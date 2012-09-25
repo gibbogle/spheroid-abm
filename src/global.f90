@@ -15,6 +15,7 @@ integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
 integer, parameter :: OUTSIDE_TAG = -99999
+real, parameter :: PI = 4.0*atan(1.0)
 
 type occupancy_type
 	integer :: indx(2)
@@ -42,7 +43,7 @@ type(cell_type), allocatable :: cell_list(:)
 integer :: NX, NY, NZ
 integer, allocatable :: zdomain(:),zoffset(:)
 integer :: blobrange(3,2)
-real :: DELTA_X, DELTA_T, PI
+real :: DELTA_X, DELTA_T
 real :: x0,y0,z0   ! centre in global coordinates (units = grids)
 real :: blob_radius, Radius, Centre(3)
 integer :: jumpvec(3,27)
@@ -116,7 +117,7 @@ end subroutine
 !---------------------------------------------------------------------
 subroutine SetRadius(N)
 integer :: N
-Radius = (N*3.0/(4*PI))**(1./3)
+Radius = (3.0*N/(4.0*PI))**(1./3.)
 end subroutine
 
 !---------------------------------------------------------------------

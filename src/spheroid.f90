@@ -5,7 +5,7 @@ use boundary
 !use ode_diffuse
 !use FDC
 !use fields
-!use winsock 
+!use winsock  
 
 IMPLICIT NONE
 
@@ -52,17 +52,18 @@ call logger(logmsg)
 !if (.not.ok) return
 !call logger("did read_cell_params")
 
-PI = 4.0*atan(1.0)
 NX = 100
 blob_radius = 10
 seed = (/12345, 67891/)
-nsteps = 1000
+nsteps = 10000
 
 call array_initialisation(ok)
 if (.not.ok) return
 call logger('did array_initialisation')
 
 call PlaceCells(ok)
+call SetRadius(Nsites)
+write(*,*) 'Ncells: ',Ncells,Radius
 call logger('did placeCells')
 if (.not.ok) return
 
@@ -137,7 +138,7 @@ end subroutine
 subroutine array_initialisation(ok)
 logical :: ok
 integer :: x,y,z,k, ichemo
-integer :: MAXX, z1, z2, nbc0, inflow
+integer :: MAXX, z1, z2, nc0, inflow
 integer :: cog_size
 real :: d, rr(3)
 
@@ -170,8 +171,10 @@ z0 = (NZ + 1.0)/2.
 Centre = (/x0,y0,z0/)   ! now, actually the global centre (units = grids)
 Radius = blob_radius    ! starting value
 
-nbc0 = (4./3.)*PI*Radius**3
-max_nlist = 10*nbc0
+nc0 = (4./3.)*PI*Radius**3
+max_nlist = 10*nc0
+write(*,*) 'Initial radius: ',Radius, nc0
+
 allocate(cell_list(max_nlist))
 allocate(occupancy(NX,NY,NZ))
 !allocate(gaplist(max_ngaps))
@@ -240,6 +243,7 @@ do x = 1,NX
 	enddo
 enddo
 nlist = k
+Nsites = k
 Ncells = k
 Ncells0 = Ncells		
 ok = .true.
@@ -390,23 +394,40 @@ end function
 !-----------------------------------------------------------------------------------------
 subroutine cell_division(kcell0)
 integer :: kcell0
-integer :: j, kcell1, site0(3), site1(3), site2(3), site(3), npath, path(3,200)
+integer :: j, k, kcell1, site0(3), site1(3), site2(3), site(3), npath, path(3,200)
 type (boundary_type), pointer :: bdry
 
 site0 = cell_list(kcell0)%site
-call choose_bdrysite(site0,site1)
-call get_path(site0,site1,path,npath)
+if (dbug) write(*,*) 'cell_division: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
+if (bdrylist_present(site0,bdrylist)) then	! site0 is on the boundary
+	npath = 1
+	site1 = site0
+	path(:,1) = site0
+else
+	call choose_bdrysite(site0,site1)
+	call get_path(site0,site1,path,npath)
+endif
+if (dbug) write(*,*) 'path: ',npath
+do k = 1,npath
+	if (dbug) write(*,'(i3,2x,3i4)') path(:,k)
+enddo
+
 !call get_nearbdrypath(site0,path,npath)
 ! Need to choose an outside site near site1
 call get_outsidesite(site1,site2)
 npath = npath+1
 path(:,npath) = site2
+if (dbug) write(*,*) 'outside site: ',site2,occupancy(site2(1),site2(2),site2(3))%indx
+
 call push_path(path,npath)
+
+if (dbug) write(*,*) 'did push_path'
 call add_cell(kcell0,kcell1,site0)
 ! Now need to fix the bdrylist.  
 ! site1 was on the boundary, but may no longer be.
 ! site2 is now on the boundary
 ! First add site2
+if (dbug) write(*,*) 'add site2 to bdrylist: ',site2
 if (isbdry(site2)) then   ! add it to the bdrylist
     nbdry = nbdry + 1
     allocate(bdry)
@@ -422,11 +443,15 @@ else
 	call logger(logmsg)
     stop
 endif
+if (dbug) write(*,*) 'Check for changed boundary status'
 ! Now check sites near site2 that may have changed their boundary status (including site1)
 do j = 1,6
 	site = site2 + neumann(:,j)
+	if (dbug) write(*,*) j,site
 	if (isbdry(site)) then
+		if (dbug) write(*,*) 'isbdry'
 		if (.not.bdrylist_present(site,bdrylist)) then	! add it
+			if (dbug) write(*,*) 'not present, add it'
 			nbdry = nbdry + 1
 			allocate(bdry)
 			bdry%site = site
@@ -438,13 +463,16 @@ do j = 1,6
 		!    call SetBdryConcs(site)
 		endif
 	else
+		if (dbug) write(*,*) 'not isbdry'
 		if (bdrylist_present(site,bdrylist)) then	! remove it
+			if (dbug) write(*,*) 'present, remove it'
 			call bdrylist_delete(site,bdrylist)
 			nullify(occupancy(site(1),site(2),site(3))%bdry)
 			nbdry = nbdry - 1	
 		endif
 	endif
 enddo
+if (dbug) write(*,*) 'done!'
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -453,9 +481,59 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine choose_bdrysite(site0,site1)
 integer :: site0(3), site1(3)
+integer :: site(3), sitemin(3)
+real :: vc(3), v(3), r, rfrac, d, alpha_max, cosa_min, dmin, cosa
+logical :: hit
 type (boundary_type), pointer :: bdry
 
+if (dbug) write(*,*) 'choose_bdrysite: ',site0
+vc = site0 - Centre
+r = norm(vc)
+vc = vc/r
+rfrac = r/Radius
+alpha_max = get_alpha_max(rfrac)
+cosa_min = cos(alpha_max)
+dmin = 1.0e10
+hit = .false.
+bdry => bdrylist
+do while ( associated ( bdry )) 
+    site = bdry%site
+    v = site - Centre
+    d = norm(v)
+    cosa = dot_product(v,vc)/d
+    if (cosa > cosa_min) then
+		hit = .true.
+		if (d < dmin) then
+			dmin = d
+			sitemin = site
+		endif
+	endif
+    bdry => bdry%next
+enddo
+if (.not.hit) then
+	write(*,*) 'Error: choose_bdrysite: no candidate bdry site'
+	stop
+endif
+site1 = sitemin
+if (dbug) write(*,*) 'site1: ',site1,occupancy(site1(1),site1(2),site1(3))%indx
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+real function get_alpha_max(r)
+real :: r
+real :: alf
+real :: r1 = 0.2, r2 = 0.8, alpha1 = PI, alpha2 = PI/6
+
+if (r < r1) then
+	get_alpha_max = alpha1
+elseif (r > r2) then
+	get_alpha_max = alpha2
+else
+	alf = (r-r1)/(r2-r1)
+	get_alpha_max = (1-alf)*alpha1 + alf*alpha2
+endif
+end function
 
 !-----------------------------------------------------------------------------------------
 ! For a given cell site site0(:), find a suitable free site on the boundary of
@@ -544,7 +622,7 @@ integer :: site1(3), site2(3), path(3,200), npath
 integer :: v(3), jump(3), site(3), k, j, jmin
 real :: r, d2, d2min
 
-write(*,'(a,3i4,2x,3i4)') 'site1, site2: ',site1, site2
+if (dbug) write(*,'(a,3i4,2x,3i4)') 'site1, site2: ',site1, site2
 k = 1
 site = site1
 path(:,k) = site
@@ -552,9 +630,10 @@ do
 	d2min = 1.0e10
 	do j = 1,6
 		jump = neumann(:,j)
-		v = site2 - (site + jump)
+		v = site + jump
+		if (occupancy(v(1),v(2),v(3))%indx(1) < 0) cycle
+		v = site2 - v
 		d2 = v(1)*v(1) + v(2)*v(2) + v(3)*v(3)
-!		write(*,'(i6,2x,3i3,2x,3f6.3,2x,f8.4)') j,jump,v_try,d
 		if (d2 < d2min) then
 			d2min = d2
 			jmin = j
@@ -562,9 +641,8 @@ do
 	enddo
 	site = site + neumann(:,jmin)
 	k = k+1
+	if (dbug) write(*,*) k,site,jmin,d2min
 	path(:,k) = site
-!	write(*,'(i3,2x,3i4,2x,i2,2x,3i3)') k,site1,jmax,neumann(:,jmax)
-!	if (occupancy(site1(1),site1(2),site1(3))%indx(1) == OUTSIDE_TAG) exit
 	if (site(1) == site2(1) .and. site(2) == site2(2) .and. site(3) == site2(3)) exit
 enddo
 npath = k
@@ -580,7 +658,9 @@ integer :: k, site1(3), site2(3), kcell
 do k = npath-1,1,-1
 	site1 = path(:,k)
 	kcell = occupancy(site1(1),site1(2),site1(3))%indx(1)
+	if (dbug) write(*,*) k,' site1: ',site1,kcell
 	site2 = path(:,k+1)
+	if (dbug) write(*,*) 'site2: ',site2
 	cell_list(kcell)%site = site2
 	occupancy(site2(1),site2(2),site2(3))%indx(1) = kcell
 enddo
@@ -596,6 +676,7 @@ integer :: kcell0, kcell1, site(3)
 
 lastID = lastID + 1
 nlist = nlist + 1
+Ncells = Ncells + 1
 kcell1 = nlist
 cell_list(kcell1)%state = cell_list(kcell0)%state
 cell_list(kcell1)%site = site
@@ -758,23 +839,25 @@ integer :: kcell, site(3), kpar=0
 real :: r(3), rmax
 
 istep = istep + 1
+!if (istep == 6216) dbug = .true.
 res = 0
-do
-	kcell = random_int(1,nlist,kpar)
-	site = cell_list(kcell)%site
-	r = site - Centre
-	if (norm(r) < Radius/4) exit
-enddo
-call cell_division(kcell)
-if (mod(istep,100) == 0) then
+!do
+!	kcell = random_int(1,nlist,kpar)
+!	site = cell_list(kcell)%site
+!	r = site - Centre
+!	if (norm(r) < Radius/4) exit
+!enddo
+if (mod(istep,100) == 0 .or. istep > 6200) then
 	rmax = 0
 	do kcell = 1,nlist
 		r = cell_list(kcell)%site - Centre
 		rmax = max(rmax,norm(r))
 	enddo
 	write(*,'(2i6,2f6.1)') istep, Ncells, Radius, rmax
-	call check_bdry
+!	call check_bdry
 endif
+kcell = random_int(1,nlist,kpar)
+call cell_division(kcell)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
