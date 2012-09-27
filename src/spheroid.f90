@@ -4,7 +4,7 @@ use boundary
 !use behaviour
 !use ode_diffuse
 !use FDC
-!use fields
+use fields
 !use winsock  
 
 IMPLICIT NONE
@@ -47,24 +47,26 @@ call logger(logmsg)
     endif
 #endif
 
-!call logger("read_cell_params")
-!call read_cell_params(ok)
-!if (.not.ok) return
-!call logger("did read_cell_params")
+call logger("read_cell_params")
+call read_cell_params(ok)
+if (.not.ok) return
+call logger("did read_cell_params")
 
-NX = 100
-blob_radius = 10
-seed = (/12345, 67891/)
-nsteps = 10000
+!NX = 100
+!blob_radius = 10
+!seed = (/12345, 67891/)
+!nsteps = 10000
 
 call array_initialisation(ok)
 if (.not.ok) return
 call logger('did array_initialisation')
 
+call SetupChemo
+
 call PlaceCells(ok)
 call SetRadius(Nsites)
-write(*,*) 'Ncells: ',Ncells,Radius
-call logger('did placeCells')
+write(logmsg,*) 'did placeCells: Ncells: ',Ncells,Radius
+call logger(logmsg)
 if (.not.ok) return
 
 !call test_get_path
@@ -173,7 +175,8 @@ Radius = blob_radius    ! starting value
 
 nc0 = (4./3.)*PI*Radius**3
 max_nlist = 10*nc0
-write(*,*) 'Initial radius: ',Radius, nc0
+write(logmsg,*) 'Initial radius: ',Radius, nc0
+call logger(logmsg)
 
 allocate(cell_list(max_nlist))
 allocate(occupancy(NX,NY,NZ))
@@ -208,6 +211,60 @@ do i = 0,npar-1
 enddo
 call par_zigset(npar,zig_seed,grainsize)
 par_zig_init = .true.
+end subroutine
+
+!----------------------------------------------------------------------------------------1123
+!----------------------------------------------------------------------------------------
+subroutine read_cell_params(ok)
+logical :: ok
+integer :: itestcase, ncpu_dummy
+real :: days
+
+ok = .true.
+open(nfcell,file=inputfile,status='old')
+
+read(nfcell,*) NX							! rule of thumb: about 4*BLOB_RADIUS
+read(nfcell,*) blob_radius					! initial B cell blob size (sites)
+read(nfcell,*) days							! number of days to simulate
+read(nfcell,*) itestcase                    ! test case to simulate
+read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
+read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
+read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
+read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
+read(nfcell,*) fixedfile					! file with "fixed" parameter values
+close(nfcell)
+
+! Setup test_case
+test_case = .false.
+if (itestcase /= 0) then
+    test_case(itestcase) = .true.
+endif
+
+call read_fixed_params(ok)
+if (.not.ok) then
+	write(logmsg,'(a,a)') 'Error reading fixed input data file: ',fixedfile
+	call logger(logmsg)
+	return
+endif
+
+if (mod(NX,2) /= 0) NX = NX+1					! ensure that NX is even
+open(nfout,file=outputfile,status='replace')
+write(logmsg,*) 'Opened nfout: ',outputfile
+call logger(logmsg)
+
+Nsteps = days*60*24/DELTA_T
+
+!call setup_dists
+
+ok = .true.
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine read_fixed_params(ok)
+logical :: ok
+
+ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -437,7 +494,7 @@ if (isbdry(site2)) then   ! add it to the bdrylist
     call bdrylist_insert(bdry,bdrylist)
 !    call AssignBdryRole(site,bdry)
     occupancy(site2(1),site2(2),site2(3))%bdry => bdry
-!    call SetBdryConcs(site)
+    call SetBdryConcs(site2)
 else
     write(logmsg,*) 'Added site is not bdry: ',site2,occupancy(site2(1),site2(2),site2(3))%indx
 	call logger(logmsg)
@@ -460,7 +517,7 @@ do j = 1,6
 			call bdrylist_insert(bdry,bdrylist)
 		!    call AssignBdryRole(site,bdry)
 			occupancy(site(1),site(2),site(3))%bdry => bdry
-		!    call SetBdryConcs(site)
+		    call SetBdryConcs(site)
 		endif
 	else
 		if (dbug) write(*,*) 'not isbdry'
@@ -468,7 +525,8 @@ do j = 1,6
 			if (dbug) write(*,*) 'present, remove it'
 			call bdrylist_delete(site,bdrylist)
 			nullify(occupancy(site(1),site(2),site(3))%bdry)
-			nbdry = nbdry - 1	
+			nbdry = nbdry - 1
+			call ResetConcs(site)
 		endif
 	endif
 enddo
@@ -511,7 +569,8 @@ do while ( associated ( bdry ))
     bdry => bdry%next
 enddo
 if (.not.hit) then
-	write(*,*) 'Error: choose_bdrysite: no candidate bdry site'
+	write(logmsg,*) 'Error: choose_bdrysite: no candidate bdry site'
+	call logger(logmsg)
 	stop
 endif
 site1 = sitemin
@@ -828,6 +887,18 @@ if (rmax > 0) then
 endif
 end subroutine
 
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine get_dimensions(NX_dim,NY_dim,NZ_dim) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
+use, intrinsic :: iso_c_binding
+integer(c_int) :: NX_dim,NY_dim,NZ_dim
+
+NX_dim = NX
+NY_dim = NY
+NZ_dim = NZ
+end subroutine
+
 !-----------------------------------------------------------------------------------------
 ! Advance simulation through one time step (DELTA_T)
 !-----------------------------------------------------------------------------------------
@@ -835,30 +906,203 @@ subroutine simulate_step(res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: simulate_step  
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
-integer :: kcell, site(3), kpar=0
+integer :: kcell, site(3), hour, kpar=0
 real :: r(3), rmax
 
 istep = istep + 1
+!write(*,*) 'istep: ',istep
 !if (istep == 6216) dbug = .true.
+call make_split(.true.)
+call UpdateFields1(DELTA_T)
 res = 0
-!do
-!	kcell = random_int(1,nlist,kpar)
-!	site = cell_list(kcell)%site
-!	r = site - Centre
-!	if (norm(r) < Radius/4) exit
-!enddo
-if (mod(istep,100) == 0 .or. istep > 6200) then
+if (mod(istep,60) == 0) then
 	rmax = 0
 	do kcell = 1,nlist
 		r = cell_list(kcell)%site - Centre
 		rmax = max(rmax,norm(r))
 	enddo
-	write(*,'(2i6,2f6.1)') istep, Ncells, Radius, rmax
+	hour = istep/60
+	write(logmsg,'(3i6,2f6.1)') istep, hour, Ncells, Radius, rmax
+	call logger(logmsg)
+!	call CheckBdryList
+	call ShowConc
 !	call check_bdry
 endif
 kcell = random_int(1,nlist,kpar)
 call cell_division(kcell)
 end subroutine
+
+!-------------------------------------------------------------------------------- 
+! The GUI calls this subroutine to fetch the cell info needed to identify and render 
+! the cells:
+!   id			the cell's sequence number
+!   position	(x,y,z)
+!   state       this is translated into a colour
+!
+! The info is stored in integer arrays, one for B cells, one for FDCs,
+! and one for cell-cell bonds (not used).
+! As a quick-and-dirty measure, the first 7 B cells in the list are actually 
+! markers to provide a visual indication of the extent of the follicular blob.
+! Improving this:
+! blobrange(:,:) holds the info about the ranges of x, y and z that the blob occupies.
+! blobrange(1,1) <= x <= blobrange(1,2)
+! blobrange(2,1) <= y <= blobrange(2,2)
+! blobrange(3,1) <= z <= blobrange(3,2)
+!--------------------------------------------------------------------------------
+subroutine get_scene(nBC_list,BC_list,nFDCMRC_list,FDCMRC_list,nbond_list,bond_list) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_scene
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nFDCMRC_list, nBC_list, nbond_list, FDCMRC_list(*), BC_list(*), bond_list(*)
+integer :: k, kc, kcell, site(3), j, jb
+integer :: col(3)
+integer :: x, y, z
+integer :: ifdcstate, ibcstate, ctype, stage, region
+integer :: last_id1, last_id2
+logical :: ok
+integer, parameter :: axis_centre = -2	! identifies the ellipsoid centre
+integer, parameter :: axis_end    = -3	! identifies the ellipsoid extent in 5 directions
+integer, parameter :: axis_bottom = -4	! identifies the ellipsoid extent in the -Y direction, i.e. bottom surface
+integer, parameter :: ninfo = 5			! the size of the info package for a cell (number of integers)
+integer, parameter :: nax = 6			! number of points used to delineate the follicle
+
+nBC_list = 0
+nFDCMRC_list = 0
+nbond_list = 0
+
+! Need some markers to delineate the follicle extent.  These nax "cells" are used to convey (the follicle centre
+! and) the approximate ellipsoidal blob limits in the 3 axis directions.
+do k = 1,nax
+	select case (k)
+!	case (1)
+!		x = Centre(1) + 0.5
+!		y = Centre(2) + 0.5
+!		z = Centre(3) + 0.5
+!		site = (/x, y, z/)
+!		ibcstate = axis_centre
+	case (1)
+!		x = Centre(1) - Radius%x - 2
+		x = blobrange(1,1) - 1
+		y = Centre(2) + 0.5
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	case (2)
+!		x = Centre(1) + Radius%x + 2
+		x = blobrange(1,2) + 1
+		y = Centre(2) + 0.5
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	case (3)
+		x = Centre(1) + 0.5
+!		y = Centre(2) - Radius%y - 2
+		y = blobrange(2,1) - 1
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		ibcstate = axis_bottom
+	case (4)
+		x = Centre(1) + 0.5
+!		y = Centre(2) + Radius%y + 2
+		y = blobrange(2,2) + 1
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	case (5)
+		x = Centre(1) + 0.5
+		y = Centre(2) + 0.5
+!		z = Centre(3) - Radius%z - 2
+		z = blobrange(3,1) - 1
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	case (6)
+		x = Centre(1) + 0.5
+		y = Centre(2) + 0.5
+!		z = Centre(3) + Radius%z + 2
+		z = blobrange(3,2) + 1
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	end select
+
+	j = ninfo*(k-1)
+	BC_list(j+1) = k-1
+	BC_list(j+2:j+4) = site
+	BC_list(j+5) = ibcstate
+	last_id1 = k-1
+enddo
+k = last_id1 + 1
+
+! Cells
+do kcell = 1,nlist
+	if (cell_list(kcell)%exists) then
+		k = k+1
+		j = ninfo*(k-1)
+		site = cell_list(kcell)%site
+		call cellColour(kcell,col)
+		BC_list(j+1) = kcell + last_id1
+		BC_list(j+2:j+4) = site
+		BC_list(j+5) = rgb(col)
+		last_id2 = kcell + last_id1
+	endif
+enddo
+nBC_list = last_id2
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Rendered cognate B cell colour depends on stage, state, receptor expression level.
+! col(:) = (r,g,b)
+!-----------------------------------------------------------------------------------------
+subroutine cellColour(kcell,col)
+integer :: kcell, col(3)
+integer :: stage, status
+integer, parameter :: WHITE(3) = (/255,255,255/)
+integer, parameter :: RED(3) = (/255,0,0/)
+integer, parameter :: GREEN(3) = (/0,255,0/)
+integer, parameter :: BLUE(3) = (/0,0,255/)
+integer, parameter :: DEEPRED(3) = (/200,0,0/)
+integer, parameter :: DEEPBLUE(3) = (/30,20,255/)
+integer, parameter :: DEEPGREEN(3) = (/0,150,0/)
+integer, parameter :: LIGHTRED(3) = (/255,70,90/)
+integer, parameter :: LIGHTBLUE(3) = (/0,200,255/)
+integer, parameter :: LIGHTGREEN(3) = (/50,255,150/)
+integer, parameter :: DEEPORANGE(3) = (/240,70,0/)
+integer, parameter :: LIGHTORANGE(3) = (/255,130,0/)
+integer, parameter :: YELLOW(3) = (/255,255,0/)
+integer, parameter :: DEEPPURPLE(3) = (/180,180,30/)
+integer, parameter :: LIGHTPURPLE(3) = (/230,230,100/)
+integer, parameter :: DEEPBROWN(3) = (/130,70,0/)
+integer, parameter :: LIGHTBROWN(3) = (/200,100,0/)
+integer, parameter :: GRAY(3) = (/128,128,128/)
+
+integer, parameter :: Qt_white = 3
+integer, parameter :: Qt_black = 2
+integer, parameter :: Qt_red = 7
+integer, parameter :: Qt_darkRed = 13
+integer, parameter :: Qt_green = 8
+integer, parameter :: Qt_darkGreen = 14
+integer, parameter :: Qt_blue = 9
+integer, parameter :: Qt_darkBlue = 15
+integer, parameter :: Qt_cyan = 10
+integer, parameter :: Qt_darkCyan = 16
+integer, parameter :: Qt_magenta = 11
+integer, parameter :: Qt_darkMagenta = 17
+integer, parameter :: Qt_yellow = 12
+integer, parameter :: Qt_darkYellow = 18
+integer, parameter :: Qt_gray = 5
+integer, parameter :: Qt_darkGray = 4
+integer, parameter :: Qt_lightGray = 6
+
+col = LIGHTORANGE
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Pack the colours (r,g,b) into an integer.
+!-----------------------------------------------------------------------------------------
+integer function rgb(col)
+integer :: col(3)
+
+rgb = ishft(col(1),16) + ishft(col(2),8) + col(3)
+end function
+
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -960,14 +1204,75 @@ subroutine disableTCP
 use_TCP = .false.   ! because this is called from spheroid_main()	
 end subroutine
 
-!--------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------
-subroutine connecter(ok)
-logical :: ok
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine connection(awp,port,error)
+TYPE(winsockport) :: awp
+integer :: port, error
+integer :: address = 0
+!!!character*(64) :: ip_address = "127.0.0.1"C      ! need a portable way to make a null-terminated C string
+character*(64) :: host_name = "localhost"
 
-ok = .true.
+if (.not.winsock_init(1)) then
+    call logger("winsock_init failed")
+    stop
+endif
+
+awp%handle = 0
+awp%host_name = host_name
+awp%ip_port = port
+awp%protocol = IPPROTO_TCP
+call Set_Winsock_Port (awp,error)
+
+if (.not.awp%is_open) then
+    write(nflog,*) 'Error: connection: awp not open: ',port
+endif
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine connecter(ok)
+logical :: ok
+integer :: error
+
+! Main connection
+ok = .true.
+call connection(awp_0,TCP_PORT_0,error)
+if (awp_0%handle < 0 .or. error /= 0) then
+    write(logmsg,'(a)') 'TCP connection to TCP_PORT_0 failed'
+    call logger(logmsg)
+    ok = .false.
+    return
+endif
+if (.not.awp_0%is_open) then
+	write(logmsg,'(a)') 'No connection to TCP_PORT_0'
+    call logger(logmsg)
+    ok = .false.
+    return
+endif
+write(logmsg,'(a)') 'Connected to TCP_PORT_0  '
+call logger(logmsg)
+
+if (use_CPORT1) then
+	call connection(awp_1,TCP_PORT_1,error)
+	if (awp_1%handle < 0 .or. error /= 0) then
+		write(logmsg,'(a)') 'TCP connection to TCP_PORT_1 failed'
+		call logger(logmsg)
+		ok = .false.
+		return
+	endif
+	if (.not.awp_1%is_open) then
+		write(logmsg,'(a)') 'No connection to TCP_PORT_1'
+		call logger(logmsg)
+		ok = .false.
+		return
+	endif
+	write(logmsg,'(a)') 'Connected to TCP_PORT_1  '
+	call logger(logmsg)
+endif
+! Allow time for completion of the connection
+call sleeper(2)
+end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -990,17 +1295,17 @@ endif
 close(nflog)
 
 if (use_TCP) then
-!	if (stopped) then
-!	    call winsock_close(awp_0)
-!	    if (use_CPORT1) call winsock_close(awp_1)
-!	else
-!	    call winsock_send(awp_0,quit,8,error)
-!	    call winsock_close(awp_0)
-!		if (use_CPORT1) then
-!			call winsock_send(awp_1,quit,8,error)
-!			call winsock_close(awp_1)
-!		endif
-!	endif
+	if (stopped) then
+	    call winsock_close(awp_0)
+	    if (use_CPORT1) call winsock_close(awp_1)
+	else
+	    call winsock_send(awp_0,quit,8,error)
+	    call winsock_close(awp_0)
+		if (use_CPORT1) then
+			call winsock_send(awp_1,quit,8,error)
+			call winsock_close(awp_1)
+		endif
+	endif
 endif
 end subroutine
 

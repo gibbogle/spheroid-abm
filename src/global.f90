@@ -4,16 +4,24 @@ module global
 
 use omp_lib
 use par_zig_mod
+use winsock
 
 implicit none
 
 !INTEGER,  PARAMETER  ::  DP=SELECTED_REAL_KIND( 12, 60 )
 INTEGER,  PARAMETER  ::  SP = kind(1.0), DP = kind(1.0d0)
 integer, parameter :: REAL_KIND = SP
+integer, parameter :: TCP_PORT_0 = 5000		! main communication port (logging) 
+integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
 
-integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14
+integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
+real, parameter :: DELTA_T = 1	! minutes
+real, parameter :: DELTA_X = 10	! microns
+integer, parameter :: MAX_CHEMO = 1
+integer, parameter :: TRACER = 1
+!integer, parameter :: MAX_RECEPTOR = 1
 integer, parameter :: OUTSIDE_TAG = -99999
 real, parameter :: PI = 4.0*atan(1.0)
 
@@ -43,7 +51,6 @@ type(cell_type), allocatable :: cell_list(:)
 integer :: NX, NY, NZ
 integer, allocatable :: zdomain(:),zoffset(:)
 integer :: blobrange(3,2)
-real :: DELTA_X, DELTA_T
 real :: x0,y0,z0   ! centre in global coordinates (units = grids)
 real :: blob_radius, Radius, Centre(3)
 integer :: jumpvec(3,27)
@@ -51,16 +58,19 @@ integer :: jumpvec(3,27)
 integer :: max_nlist, nlist, Ncells, Ncells0, lastNcells, lastID
 integer :: max_ngaps, ngaps, nadd_sites, Nsites
 integer :: nbdry
-integer :: istep, nsteps
+integer :: istep, nsteps, NT_GUI_OUT
 integer :: Mnodes
 
 character*(128) :: inputfile
+character*(128) :: fixedfile
 character*(128) :: outputfile
 character*(2048) :: logmsg
-!TYPE(winsockport) :: awp_0, awp_1
+logical :: test_case(4)
+
+TYPE(winsockport) :: awp_0, awp_1
 logical :: use_TCP = .true.         ! turned off in para_main()
 logical :: use_CPORT1 = .false.
-!logical :: stopped, clear_to_send
+logical :: stopped, clear_to_send
 logical :: simulation_start, par_zig_init, initialized
 logical :: dbug = .false.
 
