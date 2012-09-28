@@ -29,6 +29,13 @@ end function
 subroutine SetupChemo
 integer :: ic
 
+chemo(OXYGEN)%name = 'Oxygen'
+chemo(OXYGEN)%used = .true.
+chemo(OXYGEN)%use_secretion = .false.
+chemo(OXYGEN)%bdry_rate = 0
+chemo(OXYGEN)%bdry_conc = 50
+chemo(OXYGEN)%diff_coef = 2.0	! units?
+chemo(OXYGEN)%halflife = 3.0	! hours
 chemo(TRACER)%name = 'Tracer'
 chemo(TRACER)%used = .true.
 chemo(TRACER)%use_secretion = .false.
@@ -105,8 +112,8 @@ end subroutine
 !----------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------
 subroutine ShowConc
-integer :: x, y, z, k, x1, site(3)
-real :: C(100)
+integer :: x, y, z, k, x1, site(3), ichemo
+real :: C(MAX_CHEMO,100)
 logical :: start
 
 y = Centre(2) 
@@ -124,18 +131,21 @@ do x = blobrange(1,1),blobrange(1,2)
 	if (.not.start) x1 = x
 	start = .true.
 	k = k+1
-	C(k) = chemo(TRACER)%conc(x,y,z)
+	do ichemo = 1,MAX_CHEMO
+	    C(ichemo,k) = chemo(ichemo)%conc(x,y,z)
+	enddo
 enddo
-write(*,'(10f7.2)') C(1:k)
-
-if (C(1) < 100) then
-	write(logmsg,*) 'First conc < 100: istep: ',istep, C(1),occupancy(x1,y,z)%indx(1)
-	call logger(logmsg)
-	site = (/x1,y,z/)
-	write(logmsg,'(a,L)') 'isbdry: ',isbdry(site)
-	call logger(logmsg)
-	stop
-endif
+do ichemo = 1,MAX_CHEMO
+    write(*,'(10f7.2)') C(ichemo,1:k)
+enddo
+!if (C(1) < 100) then
+!	write(logmsg,*) 'First conc < 100: istep: ',istep, C(1),occupancy(x1,y,z)%indx(1)
+!	call logger(logmsg)
+!	site = (/x1,y,z/)
+!	write(logmsg,'(a,L)') 'isbdry: ',isbdry(site)
+!	call logger(logmsg)
+!	stop
+!endif
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -183,18 +193,15 @@ do it = 1,nt
 		call par_evolve(Kdiffusion,Kdecay,C_par,z1,z2,dt,kpar)
 		do ichemo = 1,MAX_CHEMO
 			if (.not.chemo(ichemo)%used) cycle
-!			Cptr => chemo(ichemo)
 			chemo(ichemo)%conc(:,:,z1:z2) = C_par(ichemo,:,:,1:n)
 		enddo
 		deallocate(C_par)
 	enddo
 enddo
-!	write(*,*) 'call gradient'
 do ichemo = 1,MAX_CHEMO
 	Cptr => chemo(ichemo)
 	call gradient(Cptr%conc,Cptr%grad)
 enddo
-!stop
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -206,7 +213,7 @@ integer :: z1, z2, kpar
 !real :: C(:,:,:)
 real :: Ctemp(:,:,:,:)
 real :: Kdiffusion(:), Kdecay(:), dt
-real :: C0, sum, dV, dMdt
+real :: sum, dV, C0(MAX_CHEMO), dMdt(MAX_CHEMO)
 integer :: x, y, z, zpar, xx, yy, zz, nb, k, indx(2), ichemo
 logical :: source_site
 
@@ -228,10 +235,11 @@ do zpar = 1,z2-z1+1
 		        source_site = .true.
             endif
             if (.not.source_site) then
-! For now ignore reactions
+                dMdt = 0
+                C0 = 0
 				do ichemo = 1,MAX_CHEMO
 !					C0 = C(x,y,z)
-					C0 = chemo(ichemo)%conc(x,y,z)
+					C0(ichemo) = chemo(ichemo)%conc(x,y,z)
 					sum = 0
 					nb = 0
 					do k = 1,6
@@ -245,8 +253,11 @@ do zpar = 1,z2-z1+1
 !						sum = sum + C(xx,yy,zz)
 						sum = sum + chemo(ichemo)%conc(xx,yy,zz)
 					enddo
-					dMdt = Kdiffusion(ichemo)*DELTA_X*(sum - nb*C0) - Kdecay(ichemo)*C0*dV ! + influx(x,y,z)
-					Ctemp(ichemo,x,y,zpar) = (C0*dV + dMdt*dt)/dV
+					dMdt(ichemo) = Kdiffusion(ichemo)*DELTA_X*(sum - nb*C0(ichemo)) - Kdecay(ichemo)*C0(ichemo)*dV ! + influx(x,y,z)
+				enddo
+				! reactions between chems go here, changing dMdt
+                do ichemo = 1,MAX_CHEMO
+					Ctemp(ichemo,x,y,zpar) = (C0(ichemo)*dV + dMdt(ichemo)*dt)/dV
 				enddo
 			endif
 		enddo

@@ -19,8 +19,9 @@ integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,
 
 real, parameter :: DELTA_T = 1	! minutes
 real, parameter :: DELTA_X = 10	! microns
-integer, parameter :: MAX_CHEMO = 1
-integer, parameter :: TRACER = 1
+integer, parameter :: MAX_CHEMO = 2
+integer, parameter :: OXYGEN = 1
+integer, parameter :: TRACER = 2
 !integer, parameter :: MAX_RECEPTOR = 1
 integer, parameter :: OUTSIDE_TAG = -99999
 real, parameter :: PI = 4.0*atan(1.0)

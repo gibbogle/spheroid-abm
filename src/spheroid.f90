@@ -1,7 +1,7 @@
 module spheroid_mod
 use global
 use boundary
-!use behaviour
+!use behaviour 
 !use ode_diffuse
 !use FDC
 use fields
