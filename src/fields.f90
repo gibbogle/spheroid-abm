@@ -136,7 +136,7 @@ do x = blobrange(1,1),blobrange(1,2)
 	enddo
 enddo
 do ichemo = 1,MAX_CHEMO
-    write(*,'(10f7.2)') C(ichemo,1:k)
+    write(*,'(i4,2x,10f7.2)') istep/60,C(ichemo,1:10)
 enddo
 !if (C(1) < 100) then
 !	write(logmsg,*) 'First conc < 100: istep: ',istep, C(1),occupancy(x1,y,z)%indx(1)
@@ -213,7 +213,7 @@ integer :: z1, z2, kpar
 !real :: C(:,:,:)
 real :: Ctemp(:,:,:,:)
 real :: Kdiffusion(:), Kdecay(:), dt
-real :: sum, dV, C0(MAX_CHEMO), dMdt(MAX_CHEMO)
+real :: sum, dV, C0(MAX_CHEMO), dMdt(MAX_CHEMO), dCdt(MAX_CHEMO)
 integer :: x, y, z, zpar, xx, yy, zz, nb, k, indx(2), ichemo
 logical :: source_site
 
@@ -256,6 +256,9 @@ do zpar = 1,z2-z1+1
 					dMdt(ichemo) = Kdiffusion(ichemo)*DELTA_X*(sum - nb*C0(ichemo)) - Kdecay(ichemo)*C0(ichemo)*dV ! + influx(x,y,z)
 				enddo
 				! reactions between chems go here, changing dMdt
+				dCdt = 0
+				call reactions(C0,dCdt)
+				dMdt = dMdt + dCdt*dV
                 do ichemo = 1,MAX_CHEMO
 					Ctemp(ichemo,x,y,zpar) = (C0(ichemo)*dV + dMdt(ichemo)*dt)/dV
 				enddo
@@ -263,6 +266,17 @@ do zpar = 1,z2-z1+1
 		enddo
 	enddo
 enddo
+end subroutine
+
+!----------------------------------------------------------------------------------------
+! The processes that need to be accounted for are:
+! oxygen uptake by the cell (if there is one
+! 
+!----------------------------------------------------------------------------------------
+subroutine reactions(C0,dCdt)
+real :: C0(:), dCdt(:)
+
+dCdt = 0
 end subroutine
 
 !----------------------------------------------------------------------------------------
