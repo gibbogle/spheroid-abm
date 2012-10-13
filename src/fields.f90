@@ -16,35 +16,37 @@ end type
 contains
 
 !----------------------------------------------------------------------------------------
-! Convert halflife in hours to a decay rate /min
+! Convert halflife in hours to a decay rate /sec
 !----------------------------------------------------------------------------------------
 real function DecayRate(halflife)
 real :: halflife
 
-DecayRate = log(2.0)/(halflife*60)
+DecayRate = log(2.0)/(halflife*60*60)
 end function
 
 !----------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------
 subroutine SetupChemo
-integer :: ic
+integer :: ichemo
 
 chemo(OXYGEN)%name = 'Oxygen'
 chemo(OXYGEN)%used = .true.
 chemo(OXYGEN)%use_secretion = .false.
 chemo(OXYGEN)%bdry_rate = 0
-chemo(OXYGEN)%bdry_conc = 50
-chemo(OXYGEN)%diff_coef = 2.0	! units?
-chemo(OXYGEN)%halflife = 3.0	! hours
+chemo(OXYGEN)%bdry_conc = 65
+chemo(OXYGEN)%diff_coef = 2.0e-3	! units = mm^2s^-1
+chemo(OXYGEN)%halflife = 0.01	! hours
 chemo(TRACER)%name = 'Tracer'
-chemo(TRACER)%used = .true.
+!chemo(TRACER)%used = .true.
+chemo(TRACER)%used = .false.
 chemo(TRACER)%use_secretion = .false.
 chemo(TRACER)%bdry_rate = 0
 chemo(TRACER)%bdry_conc = 100
 chemo(TRACER)%diff_coef = 1.0	! units?
 chemo(TRACER)%halflife = 1.5	! hours
-do ic = 1,MAX_CHEMO
-	chemo(ic)%decay_rate = DecayRate(chemo(ic)%halflife)
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
 enddo
 call AllocateConcArrays
 end subroutine
@@ -60,7 +62,7 @@ do ic = 1,MAX_CHEMO
 	if (chemo(ic)%used) then
 		allocate(chemo(ic)%conc(NX,NY,NZ))
 		allocate(chemo(ic)%grad(3,NX,NY,NZ))
-		chemo(ic)%conc = 0	
+		chemo(ic)%conc = chemo(ic)%bdry_conc	
 	endif
 enddo
 end subroutine
@@ -111,7 +113,7 @@ end subroutine
 
 !----------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------
-subroutine ShowConc
+subroutine ShowConcs
 integer :: x, y, z, k, x1, site(3), ichemo
 real :: C(MAX_CHEMO,100)
 logical :: start
@@ -132,10 +134,12 @@ do x = blobrange(1,1),blobrange(1,2)
 	start = .true.
 	k = k+1
 	do ichemo = 1,MAX_CHEMO
+		if (.not.chemo(ichemo)%used) cycle
 	    C(ichemo,k) = chemo(ichemo)%conc(x,y,z)
 	enddo
 enddo
 do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
     write(*,'(i4,2x,10f7.2)') istep/60,C(ichemo,1:10)
 enddo
 !if (C(1) < 100) then
@@ -166,11 +170,11 @@ real, allocatable :: C_par(:,:,:,:)
 
 x = Centre(1)
 y = Centre(2)
-z = 10
-!write(*,*) 'UpdateFields: zoffset: ',zoffset
+z = Centre(3)
+!write(*,*) 'UpdateFields: conc: ',chemo(OXYGEN)%conc(x,y,z)
 dt = dtstep/nt
 do ichemo = 1,MAX_CHEMO
-!	if (.not.chemo(ichemo)%used) cycle
+	if (.not.chemo(ichemo)%used) cycle
 !	write(*,*) 'UpdateFields: ichemo: ',ichemo
 !	Carray(ichemo)%cptr => chemo(ichemo)
 	Kdiffusion(ichemo) = chemo(ichemo)%diff_coef
@@ -198,10 +202,11 @@ do it = 1,nt
 		deallocate(C_par)
 	enddo
 enddo
-do ichemo = 1,MAX_CHEMO
-	Cptr => chemo(ichemo)
-	call gradient(Cptr%conc,Cptr%grad)
-enddo
+!do ichemo = 1,MAX_CHEMO
+!	if (.not.chemo(ichemo)%used) cycle
+!	Cptr => chemo(ichemo)
+!	call gradient(Cptr%conc,Cptr%grad)
+!enddo
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -229,6 +234,7 @@ do zpar = 1,z2-z1+1
             if (associated(occupancy(x,y,z)%bdry)) then
                 ! Check for chemo bdry site - no change to the concentration at such a site
                 do ichemo = 1,MAX_CHEMO
+					if (.not.chemo(ichemo)%used) cycle
 		            chemo(ichemo)%conc(x,y,z) = chemo(ichemo)%bdry_conc
 			        Ctemp(ichemo,x,y,zpar) = chemo(ichemo)%bdry_conc
 				enddo
@@ -238,6 +244,7 @@ do zpar = 1,z2-z1+1
                 dMdt = 0
                 C0 = 0
 				do ichemo = 1,MAX_CHEMO
+					if (.not.chemo(ichemo)%used) cycle
 !					C0 = C(x,y,z)
 					C0(ichemo) = chemo(ichemo)%conc(x,y,z)
 					sum = 0
@@ -260,6 +267,7 @@ do zpar = 1,z2-z1+1
 				call reactions(C0,dCdt)
 				dMdt = dMdt + dCdt*dV
                 do ichemo = 1,MAX_CHEMO
+					if (.not.chemo(ichemo)%used) cycle
 					Ctemp(ichemo,x,y,zpar) = (C0(ichemo)*dV + dMdt(ichemo)*dt)/dV
 				enddo
 			endif

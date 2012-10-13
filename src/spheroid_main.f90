@@ -65,8 +65,9 @@ write(nfrun,*) 'infile: ',infile
 write(nfrun,*) 'outfile: ',outfile
 call execute(ncpu,infile,inbuflen,outfile,outbuflen)
 !call cpu_time(t1)
-
+write(*,*) 'did execute: nsteps: ',nsteps
 do jstep = 1,Nsteps
+!	write(*,*) 'jstep: ',jstep
 	call simulate_step(res)
 	if (res /= 0) then
 		write(*,*) 'Error exit'

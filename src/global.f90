@@ -17,8 +17,8 @@ integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
-real, parameter :: DELTA_T = 1	! minutes
-real, parameter :: DELTA_X = 10	! microns
+real, parameter :: DELTA_T = 0.04	! sec
+real, parameter :: DELTA_X = 0.01	! mm
 integer, parameter :: MAX_CHEMO = 2
 integer, parameter :: OXYGEN = 1
 integer, parameter :: TRACER = 2

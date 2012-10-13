@@ -252,7 +252,7 @@ open(nfout,file=outputfile,status='replace')
 write(logmsg,*) 'Opened nfout: ',outputfile
 call logger(logmsg)
 
-Nsteps = days*60*24/DELTA_T
+Nsteps = days*24*60*60/DELTA_T		! DELTA_T in seconds
 
 !call setup_dists
 
@@ -449,11 +449,12 @@ end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine cell_division(kcell0)
-integer :: kcell0
+subroutine cell_division
+integer :: kcell0, kpar=0
 integer :: j, k, kcell1, site0(3), site1(3), site2(3), site(3), npath, path(3,200)
 type (boundary_type), pointer :: bdry
 
+kcell0 = random_int(1,nlist,kpar)
 site0 = cell_list(kcell0)%site
 if (dbug) write(*,*) 'cell_division: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
 if (bdrylist_present(site0,bdrylist)) then	! site0 is on the boundary
@@ -913,7 +914,7 @@ istep = istep + 1
 !write(*,*) 'istep: ',istep
 !if (istep == 6216) dbug = .true.
 call make_split(.true.)
-call UpdateFields1(DELTA_T)
+call UpdateFields(DELTA_T)
 res = 0
 if (mod(istep,60) == 0) then
 	rmax = 0
@@ -925,11 +926,10 @@ if (mod(istep,60) == 0) then
 	write(logmsg,'(3i6,2f6.1)') istep, hour, Ncells, Radius, rmax
 	call logger(logmsg)
 !	call CheckBdryList
-	call ShowConc
+	call ShowConcs
 !	call check_bdry
 endif
-kcell = random_int(1,nlist,kpar)
-call cell_division(kcell)
+call cell_division
 end subroutine
 
 !-------------------------------------------------------------------------------- 
