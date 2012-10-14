@@ -7,10 +7,9 @@ implicit none
 integer, parameter :: dp = kind(1.d0)
 
 logical, parameter :: SPHERE = .true.
-real(dp), parameter :: RADIUS = 15
+real(dp), parameter :: RADIUS = 10		! units = gridcells
 real(dp), parameter :: K01 = 0.001
 !#define CADV  0.0			 /* coeff of advection term */
-
 real(dp), parameter :: XMIN = 0           ! grid boundaries in x  
 real(dp), parameter :: XMAX = 20.0
 real(dp), parameter :: YMIN = 30.0        ! grid boundaries in y  
@@ -33,6 +32,23 @@ interface
 	real(c_double), VALUE :: t0, t1, dtout
 	end subroutine Solve
 end interface
+
+!interface
+!	subroutine React(C, dCdt) bind(C)
+!	use :: iso_c_binding
+!	real(c_double) :: C(*), dCdt(*)
+!	end subroutine React
+!end interface
+!
+!interface
+!	subroutine ReactJac(C, dfdC, nvars) bind(C)
+!	use :: iso_c_binding
+!	real(c_double) :: C(*), dfdC(*)
+!	integer(c_int) :: nvars
+!	end subroutine ReactJac
+!end interface
+
+
 
 contains
 
@@ -70,11 +86,11 @@ if (ndim == 2) then
 	else
 		nin = MX*MY
 	endif
-	allocate(xmap(0:nin-1))
-	allocate(ymap(0:nin-1))
+	allocate(xmap(1:nin))
+	allocate(ymap(1:nin))
 	allocate(zmap(1))
 	NG = nin
-	kg = -1
+	kg = 0	!-1
 	do x = 0, MX+2-1
 		do y = 0, MY+2-1
 			n2 = y + x*(MY+2)
@@ -118,11 +134,11 @@ elseif (ndim == 3) then
 	else
 		nin = MX*MY*MZ
 	endif
-	allocate(xmap(0:nin-1))
-	allocate(ymap(0:nin-1))
-	allocate(zmap(0:nin-1))
+	allocate(xmap(nin))
+	allocate(ymap(nin))
+	allocate(zmap(nin))
 	NG = nin
-	kg = -1
+	kg = 0	!-1
 	do x = 0, MX+2-1
 		do y = 0, MY+2-1
 			do z = 0, MZ+2-1
@@ -166,10 +182,10 @@ dy = (YMAX-YMIN)/my
 xmid = 0.5*(XMIN + XMAX)
 ymid = 0.5*(YMIN + YMAX)
 if (ndim == 2) then
-	do kg = 0, NG-1
+	do kg = 1, NG
 		x = XMIN + dx*(xmap(kg) - 0.5)
 		y = YMIN + dy*(ymap(kg) - 0.5)
-		ke = kg*nvars
+		ke = (kg-1)*nvars + 1
 		if (x < xmid) then
 			ax = (x-XMIN)/(xmid-XMIN)
 		else
@@ -182,17 +198,16 @@ if (ndim == 2) then
 		endif
 		v(ke)   = 	ax*ay
 		v(ke+1) = 10*ax*ay
+		write(*,'(2i6,2f6.3)') kg,ke,v(ke),v(ke+1)
 	enddo
 else if (ndim == 3) then
 	dz = (ZMAX-ZMIN)/mz
-	xmid = 0.5*(XMIN + XMAX)
-	ymid = 0.5*(YMIN + YMAX)
 	zmid = 0.5*(ZMIN + ZMAX)
-	do kg = 0, NG-1
+	do kg = 1, NG
 		x = XMIN + dx*(xmap(kg) - 0.5)
 		y = YMIN + dy*(ymap(kg) - 0.5)
 		z = ZMIN + dz*(zmap(kg) - 0.5)
-		ke = kg*nvars
+		ke = (kg-1)*nvars + 1
 		if (x < xmid) then
 			ax = (x-XMIN)/(xmid-XMIN)
 		else
@@ -223,45 +238,49 @@ subroutine React(C, dCdt) bind(C)
 use, intrinsic :: iso_c_binding
 real(c_double) :: C(*), dCdt(*)
 
-dCdt(0) = K01*C(0)*C(1)
-dCdt(1) = -K01*C(0)*C(1)
+!write(*,*) 'React'
+dCdt(1) = K01*C(1)*C(2)
+dCdt(2) = -K01*C(1)*C(2)
 end subroutine
 
 !------------------------------------------------------------------------------
 ! dfdC[k'][k] = df[k']/dC[k]
 ! df(jc)/dC(ic) = dfdC[k], index k = jc + ic*nvars
 !------------------------------------------------------------------------------
-subroutine ReactJac(C, dfdC, nvars)
+subroutine ReactJac(C, dfdC, nvars) bind(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: ReactJac
 use, intrinsic :: iso_c_binding
 real(c_double) :: C(*), dfdC(*)
-integer(c_int) :: nvars
-integer :: ic, jc, k
+integer(c_int), VALUE :: nvars
+integer(c_int) :: ic, jc, k
 
+!write(*,*) 'ReactJac!'
 !dfdC[0][0] = K01*C[1];
 !dfdC[0][1] = K01*C[0];
 !dfdC[1][0] = -K01*C[1];
 !dfdC[1][1] = -K01*C[0];
 jc = 0
 ic = 0
-k = jc + ic*nvars
-dfdC(k) = K01*C(1)
+k = jc + ic*nvars + 1
+dfdC(k) = K01*C(2)
 jc = 0
 ic = 1
-k = jc + ic*nvars
-dfdC(k) = K01*C(0)
+k = jc + ic*nvars + 1
+dfdC(k) = K01*C(1)
 jc = 1
 ic = 0
-k = jc + ic*nvars
-dfdC(k) = -K01*C(1)
+k = jc + ic*nvars + 1
+dfdC(k) = -K01*C(2)
 jc = 1
 ic = 1
-k = jc + ic*nvars
-dfdC(k) = -K01*C(0)
+k = jc + ic*nvars + 1
+dfdC(k) = -K01*C(1)
 end subroutine
 
 end module
 
+!------------------------------------------------------------------------------
+!------------------------------------------------------------------------------
 program main
 use ReactDiff
 
@@ -275,22 +294,22 @@ real(dp) :: DIFFCOEF = 1.0e-1		 ! coeff of diffusion
 
 !begin = clock();
 
-ndim = 3
-mx = 30
-my = 30
-mz = 30
+ndim = 2
+mx = 20
+my = 20
+mz = 20
 nvars = 2
-vbnd(0) = 0
 vbnd(1) = 0
+vbnd(2) = 0
 dx = (XMAX-XMIN)/mx  
-cdiff(0) = DIFFCOEF/(dx*dx)
 cdiff(1) = DIFFCOEF/(dx*dx)
 cdiff(2) = DIFFCOEF/(dx*dx)
+cdiff(3) = DIFFCOEF/(dx*dx)
 
 t0 = 0
 t1 = 10
 dtout = t1
-nout = 20
+nout = 10
 call MakeMaps(ndim,mx,my,mz,NG,xmap,ymap,zmap)
 
 allocate(v(NG*nvars))

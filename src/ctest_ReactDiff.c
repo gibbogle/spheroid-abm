@@ -13,7 +13,7 @@ typedef double realtype;
 #define FALSE 0
 
 #define SPHERE TRUE
-#define RADIUS 15
+#define RADIUS 10
 #define K01	  0.001
 //#define CADV  0.0			 /* coeff of advection term */
 
@@ -29,7 +29,7 @@ static void	MakeMaps(int ndim, int mx, int my, int mz, int *NG, int **xmap, int 
 void React(realtype *C, realtype *dCdt);
 void ReactJac(realtype C[], realtype dfdC[], int nvars);
 
-extern int Solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, realtype *cdiff, 
+extern int solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, realtype *cdiff, 
 	int *xmap, int *ymap, int *zmap, realtype *v, realtype t0, realtype t1, realtype dtout, int nout);
 
 //------------------------------------------------------------------------------
@@ -213,7 +213,7 @@ static void SetIC(int ndim, int mx, int my, int mz, int NG, int nvars,
 // Rates of change of consituents are determined from constituent concentrations
 // (later we may wish to add sources and sinks)
 //------------------------------------------------------------------------------
-void React(realtype *C, realtype *dCdt)
+void react(realtype *C, realtype *dCdt)
 {
 	dCdt[0] = K01*C[0]*C[1];
 	dCdt[1] = -K01*C[0]*C[1];
@@ -223,7 +223,7 @@ void React(realtype *C, realtype *dCdt)
 // dfdC[k'][k] = df[k']/dC[k]
 // df(jc)/dC(ic) = dfdC[k], index k = jc + ic*nvars
 //------------------------------------------------------------------------------
-void ReactJac(realtype C[], realtype dfdC[], int nvars)
+void reactjac(realtype C[], realtype dfdC[], int nvars)
 {
 	int ic, jc, k;
 
@@ -259,10 +259,10 @@ int main(void)
 
   	begin = clock();
 
-	ndim = 3;
-	mx = 30;
-	my = 30;
-	mz = 30;
+	ndim = 2;
+	mx = 20;
+	my = 20;
+	mz = 20;
 	nvars = 2;
 	vbnd[0] = 0;
 	vbnd[1] = 0;
@@ -274,12 +274,12 @@ int main(void)
 	t0 = 0;
 	t1 = 10;
 	dtout = t1;
-	nout = 20;
+	nout = 10;
 	MakeMaps(ndim,mx,my,mz,&NG,&xmap,&ymap,&zmap);
 
 	v = (realtype *)malloc(NG*nvars*sizeof(realtype));
 	SetIC(ndim,mx,my,mz,NG,nvars,xmap,ymap,zmap,v);
-	Solve(ndim,mx,my,mz,NG,nvars,vbnd,cdiff,xmap,ymap,zmap,v,t0,t1,dtout,nout);
+	solve(ndim,mx,my,mz,NG,nvars,vbnd,cdiff,xmap,ymap,zmap,v,t0,t1,dtout,nout);
 
     end = clock();
 	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;

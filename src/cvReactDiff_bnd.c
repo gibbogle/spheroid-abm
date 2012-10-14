@@ -113,6 +113,9 @@ typedef struct {
 	int *xmap;	/* x = xmap[k] */
 	int *ymap;	/* y = ymap[k] */
 	int *zmap;	/* z = zmap[k] */
+//	realtype *C;
+//	realtype *dCdt;
+//	realtype *dfdC;
 } *UserData;
 
 /* Private Helper Functions */
@@ -139,8 +142,8 @@ static int Jac(long int N, long int mu, long int ml,
                DlsMat J, void *user_data,
                N_Vector tmp1, N_Vector tmp2, N_Vector tmp3);
 
-extern void React(realtype *C, realtype *dCdt);
-extern void ReactJac(realtype C[], realtype dfdC[], int nvars); 
+extern void react(realtype *C, realtype *dCdt);
+extern void reactjac(realtype C[], realtype dfdC[], int nvars); 
 
 N_Vector u_save;
 
@@ -178,6 +181,9 @@ int solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, r
 	if(check_flag((void *)data, "malloc", 2)) return(1);
 	data->NVARS = nvars;
 	data->vbnd = (realtype *)malloc(data->NVARS*sizeof(realtype));
+//	data->C = (realtype *)malloc(data->NVARS*sizeof(realtype));
+//	data->dCdt = (realtype *)malloc(data->NVARS*sizeof(realtype));
+//	data->dfdC = (realtype *)malloc(data->NVARS*sizeof(realtype));
 	for (ic=0; ic<data->NVARS; ic++) {
 		data->vbnd[ic] = vbnd[ic];
 	}
@@ -200,7 +206,7 @@ int solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, r
 	}
 	printf("NEQ: %d\n",data->NEQ);
 
-//	TestMap(data);
+	TestMap(data);
 
 	/* Create a serial vector */
 	u = N_VNew_Serial(data->NEQ);  /* Allocate u vector */
@@ -286,6 +292,10 @@ int solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, r
 	data->xmap = NULL;
 	data->ymap = NULL;
 	data->zmap = NULL;
+	free(data->vbnd);
+//	free(data->C);
+//	free(data->dCdt);
+//	free(data->dfdC);
 	free(data->gmap);
 	free(data);
 	return(0);
@@ -326,6 +336,7 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
   int  kgup, kgdn, kglt, kgrt, kgbk, kgfd;
   UserData data;
 
+  //printf("f\n");
   udata = NV_DATA_S(u);
   dudata = NV_DATA_S(udot);
 
@@ -346,6 +357,7 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
 		  i = data->xmap[kg];
 		  j = data->ymap[kg];
 		  k = GMAP2(i,j,data);
+//		  printf("i,j,k: %d %d %d\n",i,j,k);
 		  kgdn = GMAP2(i,j-1,data);
 		  kgup = GMAP2(i,j+1,data);
 		  kglt = GMAP2(i-1,j,data);
@@ -355,7 +367,7 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
 			  ke = kg*NVARS + ic;
 			  C[ic] = udata[ke];
 		  }
-		  React(C,dCdt);
+		  react(C,dCdt);
 		  // Set diffusion and advection terms and load into udot
 		  for (ic=0; ic<NVARS; ic++) {
 			  ke = kg*NVARS + ic;
@@ -389,6 +401,7 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
 //			  hadv = horac*(urt - ult);
 			  dudata[ke] = xdiff + ydiff + dCdt[ic];	// + hadv
 		  }
+//		  printf("did dudata loop: %d\n",ke);
 	  }
   } else if (data->ndim == 3) {
 	  for (kg=0; kg<data->NG; kg++) {
@@ -401,6 +414,12 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
 		  kgrt = GMAP3(i+1,j,k,data);
 		  kgbk = GMAP3(i,j,k-1,data);
 		  kgfd = GMAP3(i,j,k+1,data);
+
+		  for (ic=0; ic<NVARS; ic++) {
+			  ke = kg*NVARS + ic;
+			  C[ic] = udata[ke];
+		  }
+		  react(C,dCdt);
 		  
 		  // Set diffusion and advection terms and load into udot
 		  for (ic=0; ic<NVARS; ic++) {
@@ -447,12 +466,13 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
 			  ydiff = ydc*(udn - TWO*uij + uup);
 			  zdiff = zdc*(ubk - TWO*uij + ufd);
 //			  hadv = horac*(urt - ult);
-			  dudata[ke] = xdiff + ydiff + zdiff;	// + hadv;
+			  dudata[ke] = xdiff + ydiff + zdiff + dCdt[ic];	// + hadv;
 		  }
 	  }
   }
   free(C);
   free(dCdt);
+//  printf("did f\n");
   return(0);
 }
 
@@ -468,14 +488,16 @@ static int Jac(long int N, long int mu, long int ml,
                N_Vector tmp1, N_Vector tmp2, N_Vector tmp3)
 {
 	int NVARS;
-	long int i, j, k, kg, ke, ic, kje, jc;
+	int i, j, k, kg, ke, ic, kje, jc;
 	int kup, kdn, klt, krt, kbk, kfd;
 	int  kgup, kgdn, kglt, kgrt, kgbk, kgfd;
 	realtype *kthCol, xdc, ydc, zdc;	//, horac;
 	realtype *udata;
-	realtype *C, *dfdC, dfdC_elem;
+	realtype *C, *dfdC;
+	realtype dfdC_elem;
 	UserData data;
   
+//	printf("Jac\n");
   /*
     The components of f = udot that depend on u(i,j) are:
 	For 2D:
@@ -507,7 +529,6 @@ static int Jac(long int N, long int mu, long int ml,
 	NVARS = data->NVARS;
 	C = (realtype *)malloc(NVARS*sizeof(realtype));
 	dfdC = (realtype *)malloc(NVARS*NVARS*sizeof(realtype));
-
 	xdc = data->xdcoef;
 	ydc = data->ydcoef;
 	zdc = data->zdcoef;
@@ -527,7 +548,7 @@ static int Jac(long int N, long int mu, long int ml,
 				ke = kg*NVARS + ic;
 				C[ic] = udata[ke];
 			}
-			ReactJac(C,dfdC,NVARS);	// dfdC[k'][k] = df[k']/dC[k]
+			reactjac(C,dfdC,NVARS);	// dfdC[k'][k] = df[k']/dC[k]
 
 			for (ic=0; ic<NVARS; ic++) {
 				ke = kg*NVARS + ic;
@@ -578,7 +599,7 @@ static int Jac(long int N, long int mu, long int ml,
 				ke = kg*NVARS + ic;
 				C[ic] = udata[ke];
 			}
-			ReactJac(C,dfdC,NVARS);	// dfdC[k'][k] = df[k']/dC[k]
+			reactjac(C,dfdC,NVARS);	// dfdC[k'][k] = df[k']/dC[k]
 
 			for (ic=0; ic<NVARS; ic++) {
 				ke = kg*NVARS + ic;
@@ -623,6 +644,7 @@ static int Jac(long int N, long int mu, long int ml,
 	}
 	free(C);
 	free(dfdC);
+//	printf("did Jac\n");
 	return(0);
 }
 
@@ -645,7 +667,7 @@ static int SetupUserData(UserData data)
 {
 	int x, y, z, i, j, k, kg, n;
 	int kup, kdn, klt, krt, kbk, kfd;
-	int lbw=0, ubw=0;
+	int lbw, ubw;
 
 	printf("SetupUserData\n");
 
@@ -661,12 +683,16 @@ static int SetupUserData(UserData data)
 	for (k=0; k<n; k++)
 		data->gmap[k] = -1;
 
+	lbw = 0;
+	ubw = 0;
 	if (data->ndim == 2) {
+//		printf("gmap: NG: %d MX: %d MY: %d\n",data->NG,data->MX,data->MY);
 		for (kg=0; kg<data->NG; kg++) {
 			x = data->xmap[kg];
 			y = data->ymap[kg];
 			k = y + x*(data->MY+2);
 			data->gmap[k] = kg;
+//			printf("kg, x, y, k: %d %d %d %d\n",kg,x,y,k);
 		} 
 
 		for (kg=0; kg<data->NG; kg++) {
@@ -676,21 +702,25 @@ static int SetupUserData(UserData data)
 			if (kdn > 0) {
 				ubw = MAX(kg-kdn, ubw);
 				lbw = MAX(kdn-kg, lbw);
+//				printf("kdn: %d %d %d   %d  %d\n",kg,i,j,kdn,lbw);
 			}
 			kup = GMAP2(i,j+1,data);
 			if (kup > 0) {
 				ubw = MAX(kg-kup, ubw);
 				lbw = MAX(kup-kg, lbw);
+//				printf("kup: %d %d %d   %d  %d\n",kg,i,j,kup,lbw);
 			}
 			klt = GMAP2(i-1,j,data);
 			if (klt > 0) {
 				ubw = MAX(kg-klt, ubw);
 				lbw = MAX(klt-kg, lbw);
+//				printf("klt: %d %d %d   %d  %d\n",kg,i,j,klt,lbw);
 			}
 			krt = GMAP2(i+1,j,data);
 			if (krt > 0) {
 				ubw = MAX(kg-krt, ubw);
 				lbw = MAX(krt-kg, lbw);
+//				printf("krt: %d %d %d   %d  %d\n",kg,i,j,krt,lbw);
 			}
 		}
 		printf("lbw, ubw: %d %d\n",lbw,ubw);
@@ -790,7 +820,6 @@ static void TestMap( UserData data)
 		}
 	}
 	printf("gmap check OK\n");
-	exit(1);
 }
 
 
