@@ -7,8 +7,8 @@ implicit none
 integer, parameter :: dp = kind(1.d0)
 
 logical, parameter :: SPHERE = .true.
-real(dp), parameter :: RADIUS = 10		! units = gridcells
-real(dp), parameter :: K01 = 0.001
+real(dp), parameter :: RADIUS = 15		! units = gridcells
+real(dp), parameter :: K01 = 0.01
 !#define CADV  0.0			 /* coeff of advection term */
 real(dp), parameter :: XMIN = 0           ! grid boundaries in x  
 real(dp), parameter :: XMAX = 20.0
@@ -167,9 +167,54 @@ endif
 end subroutine
 
 !----------------------------------------------------------------------------
+subroutine SetIC(ndim, mx, my, mz, NG, nvars, xmap, ymap, zmap, vbnd, v)
+integer :: ndim, mx, my, mz, NG, nvars
+integer :: xmap(:), ymap(:), zmap(:)
+real(dp) :: vbnd(:), v(:)
+integer :: kg, ke
+real(dp) :: dx, dy, dz, r, alpha
+real(dp) :: xmid, ymid, zmid, ax, ay, az
+real(dp) :: vminfrac = 0.5
+
+xmid = 0.5*(XMIN + XMAX)
+ymid = 0.5*(YMIN + YMAX)
+if (ndim == 2) then
+	do kg = 1, NG
+		dx = (xmap(kg) + XMIN) - xmid
+		dy = (ymap(kg) + YMIN) - ymid
+		r = sqrt(dx*dx + dy*dy)
+		if (r >= RADIUS) then
+			alpha = 1.0
+		else
+			alpha = r/RADIUS
+		endif
+		ke = (kg-1)*nvars + 1
+		v(ke)   = alpha*vbnd(1)
+		v(ke+1) = alpha*vbnd(2)
+	enddo
+elseif (ndim == 3) then
+	zmid = 0.5*(ZMIN + ZMAX)
+	do kg = 1, NG
+		dx = (xmap(kg) + XMIN) - xmid
+		dy = (ymap(kg) + YMIN) - ymid
+		dz = (zmap(kg) + ZMIN) - zmid
+		r = sqrt(dx*dx + dy*dy + dz*dz)
+		if (r >= RADIUS) then
+			alpha = 1.0
+		else
+			alpha = r/RADIUS
+		endif
+		ke = (kg-1)*nvars + 1
+		v(ke)   = alpha*vbnd(1)
+		v(ke+1) = alpha*vbnd(2)
+	enddo
+endif
+end subroutine
+
+!----------------------------------------------------------------------------
 ! Set test-case initial conditions in v
 !----------------------------------------------------------------------------
-subroutine SetIC(ndim, mx, my, mz, NG, nvars, xmap, ymap, zmap, v)
+subroutine SetIC1(ndim, mx, my, mz, NG, nvars, xmap, ymap, zmap, v)
 integer :: ndim, mx, my, mz, NG, nvars
 integer :: xmap(:), ymap(:), zmap(:)
 real(dp) :: v(:)
@@ -239,7 +284,7 @@ use, intrinsic :: iso_c_binding
 real(c_double) :: C(*), dCdt(*)
 
 !write(*,*) 'React'
-dCdt(1) = K01*C(1)*C(2)
+dCdt(1) = -K01*C(1)*C(2)
 dCdt(2) = -K01*C(1)*C(2)
 end subroutine
 
@@ -262,11 +307,11 @@ integer(c_int) :: ic, jc, k
 jc = 0
 ic = 0
 k = jc + ic*nvars + 1
-dfdC(k) = K01*C(2)
+dfdC(k) = -K01*C(2)
 jc = 0
 ic = 1
 k = jc + ic*nvars + 1
-dfdC(k) = K01*C(1)
+dfdC(k) = -K01*C(1)
 jc = 1
 ic = 0
 k = jc + ic*nvars + 1
@@ -286,7 +331,7 @@ use ReactDiff
 
 !clock_t begin, end;
 !double time_spent;
-integer :: ndim, mx, my, mz, NG, nvars, nout
+integer :: ndim, mx, my, mz, NG, nvars, nout, i
 integer, allocatable :: xmap(:), ymap(:), zmap(:)
 real(dp), allocatable :: v(:)
 real(dp) :: dx, cdiff(3), vbnd(2), t0, t1, dtout
@@ -294,13 +339,13 @@ real(dp) :: DIFFCOEF = 1.0e-1		 ! coeff of diffusion
 
 !begin = clock();
 
-ndim = 2
-mx = 20
-my = 20
-mz = 20
+ndim = 3
+mx = 30
+my = 30
+mz = 30
 nvars = 2
-vbnd(1) = 0
-vbnd(2) = 0
+vbnd(1) = 1.0
+vbnd(2) = 1.0
 dx = (XMAX-XMIN)/mx  
 cdiff(1) = DIFFCOEF/(dx*dx)
 cdiff(2) = DIFFCOEF/(dx*dx)
@@ -309,11 +354,12 @@ cdiff(3) = DIFFCOEF/(dx*dx)
 t0 = 0
 t1 = 10
 dtout = t1
-nout = 10
+nout = 100
 call MakeMaps(ndim,mx,my,mz,NG,xmap,ymap,zmap)
 
 allocate(v(NG*nvars))
-call SetIC(ndim,mx,my,mz,NG,nvars,xmap,ymap,zmap,v)
+call SetIC(ndim,mx,my,mz,NG,nvars,xmap,ymap,zmap,vbnd,v)
+!write(*,'(10f7.3)') (v(2*i),i=1,NG/2)
 call Solve(ndim,mx,my,mz,NG,nvars,vbnd,cdiff,xmap,ymap,zmap,v,t0,t1,dtout,nout)
 
 !end = clock();
