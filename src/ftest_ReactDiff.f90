@@ -299,7 +299,7 @@ real(c_double) :: C(*), dfdC(*)
 integer(c_int), VALUE :: nvars
 integer(c_int) :: ic, jc, k
 
-!write(*,*) 'ReactJac!'
+write(*,*) 'ReactJac!'
 !dfdC[0][0] = K01*C[1];
 !dfdC[0][1] = K01*C[0];
 !dfdC[1][0] = -K01*C[1];
