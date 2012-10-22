@@ -1,3 +1,4 @@
+
 ! Main program
 !-----------------------------------------------------------------------------------------
 PROGRAM spheroid_main
@@ -65,6 +66,7 @@ write(nfrun,*) 'infile: ',infile
 write(nfrun,*) 'outfile: ',outfile
 call execute(ncpu,infile,inbuflen,outfile,outbuflen)
 !call cpu_time(t1)
+t1 = wtime()
 write(*,*) 'did execute: nsteps: ',nsteps
 do jstep = 1,Nsteps
 !	write(*,*) 'jstep: ',jstep
@@ -85,6 +87,7 @@ do jstep = 1,Nsteps
 	endif
 enddo
 !call cpu_time(t2)
-!write(*,*) 'time: ',t2-t1
+t2 = wtime()
+write(*,*) 'time: ',t2-t1
 end
 

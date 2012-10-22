@@ -17,11 +17,13 @@ integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
-real, parameter :: DELTA_T = 0.04	! sec
-real, parameter :: DELTA_X = 0.01	! mm
-integer, parameter :: MAX_CHEMO = 2
+real, parameter :: DELTA_T = 1	! sec  (D = 2.0e-6 => dt = 1, D = 2.0e-5 => dt = 0.1)
+real, parameter :: DELTA_X = 0.002	! cm = 20 um
+integer, parameter :: MAX_CHEMO = 3
 integer, parameter :: OXYGEN = 1
-integer, parameter :: TRACER = 2
+integer, parameter :: GLUCOSE = 2
+integer, parameter :: TRACER = 3
+logical, parameter :: use_ODE_diffusion = .true.
 !integer, parameter :: MAX_RECEPTOR = 1
 integer, parameter :: OUTSIDE_TAG = -99999
 real, parameter :: PI = 4.0*atan(1.0)
@@ -80,6 +82,17 @@ integer :: seed(2)
 !DEC$ ATTRIBUTES DLLEXPORT :: nsteps
 
 contains
+
+!-----------------------------------------------------------------------------------------
+! WTIME returns a reading of the wall clock time.
+!-----------------------------------------------------------------------------------------
+real(DP) function wtime
+!DEC$ ATTRIBUTES DLLEXPORT :: wtime
+  integer :: clock_max, clock_rate, clock_reading
+
+  call system_clock ( clock_reading, clock_rate, clock_max )
+  wtime = real(clock_reading,kind=DP)/clock_rate
+end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------

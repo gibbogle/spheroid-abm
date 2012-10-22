@@ -5,7 +5,7 @@ use global
 use chemokine
 use bdry_linked_list
 use boundary
-!use ode_diffuse
+use ode_diffuse
 implicit none
 save
 
@@ -19,7 +19,7 @@ contains
 ! Convert halflife in hours to a decay rate /sec
 !----------------------------------------------------------------------------------------
 real function DecayRate(halflife)
-real :: halflife
+real(REAL_KIND) :: halflife
 
 DecayRate = log(2.0)/(halflife*60*60)
 end function
@@ -33,20 +33,29 @@ chemo(OXYGEN)%name = 'Oxygen'
 chemo(OXYGEN)%used = .true.
 chemo(OXYGEN)%use_secretion = .false.
 chemo(OXYGEN)%bdry_rate = 0
-chemo(OXYGEN)%bdry_conc = 65
-chemo(OXYGEN)%diff_coef = 2.0e-3	! units = mm^2s^-1
+chemo(OXYGEN)%bdry_conc = 100
+chemo(OXYGEN)%diff_coef = 2.0e-5	! units = cm^2s^-1
 chemo(OXYGEN)%halflife = 0.01	! hours
+
+chemo(GLUCOSE)%name = 'Glucose'
+chemo(GLUCOSE)%used = .true.
+chemo(GLUCOSE)%use_secretion = .false.
+chemo(GLUCOSE)%bdry_rate = 0
+chemo(GLUCOSE)%bdry_conc = 50
+chemo(GLUCOSE)%diff_coef = 2.0e-6	! units = cm^2s^-1
+chemo(GLUCOSE)%halflife = 0.1	! hours
+
 chemo(TRACER)%name = 'Tracer'
-!chemo(TRACER)%used = .true.
-chemo(TRACER)%used = .false.
+chemo(TRACER)%used = .true.
 chemo(TRACER)%use_secretion = .false.
 chemo(TRACER)%bdry_rate = 0
-chemo(TRACER)%bdry_conc = 100
-chemo(TRACER)%diff_coef = 1.0	! units?
-chemo(TRACER)%halflife = 1.5	! hours
+chemo(TRACER)%bdry_conc = 200
+chemo(TRACER)%diff_coef = 2.0e-6	! units?
+chemo(TRACER)%halflife = 1.0	! hours
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
+	write(*,*) 'decay_rate: ',ichemo,chemo(ichemo)%decay_rate
 enddo
 call AllocateConcArrays
 end subroutine
@@ -163,7 +172,7 @@ real :: dtstep
 type(chemokine_type), pointer :: Cptr
 !type(Carray_type) :: Carray(MAX_CHEMO)
 integer :: ichemo, it, nt = 4
-real :: Kdiffusion(MAX_CHEMO), Kdecay(MAX_CHEMO), dt
+real :: Kdiffusion(MAX_CHEMO), Kdecay(MAX_CHEMO), dt, dCmax_par(0:20), dCmax
 integer :: z1, z2, n, kpar
 integer :: x, y, z
 real, allocatable :: C_par(:,:,:,:)
@@ -172,6 +181,7 @@ x = Centre(1)
 y = Centre(2)
 z = Centre(3)
 !write(*,*) 'UpdateFields: conc: ',chemo(OXYGEN)%conc(x,y,z)
+dCmax_par = 0
 dt = dtstep/nt
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
@@ -182,7 +192,7 @@ do ichemo = 1,MAX_CHEMO
 enddo
 
 do it = 1,nt
-	!$omp parallel do private(ichemo,z1,z2,n,C_par,dt)
+	!$omp parallel do private(ichemo,z1,z2,n,C_par,dt,dCmax)
 	do kpar = 0,Mnodes-1
 		if (Mnodes == 1) then
 			z1 = blobrange(3,1)
@@ -194,14 +204,18 @@ do it = 1,nt
 		n = z2 - z1 + 1
 		dt = dtstep/nt
 		allocate(C_par(MAX_CHEMO,NX,NY,n))
-		call par_evolve(Kdiffusion,Kdecay,C_par,z1,z2,dt,kpar)
+		call par_evolve(Kdiffusion,Kdecay,C_par,z1,z2,dt,dCmax,kpar)
 		do ichemo = 1,MAX_CHEMO
 			if (.not.chemo(ichemo)%used) cycle
 			chemo(ichemo)%conc(:,:,z1:z2) = C_par(ichemo,:,:,1:n)
 		enddo
 		deallocate(C_par)
+		dCmax_par(kpar) = dCmax
 	enddo
 enddo
+if (mod(istep,60) == 0) then
+	write(*,'(a,8f8.4)') 'dCmax: ',dCmax_par(0:Mnodes-1)
+endif
 !do ichemo = 1,MAX_CHEMO
 !	if (.not.chemo(ichemo)%used) cycle
 !	Cptr => chemo(ichemo)
@@ -213,16 +227,17 @@ end subroutine
 ! Updates concentrations through a timestep dt, solving the diffusion-decay eqtn by a 
 ! simple explicit method.  This assumes concentration boundary conditions.
 !----------------------------------------------------------------------------------------
-subroutine par_evolve(Kdiffusion,Kdecay,Ctemp,z1,z2,dt,kpar)
+subroutine par_evolve(Kdiffusion,Kdecay,Ctemp,z1,z2,dt,dCmax,kpar)
 integer :: z1, z2, kpar
 !real :: C(:,:,:)
 real :: Ctemp(:,:,:,:)
-real :: Kdiffusion(:), Kdecay(:), dt
+real :: Kdiffusion(:), Kdecay(:), dt, dCmax, Cnew
 real :: sum, dV, C0(MAX_CHEMO), dMdt(MAX_CHEMO), dCdt(MAX_CHEMO)
 integer :: x, y, z, zpar, xx, yy, zz, nb, k, indx(2), ichemo
 logical :: source_site
 
 !write(*,*) 'par_evolve: ',ichemo,kpar,z1,z2,dt
+dCmax = 0
 dV = DELTA_X**3
 do zpar = 1,z2-z1+1
 	z = zpar + z1-1
@@ -268,7 +283,11 @@ do zpar = 1,z2-z1+1
 				dMdt = dMdt + dCdt*dV
                 do ichemo = 1,MAX_CHEMO
 					if (.not.chemo(ichemo)%used) cycle
-					Ctemp(ichemo,x,y,zpar) = (C0(ichemo)*dV + dMdt(ichemo)*dt)/dV
+					Cnew = (C0(ichemo)*dV + dMdt(ichemo)*dt)/dV
+					Ctemp(ichemo,x,y,zpar) = Cnew
+					if (ichemo == 1) then
+						dCmax = max(dCmax,abs(Cnew-C0(ichemo)))
+					endif
 				enddo
 			endif
 		enddo
@@ -297,10 +316,10 @@ subroutine UpdateFields1(dtstep)
 real :: dtstep
 type(chemokine_type), pointer :: Cptr
 integer :: ichemo, it, nt = 4
-real :: Kdiffusion, Kdecay, dt
+real(REAL_KIND) :: Kdiffusion, Kdecay, dt
 integer :: z1, z2, n, kpar
 integer :: x, y, z
-real, allocatable :: C_par(:,:,:)
+real(REAL_KIND), allocatable :: C_par(:,:,:)
 
 x = Centre(1)
 y = Centre(2)
@@ -344,8 +363,8 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine par_evolve1(ichemo,C,Kdiffusion,Kdecay,Ctemp,z1,z2,dt,kpar)
 integer :: ichemo, z1, z2, kpar
-real :: C(:,:,:), Ctemp(:,:,:)
-real :: Kdiffusion, Kdecay, dt
+real(REAL_KIND) :: C(:,:,:), Ctemp(:,:,:)
+real (REAL_KIND) :: Kdiffusion, Kdecay, dt
 real :: C0, sum, dV, dMdt
 integer :: x, y, z, zpar, xx, yy, zz, nb, k, indx(2), i
 logical :: source_site
@@ -397,9 +416,9 @@ end subroutine
 !----------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------
 subroutine gradient(C,grad)
-real :: C(:,:,:), grad(:,:,:,:)
+real(REAL_KIND) :: C(:,:,:), grad(:,:,:,:)
 integer :: x, y, z, xx, yy, zz, x1, x2, y1, y2, z1, z2, i, k, indx(2)
-real :: g(3)
+real(REAL_KIND) :: g(3)
 logical :: missed
 real, parameter :: MISSING_VAL = 1.0e10
 

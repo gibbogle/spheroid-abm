@@ -94,6 +94,11 @@ call make_split(.true.)
 !
 !call checkcellcount(ok)
 
+if (use_ODE_diffusion) then
+	call SetupODEDiffusion
+	call TestODEDiffusion
+	stop
+endif
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)

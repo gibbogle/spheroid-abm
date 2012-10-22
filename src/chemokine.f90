@@ -33,13 +33,14 @@ type chemokine_type
 end type
 type(chemokine_type), target :: chemo(MAX_CHEMO)
 
-!type ODEdiff_type
-!	integer :: ichemo
-!	integer :: nvars
-!	integer, allocatable :: ivar(:,:,:)
-!	integer, allocatable :: varsite(:,:)
-!	integer, allocatable :: icoef(:,:)
-!end type
-!type(ODEdiff_type) :: ODEdiff
+type ODEdiff_type
+	integer :: ichemo
+	integer :: nvars
+	integer, allocatable :: ivar(:,:,:)
+	integer, allocatable :: varsite(:,:)
+	integer, allocatable :: icoef(:,:)
+!	integer, allocatable :: ncoef(:)
+end type
+type(ODEdiff_type) :: ODEdiff
 
 end module

@@ -1,4 +1,5 @@
 ! To test cvReactDiff_bnd
+! Units cm, s
 
 module ReactDiff
 use iso_c_binding
@@ -48,7 +49,7 @@ end interface
 !	end subroutine ReactJac
 !end interface
 
-
+integer :: nJac = 0, nReact = 0
 
 contains
 
@@ -284,6 +285,7 @@ use, intrinsic :: iso_c_binding
 real(c_double) :: C(*), dCdt(*)
 
 !write(*,*) 'React'
+nReact = nReact + 1
 dCdt(1) = -K01*C(1)*C(2)
 dCdt(2) = -K01*C(1)*C(2)
 end subroutine
@@ -299,7 +301,10 @@ real(c_double) :: C(*), dfdC(*)
 integer(c_int), VALUE :: nvars
 integer(c_int) :: ic, jc, k
 
-write(*,*) 'ReactJac!'
+nJac = nJac + 1
+if (mod(nJac,100000) == 0) then
+	write(*,*) 'ReactJac: ',nReact,nJac
+endif
 !dfdC[0][0] = K01*C[1];
 !dfdC[0][1] = K01*C[0];
 !dfdC[1][0] = -K01*C[1];
@@ -335,18 +340,20 @@ integer :: ndim, mx, my, mz, NG, nvars, nout, i
 integer, allocatable :: xmap(:), ymap(:), zmap(:)
 real(dp), allocatable :: v(:)
 real(dp) :: dx, cdiff(3), vbnd(2), t0, t1, dtout
-real(dp) :: DIFFCOEF = 1.0e-1		 ! coeff of diffusion
+real(dp) :: DIFFCOEF = 1.0e-6		 ! coeff of diffusion of O2
 
 !begin = clock();
 
 ndim = 3
-mx = 30
-my = 30
-mz = 30
+mx = 50
+my = 50
+mz = 50
 nvars = 2
 vbnd(1) = 1.0
 vbnd(2) = 1.0
-dx = (XMAX-XMIN)/mx  
+!dx = (XMAX-XMIN)/mx  
+dx = 2.0e-3		! 20 um
+
 cdiff(1) = DIFFCOEF/(dx*dx)
 cdiff(2) = DIFFCOEF/(dx*dx)
 cdiff(3) = DIFFCOEF/(dx*dx)

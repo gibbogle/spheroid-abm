@@ -76,9 +76,11 @@
 #include <sundials/sundials_types.h> /* definition of type realtype */
 #include <sundials/sundials_math.h>  /* definition of ABS and EXP */
 
+#define USE_JACK FALSE				/* this has virtually no effect on speed */
+
 #define TWO  RCONST(2.0)
-#define RTOL    RCONST(1.0e-5)    /* scalar relative tolerance */
-#define FLOOR   RCONST(100.0)     /* value of C1 or C2 at which tolerances */
+#define RTOL    RCONST(1.0e-5)    /* scalar relative tolerance (1.0e-5)*/
+#define FLOOR   RCONST(1.0)     /* value of C1 or C2 at which tolerances (100.0)*/
                                   /* change from relative to absolute      */
 #define ATOL    (RTOL*FLOOR)      /* scalar absolute tolerance */
 
@@ -108,11 +110,12 @@ typedef struct {
 	int NEQ;
 	int lbw, ubw;
 	realtype *vbnd;
-	realtype xdcoef, ydcoef, zdcoef;	//, hacoef;
+	realtype xdcoef, ydcoef, zdcoef;	//, hacoef;		// NOTE: currently same diff. coeff. for each constituent!
 	int *gmap;	/* kg = gmap[y + x*(MY+2)] x=0,..,MX+1; y=0,..,MY+1 */
 	int *xmap;	/* x = xmap[k] */
 	int *ymap;	/* y = ymap[k] */
 	int *zmap;	/* z = zmap[k] */
+	int *jack;
 //	realtype *C;
 //	realtype *dCdt;
 //	realtype *dfdC;
@@ -145,6 +148,7 @@ static int Jac(long int N, long int mu, long int ml,
 extern void react(realtype *C, realtype *dCdt);
 extern void reactjac(realtype C[], realtype dfdC[], int nvars); 
 
+int n_f = 0;
 N_Vector u_save;
 
 //----------------------------------------------------------------------------
@@ -170,11 +174,13 @@ int solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, r
 	void *cvode_mem;
 	int iout, flag;
 	long int nst;
+	clock_t begin, end;
+//	double time_spent;
 
 	u = NULL;
 	data = NULL;
 	cvode_mem = NULL;
-	reltol = 0;		/* Set the tolerances */
+	reltol = RTOL;		/* Set the tolerances */
 	abstol = ATOL;
 
 	data = (UserData) malloc(sizeof *data);  /* Allocate data memory */
@@ -223,7 +229,8 @@ int solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, r
 	printf("CVodeCreate\n");
 	/* Call CVodeCreate to create the solver memory and specify the 
 	* Backward Differentiation Formula and the use of a Newton iteration */
-	cvode_mem = CVodeCreate(CV_BDF, CV_NEWTON);
+//	cvode_mem = CVodeCreate(CV_BDF, CV_NEWTON);
+	cvode_mem = CVodeCreate(CV_ADAMS, CV_NEWTON);
 	if(check_flag((void *)cvode_mem, "CVodeCreate", 0)) return(1);
 
 	printf("CVodeInit\n");
@@ -259,6 +266,7 @@ int solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, r
 	printf("Start solving\n");
 	umax = N_VMaxNorm(u);
 	PrintHeader(t0, reltol, abstol, umax, data);
+	begin = clock();
 	for (iout=1, tout=t1; iout <= nout; iout++, tout += dtout) {
 		flag = CVode(cvode_mem, tout, u, &t, CV_NORMAL);
 		if(check_flag(&flag, "CVode", 1)) break;
@@ -267,6 +275,10 @@ int solve(int ndim, int mx, int my, int mz, int NG, int nvars, realtype *vbnd, r
 		check_flag(&flag, "CVodeGetNumSteps", 1);
 		PrintOutput(t, umax, nst);
 	}
+
+//    end = clock();
+//	time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+//	printf("Solve time: %6.1f\n",time_spent);
 
 	ShowSol(u);
 
@@ -330,12 +342,15 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
   realtype xdc, ydc, zdc, xdiff, ydiff, zdiff;	//, horac, hadv;
   realtype *C, *dCdt;
   realtype *udata, *dudata;
+  realtype dumax;
   int NVARS;
   int i, j, k;
-  int kg, ic, ke, kup, kdn, klt, krt, kbk, kfd;
+  int kg, ic, ke, kup, kdn, klt, krt, kbk, kfd, kjack;
   int  kgup, kgdn, kglt, kgrt, kgbk, kgfd;
   UserData data;
 
+  n_f++;
+  dumax = 0;
   //printf("f\n");
   udata = NV_DATA_S(u);
   dudata = NV_DATA_S(udot);
@@ -405,16 +420,25 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
 	  }
   } else if (data->ndim == 3) {
 	  for (kg=0; kg<data->NG; kg++) {
- 		  i = data->xmap[kg];
-		  j = data->ymap[kg];
-		  k = data->zmap[kg];
-		  kgdn = GMAP3(i,j-1,k,data);
-		  kgup = GMAP3(i,j+1,k,data);
-		  kglt = GMAP3(i-1,j,k,data);
-		  kgrt = GMAP3(i+1,j,k,data);
-		  kgbk = GMAP3(i,j,k-1,data);
-		  kgfd = GMAP3(i,j,k+1,data);
-
+		  if (USE_JACK) {
+			  kjack = 6*kg;
+			  kgdn = data->jack[kjack++];
+			  kgup = data->jack[kjack++];
+			  kglt = data->jack[kjack++];
+			  kgrt = data->jack[kjack++];
+			  kgbk = data->jack[kjack++];
+			  kgfd = data->jack[kjack++];
+		  } else {
+ 			  i = data->xmap[kg];
+			  j = data->ymap[kg];
+			  k = data->zmap[kg];
+			  kgdn = GMAP3(i,j-1,k,data);
+			  kgup = GMAP3(i,j+1,k,data);
+			  kglt = GMAP3(i-1,j,k,data);
+			  kgrt = GMAP3(i+1,j,k,data);
+			  kgbk = GMAP3(i,j,k-1,data);
+			  kgfd = GMAP3(i,j,k+1,data);
+		  }
 		  for (ic=0; ic<NVARS; ic++) {
 			  ke = kg*NVARS + ic;
 			  C[ic] = udata[ke];
@@ -467,11 +491,17 @@ static int f(realtype t, N_Vector u,N_Vector udot, void *user_data)
 			  zdiff = zdc*(ubk - TWO*uij + ufd);
 //			  hadv = horac*(urt - ult);
 			  dudata[ke] = xdiff + ydiff + zdiff + dCdt[ic];	// + hadv;
+			  dumax = MAX(dumax,fabs(dudata[ke]));
 		  }
 	  }
   }
   free(C);
   free(dCdt);
+	if (n_f%100 == 0) {
+		kg = data->NG/2;
+		ke = NVARS*kg;
+		printf("At %d %d %d  dudata: %12.4e  dumax: %12.4e\n",data->xmap[kg],data->ymap[kg],data->zmap[kg],dudata[ke],dumax);
+	}
 //  printf("did f\n");
   return(0);
 }
@@ -490,7 +520,7 @@ static int Jac(long int N, long int mu, long int ml,
 	int NVARS;
 	int i, j, k, kg, ke, ic, kje, jc;
 	int kup, kdn, klt, krt, kbk, kfd;
-	int  kgup, kgdn, kglt, kgrt, kgbk, kgfd;
+	int  kgup, kgdn, kglt, kgrt, kgbk, kgfd, kjack;
 	realtype *kthCol, xdc, ydc, zdc;	//, horac;
 	realtype *udata;
 	realtype *C, *dfdC;
@@ -584,16 +614,25 @@ static int Jac(long int N, long int mu, long int ml,
 	} else if (data->ndim == 3) {
 	  
 		for (kg=0; kg<data->NG; kg++) {
-			i = data->xmap[kg];
-			j = data->ymap[kg];
-			k = data->zmap[kg];
-
-			kgdn = GMAP3(i,j-1,k,data);
-			kgup = GMAP3(i,j+1,k,data);
-			kglt = GMAP3(i-1,j,k,data);
-			kgrt = GMAP3(i+1,j,k,data);
-			kgbk = GMAP3(i,j,k-1,data);
-			kgfd = GMAP3(i,j,k+1,data);
+			if (USE_JACK) {
+				kjack = 6*kg;
+				kgdn = data->jack[kjack++];
+				kgup = data->jack[kjack++];
+				kglt = data->jack[kjack++];
+				kgrt = data->jack[kjack++];
+				kgbk = data->jack[kjack++];
+				kgfd = data->jack[kjack++];
+			} else {
+				i = data->xmap[kg];
+				j = data->ymap[kg];
+				k = data->zmap[kg];
+				kgdn = GMAP3(i,j-1,k,data);
+				kgup = GMAP3(i,j+1,k,data);
+				kglt = GMAP3(i-1,j,k,data);
+				kgrt = GMAP3(i+1,j,k,data);
+				kgbk = GMAP3(i,j,k-1,data);
+				kgfd = GMAP3(i,j,k+1,data);
+			}
 
 			for (ic=0; ic<NVARS; ic++) {
 				ke = kg*NVARS + ic;
@@ -666,7 +705,7 @@ static int Jac(long int N, long int mu, long int ml,
 static int SetupUserData(UserData data)
 {
 	int x, y, z, i, j, k, kg, n;
-	int kup, kdn, klt, krt, kbk, kfd;
+	int kup, kdn, klt, krt, kbk, kfd, kjack;
 	int lbw, ubw;
 
 	printf("SetupUserData\n");
@@ -732,7 +771,10 @@ static int SetupUserData(UserData data)
 			k = z + y*(data->MZ+2) + x*(data->MY+2)*(data->MZ+2);
 			data->gmap[k] = kg;
 		} 		
-
+		if (USE_JACK) {
+			data->jack = (int *)malloc(6*data->NG*sizeof(int));
+		}
+		kjack = 0;
 		for (kg=0; kg<data->NG; kg++) {
 			i = data->xmap[kg];
 			j = data->ymap[kg];
@@ -766,6 +808,14 @@ static int SetupUserData(UserData data)
 			if (kfd > 0) {
 				ubw = MAX(kg-kfd, ubw);
 				lbw = MAX(kfd-kg, lbw);
+			}
+			if (USE_JACK) {
+				data->jack[kjack++] = kdn;
+				data->jack[kjack++] = kup;
+				data->jack[kjack++] = klt;
+				data->jack[kjack++] = krt;
+				data->jack[kjack++] = kbk;
+				data->jack[kjack++] = kfd;
 			}
 		}
 		printf("NG: %d  lbw, ubw: %d %d\n",data->NG,lbw,ubw);	
