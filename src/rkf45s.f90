@@ -1,4 +1,4 @@
-module rkf45
+module rkf45s
 
 implicit none
 
