@@ -10,7 +10,7 @@ implicit none
 
 !INTEGER,  PARAMETER  ::  DP=SELECTED_REAL_KIND( 12, 60 )
 INTEGER,  PARAMETER  ::  SP = kind(1.0), DP = kind(1.0d0)
-integer, parameter :: REAL_KIND = SP
+integer, parameter :: REAL_KIND = DP
 integer, parameter :: TCP_PORT_0 = 5000		! main communication port (logging) 
 integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
 

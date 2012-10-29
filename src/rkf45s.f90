@@ -5,14 +5,16 @@ implicit none
 private
 
 integer, parameter :: MAX_CASE = 4
+INTEGER,  PARAMETER  ::  SP = kind(1.0), DP = kind(1.0d0)
+integer, parameter :: REAL_KIND = DP
 
-real(kind=4) :: abserr_save_g(MAX_CASE) = (/-1,-1,-1,01/)
-real(kind=4) :: relerr_save_g(MAX_CASE) = (/-1,-1,-1,-1/)
+real(REAL_KIND) :: abserr_save_g(MAX_CASE) = (/-1,-1,-1,01/)
+real(REAL_KIND) :: relerr_save_g(MAX_CASE) = (/-1,-1,-1,-1/)
 integer      :: flag_save_g(MAX_CASE) = (/-1000,-1000,-1000,-1000/)
 integer      :: init_g(MAX_CASE) = (/-1000,-1000,-1000,-1000/)
 integer      :: kflag_g(MAX_CASE) = (/-1000,-1000,-1000,-1000/)
 integer      :: kop_g(MAX_CASE) = (/-1,-1,-1,-1/)
-real(kind=4) :: h_g(MAX_CASE) = (/-1,-1,-1,-1/)
+real(REAL_KIND) :: h_g(MAX_CASE) = (/-1,-1,-1,-1/)
 
 public :: r4_rkf45, r8_rkf45
 
@@ -377,6 +379,8 @@ subroutine r4_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
 ! Replace the commented out SAVEd declarations
   real(kind=4) :: abserr_save, relerr_save, h
   integer :: flag_save, init, kflag, kop
+  
+!  write(*,*) relerr, abserr, flag, icase
 
   if (icase > MAX_CASE) then
 	  write(*,*) 'ERROR: r4_rkf45: icase > MAX_CASE'
@@ -390,6 +394,8 @@ subroutine r4_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
 	kflag = kflag_g(icase)
 	kop = kop_g(icase)
 	h = h_g(icase)
+	
+	write(*,*) 'r4_rkf45: h: ',h
 !
 !  Check the input parameters.
 !
@@ -578,6 +584,7 @@ subroutine r4_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
         ypk = abs ( yp(k) )
         if ( tol < ypk * h**5 ) then
           h = ( tol / ypk )**0.2E+00
+!          write(*,*) 'Reset h: tol/ypk: ',h
           h_g(icase) = h
         end if
       end if
@@ -589,6 +596,7 @@ subroutine r4_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
     end if
 
     h = max ( h, 26.0E+00 * eps * max ( abs ( t ), abs ( dt ) ) )
+!    write(*,*) 'Reset h: 26*eps*dt: ',h
     h_g(icase) = h
     flag_save = sign ( 2, flag )
     flag_save_g(icase) = flag_save
@@ -711,7 +719,9 @@ subroutine r4_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
 !
 !  Advance an approximate solution over one step of length H.
 !
+!	if (icase == 1) then
 !	  write(*,'(a,i2,2f8.4)') 'call r4_fehl: h: ',icase,t,h
+!	endif
       call r4_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, f1, icase )
       nfe = nfe + 5
 !
@@ -763,13 +773,14 @@ subroutine r4_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
       end if
 
       h = s * h
+!      write(*,*) 'Reset h: s*h: ',s,h
       h_g(icase) = h
 
       if ( abs ( h ) < hmin ) then
         flag = 6
         kflag = 6
         kflag_g(icase) = kflag
-        write(*,*) 'r4_rkf: ',esttol,s,h,hmin
+!        write(*,*) 'r4_rkf: ',esttol,s,h,hmin
         return
       end if
 
@@ -790,13 +801,14 @@ subroutine r4_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
       s = 0.9E+00 / esttol**0.2E+00
     else
       s = 5.0E+00
-    end if
+    end if  
 
     if ( hfaild ) then
       s = min ( s, 1.0E+00 )
     end if
 
     h = sign ( max ( s * abs ( h ), hmin ), h )
+!    write(*,*) 'Reset h: max(s*h,hmin): ',s,h,hmin
     h_g(icase) = h
 !
 !  End of core integrator
@@ -822,7 +834,7 @@ subroutine r4_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
   return
 end subroutine
 
-subroutine r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, s )
+subroutine r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, s, icase )
 
 !*****************************************************************************80
 !
@@ -898,7 +910,7 @@ subroutine r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, s )
 !
   implicit none
 
-  integer neqn
+  integer neqn, icase
 
   real ( kind = 8 ) ch
   external f
@@ -917,13 +929,13 @@ subroutine r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, s )
 
   f5(1:neqn) = y(1:neqn) + ch * yp(1:neqn)
 
-  call f ( t + ch, f5, f1 )
+  call f ( t + ch, f5, f1, icase )
 
   ch = 3.0D+00 * h / 32.0D+00
 
   f5(1:neqn) = y(1:neqn) + ch * ( yp(1:neqn) + 3.0D+00 * f1(1:neqn) )
 
-  call f ( t + 3.0D+00 * h / 8.0D+00, f5, f2 )
+  call f ( t + 3.0D+00 * h / 8.0D+00, f5, f2, icase )
 
   ch = h / 2197.0D+00
 
@@ -932,7 +944,7 @@ subroutine r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, s )
   + ( 7296.0D+00 * f2(1:neqn) - 7200.0D+00 * f1(1:neqn) ) &
   )
 
-  call f ( t + 12.0D+00 * h / 13.0D+00, f5, f3 )
+  call f ( t + 12.0D+00 * h / 13.0D+00, f5, f3, icase )
 
   ch = h / 4104.0D+00
 
@@ -942,7 +954,7 @@ subroutine r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, s )
   + ( 29440.0D+00 * f2(1:neqn) - 32832.0D+00 * f1(1:neqn) ) &
   )
 
-  call f ( t + h, f5, f4 )
+  call f ( t + h, f5, f4, icase )
 
   ch = h / 20520.0D+00
 
@@ -954,7 +966,7 @@ subroutine r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, s )
   + ( 41040.0D+00 * f1(1:neqn) - 28352.0D+00 * f2(1:neqn) ) &
   )
 
-  call f ( t + h / 2.0D+00, f1, f5 )
+  call f ( t + h / 2.0D+00, f1, f5, icase )
 !
 !  Ready to compute the approximate solution at T+H.
 !
@@ -970,7 +982,7 @@ subroutine r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, s )
   return
 end subroutine
 
-subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
+subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag, icase )
 
 !*****************************************************************************80
 !
@@ -1133,10 +1145,10 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
 !
   implicit none
 
-  integer neqn
+  integer neqn, icase
 
   real ( kind = 8 ) abserr
-  real ( kind = 8 ), save :: abserr_save = -1.0D+00
+!  real ( kind = 8 ), save :: abserr_save = -1.0D+00
   real ( kind = 8 ) ae
   real ( kind = 8 ) dt
   real ( kind = 8 ) ee
@@ -1157,22 +1169,23 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
   real ( kind = 8 ), allocatable :: f4(:)
   real ( kind = 8 ), allocatable :: f5(:)
 
-  real ( kind = 8 ), save :: h = -1.0D+00
+!  real ( kind = 8 ), save :: h = -1.0D+00
   logical hfaild
   real ( kind = 8 ) hmin
   integer flag
-  integer, save :: flag_save = -1000
-  integer, save :: init = -1000
+!  integer, save :: flag_save = -1000
+!  integer, save :: init = -1000
   integer k
-  integer, save :: kflag = -1000
-  integer, save :: kop = -1
+!  integer, save :: kflag = -1000
+!  integer, save :: kop = -1
   integer, parameter :: maxnfe = 3000
   integer mflag
-  integer, save :: nfe = -1
+!  integer, save :: nfe = -1
+  integer :: nfe = -1
   logical output
   real ( kind = 8 ) relerr
   real ( kind = 8 ) relerr_min
-  real ( kind = 8 ), save :: relerr_save = -1.0D+00
+!  real ( kind = 8 ), save :: relerr_save = -1.0D+00
   real ( kind = 8 ), parameter :: remin = 1.0E-12
   real ( kind = 8 ) s
   real ( kind = 8 ) scale
@@ -1183,6 +1196,22 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
   real ( kind = 8 ) y(neqn)
   real ( kind = 8 ) yp(neqn)
   real ( kind = 8 ) ypk
+! Replace the commented out SAVEd declarations
+  real(kind=8) :: abserr_save, relerr_save, h
+  integer :: flag_save, init, kflag, kop
+
+  if (icase > MAX_CASE) then
+	  write(*,*) 'ERROR: r4_rkf45: icase > MAX_CASE'
+	  stop
+  endif
+! Initialize SAVEd variables
+	abserr_save = abserr_save_g(icase)
+	relerr_save = relerr_save_g(icase)
+	flag_save = flag_save_g(icase)
+	init = init_g(icase)
+	kflag = kflag_g(icase)
+	kop = kop_g(icase)
+	h = h_g(icase)
 
   allocate(f1(neqn))
   allocate(f2(neqn))
@@ -1296,12 +1325,20 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
 !  Set the continuation flag KFLAG for subsequent input checking.
 !
   flag_save = flag
+  flag_save_g(icase) = flag_save
   kflag = 0
+  kflag_g(icase) = kflag
 !
 !  Save RELERR and ABSERR for checking input on subsequent calls.
 !
   relerr_save = relerr
+  relerr_save_g(icase) = relerr_save
   abserr_save = abserr
+  abserr_save_g(icase) = abserr_save
+!
+!Gib doesn't like the way nfe is accumulated
+!
+  nfe = 0
 !
 !  Restrict the relative error tolerance to be at least
 !
@@ -1318,6 +1355,7 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
     relerr = relerr_min
     flag = 3
     kflag = 3
+    kflag_g(icase) = kflag
     return
   end if
 
@@ -1334,8 +1372,10 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
   if ( mflag == 1 ) then
 
     init = 0
+    init_g(icase) = init
     kop = 0
-    call f ( t, y, yp )
+    kop_g(icase) = kop
+    call f ( t, y, yp, icase )
     nfe = 1
 
     if ( t == tout ) then
@@ -1348,7 +1388,9 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
   if ( init == 0 ) then
 
     init = 1
+    init_g(icase) = init
     h = abs ( dt )
+    h_g(icase) = h
     toln = 0.0D+00
 
     do k = 1, neqn
@@ -1358,33 +1400,40 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
         ypk = abs ( yp(k) )
         if ( tol < ypk * h**5 ) then
           h = ( tol / ypk )**0.2D+00
+          h_g(icase) = h
         end if
       end if
     end do
 
     if ( toln <= 0.0D+00 ) then
       h = 0.0D+00
+      h_g(icase) = h
     end if
 
     h = max ( h, 26.0D+00 * eps * max ( abs ( t ), abs ( dt ) ) )
+    h_g(icase) = h
     flag_save = sign ( 2, flag )
+    flag_save_g(icase) = flag_save
 
   end if
 !
 !  Set the stepsize for integration in the direction from T to TOUT.
 !
   h = sign ( h, dt )
+  h_g(icase) = h
 !
 !  Test to see if too may output points are being requested.
 !
   if ( 2.0D+00 * abs ( dt ) <= abs ( h ) ) then
     kop = kop + 1
+    kop_g(icase) = kop
   end if
 !
 !  Unnecessary frequency of output.
 !
   if ( kop == 100 ) then
     kop = 0
+    kop_g(icase) = kop
     flag = 7
     return
   end if
@@ -1394,7 +1443,7 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
   if ( abs ( dt ) <= 26.0D+00 * eps * abs ( t ) ) then
     t = tout
     y(1:neqn) = y(1:neqn) + dt * yp(1:neqn)
-    call f ( t, y, yp )
+    call f ( t, y, yp, icase )
     nfe = nfe + 1
     flag = 2
     return
@@ -1439,6 +1488,7 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
       else
         h = 0.5D+00 * dt
       end if
+      h_g(icase) = h
 
     end if
 !
@@ -1476,12 +1526,13 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
       if ( maxnfe < nfe ) then
         flag = 4
         kflag = 4
-        return
+        kflag_g(icase) = kflag
+       return
       end if
 !
 !  Advance an approximate solution over one step of length H.
 !
-      call r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, f1 )
+      call r8_fehl ( f, neqn, y, t, h, yp, f1, f2, f3, f4, f5, f1, icase )
       nfe = nfe + 5
 !
 !  Compute and test allowable tolerances versus local error estimates
@@ -1530,10 +1581,12 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
       end if
 
       h = s * h
+      h_g(icase) = h
 
       if ( abs ( h ) < hmin ) then
         flag = 6
         kflag = 6
+        kflag_g(icase) = kflag
         return
       end if
 
@@ -1544,7 +1597,7 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
 !
     t = t + h
     y(1:neqn) = f1(1:neqn)
-    call f ( t, y, yp )
+    call f ( t, y, yp, icase )
     nfe = nfe + 1
 !
 !  Choose the next stepsize.  The increase is limited to a factor of 5.
@@ -1561,6 +1614,7 @@ subroutine r8_rkf45 ( f, neqn, y, yp, t, tout, relerr, abserr, flag )
     end if
 
     h = sign ( max ( s * abs ( h ), hmin ), h )
+    h_g(icase) = h
 !
 !  End of core integrator
 !

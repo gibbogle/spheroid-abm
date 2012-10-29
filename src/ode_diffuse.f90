@@ -4,18 +4,104 @@
 ! The list needs to be updated when the boundary changes, or when FDCs move and/or the number
 ! changes.
 
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+double precision function spcrad(neqn,t,y)
+use global
+!DEC$ ATTRIBUTES DLLEXPORT :: spcrad
+integer :: neqn
+double precision :: t, y(neqn)
+!spcrad = 4d0*((nx+1)**2 + (ny+1)**2 + (nz+1)**2)
+!spcrad = 40*BLOB_RADIUS**2
+spcrad = 4*BLOB_RADIUS
+!write(*,*) 'spcrad: ',spcrad
+end function
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
 module ode_diffuse
 
 use chemokine
 use rkf45s
+use rksuite_90
+use rksuite_90_prec, only:wp
+use rkc_90
 
 implicit none
 
+integer, parameter :: MAX_VARS = 50000
 real(REAL_KIND), parameter :: BASE_CHEMOKINE_SECRETION = 0.012
+real(REAL_KIND), parameter :: fluid_fraction = 0.5
+real(REAL_KIND), parameter :: Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
+real(REAL_KIND), parameter :: Tmax = 10
+
+integer, parameter :: RKF45_SOLVER = 1
+integer, parameter :: RKSUITE_SOLVER = 2
+integer, parameter :: RKC_SOLVER = 3
+real(REAL_KIND), allocatable :: allstate(:,:), allstatep(:,:)
 
 integer :: ivdbug
 
+!public :: spcrad
+
 contains
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+function f_deriv(t,v)
+use rksuite_90_prec, only:wp
+real(kind=wp), intent(in) :: t
+real(kind=wp), dimension(:), intent(in) :: v
+real(kind=wp), dimension(size(v,1)) :: f_deriv   
+
+integer :: icase
+integer :: i, k, kv, n, ichemo
+real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, dmax
+logical :: bnd, dbug
+
+!ichemo = icase
+ichemo = 1
+DX2 = DELTA_X*DELTA_X
+decay_rate = chemo(ichemo)%decay_rate
+dc1 = chemo(ichemo)%diff_coef/DX2
+dc6 = 6*dc1 + decay_rate
+cbnd = chemo(ichemo)%bdry_conc
+n = ODEdiff%nvars
+!if (t < 1.0) write(*,*) icase,t
+dmax = 0
+do i = 1,n
+	C = allstate(i,:)
+	C(ichemo) = v(i)
+	dCsum = 0
+	do k = 1,7
+		kv = ODEdiff%icoef(i,k)
+!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
+!			bnd = .false.
+!		else								! boundary
+!			bnd = .true.
+!		endif
+		if (k == 1) then
+			dCdiff = -dc6
+		else
+			dCdiff = dc1
+		endif
+		if (kv == 0) then
+			val = cbnd
+		else
+			val = v(kv)
+		endif
+		dCsum = dCsum + dCdiff*val
+	enddo
+	dCreact = 0
+	call react(ichemo,i,C,dCreact)
+!	if (i == 6822) then
+!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
+!	endif
+	f_deriv(i) = dCsum + dCreact
+!	dmax = max(dmax,f_deriv(i))
+enddo
+end function
 
 !----------------------------------------------------------------------------------
 ! Solve for a test case with solute flux into the gridcells with x = 1.
@@ -54,11 +140,14 @@ contains
 ! In other words, the second derivative can be approximated by the second derivative
 ! at the neighbouring point (x+1,y,z), but this requires knowledge of concentration
 ! at more points.
+!
+! Note that now %coef(:,:) is not used.  Only %icoef(:,:) is needed.
 !----------------------------------------------------------------------------------
-subroutine SetupODEDiffusion
+subroutine SetupODEDiff
 integer :: x, y, z, i, site(3), ifdc, ichemo, k, nc
-real(REAL_KIND) :: DX, DX2, c(MAX_CHEMO,7)
+!real(REAL_KIND) :: DX, DX2, c(MAX_CHEMO,7)
 real(REAL_KIND) :: secretion
+integer :: ierr
 logical :: left, right
 
 call logger('Set diffusion parameters')
@@ -66,10 +155,13 @@ if (.not.allocated(ODEdiff%ivar)) then
 	allocate(ODEdiff%ivar(NX,NY,NZ))
 endif
 if (.not.allocated(ODEdiff%varsite)) then
-	allocate(ODEdiff%varsite(NX*NY*NZ,3))
+	allocate(ODEdiff%varsite(MAX_VARS,3))
 endif
-DX = 1.0
-DX2 = DX*DX
+if (.not.allocated(ODEdiff%icoef)) then
+	allocate(ODEdiff%icoef(MAX_VARS,7))
+endif
+!DX = 1.0
+!DX2 = DX*DX
 ODEdiff%ivar = 0
 i = 0
 do x = 1,NX
@@ -87,112 +179,127 @@ ODEdiff%nvars = i
 
 if (.not.use_ODE_diffusion) return
 
-if (.not.allocated(ODEdiff%icoef)) then
-	allocate(ODEdiff%icoef(ODEdiff%nvars,7))
-endif
-do ichemo = 1,MAX_CHEMO
-	if (.not.chemo(ichemo)%used) cycle
-	if (allocated(chemo(ichemo)%coef)) deallocate(chemo(ichemo)%coef)
-	allocate(chemo(ichemo)%coef(ODEdiff%nvars,7))
-enddo
+!if (allocated(ODEdiff%icoef)) then
+!	deallocate(ODEdiff%icoef)
+!endif
+!allocate(ODEdiff%icoef(ODEdiff%nvars,7))
+!do ichemo = 1,MAX_CHEMO
+!	if (.not.chemo(ichemo)%used) cycle
+!	if (allocated(chemo(ichemo)%coef)) deallocate(chemo(ichemo)%coef)
+!	allocate(chemo(ichemo)%coef(ODEdiff%nvars,7))
+!enddo
 
+ierr = 0
 do i = 1,ODEdiff%nvars
-	c = 0
-	nc = 0
+!	c = 0
+!	nc = 0
 	site = ODEdiff%varsite(i,:)
 	x = site(1)
 	y = site(2)
 	z = site(3)
-	do ichemo = 1,MAX_CHEMO
-		c(ichemo,1) = -chemo(ichemo)%decay_rate
-	enddo
+!	do ichemo = 1,MAX_CHEMO
+!		c(ichemo,1) = -chemo(ichemo)%decay_rate
+!	enddo
+	ODEdiff%icoef(i,:) = 0
 	ODEdiff%icoef(i,1) = i
 	
 	left = .true.
 	right = .true.
 	if (x==1) then
-		left = .false.
+!		left = .false.
+		ierr = 1
+		exit
 	elseif (ODEdiff%ivar(x-1,y,z) == 0) then
 		left = .false.
 	endif
 	if (x==NX) then 
-		right = .false.
+!		right = .false.
+		ierr = 2
+		exit
 	elseif (ODEdiff%ivar(x+1,y,z) == 0) then
 		right = .false.
 	endif
 	if (left) then
-		nc = nc + 1
+!		nc = nc + 1
 		ODEdiff%icoef(i,2) = ODEdiff%ivar(x-1,y,z)
-		do ichemo = 1,MAX_CHEMO
-			c(ichemo,2) = chemo(ichemo)%diff_coef/DX2
-		enddo
+!		do ichemo = 1,MAX_CHEMO
+!			c(ichemo,2) = chemo(ichemo)%diff_coef/DX2
+!		enddo
 	endif
 	if (right) then
-		nc = nc + 1
+!		nc = nc + 1
 		ODEdiff%icoef(i,3) = ODEdiff%ivar(x+1,y,z)
-		do ichemo = 1,MAX_CHEMO
-			c(ichemo,3) = chemo(ichemo)%diff_coef/DX2
-		enddo
+!		do ichemo = 1,MAX_CHEMO
+!			c(ichemo,3) = chemo(ichemo)%diff_coef/DX2
+!		enddo
 	endif
 	left = .true.
 	right = .true.
 	if (y==1) then
-		left = .false.
+!		left = .false.
+		ierr = 3
+		exit
 	elseif (ODEdiff%ivar(x,y-1,z) == 0) then
 		left = .false.
 	endif
 	if (y==NY) then 
-		right = .false.
+!		right = .false.
+		ierr = 4
+		exit
 	elseif (ODEdiff%ivar(x,y+1,z) == 0) then
 		right = .false.
 	endif
 	if (left) then
-		nc = nc + 1
+!		nc = nc + 1
 		ODEdiff%icoef(i,4) = ODEdiff%ivar(x,y-1,z)
-		do ichemo = 1,MAX_CHEMO
-			c(ichemo,4) = chemo(ichemo)%diff_coef/DX2
-		enddo
+!		do ichemo = 1,MAX_CHEMO
+!			c(ichemo,4) = chemo(ichemo)%diff_coef/DX2
+!		enddo
 	endif
 	if (right) then
-		nc = nc + 1
+!		nc = nc + 1
 		ODEdiff%icoef(i,5) = ODEdiff%ivar(x,y+1,z)
-		do ichemo = 1,MAX_CHEMO
-			c(ichemo,5) = chemo(ichemo)%diff_coef/DX2
-		enddo
+!		do ichemo = 1,MAX_CHEMO
+!			c(ichemo,5) = chemo(ichemo)%diff_coef/DX2
+!		enddo
 	endif
 	left = .true.
 	right = .true.
 	if (z==1) then
-		left = .false.
+!		left = .false.
+		ierr = 5
+		exit
 	elseif (ODEdiff%ivar(x,y,z-1) == 0) then
 		left = .false.
 	endif
 	if (z==NZ) then 
-		right = .false.
+!		right = .false.
+		ierr = 6
+		exit
 	elseif (ODEdiff%ivar(x,y,z+1) == 0) then
 		right = .false.
 	endif
 	if (left) then
-		nc = nc + 1
+!		nc = nc + 1
 		ODEdiff%icoef(i,6) = ODEdiff%ivar(x,y,z-1)
-		do ichemo = 1,MAX_CHEMO
-			c(ichemo,6) = chemo(ichemo)%diff_coef/DX2
-		enddo
+!		do ichemo = 1,MAX_CHEMO
+!			c(ichemo,6) = chemo(ichemo)%diff_coef/DX2
+!		enddo
 	endif
 	if (right) then
-		nc = nc + 1
+!		nc = nc + 1
 		ODEdiff%icoef(i,7) = ODEdiff%ivar(x,y,z+1)
-		do ichemo = 1,MAX_CHEMO
-			c(ichemo,7) = chemo(ichemo)%diff_coef/DX2
-		enddo
+!		do ichemo = 1,MAX_CHEMO
+!			c(ichemo,7) = chemo(ichemo)%diff_coef/DX2
+!		enddo
 	endif
 	
-	do ichemo = 1,MAX_CHEMO
-		c(ichemo,1) = c(ichemo,1) - nc*chemo(ichemo)%diff_coef/DX2
-		if (chemo(ichemo)%used) then
-			chemo(ichemo)%coef(i,:) = c(ichemo,:) 
-		endif
-	enddo
+!	do ichemo = 1,MAX_CHEMO
+!		c(ichemo,1) = c(ichemo,1) - nc*chemo(ichemo)%diff_coef/DX2
+!		if (chemo(ichemo)%used) then
+!			chemo(ichemo)%coef(i,:) = c(ichemo,:) 
+!		endif
+!	enddo
 !	ODEdiff%ncoef(i) = nc
 	
 !	if (i == ivdbug) then
@@ -204,50 +311,261 @@ do i = 1,ODEdiff%nvars
 !		write(*,'(a,7f8.4)') 'coef: ',chemo(1)%coef(i,:)
 !	endif
 enddo
+if (ierr /= 0) then
+	write(logmsg,*) 'Error: SetupODEDiff: lattice boundary reached: ierr: ',ierr
+	call logger(logmsg)
+	stop
+endif
+end subroutine
+
+!----------------------------------------------------------------------------------
+! A cell has moved to site(:), which was previously exterior (boundary), and the 
+! variable-site mappings need to be updated, together with %icoef(:,:)
+! The relevant neighbours are at x +/- 1, y +/- 1, z +/- 1
+!----------------------------------------------------------------------------------
+subroutine ExtendODEDiff(site)
+integer :: site(3)
+integer :: x, y, z, x1, x2, y1, y2, z1, z2, n, kv, nb
+real(REAL_KIND) :: csum(MAX_CHEMO)
+
+x = site(1)
+y = site(2)
+z = site(3)
+n = ODEdiff%nvars + 1
+ODEdiff%ivar(x,y,z) = n
+ODEdiff%varsite(n,:) = site
+ODEdiff%nvars = n
+ODEdiff%icoef(n,:) = 0
+ODEdiff%icoef(n,1) = n
+! See which neighbours of site are interior, and require to have 
+! %icoef = 0 replaced by %icoef = n
+nb = 0
+csum = 0
+x2 = x+1
+kv = ODEdiff%ivar(x2,y,z) 
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,2) /= 0) then
+		write(*,*) 'Error: ExtendODEDiff: icoef(kv,2): ',ODEdiff%icoef(kv,2)
+		stop
+	endif
+	ODEdiff%icoef(kv,2) = n
+	ODEdiff%icoef(n,3) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+x1 = x-1
+kv = ODEdiff%ivar(x1,y,z) 
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,3) /= 0) then
+		write(*,*) 'Error: ExtendODEDiff: icoef(kv,3): ',ODEdiff%icoef(kv,3)
+		stop
+	endif
+	ODEdiff%icoef(kv,3) = n
+	ODEdiff%icoef(n,2) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+y2 = y+1
+kv = ODEdiff%ivar(x,y2,z) 
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,4) /= 0) then
+		write(*,*) 'Error: ExtendODEDiff: icoef(kv,4): ',ODEdiff%icoef(kv,4)
+		stop
+	endif
+	ODEdiff%icoef(kv,4) = n
+	ODEdiff%icoef(n,5) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+y1 = y-1
+kv = ODEdiff%ivar(x,y1,z) 
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,5) /= 0) then
+		write(*,*) 'Error: ExtendODEDiff: icoef(kv,5): ',ODEdiff%icoef(kv,5)
+		stop
+	endif
+	ODEdiff%icoef(kv,5) = n
+	ODEdiff%icoef(n,4) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+z2 = z+1
+kv = ODEdiff%ivar(x,y,z2) 
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,6) /= 0) then
+		write(*,*) 'Error: ExtendODEDiff: icoef(kv,6): ',ODEdiff%icoef(kv,6)
+		stop
+	endif
+	ODEdiff%icoef(kv,6) = n
+	ODEdiff%icoef(n,7) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+z1 = z-1
+kv = ODEdiff%ivar(x,y,z1) 
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,7) /= 0) then
+		write(*,*) 'Error: ExtendODEDiff: icoef(kv,7): ',ODEdiff%icoef(kv,7)
+		stop
+	endif
+	ODEdiff%icoef(kv,7) = n
+	ODEdiff%icoef(n,6) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+
+csum = csum + (6-nb)*chemo(:)%bdry_conc
+allstate(n,:) = csum/6
+allstatep(n,:) = 0
+end subroutine
+
+!----------------------------------------------------------------------------------
+! The rate of change of mass of constituent ichemo as a result of reactions is computed,
+! with the assumption that the concentrations of the other constituents are fixed
+! at the values from the previous time step, stored in allstate(:,:)
+! isite = current site index
+! C = current vector of concentrations
+! dMdt = rate of change of mass of C(ichemo) at a site as a result of reactions (mol/sec)
+! Note: the rate of consumption (of O2 or G) is in general a function of both the
+! cell state and the concentration.  The consumption rate must in any case be less
+! than some fraction of the total mass in the site (to avoid negative concentrations).
+! We can use a Michaelis-Menten function to take the rate to zero as C -> 0.
+! Note that currently Vsite is fixed - no accounting for cell death, gaps etc.
+!----------------------------------------------------------------------------------
+subroutine react(ichemo,isite,C,dCreact)
+integer :: ichemo, isite
+real(REAL_KIND) :: C(:), dCreact
+real(REAL_KIND) :: metab, dMdt
+!real, parameter :: K_O = 0.05
+!real, parameter :: K_G = 0.02
+
+if (C(OXYGEN) > 0) then
+	metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+else
+	metab = 0
+endif
+select case (ichemo)
+
+case (OXYGEN)
+	dMdt = -metab*chemo(OXYGEN)%cell_rate
+	
+case (GLUCOSE)
+	dMdt = -metab*chemo(GLUCOSE)%cell_rate
+case (TRACER)
+	dMdt = 0
+end select
+dCreact = dMdt*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
+!dCreact = 0
 end subroutine
 
 !----------------------------------------------------------------------------------
 ! Simple diffusion-decay for a single constituent (ODEdiff%ichemo)
+! Now all chemo constituents share the same FD template, and there are always
+! 6 neighbours (some may be boundary, with specified concentrations).
+! For now assume uniform diffusion coefficient for a constituent
 !----------------------------------------------------------------------------------
 subroutine deriv(t,v,dv,icase)
 real(REAL_KIND) :: t, v(*), dv(*)
 integer :: icase
 integer :: i, k, kv, n, ichemo
-real(REAL_KIND) :: csum, dc, DX2, val
+real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
 logical :: bnd, dbug
 
 !ichemo = ODEdiff%ichemo
 ichemo = icase
 DX2 = DELTA_X*DELTA_X
+decay_rate = chemo(ichemo)%decay_rate
+dc1 = chemo(ichemo)%diff_coef/DX2
+dc6 = 6*dc1 + decay_rate
+cbnd = chemo(ichemo)%bdry_conc
 n = ODEdiff%nvars
 !if (t < 1.0) write(*,*) icase,t
 do i = 1,n
-	csum = 0
+	C = allstate(i,:)
+	C(ichemo) = v(i)
+	dCsum = 0
 	do k = 1,7
-		if (ODEdiff%icoef(i,k) /= 0) then	! interior
-			bnd = .false.
-		else								! boundary
-			bnd = .true.
-		endif
+		kv = ODEdiff%icoef(i,k)
+!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
+!			bnd = .false.
+!		else								! boundary
+!			bnd = .true.
+!		endif
 		if (k == 1) then
-			dc = -chemo(ichemo)%decay_rate - 6*chemo(ichemo)%diff_coef/DX2	! ODEdiff%ncoef(i)
+			dCdiff = -dc6
 		else
-			dc = chemo(ichemo)%diff_coef/DX2
+			dCdiff = dc1
 		endif
-		if (bnd) then
-			val = chemo(ichemo)%bdry_conc
+		if (kv == 0) then
+			val = cbnd
 		else
-			kv = ODEdiff%icoef(i,k)
 			val = v(kv)
 		endif
-		csum = csum + dc*val
+		dCsum = dCsum + dCdiff*val
 	enddo
-	dv(i) = csum
+	call react(ichemo,i,C,dCreact)
+!	if (i == 6822) then
+!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
+!	endif
+	dv(i) = dCsum + dCreact
 enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
-! Now all chemo constituents share the same FD template
+!----------------------------------------------------------------------------------
+subroutine f_rkc(neqn,t,v,dvdt,icase)
+integer :: neqn, icase
+real(REAL_KIND) :: t, v(neqn), dvdt(neqn)
+integer :: i, k, kv, n, ichemo
+real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
+logical :: bnd, dbug
+
+!write(*,*) 'neqn: ',neqn
+!ichemo = ODEdiff%ichemo
+ichemo = icase
+DX2 = DELTA_X*DELTA_X
+decay_rate = chemo(ichemo)%decay_rate
+dc1 = chemo(ichemo)%diff_coef/DX2
+dc6 = 6*dc1 + decay_rate
+cbnd = chemo(ichemo)%bdry_conc
+n = neqn
+!if (t < 1.0) write(*,*) icase,t
+do i = 1,n
+	C = allstate(i,:)
+	C(ichemo) = v(i)
+	dCsum = 0
+	do k = 1,7
+		kv = ODEdiff%icoef(i,k)
+!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
+!			bnd = .false.
+!		else								! boundary
+!			bnd = .true.
+!		endif
+		if (k == 1) then
+			dCdiff = -dc6
+		else
+			dCdiff = dc1
+		endif
+		if (kv == 0) then
+			val = cbnd
+		else
+			val = v(kv)
+		endif
+		dCsum = dCsum + dCdiff*val
+	enddo
+	call react(ichemo,i,C,dCreact)
+!	if (i == 6822) then
+!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
+!	endif
+	dvdt(i) = dCsum + dCreact
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Now all chemo constituents share the same FD template, and there are always
+! 6 neighbours (some may be boundary, with specified concentrations).
 !----------------------------------------------------------------------------------
 subroutine deriv_all(t,v,dv)
 real(REAL_KIND) :: t, v(*), dv(*)
@@ -287,52 +605,302 @@ do i = 1,n
 		dv(kv) = csum(ichemo)
 	enddo
 enddo
-!	site = ODEdiff%varsite(i,:)
-!	if (ODEdiff%ichemo /= CXCL13) then
-!		if (associated(occupancy(site(1),site(2),site(3))%bdry)) then
-!			! Check for chemo bdry site 
-!			do ic = 1,MAX_CHEMO
-!				if (ODEdiff%ichemo == ic .and. occupancy(site(1),site(2),site(3))%bdry%chemo_influx(ic)) then
-!					if (chemo(ic)%use_secretion) then
-!						dv(i) = dv(i) + chemo(ic)%bdry_rate
-!					else
-!						dv(i) = 0
-!					endif
-!				endif
-!			enddo
-!		endif
-!	else
-!		nf_FDC = occupancy(site(1),site(2),site(3))%FDC_nbdry 
-!		nf_MRC = occupancy(site(1),site(2),site(3))%MRC_nbdry 
-!		if (nf_FDC + nf_MRC > 0) then
-!			if (chemo(CXCL13)%use_secretion) then
-!				dv(i) = dv(i) + (nf_FDC+nf_MRC)*chemo(CXCL13)%bdry_rate
-!			else
-!				dv(i) = 0
-!			endif
-!		endif
-!    endif
-!enddo
 
-! Secretion by FDCs
-!do ifdc = 1,NFDC
-!	site = FDC_list(ifdc)%site
-!	do dx = -2,2
-!		x = site(1)+dx
-!		do dy = -2,2
-!			y = site(2)+dy
-!			do dz = -2,2
-!				z = site(3)+dz
-!				if (dx*dx+dy*dy+dz*dz > 4.1) cycle
-!				if (occupancy(x,y,z)%indx(1) >= 0) then
-!					i = ODEdiff%ivar(x,y,z)
-!					dv(i) = dv(i) + FDC_list(ifdc)%secretion
-!				endif
+end subroutine
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine showresults(v)
+real(REAL_KIND) :: v(:)
+integer :: x,y,z,i
+
+x = NX/2
+y = NY/2
+do z = NZ/2,NZ/2+9
+	i = ODEdiff%ivar(x,y,z)
+	write(*,'(f7.4,$)') v(i)
+enddo
+write(*,*)
+
+end subroutine
+
+!----------------------------------------------------------------------------------
+! In this version the diffusion/decay of each constituent is solved by a separate
+! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
+! Note that this required modifications to the way r4_rkf45 handles SAVEd variables,
+! to avoid collisions between different threads.
+!----------------------------------------------------------------------------------
+subroutine TestODEDiffusion
+integer flag, i, j, k, ichemo
+real(REAL_KIND) :: tstart, tend, t, relerr, abserr
+!real(REAL_KIND), allocatable :: allstate(:,:), allstatep(:,:)
+real(REAL_KIND), allocatable :: state(:), statep(:)
+real(REAL_KIND), parameter :: dt = 10.0
+real(REAL_KIND) :: res(10)
+integer :: x, y, z, dx, dy, dz, xmid, ymid, zmid, ibnd, k0, site(3), nchemo, icase, imax, nvars
+real(REAL_KIND) :: grad(3)
+real(REAL_KIND) :: amp, r, ctemp(10), dvmax
+real(REAL_KIND) :: t1, t2
+integer :: nt = 60
+logical :: ok
+integer :: flag_par(MAX_CHEMO)
+real(REAL_KIND) :: abserr_par(MAX_CHEMO), relerr_par(MAX_CHEMO)
+integer, parameter :: SOLVER = RKC_SOLVER
+
+type(rk_comm_real_1d) :: comm
+real(kind=wp) :: t_start, t_end, tolerance, t_want, t_inc, t_got
+!real(kind=wp) :: y_start(NEQ), y_maxvals(NEQ), y_got(:), yderiv_got(:)
+real(kind=wp), allocatable :: thresholds(:)
+!interface 
+!   function f_deriv(t,y)
+!      use rksuite_90_prec, only:wp
+!      real(kind=wp), intent(in) :: t
+!      real(kind=wp), dimension(:), intent(in) :: y
+!      real(kind=wp), dimension(size(y,1)) :: f_deriv
+!   end function f_deriv
+!end interface
+
+real(REAL_KIND), allocatable :: work(:,:)
+integer :: info(4), idid
+real(REAL_KIND) :: rtol, atol(1)
+type(rkc_comm) :: comm_rkc(MAX_CHEMO)
+
+write(logmsg,*) 'TestODEDiffusion: nvars: ',ODEdiff%nvars
+call logger(logmsg)
+nchemo = 2	!MAX_CHEMO
+nvars = ODEdiff%nvars
+!allocate(prev_state(ODEdiff%nvars))
+!allocate(allstate(MAX_VARS,MAX_CHEMO))
+!allocate(allstatep(MAX_VARS,MAX_CHEMO))
+allocate(allstate(nvars,MAX_CHEMO))
+allocate(allstatep(nvars,MAX_CHEMO))
+allocate(work(8+4*nvars,MAX_CHEMO))
+xmid = NX/2
+ymid = NY/2
+zmid = NZ/2
+k0 = ODEdiff%ivar(xmid,ymid,zmid)
+tstart = 0
+do ichemo = 1,nchemo
+	if (.not.chemo(ichemo)%used) cycle
+	call InitState(ichemo,allstate(1:nvars,ichemo))
+	allstatep(:,ichemo) = 0
+	if (SOLVER == RKF45_SOLVER) then
+		call deriv(tstart,allstate(:,ichemo),allstatep(:,ichemo),ichemo)
+	elseif (SOLVER == RKSUITE_SOLVER) then
+		t_end = 10000
+		tolerance = 1.0e-4
+		allocate(thresholds(nvars))
+		thresholds = 0.1
+		call rk_setup(comm, tstart, allstate(1:nvars,ichemo), t_end,  tolerance, thresholds)
+	elseif (SOLVER == RKC_SOLVER) then
+		info(1) = 1
+		info(2) = 1
+		info(3) = 1
+		info(4) = 0
+		rtol = 1d-2
+		atol = rtol
+		idid = 0
+	endif
+!	write(*,'(10f7.3)') allstate(k0:k0+9,ichemo)
+enddo
+
+!	ODEdiff%ichemo = ichemo
+!	if (.not.chemo(ichemo)%used) cycle
+
+!	call InitState(ichemo,state)
+!	statep = 0
+!	call deriv(tstart,state,statep)
+!	write(*,*) 'did initial deriv'
+	
+t1 = wtime()
+!	prev_state = 0
+flag_par = 1
+do k = 1,nt
+
+	!$omp parallel do private(tstart, tend, state, statep, flag, relerr, abserr, site, idid, icase)
+	do ichemo = 1,nchemo
+		if (.not.chemo(ichemo)%used) cycle
+!			ODEdiff%ichemo = ichemo
+!	write(*,*) 'ichemo: ',ichemo
+		allocate(state(nvars))
+		allocate(statep(nvars))
+		state = allstate(1:nvars,ichemo)
+		statep = allstatep(1:nvars,ichemo)
+		if (ichemo == 1) then
+!			write(*,'(i6,10f7.3)') k,state(k0:k0+9)
+			call showresults(state)
+		endif
+		if (k == 1) then
+			abserr = 10*sqrt ( epsilon ( abserr ) )
+			abserr_par(ichemo) = abserr
+			relerr = 10*sqrt ( epsilon ( relerr ) )
+			relerr_par(ichemo) = relerr
+		else
+			abserr = abserr_par(ichemo)
+			relerr = relerr_par(ichemo)
+		endif
+		tstart = (k-1)*dt
+		tend = tstart + dt
+		flag = flag_par(ichemo)
+		icase = ichemo
+		if (SOLVER == RKF45_SOLVER) then
+			if (REAL_KIND == SP) then	
+!				call r4_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, icase )
+			else
+				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, icase )
+			endif
+			if (flag /= 2) then
+				write(logmsg,*) 'Bad flag: ',flag
+				call logger(logmsg)
+				stop
+				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, icase )
+				flag = 2
+			endif
+			flag_par(ichemo) = flag
+			abserr_par(ichemo) = abserr
+			relerr_par(ichemo) = relerr
+		elseif (SOLVER == RKSUITE_SOLVER) then
+			call range_integrate(comm, f_deriv, tend, t_got, state, statep, flag)
+			if (flag /= 1 .and. flag /= 3 .and. flag /= 4) then
+				write(logmsg,*) 'Bad flag: ',flag
+				call logger(logmsg)
+				stop
+			endif
+			write(*,'(a,3f10.3)') 'tstart: ',tstart,tend,t_got
+		elseif (SOLVER == RKC_SOLVER) then
+			idid = 0
+			call rkc(comm_rkc(ichemo),nvars,f_rkc,state,tstart,tend,rtol,atol,info,work(:,ichemo),idid,icase)
+			!---------------------------------
+			!  Was the integration successful?
+			!---------------------------------
+			if (idid /= 1) then
+				write(*,*) ' Failed at t = ',tstart,' with idid = ',idid
+				stop
+			endif
+		endif
+!		do i = 1,ODEdiff%nvars
+!			site = ODEdiff%varsite(i,:)
+!			chemo(ichemo)%conc(site(1),site(2),site(3)) = state(i)
+!		enddo
+		allstate(1:ODEdiff%nvars,ichemo) = state
+		allstatep(1:ODEdiff%nvars,ichemo) = statep
+! To test derivs
+!		call deriv(tend,state,statep,ichemo)
+!		dvmax = 0
+!		do i = 1,ODEdiff%nvars
+!			if (abs(statep(i)) > dvmax) then
+!				dvmax = abs(statep(i))
+!				imax = i
+!			endif
+!		enddo
+!		write(*,*) 'Max dv: ',imax,dvmax
+!		write(*,'(7i6)') ODEdiff%icoef(imax,:)
+		deallocate(state)
+		deallocate(statep)
+	enddo
+!	call TestAddSite
+!   nvars = ODEdiff%nvars
+!		prev_state = state
+enddo
+
+t2 = wtime()
+write(*,'(a,f10.1)') 'Time: ',t2-t1
+
+!	do x = 1,NX
+!		do y = 1,NY
+!			do z = 1,NZ
+!				if (occupancy(x,y,z)%indx(1) < 0) cycle
+!				i = ODEdiff%ivar(x,y,z)
+!				chemo(ichemo)%conc(x,y,z) = state(i)
+!				call compute_gradient(state,x,y,z,grad)
+!				chemo(ichemo)%grad(:,x,y,z) = grad
 !			enddo
 !		enddo
 !	enddo
 !enddo
+!deallocate(state)
+!deallocate(prev_state)
+!deallocate(statep)
+end subroutine
 
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine TestAddSite
+integer :: i, j, x, y, z, site(3), kpar=0
+
+do 
+	i = random_int(1,ODEdiff%nvars,kpar)
+	do j = 1,7
+		if (ODEdiff%icoef(i,j) == 0) then
+			site = ODEdiff%varsite(i,:)
+			x = site(1)
+			y = site(2)
+			z = site(3)
+			if (j == 2) then
+				x = x-1
+			elseif (j == 3) then
+				x = x+1
+			elseif (j == 4) then
+				y = y-1
+			elseif (j == 5) then
+				y = y+1
+			elseif (j == 6) then
+				z = z-1
+			elseif (j == 7) then
+				z = z+1
+			endif
+			if (ODEdiff%ivar(x,y,z) /= 0) then
+				write(*,*) 'Error: TestAddSite: ',ODEdiff%ivar(x,y,z)
+				stop
+			endif
+			site = (/x,y,z/)
+			write(*,*) 'Add site at bdry: ',site
+			call ExtendODEDiff(site)
+			return
+		endif
+	enddo
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Initialise the state vector to the current concentrations
+!----------------------------------------------------------------------------------
+subroutine InitState(ichemo,state)
+integer :: ichemo
+real(REAL_KIND) :: state(*)
+integer :: x, y, z, i, site(3), nz
+real(REAL_KIND) :: smin, smax
+
+write(logmsg,*) 'InitState: ',chemo(ichemo)%name
+call logger(logmsg)
+smin = 1.0e10
+smax = -smin
+do i = 1,ODEdiff%nvars
+	site = ODEdiff%varsite(i,:)
+	state(i) = chemo(ichemo)%bdry_conc
+!	state(i) = chemo(ichemo)%conc(site(1),site(2),site(3))
+!	if (state(i) < smin) smin = state(i)
+!	if (state(i) > smax) smax = state(i)
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Initialise the state vector to the current concentrations
+!----------------------------------------------------------------------------------
+subroutine InitStates(ichemo,n,allstate)
+integer :: ichemo,n
+real(REAL_KIND) :: allstate(n,*)
+integer :: x, y, z, i, site(3), nz
+real(REAL_KIND) :: smin, smax
+
+write(logmsg,*) 'InitState: ',chemo(ichemo)%name
+call logger(logmsg)
+smin = 1.0e10
+smax = -smin
+do i = 1,ODEdiff%nvars
+	site = ODEdiff%varsite(i,:)
+	allstate(i,ichemo) = chemo(ichemo)%conc(site(1),site(2),site(3))
+enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -437,180 +1005,6 @@ else
 	ok = .false.
 endif
 end subroutine
-
-!----------------------------------------------------------------------------------
-! In this version the diffusion/decay of each constituent is solved by a separate
-! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
-! Note that this required modifications to the way r4_rkf45 handles SAVEd variables,
-! to avoid collisions between different threads.
-!----------------------------------------------------------------------------------
-subroutine TestODEDiffusion
-integer flag, i, j, k, ichemo
-real(REAL_KIND) :: tstart, tend, relerr, abserr
-real(REAL_KIND), allocatable :: allstate(:,:), allstatep(:,:)
-real(REAL_KIND), allocatable :: state(:), statep(:)
-real(REAL_KIND), parameter :: dt = 20.0
-real(REAL_KIND) :: res(10)
-integer :: x, y, z, dx, dy, dz, xmid, ymid, zmid, ibnd, k0, site(3), flag_par(MAX_CHEMO), nchemo, icase
-real(REAL_KIND) :: grad(3)
-real(REAL_KIND) :: amp, r, ctemp(10)
-real(REAL_KIND) :: t1, t2
-integer :: nt = 180
-logical :: ok
-
-write(logmsg,*) 'TestODEDiffusion: nvars: ',ODEdiff%nvars
-call logger(logmsg)
-nchemo = MAX_CHEMO
-!allocate(prev_state(ODEdiff%nvars))
-allocate(allstate(ODEdiff%nvars,nchemo))
-allocate(allstatep(ODEdiff%nvars,nchemo))
-xmid = NX/2
-ymid = NY/2
-zmid = NZ/2
-k0 = ODEdiff%ivar(xmid,ymid,zmid)
-tstart = 0
-do ichemo = 1,nchemo
-	if (.not.chemo(ichemo)%used) cycle
-	call InitState(ichemo,allstate(:,ichemo))
-	allstatep(:,ichemo) = 0
-	call deriv(tstart,allstate(:,ichemo),allstatep(:,ichemo),ichemo)
-!	write(*,'(10f7.3)') allstate(k0:k0+9,ichemo)
-enddo
-
-!	ODEdiff%ichemo = ichemo
-!	if (.not.chemo(ichemo)%used) cycle
-
-!	call InitState(ichemo,state)
-!	statep = 0
-!	call deriv(tstart,state,statep)
-!	write(*,*) 'did initial deriv'
-	
-	t1 = wtime()
-!	prev_state = 0
-	flag_par = 1
-	do k = 1,nt
-
-		!$omp parallel do private(tstart, tend, state, statep, flag, relerr, abserr, site, icase)
-		do ichemo = 1,nchemo
-			if (.not.chemo(ichemo)%used) cycle
-!			ODEdiff%ichemo = ichemo
-			allocate(state(ODEdiff%nvars))
-			allocate(statep(ODEdiff%nvars))
-			state = allstate(:,ichemo)
-			statep = allstatep(:,ichemo)
-			if (ichemo == 1) then
-				write(*,'(i6,10f7.3)') k,state(k0:k0+9)
-			endif
-			if (k == 1) then
-				abserr = sqrt ( epsilon ( abserr ) )/2
-				relerr = sqrt ( epsilon ( relerr ) )/2
-			endif
-			tstart = (k-1)*dt
-			tend = tstart + dt
-			flag = flag_par(ichemo)
-!			write(*,*) ichemo, flag, ODEdiff%nvars, tstart, tend
-			if (REAL_KIND == 4) then	
-				icase = ichemo
-				call r4_rkf45 ( deriv, ODEdiff%nvars, state, statep, tstart, tend, relerr, abserr, flag, icase )
-			else
-	!			call r8_rkf45 ( deriv, ODEdiff%nvars, state, statep, tstart, tend, relerr, abserr, flag )
-			endif
-			if (flag /= 2) then
-				write(logmsg,*) 'Bad flag: ',flag
-				call logger(logmsg)
-				call r4_rkf45 ( deriv, ODEdiff%nvars, state, statep, tstart, tend, relerr, abserr, flag, icase )
-			endif
-			flag = 2
-			flag_par(ichemo) = flag
-	!		do i = 1,ODEdiff%nvars
-	!			site = ODEdiff%varsite(i,:)
-	!			chemo(ichemo)%conc(site(1),site(2),site(3)) = state(i)
-	!		enddo
-			allstate(:,ichemo) = state
-			allstatep(:,ichemo) = statep
-			deallocate(state)
-			deallocate(statep)
-		enddo
-		
-!		call CheckConvergence(state,prev_state,ok)
-!		if (ok) exit
-!		prev_state = state
-	enddo
-
-	t2 = wtime()
-	write(*,'(a,f10.1)') 'Time: ',t2-t1
-	write(*,*) 'site:'
-	if (nchemo >= 2) then
-		do k = k0-20,k0+20
-			site = ODEdiff%varsite(k,:)
-			write(*,'(4i6,2f8.3)') k,site,allstate(k,1),allstate(k,2)
-		enddo
-	elseif (nchemo == 1) then
-		do k = k0-20,k0+20
-			site = ODEdiff%varsite(k,:)
-			write(*,'(4i6,2f8.3)') k,site,allstate(k,1)
-		enddo
-	endif
-
-!	do x = 1,NX
-!		do y = 1,NY
-!			do z = 1,NZ
-!				if (occupancy(x,y,z)%indx(1) < 0) cycle
-!				i = ODEdiff%ivar(x,y,z)
-!				chemo(ichemo)%conc(x,y,z) = state(i)
-!				call compute_gradient(state,x,y,z,grad)
-!				chemo(ichemo)%grad(:,x,y,z) = grad
-!			enddo
-!		enddo
-!	enddo
-!enddo
-!deallocate(state)
-!deallocate(prev_state)
-!deallocate(statep)
-end subroutine
-
-
-!----------------------------------------------------------------------------------
-! Initialise the state vector to the current concentrations
-!----------------------------------------------------------------------------------
-subroutine InitState(ichemo,state)
-integer :: ichemo
-real(REAL_KIND) :: state(*)
-integer :: x, y, z, i, site(3), nz
-real(REAL_KIND) :: smin, smax
-
-write(logmsg,*) 'InitState: ',chemo(ichemo)%name
-call logger(logmsg)
-smin = 1.0e10
-smax = -smin
-do i = 1,ODEdiff%nvars
-	site = ODEdiff%varsite(i,:)
-	state(i) = chemo(ichemo)%bdry_conc
-!	state(i) = chemo(ichemo)%conc(site(1),site(2),site(3))
-!	if (state(i) < smin) smin = state(i)
-!	if (state(i) > smax) smax = state(i)
-enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
-! Initialise the state vector to the current concentrations
-!----------------------------------------------------------------------------------
-subroutine InitStates(ichemo,n,allstate)
-integer :: ichemo,n
-real(REAL_KIND) :: allstate(n,*)
-integer :: x, y, z, i, site(3), nz
-real(REAL_KIND) :: smin, smax
-
-write(logmsg,*) 'InitState: ',chemo(ichemo)%name
-call logger(logmsg)
-smin = 1.0e10
-smax = -smin
-do i = 1,ODEdiff%nvars
-	site = ODEdiff%varsite(i,:)
-	allstate(i,ichemo) = chemo(ichemo)%conc(site(1),site(2),site(3))
-enddo
-end subroutine
-
 
 !----------------------------------------------------------------------------------
 ! Compute the gradient vector for chemokine concentration at (x,y,z).

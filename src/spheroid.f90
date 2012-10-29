@@ -95,7 +95,7 @@ call make_split(.true.)
 !call checkcellcount(ok)
 
 if (use_ODE_diffusion) then
-	call SetupODEDiffusion
+	call SetupODEDiff
 	call TestODEDiffusion
 	stop
 endif

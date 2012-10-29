@@ -21,10 +21,22 @@ contains
 real function DecayRate(halflife)
 real(REAL_KIND) :: halflife
 
-DecayRate = log(2.0)/(halflife*60*60)
+if (halflife == 0) then		! No decay
+	DecayRate = 0
+else
+	DecayRate = log(2.0)/(halflife*60*60)
+endif
 end function
 
 !----------------------------------------------------------------------------------------
+! Note units:
+! distance		cm
+! volume		cm^3
+! diff coeff	cm^2.s^-1
+! mass			mol
+! concentration	mM where 1 mM = 1.0e-6 mol.cm^-3
+! consumption	mol.cell^-1.s^-1
+! production	mol.cell^-1.s^-1
 !----------------------------------------------------------------------------------------
 subroutine SetupChemo
 integer :: ichemo
@@ -33,17 +45,19 @@ chemo(OXYGEN)%name = 'Oxygen'
 chemo(OXYGEN)%used = .true.
 chemo(OXYGEN)%use_secretion = .false.
 chemo(OXYGEN)%bdry_rate = 0
-chemo(OXYGEN)%bdry_conc = 100
-chemo(OXYGEN)%diff_coef = 2.0e-5	! units = cm^2s^-1
-chemo(OXYGEN)%halflife = 0.01	! hours
+chemo(OXYGEN)%bdry_conc = 0.18		! mM
+chemo(OXYGEN)%diff_coef = 2.0e-5	! cm^2.s^-1	! 2.0e-5
+chemo(OXYGEN)%halflife = 0.0		! hours
+chemo(OXYGEN)%cell_rate = 2.3e-16	! mol.cell^-1.s^-1
 
 chemo(GLUCOSE)%name = 'Glucose'
 chemo(GLUCOSE)%used = .true.
 chemo(GLUCOSE)%use_secretion = .false.
 chemo(GLUCOSE)%bdry_rate = 0
-chemo(GLUCOSE)%bdry_conc = 50
-chemo(GLUCOSE)%diff_coef = 2.0e-6	! units = cm^2s^-1
-chemo(GLUCOSE)%halflife = 0.1	! hours
+chemo(GLUCOSE)%bdry_conc = 9.0		! mM
+chemo(GLUCOSE)%diff_coef = 6.0e-7	! cm^2s^-1
+chemo(GLUCOSE)%halflife = 0		! hours
+chemo(GLUCOSE)%cell_rate = 3.8e-17	! mol.cell^-1.s^-1
 
 chemo(TRACER)%name = 'Tracer'
 chemo(TRACER)%used = .true.
@@ -51,13 +65,32 @@ chemo(TRACER)%use_secretion = .false.
 chemo(TRACER)%bdry_rate = 0
 chemo(TRACER)%bdry_conc = 200
 chemo(TRACER)%diff_coef = 2.0e-6	! units?
-chemo(TRACER)%halflife = 1.0	! hours
+chemo(TRACER)%halflife = 0	! hours
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
 	write(*,*) 'decay_rate: ',ichemo,chemo(ichemo)%decay_rate
 enddo
 call AllocateConcArrays
+call SetMMParameters
+end subroutine
+
+!----------------------------------------------------------------------------------------
+! Consumption rate = Rmax*C/(MM_C0 + C)  (Michaelis-Menten)
+! where MM_C0 >= Rmax*T*10^6/Vsite is the O2 concentration at which cell uptake is halved,
+! and T is the maximum expected time step
+! This is to ensure that all the O2 in the site is not depleted in a time step, making
+! O2 conc go negative.  For now it seems reasonable to assume that glucose uptake
+! varies in proportion to O2 uptake, i.e. we only need Oxygen hill
+!----------------------------------------------------------------------------------------
+subroutine SetMMParameters
+!real :: Vsite
+
+!Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
+chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%cell_rate*Tmax*1.0e6/Vsite
+chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%cell_rate*Tmax*1.0e6/Vsite
+write(*,'(a,2e12.4)') 'Oxygen MM_C0: ',Tmax,chemo(OXYGEN)%MM_C0
+write(*,'(a,e12.4)') 'Glucose MM_C0: ',chemo(GLUCOSE)%MM_C0
 end subroutine
 
 !----------------------------------------------------------------------------------------
