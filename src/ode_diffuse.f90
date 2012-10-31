@@ -7,14 +7,12 @@
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 double precision function spcrad(neqn,t,y)
-use global
 !DEC$ ATTRIBUTES DLLEXPORT :: spcrad
+use global
 integer :: neqn
 double precision :: t, y(neqn)
 !spcrad = 4d0*((nx+1)**2 + (ny+1)**2 + (nz+1)**2)
-!spcrad = 40*BLOB_RADIUS**2
 spcrad = 4*BLOB_RADIUS
-!write(*,*) 'spcrad: ',spcrad
 end function
 
 !----------------------------------------------------------------------------------
@@ -38,11 +36,11 @@ real(REAL_KIND), parameter :: Tmax = 10
 integer, parameter :: RKF45_SOLVER = 1
 integer, parameter :: RKSUITE_SOLVER = 2
 integer, parameter :: RKC_SOLVER = 3
-real(REAL_KIND), allocatable :: allstate(:,:), allstatep(:,:)
+real(REAL_KIND), allocatable :: allstate(:,:)
+real(REAL_KIND), allocatable :: allstatep(:,:)
+real(REAL_KIND), allocatable :: work_rkc(:,:)
 
 integer :: ivdbug
-
-!public :: spcrad
 
 contains
 
@@ -436,26 +434,25 @@ subroutine react(ichemo,isite,C,dCreact)
 integer :: ichemo, isite
 real(REAL_KIND) :: C(:), dCreact
 real(REAL_KIND) :: metab, dMdt
-!real, parameter :: K_O = 0.05
-!real, parameter :: K_G = 0.02
 
-if (C(OXYGEN) > 0) then
-	metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-else
-	metab = 0
+if (ichemo /= TRACER) then
+	if (C(OXYGEN) > 0) then
+		metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+	else
+		metab = 0
+	endif
 endif
+
 select case (ichemo)
 
 case (OXYGEN)
-	dMdt = -metab*chemo(OXYGEN)%cell_rate
-	
+	dMdt = -metab*chemo(OXYGEN)%cell_rate	! mol/s
 case (GLUCOSE)
 	dMdt = -metab*chemo(GLUCOSE)%cell_rate
 case (TRACER)
 	dMdt = 0
 end select
 dCreact = dMdt*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
-!dCreact = 0
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -538,11 +535,6 @@ do i = 1,n
 	dCsum = 0
 	do k = 1,7
 		kv = ODEdiff%icoef(i,k)
-!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
-!			bnd = .false.
-!		else								! boundary
-!			bnd = .true.
-!		endif
 		if (k == 1) then
 			dCdiff = -dc6
 		else
@@ -556,9 +548,6 @@ do i = 1,n
 		dCsum = dCsum + dCdiff*val
 	enddo
 	call react(ichemo,i,C,dCreact)
-!	if (i == 6822) then
-!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
-!	endif
 	dvdt(i) = dCsum + dCreact
 enddo
 end subroutine
@@ -625,6 +614,89 @@ write(*,*)
 end subroutine
 
 !----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine TestSolve
+integer :: nchemo, nvars, nt, ichemo, it
+real(REAL_KIND) :: tstart, dt
+real(REAL_KIND) :: timer1, timer2
+real(REAL_KIND) :: trun = 4000
+
+nt = 20
+dt = trun/nt
+nchemo = 3
+nvars = ODEdiff%nvars
+allocate(allstate(nvars,MAX_CHEMO))
+allocate(work_rkc(8+4*nvars,MAX_CHEMO))
+do ichemo = 1,nchemo
+!	if (.not.chemo(ichemo)%used) cycle
+	call InitState(ichemo,allstate(1:nvars,ichemo))
+enddo
+timer1 = wtime()
+tstart = 0
+do it = 1,nt
+!	write(*,'(a,i4,f8.1)') 'it, tstart: ',it,tstart
+	tstart = (it-1)*dt
+	call Solve(nchemo,tstart,dt)
+enddo
+timer2 = wtime()
+write(*,'(a,f10.1)') 'Time: ',timer2-timer1
+end subroutine
+
+!----------------------------------------------------------------------------------
+! In this version the diffusion/decay of each constituent is solved by a separate
+! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
+! Note that this required modifications to the way the ODE solver handles SAVEd variables,
+! to avoid collisions between different threads.
+! The ODE solver is RKC
+! The subroutine assumes that:
+!   * ODEdiff has been set up with the correct mappings
+!   * allstate(:,:) holds the most recent solution, including estimates when the 
+!     blob changes (i.e. grows or shrinks).  This could entail variable renumbering.
+!   * work(:,:) is correctly sized (ODEdiff%nvars)
+!----------------------------------------------------------------------------------
+subroutine Solve(nchemo,tstart,dt)
+integer :: nchemo
+real(REAL_KIND) :: tstart, dt
+integer :: ichemo, nvars
+real(REAL_KIND) :: t, tend
+real(REAL_KIND), allocatable :: state(:,:)
+real(REAL_KIND) :: timer1, timer2
+logical :: ok
+! Variables for RKC
+integer :: info(4), idid
+real(REAL_KIND) :: rtol, atol(1)
+type(rkc_comm) :: comm_rkc(MAX_CHEMO)
+
+nvars = ODEdiff%nvars
+allocate(state(nvars,nchemo))
+state(:,:) = allstate(1:nvars,1:nchemo)
+call showresults(state(:,OXYGEN))
+
+info(1) = 1
+info(2) = 1
+info(3) = 1
+info(4) = 0
+rtol = 1d-2
+atol = rtol
+
+!$omp parallel do private(t, tend, idid)
+do ichemo = 1,nchemo
+!	if (.not.chemo(ichemo)%used) cycle
+	idid = 0
+	t = tstart
+	tend = t + dt
+	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:,ichemo),t,tend,rtol,atol,info,work_rkc(:,ichemo),idid,ichemo)
+	if (idid /= 1) then
+		write(*,*) ' Failed at t = ',t,' with idid = ',idid
+		stop
+	endif
+enddo
+!$omp end parallel do
+allstate(1:nvars,1:nchemo) = state(:,:)
+deallocate(state)
+end subroutine
+
+!----------------------------------------------------------------------------------
 ! In this version the diffusion/decay of each constituent is solved by a separate
 ! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
 ! Note that this required modifications to the way r4_rkf45 handles SAVEd variables,
@@ -637,7 +709,7 @@ real(REAL_KIND) :: tstart, tend, t, relerr, abserr
 real(REAL_KIND), allocatable :: state(:), statep(:)
 real(REAL_KIND), parameter :: dt = 10.0
 real(REAL_KIND) :: res(10)
-integer :: x, y, z, dx, dy, dz, xmid, ymid, zmid, ibnd, k0, site(3), nchemo, icase, imax, nvars
+integer :: x, y, z, dx, dy, dz, xmid, ymid, zmid, ibnd, k0, site(3), nchemo, imax, nvars
 real(REAL_KIND) :: grad(3)
 real(REAL_KIND) :: amp, r, ctemp(10), dvmax
 real(REAL_KIND) :: t1, t2
@@ -647,19 +719,12 @@ integer :: flag_par(MAX_CHEMO)
 real(REAL_KIND) :: abserr_par(MAX_CHEMO), relerr_par(MAX_CHEMO)
 integer, parameter :: SOLVER = RKC_SOLVER
 
+! Variables for RKSUITE
 type(rk_comm_real_1d) :: comm
 real(kind=wp) :: t_start, t_end, tolerance, t_want, t_inc, t_got
-!real(kind=wp) :: y_start(NEQ), y_maxvals(NEQ), y_got(:), yderiv_got(:)
 real(kind=wp), allocatable :: thresholds(:)
-!interface 
-!   function f_deriv(t,y)
-!      use rksuite_90_prec, only:wp
-!      real(kind=wp), intent(in) :: t
-!      real(kind=wp), dimension(:), intent(in) :: y
-!      real(kind=wp), dimension(size(y,1)) :: f_deriv
-!   end function f_deriv
-!end interface
 
+! Variables for RKC
 real(REAL_KIND), allocatable :: work(:,:)
 integer :: info(4), idid
 real(REAL_KIND) :: rtol, atol(1)
@@ -685,7 +750,7 @@ do ichemo = 1,nchemo
 	call InitState(ichemo,allstate(1:nvars,ichemo))
 	allstatep(:,ichemo) = 0
 	if (SOLVER == RKF45_SOLVER) then
-		call deriv(tstart,allstate(:,ichemo),allstatep(:,ichemo),ichemo)
+		call deriv(tstart,allstate(1:nvars,ichemo),allstatep(1:nvars,ichemo),ichemo)
 	elseif (SOLVER == RKSUITE_SOLVER) then
 		t_end = 10000
 		tolerance = 1.0e-4
@@ -704,23 +769,13 @@ do ichemo = 1,nchemo
 !	write(*,'(10f7.3)') allstate(k0:k0+9,ichemo)
 enddo
 
-!	ODEdiff%ichemo = ichemo
-!	if (.not.chemo(ichemo)%used) cycle
-
-!	call InitState(ichemo,state)
-!	statep = 0
-!	call deriv(tstart,state,statep)
-!	write(*,*) 'did initial deriv'
-	
 t1 = wtime()
-!	prev_state = 0
 flag_par = 1
 do k = 1,nt
 
-	!$omp parallel do private(tstart, tend, state, statep, flag, relerr, abserr, site, idid, icase)
+	!$omp parallel do private(tstart, tend, state, statep, flag, relerr, abserr, site, idid)
 	do ichemo = 1,nchemo
 		if (.not.chemo(ichemo)%used) cycle
-!			ODEdiff%ichemo = ichemo
 !	write(*,*) 'ichemo: ',ichemo
 		allocate(state(nvars))
 		allocate(statep(nvars))
@@ -742,18 +797,17 @@ do k = 1,nt
 		tstart = (k-1)*dt
 		tend = tstart + dt
 		flag = flag_par(ichemo)
-		icase = ichemo
 		if (SOLVER == RKF45_SOLVER) then
 			if (REAL_KIND == SP) then	
-!				call r4_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, icase )
+!				call r4_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
 			else
-				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, icase )
+				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
 			endif
 			if (flag /= 2) then
 				write(logmsg,*) 'Bad flag: ',flag
 				call logger(logmsg)
 				stop
-				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, icase )
+				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
 				flag = 2
 			endif
 			flag_par(ichemo) = flag
@@ -769,10 +823,7 @@ do k = 1,nt
 			write(*,'(a,3f10.3)') 'tstart: ',tstart,tend,t_got
 		elseif (SOLVER == RKC_SOLVER) then
 			idid = 0
-			call rkc(comm_rkc(ichemo),nvars,f_rkc,state,tstart,tend,rtol,atol,info,work(:,ichemo),idid,icase)
-			!---------------------------------
-			!  Was the integration successful?
-			!---------------------------------
+			call rkc(comm_rkc(ichemo),nvars,f_rkc,state,tstart,tend,rtol,atol,info,work(:,ichemo),idid,ichemo)
 			if (idid /= 1) then
 				write(*,*) ' Failed at t = ',tstart,' with idid = ',idid
 				stop
@@ -782,8 +833,8 @@ do k = 1,nt
 !			site = ODEdiff%varsite(i,:)
 !			chemo(ichemo)%conc(site(1),site(2),site(3)) = state(i)
 !		enddo
-		allstate(1:ODEdiff%nvars,ichemo) = state
-		allstatep(1:ODEdiff%nvars,ichemo) = statep
+		allstate(1:nvars,ichemo) = state
+		allstatep(1:nvars,ichemo) = statep
 ! To test derivs
 !		call deriv(tend,state,statep,ichemo)
 !		dvmax = 0
@@ -867,7 +918,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine InitState(ichemo,state)
 integer :: ichemo
-real(REAL_KIND) :: state(*)
+real(REAL_KIND) :: state(:)
 integer :: x, y, z, i, site(3), nz
 real(REAL_KIND) :: smin, smax
 
@@ -876,7 +927,7 @@ call logger(logmsg)
 smin = 1.0e10
 smax = -smin
 do i = 1,ODEdiff%nvars
-	site = ODEdiff%varsite(i,:)
+!	site = ODEdiff%varsite(i,:)
 	state(i) = chemo(ichemo)%bdry_conc
 !	state(i) = chemo(ichemo)%conc(site(1),site(2),site(3))
 !	if (state(i) < smin) smin = state(i)

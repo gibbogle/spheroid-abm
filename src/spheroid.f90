@@ -96,7 +96,8 @@ call make_split(.true.)
 
 if (use_ODE_diffusion) then
 	call SetupODEDiff
-	call TestODEDiffusion
+!	call TestODEDiffusion
+	call TestSolve
 	stop
 endif
 istep = 0

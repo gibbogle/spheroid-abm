@@ -294,7 +294,7 @@ contains
       parameter       (zero=0d0,rmax=0.1d0,rmin=10d0*uround)
       integer          i,ptr1,ptr2,ptr3,ptr4
       logical          array,valid
-      save
+!      save
       integer          nfe,nsteps,naccpt,nrejct,nfesig,maxm
       common /rkcdid/  nfe,nsteps,naccpt,nrejct,nfesig,maxm
       external         f
@@ -384,7 +384,7 @@ contains
       double precision absh,est,err,errold,fac,h,hmax,hmin,hold,sprad,tdir,temp1,temp2,	 & !spcrad,
                        uround,wt,ylast,yplast,at
       logical          array,last,newspc,jacatt
-      save
+!      save
       integer          nfe,nsteps,naccpt,nrejct,nfesig,maxm
       common /rkcdid/  nfe,nsteps,naccpt,nrejct,nfesig,maxm
       
