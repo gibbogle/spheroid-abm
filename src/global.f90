@@ -67,6 +67,7 @@ integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T
+real(REAL_KIND) :: divide_time_median, divide_time_shape
 
 character*(128) :: inputfile
 character*(128) :: fixedfile

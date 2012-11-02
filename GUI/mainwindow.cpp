@@ -38,6 +38,7 @@ int summaryData[100];
 int NX, NY, NZ, NBY;
 int nt_vtk;
 bool leftb;
+int ndistplots = 5;
 
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
 {}
@@ -221,16 +222,18 @@ void MainWindow::createLists()
 
 	QwtPlot *qp;
 
-	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_TC_AVIDITY");
-	distplot_list[0] = qp;
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE_TIME");
+    distplot_list[0] = qp;
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_TC_AVIDITY");
+    distplot_list[1] = qp;
 	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE1");
-	distplot_list[1] = qp;
+    distplot_list[2] = qp;
 	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE2");
-	distplot_list[2] = qp;
+    distplot_list[3] = qp;
 	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DC_ANTIGEN");
-	distplot_list[3] = qp;
-	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DC_LIFETIME");
-	distplot_list[4] = qp;
+    distplot_list[4] = qp;
+//	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DC_LIFETIME");
+//    distplot_list[5] = qp;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -278,33 +281,38 @@ void MainWindow:: drawDistPlots()
 	string name_str;
 	QString median_qstr, shape_qstr;
 	double median, shape;
-	for (int j=0; j<5; j++) {
+
+    for (int j=0; j<ndistplots; j++) {
 		qp = distplot_list[j];
         QString name = qp->objectName();
         if (name.contains("BC_AVIDITY")) {
 			name_str = name.toStdString();
 			LOG_QMSG(name);
 		}
-		if (j == 0) {
+        if (j == 0) {
+            qp->setTitle("Tumour cell division time (hrs)");
+            median_qstr = line_DIVIDE_TIME_MEDIAN->text();
+            shape_qstr = line_DIVIDE_TIME_SHAPE->text();
+        } else if (j == 1) {
 			qp->setTitle("TCR Avidity");
             median_qstr = line_BC_AVIDITY_MEDIAN->text();
             shape_qstr = line_BC_AVIDITY_SHAPE->text();
-		} else if (j == 1) {
+        } else if (j == 2) {
 			qp->setTitle("First division time (hrs)");
 			median_qstr = line_DIVIDE1_MEDIAN->text();
 			shape_qstr = line_DIVIDE1_SHAPE->text();
-		} else if (j == 2) {
+        } else if (j == 3) {
 			qp->setTitle("Later division time (hrs)");
 			median_qstr = line_DIVIDE2_MEDIAN->text();
 			shape_qstr = line_DIVIDE2_SHAPE->text();
-		} else if (j == 3) {
+        } else if (j == 4) {
 			qp->setTitle("DC antigen density");
 			median_qstr = line_DC_ANTIGEN_MEDIAN->text();
 			shape_qstr = line_DC_ANTIGEN_SHAPE->text();
-		} else if (j == 4) {
-			qp->setTitle("DC lifetime (days)");
-			median_qstr = line_DC_LIFETIME_MEDIAN->text();
-			shape_qstr = line_DC_LIFETIME_SHAPE->text();
+//        } else if (j == 5) {
+//			qp->setTitle("DC lifetime (days)");
+//			median_qstr = line_DC_LIFETIME_MEDIAN->text();
+//			shape_qstr = line_DC_LIFETIME_SHAPE->text();
 		}
 		median = median_qstr.toDouble();
 		shape = shape_qstr.toDouble();
@@ -552,6 +560,10 @@ void MainWindow::loadParams()
                     QString labelText = p.label;
                     
                     // Hardcode the distribution label names for now
+                    if (wtag.compare("DIVIDE_TIME_MEDIAN") == 0)
+                        labelText = "Median";
+                    else if (wtag.compare("DIVIDE_TIME_SHAPE") == 0)
+                        labelText = "Shape";
                     if (wtag.compare("TC_AVIDITY_MEDIAN") == 0)
                         labelText = "Median";
 					else if (wtag.compare("TC_AVIDITY_SHAPE") == 0)
@@ -568,10 +580,10 @@ void MainWindow::loadParams()
                         labelText = "Median";
 					else if (wtag.compare("DC_ANTIGEN_SHAPE") == 0)
                         labelText = "Shape";
-                    else if (wtag.compare("DC_LIFETIME_MEDIAN") == 0)
-                        labelText = "Median";
-					else if (wtag.compare("DC_LIFETIME_SHAPE") == 0)
-                        labelText = "Shape";
+//                    else if (wtag.compare("DC_LIFETIME_MEDIAN") == 0)
+//                        labelText = "Median";
+//					else if (wtag.compare("DC_LIFETIME_SHAPE") == 0)
+//                        labelText = "Shape";
 
 
 					bool is_slider = false;
@@ -2416,9 +2428,9 @@ void MainWindow::disableUseDCChemotaxis()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::redrawDistPlot()
 {
-        int i_m = 0, i_s = 0;
+    int i_m = 0, i_s = 0;
     QString sname = sender()->objectName();
-	for (int k=0; k<5; k++) {
+    for (int k=0; k<ndistplots; k++) {
 		QwtPlot *qp = distplot_list[k];
         QString tag = qp->objectName().mid(8);
         QString tag_m = tag + "_MEDIAN";

@@ -227,6 +227,8 @@ open(nfcell,file=inputfile,status='old')
 
 read(nfcell,*) NX							! rule of thumb: about 4*BLOB_RADIUS
 read(nfcell,*) initial_count				! initial number of tumour cells
+read(nfcell,*) divide_time_median
+read(nfcell,*) divide_time_shape
 read(nfcell,*) days							! number of days to simulate
 read(nfcell,*) DELTA_T						! time step size (sec)
 read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
@@ -259,9 +261,8 @@ write(logmsg,*) 'Opened nfout: ',outputfile
 call logger(logmsg)
 
 Nsteps = days*24*60*60/DELTA_T		! DELTA_T in seconds
-write(logmsg,*) 'nsteps: ',nsteps
+write(logmsg,'(a,2i6,f6.0)') 'nsteps, NT_CONC, DELTA_T: ',nsteps,NT_CONC,DELTA_T
 call logger(logmsg)
-
 !call setup_dists
 
 ok = .true.

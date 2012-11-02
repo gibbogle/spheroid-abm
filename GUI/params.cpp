@@ -323,6 +323,15 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 
 */
 
+{"DIVIDE_TIME_MEDIAN", 18, 0, 0,
+"Division time median parameter",
+"The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters. \n\
+[hours]"},
+
+{"DIVIDE_TIME_SHAPE", 1.2, 0, 0,
+"Division time shape parameter",
+"The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters."},
+
 {"NDAYS", 1.0, 0.0, 30.0,
 "Number of days",
 "Length of the simulation.\n\
@@ -337,6 +346,8 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Number of ODE solver sub-steps.",
 "The number of subdivisions of the major time step, for the ODE diffusion-reaction solver.\n\
 [days]"},
+
+
 {"TEST_CASE", 0, 0, 0,
 "Test case #",
 "Number of the test case to run.  The default value of 0 is for a normal run"},
