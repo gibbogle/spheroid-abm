@@ -122,6 +122,9 @@ private:
 	void loadParams();
 	void reloadParams();
 
+    void trackError();
+
+
 	void enableUseS1P();
 	void disableUseS1P();
 	void enableUseCCL21();
@@ -141,6 +144,7 @@ private:
 	void disableUseExitChemotaxis();
 	void enableUseDCChemotaxis();
 	void disableUseDCChemotaxis();
+
 	void writeout();
 	void execute_para();
 	void init_VTK();

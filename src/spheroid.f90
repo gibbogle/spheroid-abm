@@ -5,7 +5,8 @@ use boundary
 !use ode_diffuse
 !use FDC
 use fields
-!use winsock  
+use cellstate
+use winsock  
 
 IMPLICIT NONE
 
@@ -52,11 +53,6 @@ call read_cell_params(ok)
 if (.not.ok) return
 call logger("did read_cell_params")
 
-!NX = 100
-!blob_radius = 10
-!seed = (/12345, 67891/)
-!nsteps = 10000
-
 call array_initialisation(ok)
 if (.not.ok) return
 call logger('did array_initialisation')
@@ -96,9 +92,9 @@ call make_split(.true.)
 
 if (use_ODE_diffusion) then
 	call SetupODEDiff
+	call InitConcs
 !	call TestODEDiffusion
-	call TestSolve
-	stop
+!	call TestSolver
 endif
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
@@ -148,7 +144,7 @@ logical :: ok
 integer :: x,y,z,k, ichemo
 integer :: MAXX, z1, z2, nc0, inflow
 integer :: cog_size
-real :: d, rr(3)
+real(REAL_KIND) :: d, rr(3)
 
 ok = .false.
 call logger("call rng_initialisation")
@@ -224,14 +220,16 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 integer :: itestcase, ncpu_dummy
-real :: days
+real(REAL_KIND) :: days
 
 ok = .true.
 open(nfcell,file=inputfile,status='old')
 
 read(nfcell,*) NX							! rule of thumb: about 4*BLOB_RADIUS
-read(nfcell,*) blob_radius					! initial B cell blob size (sites)
+read(nfcell,*) initial_count				! initial number of tumour cells
 read(nfcell,*) days							! number of days to simulate
+read(nfcell,*) DELTA_T						! time step size (sec)
+read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
 read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
@@ -239,6 +237,8 @@ read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
 read(nfcell,*) fixedfile					! file with "fixed" parameter values
 close(nfcell)
+
+blob_radius = (initial_count*3./(4.*PI))**(1./3)
 
 ! Setup test_case
 test_case = .false.
@@ -259,6 +259,8 @@ write(logmsg,*) 'Opened nfout: ',outputfile
 call logger(logmsg)
 
 Nsteps = days*24*60*60/DELTA_T		! DELTA_T in seconds
+write(logmsg,*) 'nsteps: ',nsteps
+call logger(logmsg)
 
 !call setup_dists
 
@@ -278,7 +280,7 @@ end subroutine
 subroutine placeCells(ok)
 logical :: ok
 integer :: x, y, z, k, site(3)
-real :: r2lim,r2,r(3)
+real(REAL_KIND) :: r2lim,r2,r(3)
 
 occupancy(:,:,:)%indx(1) = 0
 occupancy(:,:,:)%indx(2) = 0
@@ -334,7 +336,7 @@ integer :: k, wsum, kdomain, nsum, Ntot, N, last, x, y, z
 integer, allocatable :: scount(:)
 integer, allocatable :: wz(:), ztotal(:)
 integer :: Mslices
-real :: dNT, diff1, diff2
+real(REAL_KIND) :: dNT, diff1, diff2
 logical :: show = .false.
 
 !write(*,*) 'make_split: istep,Mnodes: ',istep,Mnodes
@@ -443,7 +445,7 @@ end subroutine
 !--------------------------------------------------------------------------------
 integer function slice_count(x)
 integer :: x
-real :: r2
+real(REAL_KIND) :: r2
 
 r2 = Radius**2 - (x-x0)**2
 if (r2 < 0) then
@@ -547,7 +549,7 @@ end subroutine
 subroutine choose_bdrysite(site0,site1)
 integer :: site0(3), site1(3)
 integer :: site(3), sitemin(3)
-real :: vc(3), v(3), r, rfrac, d, alpha_max, cosa_min, dmin, cosa
+real(REAL_KIND) :: vc(3), v(3), r, rfrac, d, alpha_max, cosa_min, dmin, cosa
 logical :: hit
 type (boundary_type), pointer :: bdry
 
@@ -586,10 +588,10 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-real function get_alpha_max(r)
-real :: r
-real :: alf
-real :: r1 = 0.2, r2 = 0.8, alpha1 = PI, alpha2 = PI/6
+real(REAL_KIND) function get_alpha_max(r)
+real(REAL_KIND) :: r
+real(REAL_KIND) :: alf
+real(REAL_KIND) :: r1 = 0.2, r2 = 0.8, alpha1 = PI, alpha2 = PI/6
 
 if (r < r1) then
 	get_alpha_max = alpha1
@@ -608,8 +610,8 @@ end function
 subroutine get_nearbdrypath(site0,path,npath)
 integer :: site0(3), path(3,200),npath
 integer :: site1(3), jump(3), k, j, jmax, kpar=0
-real :: v(3), r, d, dmax, v_aim(3), v_try(3)
-real :: cosa, sina, d_try, del
+real(REAL_KIND) :: v(3), r, d, dmax, v_aim(3), v_try(3)
+real(REAL_KIND) :: cosa, sina, d_try, del
 
 v = site0 - Centre
 do j = 1,3
@@ -686,7 +688,7 @@ end subroutine
 subroutine get_path(site1,site2,path,npath)
 integer :: site1(3), site2(3), path(3,200), npath
 integer :: v(3), jump(3), site(3), k, j, jmin
-real :: r, d2, d2min
+real(REAL_KIND) :: r, d2, d2min
 
 if (dbug) write(*,'(a,3i4,2x,3i4)') 'site1, site2: ',site1, site2
 k = 1
@@ -756,7 +758,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine check_bdry
 integer :: kcell, i, site(3), site1(3), minv(3), maxv(3)
-real :: v(3), r, rmin, rmax
+real(REAL_KIND) :: v(3), r, rmin, rmax
 logical :: bdry
 
 rmin = 1.0e10
@@ -865,7 +867,7 @@ end subroutine
 subroutine adjust(site0)
 integer :: site0(3)
 integer :: i, site(3), kcell, sitemax(3)
-real :: r0, r, rmax
+real(REAL_KIND) :: r0, r, rmax
 
 if (occupancy(site0(1),site0(2),site0(3))%indx(1) /= OUTSIDE_TAG) then
 	write(*,*) 'Error: adjust: site is not OUTSIDE: ',site0
@@ -896,33 +898,47 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_dimensions(NX_dim,NY_dim,NZ_dim) BIND(C)
+subroutine get_dimensions(NX_dim,NY_dim,NZ_dim,nsteps_dim) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
 use, intrinsic :: iso_c_binding
-integer(c_int) :: NX_dim,NY_dim,NZ_dim
+integer(c_int) :: NX_dim,NY_dim,NZ_dim,nsteps_dim
 
 NX_dim = NX
 NY_dim = NY
 NZ_dim = NZ
+nsteps_dim = nsteps
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Advance simulation through one time step (DELTA_T)
+! Advance simulation through one big time step (DELTA_T)
+! The concentration fields are first solved through NT_CONC subdivisions of DELTA_T,
+! then the cell states are updated, which includes cell death and division.
+! On either death or division cell positions are adjusted, and site concentrations
+! (if necessary), and the ODE solver mappings in ODEdiff.
 !-----------------------------------------------------------------------------------------
 subroutine simulate_step(res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: simulate_step  
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
-integer :: kcell, site(3), hour, kpar=0
-real :: r(3), rmax
+integer :: kcell, site(3), hour, it, kpar=0
+real(REAL_KIND) :: r(3), rmax, tstart, dt
+!integer, parameter :: NT_CONC = 6
+integer :: nchemo
 
+dt = DELTA_T/NT_CONC
 istep = istep + 1
-!write(*,*) 'istep: ',istep
+write(logmsg,*) 'istep: ',istep
+call logger(logmsg)
 !if (istep == 6216) dbug = .true.
-call make_split(.true.)
-call UpdateFields(DELTA_T)
+!call make_split(.true.)
+!call UpdateFields(DELTA_T)
+do it = 1,NT_CONC
+	tstart = (it-1)*dt
+!	call Solver(nchemo,tstart,dt)
+	call Solver(tstart,dt)
+enddo
 res = 0
-if (mod(istep,60) == 0) then
+if (mod(istep,60) == -1) then
 	rmax = 0
 	do kcell = 1,nlist
 		r = cell_list(kcell)%site - Centre
@@ -935,7 +951,7 @@ if (mod(istep,60) == 0) then
 	call ShowConcs
 !	call check_bdry
 endif
-call cell_division
+!call cell_division
 end subroutine
 
 !-------------------------------------------------------------------------------- 
@@ -1178,7 +1194,7 @@ write(logmsg,*) 'inputfile:  ', infile
 call logger(logmsg)
 write(logmsg,*) 'outputfile: ', outfile 
 call logger(logmsg)
-if (use_tcp) then
+if (use_TCP) then
 	call connecter(ok)
 	if (.not.ok) then
 		call logger('Failed to make TCP connections')
@@ -1327,6 +1343,17 @@ if (allocated(zoffset)) deallocate(zoffset)
 if (allocated(zdomain)) deallocate(zdomain)
 !if (allocated(occupancy)) deallocate(occupancy)
 if (allocated(cell_list)) deallocate(cell_list,stat=ierr)
+if (allocated(allstate)) deallocate(allstate)
+if (allocated(allstatep)) deallocate(allstatep)
+if (allocated(work_rkc)) deallocate(work_rkc)
+do ichemo = 1,MAX_CHEMO
+	if (allocated(chemo(ichemo)%coef)) deallocate(chemo(ichemo)%coef)
+	if (allocated(chemo(ichemo)%conc)) deallocate(chemo(ichemo)%conc)
+	if (allocated(chemo(ichemo)%grad)) deallocate(chemo(ichemo)%grad)
+enddo
+if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
+if (allocated(ODEdiff%varsite)) deallocate(ODEdiff%varsite)
+if (allocated(ODEdiff%icoef)) deallocate(ODEdiff%icoef)
 call logger('deallocated all arrays')
 
 ! Close all open files

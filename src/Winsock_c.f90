@@ -12,7 +12,7 @@ TYPE winsockport
 END TYPE winsockport
 
 integer :: sock = 0
-integer, parameter :: nflog_ws=21
+integer, parameter :: nflog_ws=12
 integer, parameter :: IPPROTO_TCP = 1
 
 contains

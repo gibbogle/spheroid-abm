@@ -137,8 +137,8 @@ subroutine AddSite(ok)
 logical :: ok
 type (boundary_type), pointer :: bdry
 integer :: site(3), psite(3), indx(2), k, kmin, x, y, z
-real :: r(3), x2, y2, z2, dp, t, tmax, dpq, dmax, dmin
-real :: cmin, cmax
+real(REAL_KIND) :: r(3), x2, y2, z2, dp, t, tmax, dpq, dmax, dmin
+real(REAL_KIND) :: cmin, cmax
 
 !write(*,*) 'AddSite'
 dmax = -1.0e10
@@ -259,7 +259,7 @@ subroutine RemoveSite(ok)
 logical :: ok
 type (boundary_type), pointer :: bdry
 integer :: site(3), psite(3), k, kmax
-real :: r(3), x2, y2, z2, dp, t, dpq, dmax, dmin
+real(REAL_KIND) :: r(3), x2, y2, z2, dp, t, dpq, dmax, dmin
 
 dmin = 1.0e10
 psite = 0
@@ -384,7 +384,7 @@ end subroutine
 subroutine get_outsidesite(site1,site2)
 integer :: site1(3), site2(3)
 integer :: j, jmin, site(3)
-real :: r, rmin
+real(REAL_KIND) :: r, rmin
 
 rmin = 1.0e10
 do j = 1,6

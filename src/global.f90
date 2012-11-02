@@ -17,8 +17,8 @@ integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
-real, parameter :: DELTA_T = 1	! sec  (D = 2.0e-6 => dt = 1, D = 2.0e-5 => dt = 0.1)
-real, parameter :: DELTA_X = 0.002	! cm = 20 um
+!real(REAL_KIND), parameter :: DELTA_T = 300	! sec = 10 min = big time step for cell state change (death, division, ...)
+real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
 integer, parameter :: MAX_CHEMO = 3
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
@@ -26,11 +26,11 @@ integer, parameter :: TRACER = 3
 logical, parameter :: use_ODE_diffusion = .true.
 !integer, parameter :: MAX_RECEPTOR = 1
 integer, parameter :: OUTSIDE_TAG = -99999
-real, parameter :: PI = 4.0*atan(1.0)
+real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
 type occupancy_type
 	integer :: indx(2)
-	real :: C
+	real(REAL_KIND) :: C
 	type(boundary_type), pointer :: bdry
 end type
 
@@ -38,6 +38,8 @@ type cell_type
 	integer :: ID
 	integer :: site(3)
 	integer :: state
+	real(REAL_KIND) :: t_divide_last
+	real(REAL_KIND) :: t_divide_next
 	logical :: exists
 end type
 
@@ -52,17 +54,19 @@ type(cell_type), allocatable :: cell_list(:)
 !type(boundary_type), pointer :: bdrylist
 
 integer :: NX, NY, NZ
+integer :: initial_count
 integer, allocatable :: zdomain(:),zoffset(:)
 integer :: blobrange(3,2)
-real :: x0,y0,z0   ! centre in global coordinates (units = grids)
-real :: blob_radius, Radius, Centre(3)
+real(REAL_KIND) :: x0,y0,z0   ! centre in global coordinates (units = grids)
+real(REAL_KIND) :: blob_radius, Radius, Centre(3)
 integer :: jumpvec(3,27)
 
 integer :: max_nlist, nlist, Ncells, Ncells0, lastNcells, lastID
 integer :: max_ngaps, ngaps, nadd_sites, Nsites
 integer :: nbdry
-integer :: istep, nsteps, NT_GUI_OUT
+integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
+real(REAL_KIND) :: DELTA_T
 
 character*(128) :: inputfile
 character*(128) :: fixedfile
@@ -104,9 +108,9 @@ character*(1) :: LF = char(94)
 
 error = 0
 if (use_TCP) then
-!    if (awp_0%is_open) then
-!        call winsock_send(awp_0,trim(msg)//LF,len_trim(msg)+1,error)
-!    endif
+    if (awp_0%is_open) then
+        call winsock_send(awp_0,trim(msg)//LF,len_trim(msg)+1,error)
+    endif
 else
 	write(*,*) trim(msg)
 endif
@@ -183,8 +187,8 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine waste_time(n,dummy)
 integer :: k, n
-real :: dummy
-real(DP) :: rsum,R
+real(REAL_KIND) :: dummy
+real(REAL_KIND) :: rsum,R
 integer :: kpar=0
 
 rsum = 0
@@ -197,16 +201,16 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-real function norm(r)
-real :: r(3)
+real(REAL_KIND) function norm(r)
+real(REAL_KIND) :: r(3)
 
 norm = sqrt(r(1)*r(1) + r(2)*r(2) + r(3)*r(3))
 end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-real function norm2(r)
-real :: r(3)
+real(REAL_KIND) function norm2(r)
+real(REAL_KIND) :: r(3)
 
 norm2 = r(1)*r(1) + r(2)*r(2) + r(3)*r(3)
 end function
@@ -214,7 +218,7 @@ end function
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine normalize(r)
-real :: r(3)
+real(REAL_KIND) :: r(3)
 
 r = r/norm(r)
 end subroutine
@@ -222,9 +226,9 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! Distance from the blob centre (units = grids)
 !-----------------------------------------------------------------------------------------
-real function cdistance(site)
+real(REAL_KIND) function cdistance(site)
 integer :: site(3)
-real :: r(3)
+real(REAL_KIND) :: r(3)
 
 r = site - Centre
 cdistance = norm(r)
@@ -247,8 +251,8 @@ end function
 !---------------------------------------------------------------------
 !---------------------------------------------------------------------
 subroutine get_vnorm(v,vnorm)
-real :: v(3), vnorm(3)
-real :: d
+real(REAL_KIND) :: v(3), vnorm(3)
+real(REAL_KIND) :: d
 
 d = dot_product(v,v)
 vnorm = v/sqrt(d)

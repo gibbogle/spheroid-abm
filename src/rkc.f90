@@ -419,6 +419,8 @@ contains
 !------------------------------------      
 !  Start of loop for taking one step.  
 !------------------------------------
+      errold = 0
+      hold = 0
 20    continue      
 !----------------------------------------------
 !  Estimate the spectral radius of the Jacobian 

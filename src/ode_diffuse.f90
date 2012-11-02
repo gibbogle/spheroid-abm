@@ -40,6 +40,7 @@ real(REAL_KIND), allocatable :: allstate(:,:)
 real(REAL_KIND), allocatable :: allstatep(:,:)
 real(REAL_KIND), allocatable :: work_rkc(:,:)
 
+integer :: nchemo, chemomap(MAX_CHEMO)
 integer :: ivdbug
 
 contains
@@ -314,6 +315,14 @@ if (ierr /= 0) then
 	call logger(logmsg)
 	stop
 endif
+
+nchemo = 0
+do ichemo = 1,MAX_CHEMO
+	if (chemo(ichemo)%used) then
+		nchemo = nchemo + 1
+		chemomap(nchemo) = ichemo
+	endif
+enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -469,7 +478,6 @@ real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
 logical :: bnd, dbug
 
-!ichemo = ODEdiff%ichemo
 ichemo = icase
 DX2 = DELTA_X*DELTA_X
 decay_rate = chemo(ichemo)%decay_rate
@@ -520,7 +528,6 @@ real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
 logical :: bnd, dbug
 
 !write(*,*) 'neqn: ',neqn
-!ichemo = ODEdiff%ichemo
 ichemo = icase
 DX2 = DELTA_X*DELTA_X
 decay_rate = chemo(ichemo)%decay_rate
@@ -601,45 +608,50 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine showresults(v)
 real(REAL_KIND) :: v(:)
-integer :: x,y,z,i
+integer :: x,y,z
 
 x = NX/2
 y = NY/2
-do z = NZ/2,NZ/2+9
-	i = ODEdiff%ivar(x,y,z)
-	write(*,'(f7.4,$)') v(i)
-enddo
-write(*,*)
-
+write(logmsg,'(10f7.4)') (v(ODEdiff%ivar(x,y,z)),z=NZ/2,NZ/2+9)
+call logger(logmsg)
 end subroutine
 
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
-subroutine TestSolve
-integer :: nchemo, nvars, nt, ichemo, it
-real(REAL_KIND) :: tstart, dt
-real(REAL_KIND) :: timer1, timer2
-real(REAL_KIND) :: trun = 4000
+subroutine InitConcs
+integer :: nvars, ic, ichemo
 
-nt = 20
-dt = trun/nt
-nchemo = 3
+write(logmsg,*) 'InitConcs: ',nchemo
+call logger(logmsg)
 nvars = ODEdiff%nvars
 allocate(allstate(nvars,MAX_CHEMO))
 allocate(work_rkc(8+4*nvars,MAX_CHEMO))
-do ichemo = 1,nchemo
-!	if (.not.chemo(ichemo)%used) cycle
+
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
 	call InitState(ichemo,allstate(1:nvars,ichemo))
 enddo
+end subroutine
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine TestSolver
+integer :: nvars, nt, ichemo, it
+real(REAL_KIND) :: tstart, dt
+real(REAL_KIND) :: timer1, timer2
+real(REAL_KIND) :: trun = 400
+
+nt = 20
+dt = trun/nt
 timer1 = wtime()
 tstart = 0
 do it = 1,nt
 !	write(*,'(a,i4,f8.1)') 'it, tstart: ',it,tstart
 	tstart = (it-1)*dt
-	call Solve(nchemo,tstart,dt)
+	call Solver(tstart,dt)
 enddo
 timer2 = wtime()
 write(*,'(a,f10.1)') 'Time: ',timer2-timer1
+stop
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -654,10 +666,10 @@ end subroutine
 !     blob changes (i.e. grows or shrinks).  This could entail variable renumbering.
 !   * work(:,:) is correctly sized (ODEdiff%nvars)
 !----------------------------------------------------------------------------------
-subroutine Solve(nchemo,tstart,dt)
-integer :: nchemo
+subroutine Solver(tstart,dt)
+!integer :: nchemo
 real(REAL_KIND) :: tstart, dt
-integer :: ichemo, nvars
+integer :: ichemo, nvars, ic
 real(REAL_KIND) :: t, tend
 real(REAL_KIND), allocatable :: state(:,:)
 real(REAL_KIND) :: timer1, timer2
@@ -668,8 +680,8 @@ real(REAL_KIND) :: rtol, atol(1)
 type(rkc_comm) :: comm_rkc(MAX_CHEMO)
 
 nvars = ODEdiff%nvars
-allocate(state(nvars,nchemo))
-state(:,:) = allstate(1:nvars,1:nchemo)
+allocate(state(nvars,MAX_CHEMO))
+state(:,:) = allstate(1:nvars,1:MAX_CHEMO)
 call showresults(state(:,OXYGEN))
 
 info(1) = 1
@@ -679,8 +691,9 @@ info(4) = 0
 rtol = 1d-2
 atol = rtol
 
-!$omp parallel do private(t, tend, idid)
-do ichemo = 1,nchemo
+!$omp parallel do private(t, tend, idid, ichemo)
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
 !	if (.not.chemo(ichemo)%used) cycle
 	idid = 0
 	t = tstart
@@ -692,7 +705,7 @@ do ichemo = 1,nchemo
 	endif
 enddo
 !$omp end parallel do
-allstate(1:nvars,1:nchemo) = state(:,:)
+allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 deallocate(state)
 end subroutine
 

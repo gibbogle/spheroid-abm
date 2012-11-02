@@ -18,7 +18,7 @@ contains
 !----------------------------------------------------------------------------------------
 ! Convert halflife in hours to a decay rate /sec
 !----------------------------------------------------------------------------------------
-real function DecayRate(halflife)
+real(REAL_KIND) function DecayRate(halflife)
 real(REAL_KIND) :: halflife
 
 if (halflife == 0) then		! No decay
@@ -60,7 +60,7 @@ chemo(GLUCOSE)%halflife = 0		! hours
 chemo(GLUCOSE)%cell_rate = 3.8e-17	! mol.cell^-1.s^-1
 
 chemo(TRACER)%name = 'Tracer'
-chemo(TRACER)%used = .true.
+chemo(TRACER)%used = .false.
 chemo(TRACER)%use_secretion = .false.
 chemo(TRACER)%bdry_rate = 0
 chemo(TRACER)%bdry_conc = 200
@@ -69,7 +69,7 @@ chemo(TRACER)%halflife = 0	! hours
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
-	write(*,*) 'decay_rate: ',ichemo,chemo(ichemo)%decay_rate
+!	write(*,*) 'decay_rate: ',ichemo,chemo(ichemo)%decay_rate
 enddo
 call AllocateConcArrays
 call SetMMParameters
@@ -89,8 +89,10 @@ subroutine SetMMParameters
 !Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
 chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%cell_rate*Tmax*1.0e6/Vsite
 chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%cell_rate*Tmax*1.0e6/Vsite
-write(*,'(a,2e12.4)') 'Oxygen MM_C0: ',Tmax,chemo(OXYGEN)%MM_C0
-write(*,'(a,e12.4)') 'Glucose MM_C0: ',chemo(GLUCOSE)%MM_C0
+write(logmsg,'(a,2e12.4)') 'Oxygen MM_C0: ',Tmax,chemo(OXYGEN)%MM_C0
+call logger(logmsg)
+write(logmsg,'(a,e12.4)') 'Glucose MM_C0: ',chemo(GLUCOSE)%MM_C0
+call logger(logmsg)
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -129,7 +131,7 @@ end subroutine
 subroutine ResetConcs(site0)
 integer :: site0(3)
 integer :: site(3), ichemo, k, n
-real :: csum(MAX_CHEMO)
+real(REAL_KIND) :: csum(MAX_CHEMO)
 
 csum = 0
 n = 0
@@ -157,7 +159,7 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine ShowConcs
 integer :: x, y, z, k, x1, site(3), ichemo
-real :: C(MAX_CHEMO,100)
+real(REAL_KIND) :: C(MAX_CHEMO,100)
 logical :: start
 
 y = Centre(2) 
@@ -201,14 +203,14 @@ end subroutine
 ! This version solves for all the consitituents at once - needed for interactions.
 !----------------------------------------------------------------------------------------
 subroutine UpdateFields(dtstep)
-real :: dtstep
+real(REAL_KIND) :: dtstep
 type(chemokine_type), pointer :: Cptr
 !type(Carray_type) :: Carray(MAX_CHEMO)
 integer :: ichemo, it, nt = 4
-real :: Kdiffusion(MAX_CHEMO), Kdecay(MAX_CHEMO), dt, dCmax_par(0:20), dCmax
+real(REAL_KIND) :: Kdiffusion(MAX_CHEMO), Kdecay(MAX_CHEMO), dt, dCmax_par(0:20), dCmax
 integer :: z1, z2, n, kpar
 integer :: x, y, z
-real, allocatable :: C_par(:,:,:,:)
+real(REAL_KIND), allocatable :: C_par(:,:,:,:)
 
 x = Centre(1)
 y = Centre(2)
@@ -263,9 +265,9 @@ end subroutine
 subroutine par_evolve(Kdiffusion,Kdecay,Ctemp,z1,z2,dt,dCmax,kpar)
 integer :: z1, z2, kpar
 !real :: C(:,:,:)
-real :: Ctemp(:,:,:,:)
-real :: Kdiffusion(:), Kdecay(:), dt, dCmax, Cnew
-real :: sum, dV, C0(MAX_CHEMO), dMdt(MAX_CHEMO), dCdt(MAX_CHEMO)
+real(REAL_KIND) :: Ctemp(:,:,:,:)
+real(REAL_KIND) :: Kdiffusion(:), Kdecay(:), dt, dCmax, Cnew
+real(REAL_KIND) :: sum, dV, C0(MAX_CHEMO), dMdt(MAX_CHEMO), dCdt(MAX_CHEMO)
 integer :: x, y, z, zpar, xx, yy, zz, nb, k, indx(2), ichemo
 logical :: source_site
 
@@ -334,7 +336,7 @@ end subroutine
 ! 
 !----------------------------------------------------------------------------------------
 subroutine reactions(C0,dCdt)
-real :: C0(:), dCdt(:)
+real(REAL_KIND) :: C0(:), dCdt(:)
 
 dCdt = 0
 end subroutine
@@ -346,7 +348,7 @@ end subroutine
 ! This version solves for the consitituents one at a time.
 !----------------------------------------------------------------------------------------
 subroutine UpdateFields1(dtstep)
-real :: dtstep
+real(REAL_KIND) :: dtstep
 type(chemokine_type), pointer :: Cptr
 integer :: ichemo, it, nt = 4
 real(REAL_KIND) :: Kdiffusion, Kdecay, dt
@@ -398,7 +400,7 @@ subroutine par_evolve1(ichemo,C,Kdiffusion,Kdecay,Ctemp,z1,z2,dt,kpar)
 integer :: ichemo, z1, z2, kpar
 real(REAL_KIND) :: C(:,:,:), Ctemp(:,:,:)
 real (REAL_KIND) :: Kdiffusion, Kdecay, dt
-real :: C0, sum, dV, dMdt
+real(REAL_KIND) :: C0, sum, dV, dMdt
 integer :: x, y, z, zpar, xx, yy, zz, nb, k, indx(2), i
 logical :: source_site
 
@@ -453,7 +455,7 @@ real(REAL_KIND) :: C(:,:,:), grad(:,:,:,:)
 integer :: x, y, z, xx, yy, zz, x1, x2, y1, y2, z1, z2, i, k, indx(2)
 real(REAL_KIND) :: g(3)
 logical :: missed
-real, parameter :: MISSING_VAL = 1.0e10
+real(REAL_KIND), parameter :: MISSING_VAL = 1.0e10
 
 grad = 0
 do z = blobrange(3,1),blobrange(3,2)
@@ -573,7 +575,7 @@ use, intrinsic :: iso_c_binding
 integer(c_int) :: chem_used(*), ntsites, use_strength
 real(c_float) :: gradient_array(*)
 integer :: x, y, z, i, j, k, ic, ns
-real :: strength
+real(REAL_KIND) :: strength
 logical :: halve = .true.
 
 ns = 0
@@ -671,7 +673,7 @@ integer(c_int) :: chem_used(*), ntsites, axis, use_strength
 real(c_float) :: gradient_array(*), fraction
 integer :: x, y, z, i, j, k, ic, ns
 integer rng(3,2), rad(3)
-real :: strength
+real(REAL_KIND) :: strength
 logical :: halve = .false.
 
 rng = blobrange
@@ -734,7 +736,7 @@ end function
 !----------------------------------------------------------------------------------------
 subroutine CheckGradient
 integer :: x, y, z
-real :: g(3)
+real(REAL_KIND) :: g(3)
 logical :: err = .false.
 
 y = Centre(2)

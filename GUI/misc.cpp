@@ -149,7 +149,7 @@ void ExecThread::run()
 
 	paused = false;
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
-	get_dimensions(&NX,&NY,&NZ);
+    get_dimensions(&NX,&NY,&NZ,&nsteps);
 //	sprintf(msg,"exthread: nsteps: %d",nsteps);
 //	LOG_MSG(msg);
     mutex1.lock();
@@ -191,7 +191,7 @@ void ExecThread::run()
 		}
 		if (stopped) break;
 	}
-	LOG_MSG("ExecThread::run: stopped");
+    LOG_MSG("ExecThread::run: stopped or completed");
 	snapshot();
     sprintf(msg,"got snapshot:");
     LOG_MSG(msg);

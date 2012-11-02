@@ -87,11 +87,15 @@ rate of BCR stimulation = Ks*(BCR avidity)*(antigen load)\n\
 "Lattice size",
 "Dimension of the lattice (number of sites in X,Y and Z directions).  Typically 5*BLOB_RADIUS is OK."},
 
+{"INITIAL_COUNT", 5000, 0, 0,
+"Initial number of tumour cells",
+"Initial number of tumour cells"},
+
+/*
 {"BLOB_RADIUS", 10.0, 5.0, 50.0,
 "Initial blob size",
 "The major radius of the initial ellipsoidal blob of B cells, as number of sites.  (18.5 -> 12k sites)"},
 
-/*
 {"BC_FRACTION", 0.6, 0.4, 0.8,
 "B cell fraction",
 "Fraction of the follicular volume occupied by B cells."},
@@ -324,6 +328,15 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Length of the simulation.\n\
 [days]"},
 
+{"DELTA_T", 300, 0, 0,
+"Time step",
+"Length of main time step, for cell death, division, etc.\n\
+[days]"},
+
+{"NT_CONC", 10, 0, 0,
+"Number of ODE solver sub-steps.",
+"The number of subdivisions of the major time step, for the ODE diffusion-reaction solver.\n\
+[days]"},
 {"TEST_CASE", 0, 0, 0,
 "Test case #",
 "Number of the test case to run.  The default value of 0 is for a normal run"},
