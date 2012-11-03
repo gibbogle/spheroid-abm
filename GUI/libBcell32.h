@@ -10,7 +10,7 @@ void execute(int *,char *, int *,char *, int *);
 void simulate_step(int *);
 void terminate_run(int *);
 void get_dimensions(int *,int *,int *, int *);
-void get_scene(int *, int *, int *, int *, int *, int *);
+void get_scene(int *, int *);
 void get_summary(int *);
 //
 //

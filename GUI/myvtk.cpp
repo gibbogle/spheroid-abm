@@ -198,26 +198,26 @@ void MyVTK::key_canvas(QWidget *key_page)
 //-----------------------------------------------------------------------------------------
 void MyVTK::createMappers()
 {
-	vtkSphereSource *Bcell = vtkSphereSource::New();
-	Bcell->SetThetaResolution(12);
-	Bcell->SetPhiResolution(12);
-	Bcell->SetRadius(0.5);
-	BcellMapper = vtkPolyDataMapper::New();
+    vtkSphereSource *Tcell = vtkSphereSource::New();
+    Tcell->SetThetaResolution(12);
+    Tcell->SetPhiResolution(12);
+    Tcell->SetRadius(0.5);
+    TcellMapper = vtkPolyDataMapper::New();
 
-	BcellMapper->SetInputConnection(Bcell->GetOutputPort());
+    TcellMapper->SetInputConnection(Tcell->GetOutputPort());
 
-	vtkSphereSource *Dcell = vtkSphereSource::New();
-	Dcell->SetThetaResolution(12);
-	Dcell->SetPhiResolution(12);
-	Dcell->SetRadius(1.0);
-	DcellMapper = vtkPolyDataMapper::New();
-	DcellMapper->SetInputConnection(Dcell->GetOutputPort());
-	vtkCylinderSource *bond = vtkCylinderSource::New();
-	bond->SetResolution(12);
-	bond->SetRadius(0.15);
-	bond->SetHeight(1);
-	bondMapper = vtkPolyDataMapper::New();
-	bondMapper->SetInputConnection(bond->GetOutputPort());
+//	vtkSphereSource *Dcell = vtkSphereSource::New();
+//	Dcell->SetThetaResolution(12);
+//	Dcell->SetPhiResolution(12);
+//	Dcell->SetRadius(1.0);
+//	DcellMapper = vtkPolyDataMapper::New();
+//	DcellMapper->SetInputConnection(Dcell->GetOutputPort());
+//	vtkCylinderSource *bond = vtkCylinderSource::New();
+//	bond->SetResolution(12);
+//	bond->SetRadius(0.15);
+//	bond->SetHeight(1);
+//	bondMapper = vtkPolyDataMapper::New();
+//	bondMapper->SetInputConnection(bond->GetOutputPort());
 
 	double rSphere0 = 0.5;
 	double rSphere1 = 0.3;
@@ -283,8 +283,8 @@ void MyVTK::createMappers()
 	append2->AddInput(dumbell3);
 
 	// Rendering objects.
-	FDcellMapper = vtkPolyDataMapper::New();
-	FDcellMapper->SetInput(append2->GetOutput());
+//	FDcellMapper = vtkPolyDataMapper::New();
+//	FDcellMapper->SetInput(append2->GetOutput());
 
 	// Is this OK?
 	sphere0->Delete();
@@ -327,27 +327,27 @@ void MyVTK::stopRecorder()
 
 //-----------------------------------------------------------------------------------------
 // The cell info is fetched from the DLL by ExecThread::snapshot().
-// The info is transmitted in the integer arrays BC_list[] and DC_list[]
-// The info is transferred here into BCpos_list and DCpos_list, which are Qlists.
+// The info is transmitted in the integer arrays cell_list[] and DC_list[]
+// The info is transferred here into TCpos_list and DCpos_list, which are Qlists.
 //-----------------------------------------------------------------------------------------
 void MyVTK::get_cell_positions(bool fast)
 {
 //    LOG_QMSG("get_cell_positions");
 	double BC_diam = 0.9;
 	double DC_diam = 1.8;
-	BCpos_list.clear();
-	DCpos_list.clear();
-	bondpos_list.clear();
-	for (int i=0; i<nBC_list; i++) {
+    TCpos_list.clear();
+//	DCpos_list.clear();
+//	bondpos_list.clear();
+    for (int i=0; i<ncell_list; i++) {
 		int j = 5*i;
 		CELL_POS cp;
-		cp.tag = BC_list[j];
-		cp.x = BC_list[j+1];
-		cp.y = BC_list[j+2];
-		cp.z = BC_list[j+3];
-		cp.state = BC_list[j+4];
+        cp.tag = cell_list[j];
+        cp.x = cell_list[j+1];
+        cp.y = cell_list[j+2];
+        cp.z = cell_list[j+3];
+        cp.state = cell_list[j+4];
 		cp.diameter = BC_diam;
-		BCpos_list.append(cp);
+        TCpos_list.append(cp);
 //        double r, g, b;
 //        if (cp.state > 0) {
 //            unpack(cp.state, &r, &g, &b);
@@ -357,33 +357,33 @@ void MyVTK::get_cell_positions(bool fast)
 //        sprintf(msg,"B cell: %d: tag: %d pos: %d %d %d state: %d %lf %lf %lf",i,cp.tag,cp.x,cp.y,cp.z,cp.state,r,g,b);
 //        LOG_MSG(msg);
 	}
-	for (int i=0; i<nDC_list; i++) {
-		int j = 5*i;
-		CELL_POS cp;
-		cp.tag = DC_list[j];
-		cp.x = DC_list[j+1];
-		cp.y = DC_list[j+2];
-		cp.z = DC_list[j+3];
-        cp.state = DC_list[j+4];
-		cp.diameter = DC_diam;
-		DCpos_list.append(cp);
-	}
-	for (int i=0; i<nbond_list; i++) {
-		int j = 2*i;
-		BOND_POS cp;
-		cp.BCtag = bond_list[j];
-		cp.DCtag = bond_list[j+1];
-		bondpos_list.append(cp);
-	}
+//	for (int i=0; i<nDC_list; i++) {
+//		int j = 5*i;
+//		CELL_POS cp;
+//		cp.tag = DC_list[j];
+//		cp.x = DC_list[j+1];
+//		cp.y = DC_list[j+2];
+//		cp.z = DC_list[j+3];
+//        cp.state = DC_list[j+4];
+//		cp.diameter = DC_diam;
+//		DCpos_list.append(cp);
+//	}
+//	for (int i=0; i<nbond_list; i++) {
+//		int j = 2*i;
+//		BOND_POS cp;
+//		cp.BCtag = bond_list[j];
+//		cp.DCtag = bond_list[j+1];
+//		bondpos_list.append(cp);
+//	}
 }
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool savepos)
 {	
-	BCpos_list.clear();
-    DCpos_list.clear();
-    bondpos_list.clear();
+    TCpos_list.clear();
+//    DCpos_list.clear();
+//    bondpos_list.clear();
 	QString line, saveline;
 	QTextStream *out = NULL;
 	QFile *vtkdata = NULL;
@@ -415,21 +415,22 @@ void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool sa
 					cp.z = s[4].toInt();
 					cp.diameter = s[5].toDouble();
 					cp.state = s[6].toDouble();
-					BCpos_list.append(cp);
-				} else if (s[0].compare("D") == 0) {
-					CELL_POS cp;
-					cp.tag = s[1].toInt();
-					cp.x = s[2].toInt();
-					cp.y = s[3].toInt();
-					cp.z = s[4].toInt();
-					cp.diameter = s[5].toDouble();
-					cp.state = s[6].toDouble();
-					DCpos_list.append(cp);
-				} else if (s[0].compare("B") == 0) {
-					BOND_POS cp;
-					cp.BCtag = s[1].toInt();
-					cp.DCtag = s[2].toInt();
-					bondpos_list.append(cp);
+                    TCpos_list.append(cp);
+//				}
+//                else if (s[0].compare("D") == 0) {
+//					CELL_POS cp;
+//					cp.tag = s[1].toInt();
+//					cp.x = s[2].toInt();
+//					cp.y = s[3].toInt();
+//					cp.z = s[4].toInt();
+//					cp.diameter = s[5].toDouble();
+//					cp.state = s[6].toDouble();
+//					DCpos_list.append(cp);
+//				} else if (s[0].compare("B") == 0) {
+//					BOND_POS cp;
+//					cp.BCtag = s[1].toInt();
+//					cp.DCtag = s[2].toInt();
+//					bondpos_list.append(cp);
 				} else if (s[0].compare("E") == 0) {
 					break;
 				} 
@@ -452,9 +453,9 @@ void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool sa
 //---------------------------------------------------------------------------------------------
 void MyVTK::init()
 {
-	B_Actor_list.clear();
-	D_Actor_list.clear();
-	Bnd_Actor_list.clear();
+    T_Actor_list.clear();
+//	D_Actor_list.clear();
+//	Bnd_Actor_list.clear();
 }
 
 //---------------------------------------------------------------------------------------------
@@ -466,21 +467,21 @@ void MyVTK::cleanup()
     ACTOR_TYPE a;
 
 	LOG_MSG("VTK cleanup");
-	for (i = 0; i<B_Actor_list.length(); i++) {
-        a = B_Actor_list[i];
+    for (i = 0; i<T_Actor_list.length(); i++) {
+        a = T_Actor_list[i];
         ren->RemoveActor(a.actor);
 	}
-	for (i = 0; i<D_Actor_list.length(); i++) {
-        a = D_Actor_list[i];
-        ren->RemoveActor(a.actor);
-	}
-	for (i = 0; i<Bnd_Actor_list.length(); i++) {
-		actor = Bnd_Actor_list[i];
-        ren->RemoveActor(actor);
-	}
-	B_Actor_list.clear();
-	D_Actor_list.clear();
-	Bnd_Actor_list.clear();
+//	for (i = 0; i<D_Actor_list.length(); i++) {
+//        a = D_Actor_list[i];
+//        ren->RemoveActor(a.actor);
+//	}
+//	for (i = 0; i<Bnd_Actor_list.length(); i++) {
+//		actor = Bnd_Actor_list[i];
+//        ren->RemoveActor(actor);
+//	}
+    T_Actor_list.clear();
+//	D_Actor_list.clear();
+//	Bnd_Actor_list.clear();
 	first_VTK = true;	
 }
 
@@ -488,8 +489,8 @@ void MyVTK::cleanup()
 //---------------------------------------------------------------------------------------------
 void MyVTK::renderCells(bool redo, bool zzz)
 {
-	process_Bcells();
-    process_Dcells();
+    process_Tcells();
+//    process_Dcells();
 //    process_bonds();
 	if (first_VTK) {
 		LOG_MSG("Initializing the renderer");
@@ -528,16 +529,16 @@ void MyVTK::unpack(int x, double *rr, double *gg, double *bb)
 
 //---------------------------------------------------------------------------------------------
 // This improved, simpler method assumes only that the cell tag (cp.tag) is unique.
-// This tag is the index into B_Actor_list[], which grows as the maximum tag increases.
-// B_Actor_list now includes the field .active, which is maintained in sync with the
+// This tag is the index into T_Actor_list[], which grows as the maximum tag increases.
+// T_Actor_list now includes the field .active, which is maintained in sync with the
 // status of .actor in the renderer object ren, i.e. when the actor is added to the scene
 // .active is set to true, and when the actor is removed .active is set to false.
 // In each scene update step the status of a tag is recorded in in_pos_list[].
-// in_pos_list is compared with B_Actor_list, and actors corresponding to tags that have been
+// in_pos_list is compared with T_Actor_list, and actors corresponding to tags that have been
 // dropped (i.e. have in_pos_list[tag] = false but A_Actor_list[tag].active = true) are marked
-// as .active = false in B_Actor_list, and removed from the scene.
+// as .active = false in T_Actor_list, and removed from the scene.
 //---------------------------------------------------------------------------------------------
-void MyVTK::process_Bcells()
+void MyVTK::process_Tcells()
 {
     int i, tag, maxtag;
     double r, g, b;
@@ -546,14 +547,14 @@ void MyVTK::process_Bcells()
 	int axis_centre = -2;	// identifies the ellipsoid centre
 	int axis_end    = -3;	// identifies the ellipsoid extent in 5 directions
 	int axis_bottom = -4;	// identifies the ellipsoid extent in the -Y direction, i.e. bottom surface
-	double BCColor[] = {0.0, 0.0, 1.0};
+    double TCColor[] = {0.0, 0.0, 1.0};
     bool dbug = false;
     ACTOR_TYPE a;
     ACTOR_TYPE *ap;
 
- //   LOG_QMSG("process_Bcells");
-	int np = BCpos_list.length();
-    int na = B_Actor_list.length();
+ //   LOG_QMSG("process_Tcells");
+    int np = TCpos_list.length();
+    int na = T_Actor_list.length();
     if (istep < 0) {
         sprintf(msg,"na: %d np: %d",na,np);
         LOG_MSG(msg);
@@ -561,7 +562,7 @@ void MyVTK::process_Bcells()
     }
     maxtag = 0;
 	for (i=0; i<np; i++) {
-		cp = BCpos_list[i];
+        cp = TCpos_list[i];
         tag = cp.tag;
         maxtag = max(tag,maxtag);
 	}
@@ -572,25 +573,25 @@ void MyVTK::process_Bcells()
     ap = &a;
     for (tag=na; tag<=maxtag; tag++) {
         ap->actor = vtkActor::New();
-        ap->actor->SetMapper(BcellMapper);
+        ap->actor->SetMapper(TcellMapper);
         ap->active = false;
-        B_Actor_list.append(a);
+        T_Actor_list.append(a);
     }
-    na = B_Actor_list.length();
+    na = T_Actor_list.length();
     bool *in_pos_list;
     in_pos_list = new bool[na];
     for (tag=0; tag<na; tag++)
         in_pos_list[tag] = false;
     for (i=0; i<np; i++) {
-		cp = BCpos_list[i];
+        cp = TCpos_list[i];
         tag = cp.tag;
         in_pos_list[tag] = true;
         if (dbug) {
             sprintf(msg,"i: %d tag: %d",i,tag);
             LOG_MSG(msg);
         }
-        ap = &B_Actor_list[tag];
-        if (!ap->active) {  // Make active an actor with new tag in BCpos_list
+        ap = &T_Actor_list[tag];
+        if (!ap->active) {  // Make active an actor with new tag in TCpos_list
             if (dbug) {
                 sprintf(msg,"adding actor: %d",tag);
                 LOG_MSG(msg);
@@ -614,8 +615,8 @@ void MyVTK::process_Bcells()
         ap->actor->GetProperty()->SetColor(r, g, b);
         ap->actor->SetPosition(cp.x, cp.y, cp.z);
 	}
-    for (int k=0; k<B_Actor_list.length(); k++) {
-        ap = &B_Actor_list[k];
+    for (int k=0; k<T_Actor_list.length(); k++) {
+        ap = &T_Actor_list[k];
         if (ap->active && !in_pos_list[k]) {
             if (dbug) {
                 sprintf(msg,"removing actor: %d",k);
@@ -627,6 +628,7 @@ void MyVTK::process_Bcells()
 	}
 }
 
+/*
 //---------------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------------
 void MyVTK::process_Dcells()
@@ -682,7 +684,7 @@ void MyVTK::process_Dcells()
             LOG_MSG(msg);
         }
         ap = &D_Actor_list[tag];
-        if (!ap->active) {  // Make active an actor with new tag in BCpos_list
+        if (!ap->active) {  // Make active an actor with new tag in TCpos_list
             if (dbug) {
                 sprintf(msg,"adding actor: %d",tag);
                 LOG_MSG(msg);
@@ -707,180 +709,6 @@ void MyVTK::process_Dcells()
             ap->active = false;
         }
     }
-}
-
-/*
-//---------------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------------
-void MyVTK::process_Bcells()
-{
-    int i, tag;
-    double r, g, b, genfac;
-    double BC_MAX_GEN = 30;
-    CELL_POS cp;
-    vtkActor *actor;
-    int axis_centre = -2;	// identifies the ellipsoid centre
-    int axis_end    = -3;	// identifies the ellipsoid extent in 5 directions
-    int axis_bottom = -4;	// identifies the ellipsoid extent in the -Y direction, i.e. bottom surface
-    double BCColor[] = {0.0, 0.0, 1.0};
-    bool dbug = false;
-
-    LOG_QMSG("process_Bcells");
-    int na = B_Actor_list.length();
-    int np = BCpos_list.length();
-    if (istep > 0) {
-        sprintf(msg,"na: %d np: %d",na,np);
-        LOG_MSG(msg);
-        dbug = true;
-    }
-    int n = na;
-    for (i=0; i<np; i++) {
-        cp = BCpos_list[i];
-        tag = cp.tag;
-        n = max(tag+1,n);
-    }
-    if (dbug) {
-        sprintf(msg,"n: %d",n);
-        LOG_MSG(msg);
-    }
-    bool *active;
-    active = new bool[n];
-    for (i=0; i<n; i++)
-        active[i] = false;
-    for (i=0; i<np; i++) {
-        cp = BCpos_list[i];
-        tag = cp.tag;
-        active[tag] = true;
-        if (dbug) {
-            sprintf(msg,"i: %d tag: %d",i,tag);
-            LOG_MSG(msg);
-        }
-        if (tag >= na) {   // need to add actor, and possibly fill gaps
-            if (tag > na) {
-                for (int j=na; j<tag; j++)	//j in range(na,tag):
-                    B_Actor_list.append(0);
-            }
-            actor = vtkActor::New();
-            actor->SetMapper(BcellMapper);
-//			actor->GetProperty()->SetColor(BCColor);
-            ren->AddActor(actor);
-            B_Actor_list.append(actor);
-            na = tag + 1;
-        }
-        if (cp.state < 0) {
-            if (cp.state == -1) {	// non-cognate
-                r = 0.5; g = 0.5; b = 0.5;
-            } else if (cp.state == axis_centre) {
-                r = 1; g = 1; b = 1;
-            } else if (cp.state == axis_end) {
-                r = 0.5; g = 0; b = 0.5;
-            } else if (cp.state == axis_bottom) {
-                r = 1; g = 0.2; b = 1;
-            }
-        } else {
-            unpack(cp.state, &r, &g, &b);
-        }
-        actor = B_Actor_list[tag];
-        if (actor != 0) {
-            actor->GetProperty()->SetColor(r, g, b);
-            actor->SetPosition(cp.x, cp.y, cp.z);
-        } else {
-            sprintf(msg,"B_actor = 0: %d",tag);
-            LOG_MSG(msg);
-            exit(1);
-        }
-    }
-    for (int k=0; k<na; k++) {	// k in range(0,na):
-        if (B_Actor_list[k] != 0 && !active[k]) {     // need to remove actor from list
-            actor = B_Actor_list[k];
-            if (dbug) {
-                sprintf(msg,"removing actor: %d",k);
-                LOG_MSG(msg);
-            }
-            ren->RemoveActor(actor);
-            B_Actor_list[k] = 0;
-            B_Actor_list.removeAt(k);
-        }
-    }
-}
-
-//---------------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------------
-void MyVTK::process_Dcells(bool redo)
-{
-	int i, tag;
-	CELL_POS cp;
-	double antigen, color[3];
-	vtkActor *actor;
-	double minlevel = 0.3;
-
-    LOG_QMSG("process_Dcells");
-	double FDCColor[] = {1.0,0.5,0.3};
-    double MRCColor[] = {1.0,0.3,0.5};
-    int na = D_Actor_list.length();
-    int np = DCpos_list.length();
-    int n = na;
-	for (i=0; i<np; i++) {
-        cp = DCpos_list[i];
-        tag = cp.tag;
-        n = max(tag+1,n);
-	}
-    bool *active;
-	active = new bool[n];
-	for (i=0; i<n; i++)
-		active[i] = false;
-
-	for (i=0; i<np; i++) {
-        cp = DCpos_list[i];
-        tag = cp.tag;
-        active[tag] = true;
-        bool newDC = false;
-		if (tag >= na) {   // need to add actor, and possibly fill gaps
-			if (tag > na) {
-                for (int j=na; j<tag; j++)	//j in range(na,tag):
-                    D_Actor_list.append(0);
-			}
-			actor = vtkActor::New();
-//            actor->SetMapper(DcellMapper);
-			actor->SetMapper(FDcellMapper);
-            if (cp.state == 100)
-                actor->GetProperty()->SetColor(FDCColor);
-            else
-                actor->GetProperty()->SetColor(MRCColor);
-            ren->AddActor(actor);
-            D_Actor_list.append(actor);
-            na = tag + 1;
-            newDC = true;
-//            sprintf(msg,"DC: i: %d tag: %d state: %d",i,tag,cp.state);
-//            LOG_MSG(msg);
-		} else {
-			actor = D_Actor_list[tag];
-		}
-		if (redo || newDC || DCmotion || DCfade) {
-			if (actor != 0) {
-				if (DCfade) {
-					antigen = cp.state;
-                    color[0] = (minlevel + (1-minlevel)*antigen)*FDCColor[0];
-                    color[1] = (minlevel + (1-minlevel)*antigen)*FDCColor[1];
-                    color[2] = (minlevel + (1-minlevel)*antigen)*FDCColor[2];
-					actor->GetProperty()->SetColor(color);
-				}
-				actor->SetPosition(cp.x, cp.y, cp.z);
-			} else {
-				sprintf(msg,"D_actor = 0: %d",tag);
-				LOG_MSG(msg);
-				exit(1);
-			}
-		}
-	}
-
-	for (int k=0; k<na; k++) {	// k in range(0,na):
-		if (D_Actor_list[k] != 0 && !active[k]) {     // need to remove actor from list
-            actor = D_Actor_list[k];
-            ren->RemoveActor(actor);
-            D_Actor_list[k] = 0;
-		}
-	}
 }
 
 
@@ -960,6 +788,7 @@ void MyVTK::process_bonds()
 	}
 }
 */
+
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 bool MyVTK::startPlayer(QString posfile, QTimer *theTimer, bool save)
@@ -1006,9 +835,9 @@ bool MyVTK::nextFrame()
 		stop();
 		return false;
 	}
-	BCpos_list.clear();
-	DCpos_list.clear();
-	bondpos_list.clear();
+    TCpos_list.clear();
+//	DCpos_list.clear();
+//	bondpos_list.clear();
 	int k = 0;
 	QString line;
 	do {
@@ -1024,21 +853,21 @@ bool MyVTK::nextFrame()
 				cp.z = s[4].toInt();
 				cp.diameter = s[5].toDouble();
 				cp.state = s[6].toDouble();
-				BCpos_list.append(cp);
-			} else if (s[0].compare("D") == 0) {
-				CELL_POS cp;
-				cp.tag = s[1].toInt();
-				cp.x = s[2].toInt();
-				cp.y = s[3].toInt();
-				cp.z = s[4].toInt();
-				cp.diameter = s[5].toDouble();
-				cp.state = s[6].toDouble();
-				DCpos_list.append(cp);
-			} else if (s[0].compare("B") == 0) {
-				BOND_POS cp;
-				cp.BCtag = s[1].toInt();
-				cp.DCtag = s[2].toInt();
-				bondpos_list.append(cp);
+                TCpos_list.append(cp);
+//			} else if (s[0].compare("D") == 0) {
+//				CELL_POS cp;
+//				cp.tag = s[1].toInt();
+//				cp.x = s[2].toInt();
+//				cp.y = s[3].toInt();
+//				cp.z = s[4].toInt();
+//				cp.diameter = s[5].toDouble();
+//				cp.state = s[6].toDouble();
+//				DCpos_list.append(cp);
+//			} else if (s[0].compare("B") == 0) {
+//				BOND_POS cp;
+//				cp.BCtag = s[1].toInt();
+//				cp.DCtag = s[2].toInt();
+//				bondpos_list.append(cp);
 			} else if (s[0].compare("E") == 0) {
 				break;
 			}

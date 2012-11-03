@@ -972,8 +972,8 @@ end subroutine
 ! blobrange(2,1) <= y <= blobrange(2,2)
 ! blobrange(3,1) <= z <= blobrange(3,2)
 !--------------------------------------------------------------------------------
-subroutine get_scene(nBC_list,BC_list,nFDCMRC_list,FDCMRC_list,nbond_list,bond_list) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_scene
+subroutine get_bcell_scene(nBC_list,BC_list,nFDCMRC_list,FDCMRC_list,nbond_list,bond_list) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_bcell_scene
 use, intrinsic :: iso_c_binding
 integer(c_int) :: nFDCMRC_list, nBC_list, nbond_list, FDCMRC_list(*), BC_list(*), bond_list(*)
 integer :: k, kc, kcell, site(3), j, jb
@@ -1068,6 +1068,105 @@ do kcell = 1,nlist
 	endif
 enddo
 nBC_list = last_id2
+end subroutine
+
+!--------------------------------------------------------------------------------
+! TC = tumour cell
+!--------------------------------------------------------------------------------
+subroutine get_scene(nTC_list,TC_list) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_scene
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nTC_list, TC_list(*)
+integer :: k, kc, kcell, site(3), j, jb
+integer :: col(3)
+integer :: x, y, z
+integer :: itcstate, ctype, stage, region
+integer :: last_id1, last_id2
+logical :: ok
+integer, parameter :: axis_centre = -2	! identifies the spheroid centre
+integer, parameter :: axis_end    = -3	! identifies the spheroid extent in 5 directions
+integer, parameter :: axis_bottom = -4	! identifies the spheroid extent in the -Y direction, i.e. bottom surface
+integer, parameter :: ninfo = 5			! the size of the info package for a cell (number of integers)
+integer, parameter :: nax = 6			! number of points used to delineate the spheroid
+
+nTC_list = 0
+
+! Need some markers to delineate the follicle extent.  These nax "cells" are used to convey (the follicle centre
+! and) the approximate ellipsoidal blob limits in the 3 axis directions.
+do k = 1,nax
+	select case (k)
+!	case (1)
+!		x = Centre(1) + 0.5
+!		y = Centre(2) + 0.5
+!		z = Centre(3) + 0.5
+!		site = (/x, y, z/)
+!		itcstate = axis_centre
+	case (1)
+!		x = Centre(1) - Radius%x - 2
+		x = blobrange(1,1) - 1
+		y = Centre(2) + 0.5
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		itcstate = axis_end
+	case (2)
+!		x = Centre(1) + Radius%x + 2
+		x = blobrange(1,2) + 1
+		y = Centre(2) + 0.5
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		itcstate = axis_end
+	case (3)
+		x = Centre(1) + 0.5
+!		y = Centre(2) - Radius%y - 2
+		y = blobrange(2,1) - 1
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		itcstate = axis_bottom
+	case (4)
+		x = Centre(1) + 0.5
+!		y = Centre(2) + Radius%y + 2
+		y = blobrange(2,2) + 1
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		itcstate = axis_end
+	case (5)
+		x = Centre(1) + 0.5
+		y = Centre(2) + 0.5
+!		z = Centre(3) - Radius%z - 2
+		z = blobrange(3,1) - 1
+		site = (/x, y, z/)
+		itcstate = axis_end
+	case (6)
+		x = Centre(1) + 0.5
+		y = Centre(2) + 0.5
+!		z = Centre(3) + Radius%z + 2
+		z = blobrange(3,2) + 1
+		site = (/x, y, z/)
+		itcstate = axis_end
+	end select
+
+	j = ninfo*(k-1)
+	TC_list(j+1) = k-1
+	TC_list(j+2:j+4) = site
+	TC_list(j+5) = itcstate
+	last_id1 = k-1
+enddo
+k = last_id1 + 1
+
+! Cells
+do kcell = 1,nlist
+	if (cell_list(kcell)%exists) then
+		k = k+1
+		j = ninfo*(k-1)
+		site = cell_list(kcell)%site
+		call cellColour(kcell,col)
+		TC_list(j+1) = kcell + last_id1
+		TC_list(j+2:j+4) = site
+		TC_list(j+5) = rgb(col)
+		last_id2 = kcell + last_id1
+	endif
+enddo
+nTC_list = last_id2
 end subroutine
 
 !-----------------------------------------------------------------------------------------

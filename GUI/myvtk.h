@@ -67,8 +67,8 @@ public:
 	void cleanup();
 	void unpack(int x, double *, double *, double *);
 	void renderCells(bool,bool);
-	void process_Bcells();
-    void process_Dcells();
+    void process_Tcells();
+//    void process_Dcells();
 //    void process_bonds();
 	bool startPlayer(QString, QTimer *, bool);
 	bool nextFrame();
@@ -80,23 +80,23 @@ public:
     void recorder();
     void stop();
 
-	QList<CELL_POS > BCpos_list;
-	QList<CELL_POS > DCpos_list;
-	QList<BOND_POS > bondpos_list;
+    QList<CELL_POS > TCpos_list;
+//	QList<CELL_POS > DCpos_list;
+//	QList<BOND_POS > bondpos_list;
 //	QList<vtkActor *> B_Actor_list;
-    QList<ACTOR_TYPE> B_Actor_list;
+    QList<ACTOR_TYPE> T_Actor_list;
 //  QList<vtkActor *> D_Actor_list;
-    QList<ACTOR_TYPE> D_Actor_list;
-    QList<vtkActor *> Bnd_Actor_list;
+//  QList<ACTOR_TYPE> D_Actor_list;
+//    QList<vtkActor *> Bnd_Actor_list;
 
 	QVTKWidget* qvtkWidget;
 	vtkRenderWindow *renWin;	
 	vtkRenderer* ren;
 	vtkRenderWindowInteractor * iren;
-	vtkPolyDataMapper *BcellMapper;
-	vtkPolyDataMapper *DcellMapper;
-	vtkPolyDataMapper *bondMapper;
-	vtkPolyDataMapper *FDcellMapper;
+    vtkPolyDataMapper *TcellMapper;
+//	vtkPolyDataMapper *DcellMapper;
+//	vtkPolyDataMapper *bondMapper;
+//	vtkPolyDataMapper *FDcellMapper;
 //	vtkMPEG2Writer *mpg;
 //	vtkSmartPointer<vtkPNGWriter> writer;
 //	vtkSmartPointer<vtkBMPWriter> writer;

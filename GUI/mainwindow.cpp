@@ -26,19 +26,20 @@ Graphs *grph;
 
 int showingVTK;
 int VTKbuffer[100];
-int BC_list[NINFO*MAX_BC];
-int nBC_list;
-int DC_list[NINFO*MAX_DC];
-int nDC_list;
-int bond_list[2*MAX_BOND];
-int nbond_list;
+int cell_list[NINFO*MAX_CELLS];
+int ncell_list;
+//int BC_list[NINFO*MAX_BC];
+//int nBC_list;
+//int DC_list[NINFO*MAX_DC];
+//int nDC_list;
+//int bond_list[2*MAX_BOND];
+//int nbond_list;
 int istep;
 
 int summaryData[100];
-int NX, NY, NZ, NBY;
 int nt_vtk;
 bool leftb;
-int ndistplots = 5;
+int ndistplots = 1;
 
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
 {}
@@ -224,16 +225,18 @@ void MainWindow::createLists()
 
     qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE_TIME");
     distplot_list[0] = qp;
+    /*
     qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_TC_AVIDITY");
     distplot_list[1] = qp;
-	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE1");
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE1");
     distplot_list[2] = qp;
-	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE2");
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE2");
     distplot_list[3] = qp;
-	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DC_ANTIGEN");
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DC_ANTIGEN");
     distplot_list[4] = qp;
-//	qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DC_LIFETIME");
-//    distplot_list[5] = qp;
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DC_LIFETIME");
+    distplot_list[5] = qp;
+    */
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -243,14 +246,7 @@ void MainWindow:: startRecorder()
     bool ok;
     int nframes=0;
     QString basefile = "movie/frame";
-//    const QString title = "Set nframes";
-//    const QString text = "Number of frames to capture: ";
     int i = QInputDialog::getInteger(this, tr("Set nframes"),tr("Number of frames to capture: "), nframes, 0, 10000, 1, &ok);
-//    int i = QInputDialog::getInt(this, title, text, nframes, 0, 0, 0, &ok);
-
-//    static int i = QInputDialog::getInt(this, QObject::tr("QInputDialog::getInteger()"),
-//                                  QObject::tr("Percentage:"), 25, 0, 100, 1, &ok);
-
     if (ok) {
         nframes = i;
     }
@@ -285,15 +281,13 @@ void MainWindow:: drawDistPlots()
     for (int j=0; j<ndistplots; j++) {
 		qp = distplot_list[j];
         QString name = qp->objectName();
-        if (name.contains("BC_AVIDITY")) {
-			name_str = name.toStdString();
-			LOG_QMSG(name);
-		}
         if (j == 0) {
             qp->setTitle("Tumour cell division time (hrs)");
             median_qstr = line_DIVIDE_TIME_MEDIAN->text();
             shape_qstr = line_DIVIDE_TIME_SHAPE->text();
-        } else if (j == 1) {
+        }
+        /*
+        else if (j == 1) {
 			qp->setTitle("TCR Avidity");
             median_qstr = line_BC_AVIDITY_MEDIAN->text();
             shape_qstr = line_BC_AVIDITY_SHAPE->text();
@@ -306,14 +300,15 @@ void MainWindow:: drawDistPlots()
 			median_qstr = line_DIVIDE2_MEDIAN->text();
 			shape_qstr = line_DIVIDE2_SHAPE->text();
         } else if (j == 4) {
-			qp->setTitle("DC antigen density");
-			median_qstr = line_DC_ANTIGEN_MEDIAN->text();
-			shape_qstr = line_DC_ANTIGEN_SHAPE->text();
-//        } else if (j == 5) {
-//			qp->setTitle("DC lifetime (days)");
-//			median_qstr = line_DC_LIFETIME_MEDIAN->text();
-//			shape_qstr = line_DC_LIFETIME_SHAPE->text();
+            qp->setTitle("DC antigen density");
+            median_qstr = line_DC_ANTIGEN_MEDIAN->text();
+            shape_qstr = line_DC_ANTIGEN_SHAPE->text();
+        } else if (j == 5) {
+            qp->setTitle("DC lifetime (days)");
+            median_qstr = line_DC_LIFETIME_MEDIAN->text();
+            shape_qstr = line_DC_LIFETIME_SHAPE->text();
 		}
+        */
 		median = median_qstr.toDouble();
 		shape = shape_qstr.toDouble();
         create_lognorm_dist(median,shape,nDistPts,x,prob);
@@ -360,18 +355,10 @@ void MainWindow::loadParams()
 		if (qsname.startsWith("line_") || qsname.startsWith("spin_")
 			|| qsname.startsWith("comb_") || qsname.startsWith("cbox_")
 			|| qsname.startsWith("rbut_") || qsname.startsWith("text_")) {
-//			LOG_QMSG(qsname);
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
-//				LOG_QMSG("loadParams: rbut");
-//				LOG_QMSG("wtag: "+wtag);
-//				LOG_QMSG("qsname: "+qsname);
-//				wtag = parse_rbutton(wtag,&rbutton_case);
 				parse_rbutton(wtag,&rbutton_case);
-//				LOG_QMSG("-> wtag: "+wtag);
-//				sprintf(msg,"rbutton_case: %d",rbutton_case);
-//				LOG_MSG(msg);
 			}
             // Find corresponding data in workingParameterList
             bool found = false;
@@ -414,17 +401,14 @@ void MainWindow::loadParams()
 					} else if (qsname.startsWith("cbox_")) {
 						QCheckBox *w_cb = (QCheckBox *)w;
 
+                        /*
 						// Chemokines
 						bool use_S1P = qsname.contains("USE_S1PR1") || qsname.contains("USE_S1PR2");
 						if (p.value == 1) {
 							w_cb->setChecked(true);
 							if (use_S1P)
 								enableUseS1P();
-						} // else {
-//							w_cb->setChecked(false);
-//							if (use_S1P)
-//								disableUseS1P();
-//						}
+                        }
 						bool use_CCL21 = qsname.contains("USE_CCR7");
 						if (p.value == 1) {
 							w_cb->setChecked(true);
@@ -456,7 +440,6 @@ void MainWindow::loadParams()
 								disableUseCXCL13();
 						}
 
-						/*
 						bool in_vitro = qsname.contains("IN_VITRO");
 						if (p.value == 1) {
 							w_cb->setChecked(true);
@@ -529,17 +512,6 @@ void MainWindow::loadParams()
 							LOG_QMSG("loadParams: setChecked false")
 						}
 						setLineEditVisibility(qsname,int(p.value));
-						/*
-						if (p.value == rbutton_case) {
-							w_rb->setChecked(true);
-							LOG_QMSG("setChecked true")
-							LOG_QMSG(wtag);
-						} else {
-							w_rb->setChecked(false);
-							LOG_QMSG("setChecked false")
-							LOG_QMSG(wtag);
-						}
-						*/
 					} else if (qsname.startsWith("text_")) {
 						QLineEdit *w_l = (QLineEdit *)w;
 						w_l->setText(p.label);
@@ -564,6 +536,7 @@ void MainWindow::loadParams()
                         labelText = "Median";
                     else if (wtag.compare("DIVIDE_TIME_SHAPE") == 0)
                         labelText = "Shape";
+                    /*
                     if (wtag.compare("TC_AVIDITY_MEDIAN") == 0)
                         labelText = "Median";
 					else if (wtag.compare("TC_AVIDITY_SHAPE") == 0)
@@ -580,11 +553,11 @@ void MainWindow::loadParams()
                         labelText = "Median";
 					else if (wtag.compare("DC_ANTIGEN_SHAPE") == 0)
                         labelText = "Shape";
-//                    else if (wtag.compare("DC_LIFETIME_MEDIAN") == 0)
-//                        labelText = "Median";
-//					else if (wtag.compare("DC_LIFETIME_SHAPE") == 0)
-//                        labelText = "Shape";
-
+                    else if (wtag.compare("DC_LIFETIME_MEDIAN") == 0)
+                        labelText = "Median";
+                    else if (wtag.compare("DC_LIFETIME_SHAPE") == 0)
+                        labelText = "Shape";
+                    */
 
 					bool is_slider = false;
 					int j;
@@ -665,28 +638,24 @@ QString MainWindow::parse_rbutton(QString wtag, int *rbutton_case)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setLineEditVisibility(QString wname, int val)
 {
-	QString lineRateName, lineConcName;	//, cbName, cbName2;
+    QString lineRateName, lineConcName;
+    /*
 	if (wname.contains("S1P_BDRY_0")) {
 		lineRateName = "line_S1P_BDRY_RATE";
 		lineConcName = "line_S1P_BDRY_CONC";
-//		cbName = "cbox_USE_S1PR1";
-//		cbName2 = "cbox_USE_S1PR2";
 	} else if (wname.contains("CCL21_BDRY_0")) {
 		lineRateName = "line_CCL21_BDRY_RATE";
 		lineConcName = "line_CCL21_BDRY_CONC";
-//		cbName = "cbox_USE_CCR7";
 	} else if (wname.contains("CXCL13_BDRY_0")) {
 		lineRateName = "line_CXCL13_BDRY_RATE";
 		lineConcName = "line_CXCL13_BDRY_CONC";
-//		cbName = "cbox_USE_CXCR5";
 	} else if (wname.contains("OXY_BDRY_0")) {
 		lineRateName = "line_OXY_BDRY_RATE";
 		lineConcName = "line_OXY_BDRY_CONC";
-//		cbName = "cbox_USE_EBI2";
 	}
+    */
 	// Need to locate the LineEdit widgets from their names
 	QWidget *w_rate=0, *w_conc=0;	//, *w_cb, *w_cb2=0;
-//	bool isS1P = false;
 	for (int i=0; i<nWidgets; i++) {
 		QWidget *w = widget_list[i];							// w = widget_list[i] is the ith widget in the UI
 		QString qsname = w->objectName();
@@ -696,14 +665,6 @@ void MainWindow::setLineEditVisibility(QString wname, int val)
 		if (qsname.contains(lineConcName)) {
 			w_conc = w;
 		}
-//		if (qsname.contains(cbName)) {
-//			w_cb = w;
-//			isS1P = true;
-//		}
-//		if (qsname.contains(cbName)) {
-//			w_cb2 = w;
-//			isS1P = true;
-//		}
 	}
 	if (w_rate->isEnabled() || w_conc->isEnabled()) {
 		if (val == 0) {
@@ -729,7 +690,6 @@ void MainWindow::reloadParams()
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
-//				wtag = parse_rbutton(wtag,&rbutton_case);
 				parse_rbutton(wtag,&rbutton_case);
 			}
             // Find corresponding data in workingParameterList
@@ -762,17 +722,14 @@ void MainWindow::reloadParams()
 					} else if (qsname.startsWith("cbox_")) {
 						QCheckBox *w_cb = (QCheckBox *)w;
 
+                        /*
 						// Chemokines
 						bool use_S1P = qsname.contains("USE_S1PR1") || qsname.contains("USE_S1PR2");
 						if (p.value == 1) {
 							w_cb->setChecked(true);
 							if (use_S1P)
 								enableUseS1P();
-						} // else {
-//							w_cb->setChecked(false);
-//							if (use_S1P)
-//								disableUseS1P();
-//						}
+                        }
 						bool use_CCL21 = qsname.contains("USE_CCR7");
 						if (p.value == 1) {
 							w_cb->setChecked(true);
@@ -804,7 +761,7 @@ void MainWindow::reloadParams()
 								disableUseCXCL13();
 						}
 
-						/*
+
 						bool in_vitro = qsname.contains("IN_VITRO");
 						if (p.value == 1) {
 							w_cb->setChecked(true);
@@ -875,30 +832,6 @@ void MainWindow::reloadParams()
 						LOG_MSG(msg);
 						setBdryRadioButton(w_rb,val);
 						setLineEditVisibility(qsname,val);
-
-						/*
-						if (val == 1) {
-							w_rb->setChecked(true);
-							LOG_QMSG("reloadParams: setChecked true")
-						} else {
-							w_rb->setChecked(false);
-							LOG_QMSG("reloadParams: setChecked false")
-						}
-						*/
-//						w_rb->setChecked(true);		// testing
-
-
-						/*
-						if (p.value == rbutton_case) {
-							w_rb->setChecked(true);
-							LOG_QMSG("reloadParams: setChecked true")
-							LOG_QMSG(wtag);
-						} else {
-							w_rb->setChecked(false);
-							LOG_QMSG("reloadParams: setChecked false")
-							LOG_QMSG(wtag);
-						}
-						*/
 					}
 				}
 			}
@@ -1375,7 +1308,7 @@ void MainWindow::runServer()
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
     tab_B->setEnabled(false);
-    tab_DC->setEnabled(false);
+//    tab_DC->setEnabled(false);
     tab_TCR->setEnabled(false);
     tab_run->setEnabled(false);
 
@@ -1685,7 +1618,7 @@ void MainWindow::postConnection()
 	action_save_snapshot->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
-    tab_B->setEnabled(true);
+//    tab_B->setEnabled(true);
 //    tab_DC->setEnabled(true);
 //    tab_TCR->setEnabled(true);
     tab_run->setEnabled(true);
@@ -2029,7 +1962,6 @@ void MainWindow::changeParam()
 				if (use_traffic)
 					disableUseTraffic();
 			}
-			*/
 
 			// Chemokines
 			bool use_S1P = wname.contains("USE_S1PR1") || wname.contains("USE_S1PR2");
@@ -2037,11 +1969,7 @@ void MainWindow::changeParam()
 				v = 1;
 				if (use_S1P)
 					enableUseS1P();
-			} // else {
-//				v = 0;
-//				if (use_S1P)
-//					disableUseS1P();
-//			}
+            }
 			bool use_CCL21 = wname.contains("USE_CCR7");
 			if (checkBox->isChecked()) {
 				v = 1;
@@ -2072,27 +2000,7 @@ void MainWindow::changeParam()
 				if (use_CXCL13)
 					disableUseCXCL13();
 			}
-
-//			bool use_exit_chemotaxis = wname.contains("USE_EXIT_CHEMOTAXIS");
-//			if (checkBox->isChecked()) {
-//				v = 1;
-//				if (use_exit_chemotaxis)
-//					enableUseExitChemotaxis();
-//			} else {
-//				v = 0;
-//				if (use_exit_chemotaxis)
-//					disableUseExitChemotaxis();
-//			}
-//			bool use_DC_chemotaxis = wname.contains("USE_DC_CHEMOTAXIS");
-//			if (checkBox->isChecked()) {
-//				v = 1;
-//				if (use_DC_chemotaxis)
-//					enableUseDCChemotaxis();
-//			} else {
-//				v = 0;
-//				if (use_DC_chemotaxis)
-//					disableUseDCChemotaxis();
-//			}
+            */
 
 			QString wtag = wname.mid(5);
 			for (int k=0; k<parm->nParams; k++) {
@@ -2162,6 +2070,7 @@ void MainWindow::changeParam()
 	}
 }
 
+/*
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::enableUseS1P()
@@ -2261,7 +2170,7 @@ void MainWindow::disableUseCXCL13()
 	}
 }
 
-/*
+
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::enableInVitro()
@@ -2301,7 +2210,7 @@ void MainWindow::disableInVitro()
 		}
 	}
 }
-*/
+
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -2423,6 +2332,7 @@ void MainWindow::disableUseDCChemotaxis()
 		}
 	}
 }
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------

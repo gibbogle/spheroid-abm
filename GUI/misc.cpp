@@ -134,6 +134,7 @@ void ExecThread::run()
 {
 	LOG_MSG("Invoking DLL...");
 	int res=0;
+    int NX, NY, NZ;
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
@@ -209,9 +210,14 @@ void ExecThread::run()
 //-----------------------------------------------------------------------------------------
 void ExecThread::snapshot()
 {
-//    LOG_QMSG("snapshot");
 	mutex2.lock();
-	get_scene(&nBC_list,BC_list,&nDC_list,DC_list,&nbond_list,bond_list);
+//	get_scene(&nBC_list,BC_list,&nDC_list,DC_list,&nbond_list,bond_list);
+    get_scene(&ncell_list,cell_list);
+    if (ncell_list > MAX_CELLS) {
+        LOG_MSG("Error: MAX_CELLS exceeded");
+        exit(1);
+    }
+    /*
     if (nBC_list > MAX_BC) {
 		LOG_MSG("Error: MAX_TC exceeded");
 		exit(1);
@@ -224,6 +230,7 @@ void ExecThread::snapshot()
 		LOG_MSG("Error: MAX_BOND exceeded");
 		exit(1);
 	}
+    */
 	mutex2.unlock();
 	emit display(); // Emit signal to update VTK display
 }
