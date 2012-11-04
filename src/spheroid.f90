@@ -176,7 +176,7 @@ Centre = (/x0,y0,z0/)   ! now, actually the global centre (units = grids)
 Radius = blob_radius    ! starting value
 
 nc0 = (4./3.)*PI*Radius**3
-max_nlist = 10*nc0
+max_nlist = 200*nc0
 write(logmsg,*) 'Initial radius: ',Radius, nc0
 call logger(logmsg)
 
@@ -221,6 +221,7 @@ subroutine read_cell_params(ok)
 logical :: ok
 integer :: itestcase, ncpu_dummy
 real(REAL_KIND) :: days
+real(REAL_KIND) :: sigma
 
 ok = .true.
 open(nfcell,file=inputfile,status='old')
@@ -241,6 +242,11 @@ read(nfcell,*) fixedfile					! file with "fixed" parameter values
 close(nfcell)
 
 blob_radius = (initial_count*3./(4.*PI))**(1./3)
+divide_dist%class = LOGNORMAL_DIST
+divide_time_median = 60*60*divide_time_median	! hours -> seconds
+sigma = log(divide_time_shape)
+divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
+divide_dist%p2 = sigma
 
 ! Setup test_case
 test_case = .false.
@@ -280,8 +286,9 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine placeCells(ok)
 logical :: ok
-integer :: x, y, z, k, site(3)
-real(REAL_KIND) :: r2lim,r2,r(3)
+integer :: x, y, z, k, site(3), kpar=0
+real(REAL_KIND) :: r2lim,r2,rad(3)
+real(REAL_KIND) :: R, tpast, tdiv
 
 occupancy(:,:,:)%indx(1) = 0
 occupancy(:,:,:)%indx(2) = 0
@@ -291,8 +298,8 @@ k = 0
 do x = 1,NX
 	do y = 1,NY
 		do z = 1,NZ
-			r = (/x-x0,y-y0,z-z0/)
-			r2 = dot_product(r,r)
+			rad = (/x-x0,y-y0,z-z0/)
+			r2 = dot_product(rad,rad)
 			if (r2 < r2lim) then
 				k = k+1
 				lastID = lastID + 1
@@ -301,6 +308,15 @@ do x = 1,NX
 				cell_list(k)%site = site
 				cell_list(k)%state = 1
 				cell_list(k)%exists = .true.
+				do
+					R = par_uni(kpar)
+					tpast = -R*divide_time_median
+					tdiv = DivideTime()
+					if (tdiv + tpast > 0) exit
+				enddo
+!				write(*,'(3f8.2)') tpast/3600,tdiv/3600,(tdiv+tpast)/3600
+				cell_list(k)%t_divide_last = tpast
+				cell_list(k)%t_divide_next = tdiv + tpast
 				occupancy(x,y,z)%indx(1) = k
 			else
 				occupancy(x,y,z)%indx(1) = OUTSIDE_TAG
@@ -458,14 +474,40 @@ end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
+subroutine test_cell_division
+integer :: kcell, kpar=0
+kcell = random_int(1,nlist,kpar)
+call cell_divider(kcell)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
 subroutine cell_division
-integer :: kcell0, kpar=0
+integer :: kcell, nlist0
+real(REAL_KIND) :: tnow
+
+nlist0 = nlist
+tnow = istep*DELTA_T
+do kcell = 1,nlist0
+	if (cell_list(kcell)%t_divide_next <= tnow) then		
+		call cell_divider(kcell)
+	endif
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Note: updating of concentrations is now done in extendODEdiff()
+!-----------------------------------------------------------------------------------------
+subroutine cell_divider(kcell0)
+integer :: kcell0
+integer :: kpar=0
 integer :: j, k, kcell1, site0(3), site1(3), site2(3), site(3), npath, path(3,200)
+real(REAL_KIND) :: tnow
 type (boundary_type), pointer :: bdry
 
-kcell0 = random_int(1,nlist,kpar)
+tnow = istep*DELTA_T
 site0 = cell_list(kcell0)%site
-if (dbug) write(*,*) 'cell_division: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
+if (dbug) write(*,*) 'cell_divider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
 if (bdrylist_present(site0,bdrylist)) then	! site0 is on the boundary
 	npath = 1
 	site1 = site0
@@ -487,9 +529,13 @@ path(:,npath) = site2
 if (dbug) write(*,*) 'outside site: ',site2,occupancy(site2(1),site2(2),site2(3))%indx
 
 call push_path(path,npath)
+call extendODEdiff(site2)
 
 if (dbug) write(*,*) 'did push_path'
+cell_list(kcell0)%t_divide_last = tnow
+cell_list(kcell0)%t_divide_next = tnow + DivideTime()
 call add_cell(kcell0,kcell1,site0)
+
 ! Now need to fix the bdrylist.  
 ! site1 was on the boundary, but may no longer be.
 ! site2 is now on the boundary
@@ -527,7 +573,7 @@ do j = 1,6
 			call bdrylist_insert(bdry,bdrylist)
 		!    call AssignBdryRole(site,bdry)
 			occupancy(site(1),site(2),site(3))%bdry => bdry
-		    call SetBdryConcs(site)
+!		    call SetBdryConcs(site)
 		endif
 	else
 		if (dbug) write(*,*) 'not isbdry'
@@ -536,7 +582,7 @@ do j = 1,6
 			call bdrylist_delete(site,bdrylist)
 			nullify(occupancy(site(1),site(2),site(3))%bdry)
 			nbdry = nbdry - 1
-			call ResetConcs(site)
+!			call ResetConcs(site)
 		endif
 	endif
 enddo
@@ -742,7 +788,9 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine add_cell(kcell0,kcell1,site)
 integer :: kcell0, kcell1, site(3)
+real(REAL_KIND) :: tnow
 
+tnow = istep*DELTA_T
 lastID = lastID + 1
 nlist = nlist + 1
 Ncells = Ncells + 1
@@ -751,6 +799,8 @@ cell_list(kcell1)%state = cell_list(kcell0)%state
 cell_list(kcell1)%site = site
 cell_list(kcell1)%ID = lastID
 cell_list(kcell1)%exists = .true.
+cell_list(kcell1)%t_divide_last = tnow
+cell_list(kcell1)%t_divide_next = tnow + DivideTime()
 occupancy(site(1),site(2),site(3))%indx(1) = kcell1
 end subroutine
 
@@ -921,23 +971,27 @@ subroutine simulate_step(res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: simulate_step  
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
-integer :: kcell, site(3), hour, it, kpar=0
+integer :: kcell, site(3), hour, it, nthour, kpar=0
 real(REAL_KIND) :: r(3), rmax, tstart, dt
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo
 
+nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
 istep = istep + 1
-write(logmsg,*) 'istep: ',istep
-call logger(logmsg)
+if (mod(istep,nthour) == 0) then
+	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist
+	call logger(logmsg)
+endif
 !if (istep == 6216) dbug = .true.
 !call make_split(.true.)
-!call UpdateFields(DELTA_T)
-do it = 1,NT_CONC
-	tstart = (it-1)*dt
-!	call Solver(nchemo,tstart,dt)
-	call Solver(tstart,dt)
-enddo
+if (compute_concentrations) then
+	do it = 1,NT_CONC
+		tstart = (it-1)*dt
+	!	call Solver(nchemo,tstart,dt)
+		call Solver(tstart,dt)
+	enddo
+endif
 res = 0
 if (mod(istep,60) == -1) then
 	rmax = 0
@@ -949,10 +1003,13 @@ if (mod(istep,60) == -1) then
 	write(logmsg,'(3i6,2f6.1)') istep, hour, Ncells, Radius, rmax
 	call logger(logmsg)
 !	call CheckBdryList
-	call ShowConcs
+	if (compute_concentrations) then	
+		call ShowConcs
+	endif
 !	call check_bdry
 endif
-!call cell_division
+!call test_cell_division
+call cell_division
 end subroutine
 
 !-------------------------------------------------------------------------------- 

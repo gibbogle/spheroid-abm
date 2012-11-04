@@ -13,6 +13,10 @@ INTEGER,  PARAMETER  ::  SP = kind(1.0), DP = kind(1.0d0)
 integer, parameter :: REAL_KIND = DP
 integer, parameter :: TCP_PORT_0 = 5000		! main communication port (logging) 
 integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
+integer, parameter :: NORMAL_DIST      = 1
+integer, parameter :: LOGNORMAL_DIST   = 2
+integer, parameter :: EXPONENTIAL_DIST = 3
+integer, parameter :: CONSTANT_DIST    = 4
 
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
@@ -24,6 +28,7 @@ integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: TRACER = 3
 logical, parameter :: use_ODE_diffusion = .true.
+logical, parameter :: compute_concentrations = .true.
 !integer, parameter :: MAX_RECEPTOR = 1
 integer, parameter :: OUTSIDE_TAG = -99999
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
@@ -48,7 +53,12 @@ type boundary_type
     type (boundary_type), pointer :: next
 end type
 
+type dist_type
+	integer :: class
+	real(REAL_KIND) :: p1, p2, p3
+end type
 
+type(dist_type) :: divide_dist
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
 !type(boundary_type), pointer :: bdrylist
@@ -258,5 +268,104 @@ real(REAL_KIND) :: d
 d = dot_product(v,v)
 vnorm = v/sqrt(d)
 end subroutine
+
+!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
+real(REAL_KIND) function DivideTime
+real(REAL_KIND) :: p1, p2
+integer :: kpar = 0
+
+dividetime = 0
+p1 = divide_dist%p1
+p2 = divide_dist%p2
+select case (divide_dist%class)
+case (NORMAL_DIST)
+	DivideTime = rv_normal(p1,p2,kpar)
+case (LOGNORMAL_DIST)
+	DivideTime = rv_lognormal(p1,p2,kpar)
+case (CONSTANT_DIST)
+	DivideTime = p1
+end select
+!write(*,'(a,f8.2)') 'DivideTime: ',DivideTime/3600
+end function
+
+!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
+real function DivisionTime
+integer :: kpar = 0
+real(REAL_KIND), parameter :: rndfraction = 0.2
+
+DivisionTime = rv_lognormal(divide_dist%p1,divide_dist%p2,kpar)
+end function
+
+!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
+real(REAL_KIND) function rv_normal(p1,p2,kpar)
+integer :: kpar
+real(REAL_KIND) :: p1,p2
+real(REAL_KIND) :: R
+
+R = par_rnor(kpar)
+rv_normal = p1+R*p2
+end function
+
+!--------------------------------------------------------------------------------------
+! When Y is normal N(p1,p2) then X = exp(Y) is lognormal with
+!   median = m = exp(p1)
+!   shape  = s = exp(p2)
+! Also median = m = mean/(s^2/2)
+! kpar = parallel process number
+!--------------------------------------------------------------------------------------
+real(REAL_KIND) function rv_lognormal(p1,p2,kpar)
+integer :: kpar
+real(REAL_KIND) :: p1,p2
+real(REAL_KIND) :: R,z
+
+R = par_rnor(kpar)
+z = p1 + R*p2
+rv_lognormal = exp(z)
+end function
+
+!--------------------------------------------------------------------------------------
+! For testing.
+!--------------------------------------------------------------------------------------
+real(REAL_KIND) function my_rnor()
+real(REAL_KIND) :: sum, R
+integer :: k
+integer :: kpar=0
+
+sum = 0
+do k = 1,12
+    R = par_uni(kpar)
+    sum = sum + R
+enddo
+my_rnor = sum - 6.0
+end function
+
+!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
+real(REAL_KIND) function rv_exponential(p1)
+real(REAL_KIND) :: p1
+real(REAL_KIND) :: r
+integer :: kpar = 0
+
+r = par_rexp(kpar)
+rv_exponential = p1*r
+end function
+
+!--------------------------------------------------------------------------------------
+! Cumulative probability distribution for a lognormal variate with median m, shape s
+! Computes Pr(X < a) where X = exp(Y) and Y is N(p1,p2), p1 = log(m), p2 = log(s)
+! Pr(X < a) = Pr(Y < log(a)) = Pr(p1 + p2*R < log(a)) = Pr(R < (log(a)-p1)/p2)
+! where R is N(0,1)
+!--------------------------------------------------------------------------------------
+real(REAL_KIND) function cum_prob_lognormal(a,p1,p2)
+real(REAL_KIND) :: a, p1, p2
+real(REAL_KIND) :: b, prob
+
+b = (log(a) - p1)/p2
+prob = 0.5 + 0.5*erf(b/sqrt(2.0))
+cum_prob_lognormal = prob
+end function
 
 end module

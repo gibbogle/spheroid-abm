@@ -28,12 +28,6 @@ int showingVTK;
 int VTKbuffer[100];
 int cell_list[NINFO*MAX_CELLS];
 int ncell_list;
-//int BC_list[NINFO*MAX_BC];
-//int nBC_list;
-//int DC_list[NINFO*MAX_DC];
-//int nDC_list;
-//int bond_list[2*MAX_BOND];
-//int nbond_list;
 int istep;
 
 int summaryData[100];

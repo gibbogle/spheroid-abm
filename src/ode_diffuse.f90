@@ -27,7 +27,7 @@ use rkc_90
 
 implicit none
 
-integer, parameter :: MAX_VARS = 50000
+integer, parameter :: MAX_VARS = 100000
 real(REAL_KIND), parameter :: BASE_CHEMOKINE_SECRETION = 0.012
 real(REAL_KIND), parameter :: fluid_fraction = 0.5
 real(REAL_KIND), parameter :: Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
@@ -329,6 +329,7 @@ end subroutine
 ! A cell has moved to site(:), which was previously exterior (boundary), and the 
 ! variable-site mappings need to be updated, together with %icoef(:,:)
 ! The relevant neighbours are at x +/- 1, y +/- 1, z +/- 1
+! %nvars is incremented, and allstate(nvars,:) is initialized.
 !----------------------------------------------------------------------------------
 subroutine ExtendODEDiff(site)
 integer :: site(3)
@@ -423,7 +424,7 @@ endif
 
 csum = csum + (6-nb)*chemo(:)%bdry_conc
 allstate(n,:) = csum/6
-allstatep(n,:) = 0
+!allstatep(n,:) = 0
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -608,11 +609,17 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine showresults(v)
 real(REAL_KIND) :: v(:)
-integer :: x,y,z
+integer :: x,y,z,z1,z2,i
 
 x = NX/2
 y = NY/2
-write(logmsg,'(10f7.4)') (v(ODEdiff%ivar(x,y,z)),z=NZ/2,NZ/2+9)
+z1 = NZ/2
+do z = z1,NZ/2+9
+	i = ODEdiff%ivar(x,y,z)
+	if (i == 0) exit
+	z2 = z
+enddo
+write(logmsg,'(i6,10f7.4)') ODEdiff%nvars,(v(ODEdiff%ivar(x,y,z)),z=z1,z2)	
 call logger(logmsg)
 end subroutine
 
@@ -624,8 +631,8 @@ integer :: nvars, ic, ichemo
 write(logmsg,*) 'InitConcs: ',nchemo
 call logger(logmsg)
 nvars = ODEdiff%nvars
-allocate(allstate(nvars,MAX_CHEMO))
-allocate(work_rkc(8+4*nvars,MAX_CHEMO))
+allocate(allstate(MAX_VARS,MAX_CHEMO))
+allocate(work_rkc(8+4*MAX_VARS,MAX_CHEMO))
 
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
