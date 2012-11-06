@@ -1098,3 +1098,74 @@ do x = Centre(1)+1,NX
 enddo
 if (err) stop
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+! No use
+!-----------------------------------------------------------------------------------------
+subroutine smoother
+integer :: x, y, z, k, site(3), kpar=0
+integer :: Nsmooth = 1000
+
+do k = 1,Nsmooth
+	x = NX/2 + 1
+	y = random_int(1,NY,kpar)
+	z = random_int(1,NZ,kpar)
+	if (occupancy(x,y,z)%indx(1) >= 0) then
+		do x = NX/2+2,NX
+			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
+		enddo
+		site = (/x,y,z/)
+		call adjust(site)
+	endif
+	x = NX/2
+	y = random_int(1,NY,kpar)
+	z = random_int(1,NZ,kpar)
+	if (occupancy(x,y,z)%indx(1) >= 0) then
+		do x = NX/2-1,1,-1
+			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
+		enddo
+		site = (/x,y,z/)
+		call adjust(site)
+	endif
+	x = random_int(1,NX,kpar)
+	y = NY/2 + 1
+	z = random_int(1,NZ,kpar)
+	if (occupancy(x,y,z)%indx(1) >= 0) then
+		do y = NY/2+2,NY
+			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
+		enddo
+		site = (/x,y,z/)
+		call adjust(site)
+	endif
+	x = random_int(1,NX,kpar)
+	y = NY/2
+	z = random_int(1,NZ,kpar)
+	if (occupancy(x,y,z)%indx(1) >= 0) then
+		do y = NY/2-1,1,-1
+			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
+		enddo
+		site = (/x,y,z/)
+		call adjust(site)
+	endif
+	x = random_int(1,NX,kpar)
+	y = random_int(1,NY,kpar)
+	z = NZ/2 + 1
+	if (occupancy(x,y,z)%indx(1) >= 0) then
+		do z = NZ/2+2,NZ
+			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
+		enddo
+		site = (/x,y,z/)
+		call adjust(site)
+	endif
+	x = random_int(1,NX,kpar)
+	y = random_int(1,NY,kpar)
+	z = NZ/2
+	if (occupancy(x,y,z)%indx(1) >= 0) then
+		do z = NZ/2-1,1,-1
+			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
+		enddo
+		site = (/x,y,z/)
+		call adjust(site)
+	endif
+enddo
+end subroutine

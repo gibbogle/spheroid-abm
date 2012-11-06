@@ -51,7 +51,7 @@ chemo(OXYGEN)%halflife = 0.0		! hours
 chemo(OXYGEN)%cell_rate = 2.3e-16	! mol.cell^-1.s^-1
 
 chemo(GLUCOSE)%name = 'Glucose'
-chemo(GLUCOSE)%used = .true.
+chemo(GLUCOSE)%used = .false.
 chemo(GLUCOSE)%use_secretion = .false.
 chemo(GLUCOSE)%bdry_rate = 0
 chemo(GLUCOSE)%bdry_conc = 9.0		! mM

@@ -4,7 +4,9 @@ module rkc_90
 
 implicit none
 
-public :: rkc_comm
+double precision :: rkc_sprad
+
+public :: rkc_comm, rkc_sprad
 
 type rkc_comm
     private
@@ -390,6 +392,7 @@ contains
       
       interface 
 		double precision function spcrad(neqn,t,y)
+		integer :: neqn
 		double precision :: t, y(neqn)
         end function
       end interface
@@ -415,6 +418,7 @@ contains
         hmax = abs(tend - t)
         work(6) = hmax
         hmin = ten*uround*max(abs(t),hmax)
+        rkc_sprad = 0
       endif
 !------------------------------------      
 !  Start of loop for taking one step.  
@@ -432,6 +436,7 @@ contains
           sprad = spcrad(neqn,t,yn)
         else
           call rkcrho(comm,neqn,t,f,yn,fn,vtemp1,vtemp2,work,sprad,idid,icase)
+          rkc_sprad = max(sprad,rkc_sprad)
           if(idid .eq. 6) return
         endif
         jacatt = .true.
@@ -814,7 +819,7 @@ contains
 !  spectral radius, so is more likely to be an upper bound.
 !----------------------------------------------------------
         sprad = onep2*sigma
-        write(*,*) 'sprad: ',sprad
+!        write(*,*) 'sprad: ',sprad
         if(iter >= 2 .and. abs(sigma - sigmal) <= max(sigma,small)*p01) then
           do i = 1,neqn          
             work(ptr5+i-1) = v(i) - yn(i)

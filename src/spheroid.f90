@@ -746,7 +746,7 @@ do
 	do j = 1,6
 		jump = neumann(:,j)
 		v = site + jump
-		if (occupancy(v(1),v(2),v(3))%indx(1) < 0) cycle
+		if (occupancy(v(1),v(2),v(3))%indx(1) == OUTSIDE_TAG) cycle
 		v = site2 - v
 		d2 = v(1)*v(1) + v(2)*v(2) + v(3)*v(3)
 		if (d2 < d2min) then
@@ -840,76 +840,6 @@ enddo
 write(*,'(a,2(f7.1,3i4,2x))') 'rmin, rmax: ',rmin,minv,rmax,maxv
 end subroutine
 
-!-----------------------------------------------------------------------------------------
-! No use
-!-----------------------------------------------------------------------------------------
-subroutine smoother
-integer :: x, y, z, k, site(3), kpar=0
-integer :: Nsmooth = 1000
-
-do k = 1,Nsmooth
-	x = NX/2 + 1
-	y = random_int(1,NY,kpar)
-	z = random_int(1,NZ,kpar)
-	if (occupancy(x,y,z)%indx(1) >= 0) then
-		do x = NX/2+2,NX
-			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
-		enddo
-		site = (/x,y,z/)
-		call adjust(site)
-	endif
-	x = NX/2
-	y = random_int(1,NY,kpar)
-	z = random_int(1,NZ,kpar)
-	if (occupancy(x,y,z)%indx(1) >= 0) then
-		do x = NX/2-1,1,-1
-			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
-		enddo
-		site = (/x,y,z/)
-		call adjust(site)
-	endif
-	x = random_int(1,NX,kpar)
-	y = NY/2 + 1
-	z = random_int(1,NZ,kpar)
-	if (occupancy(x,y,z)%indx(1) >= 0) then
-		do y = NY/2+2,NY
-			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
-		enddo
-		site = (/x,y,z/)
-		call adjust(site)
-	endif
-	x = random_int(1,NX,kpar)
-	y = NY/2
-	z = random_int(1,NZ,kpar)
-	if (occupancy(x,y,z)%indx(1) >= 0) then
-		do y = NY/2-1,1,-1
-			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
-		enddo
-		site = (/x,y,z/)
-		call adjust(site)
-	endif
-	x = random_int(1,NX,kpar)
-	y = random_int(1,NY,kpar)
-	z = NZ/2 + 1
-	if (occupancy(x,y,z)%indx(1) >= 0) then
-		do z = NZ/2+2,NZ
-			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
-		enddo
-		site = (/x,y,z/)
-		call adjust(site)
-	endif
-	x = random_int(1,NX,kpar)
-	y = random_int(1,NY,kpar)
-	z = NZ/2
-	if (occupancy(x,y,z)%indx(1) >= 0) then
-		do z = NZ/2-1,1,-1
-			if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) exit
-		enddo
-		site = (/x,y,z/)
-		call adjust(site)
-	endif
-enddo
-end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! The location site0 is just outside the blob.

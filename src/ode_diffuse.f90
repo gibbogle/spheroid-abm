@@ -12,7 +12,8 @@ use global
 integer :: neqn
 double precision :: t, y(neqn)
 !spcrad = 4d0*((nx+1)**2 + (ny+1)**2 + (nz+1)**2)
-spcrad = 4*BLOB_RADIUS
+!spcrad = max(70.,4*BLOB_RADIUS)
+spcrad = 75
 end function
 
 !----------------------------------------------------------------------------------
@@ -44,63 +45,6 @@ integer :: nchemo, chemomap(MAX_CHEMO)
 integer :: ivdbug
 
 contains
-
-!----------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------
-function f_deriv(t,v)
-use rksuite_90_prec, only:wp
-real(kind=wp), intent(in) :: t
-real(kind=wp), dimension(:), intent(in) :: v
-real(kind=wp), dimension(size(v,1)) :: f_deriv   
-
-integer :: icase
-integer :: i, k, kv, n, ichemo
-real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, dmax
-logical :: bnd, dbug
-
-!ichemo = icase
-ichemo = 1
-DX2 = DELTA_X*DELTA_X
-decay_rate = chemo(ichemo)%decay_rate
-dc1 = chemo(ichemo)%diff_coef/DX2
-dc6 = 6*dc1 + decay_rate
-cbnd = chemo(ichemo)%bdry_conc
-n = ODEdiff%nvars
-!if (t < 1.0) write(*,*) icase,t
-dmax = 0
-do i = 1,n
-	C = allstate(i,:)
-	C(ichemo) = v(i)
-	dCsum = 0
-	do k = 1,7
-		kv = ODEdiff%icoef(i,k)
-!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
-!			bnd = .false.
-!		else								! boundary
-!			bnd = .true.
-!		endif
-		if (k == 1) then
-			dCdiff = -dc6
-		else
-			dCdiff = dc1
-		endif
-		if (kv == 0) then
-			val = cbnd
-		else
-			val = v(kv)
-		endif
-		dCsum = dCsum + dCdiff*val
-	enddo
-	dCreact = 0
-	call react(ichemo,i,C,dCreact)
-!	if (i == 6822) then
-!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
-!	endif
-	f_deriv(i) = dCsum + dCreact
-!	dmax = max(dmax,f_deriv(i))
-enddo
-end function
 
 !----------------------------------------------------------------------------------
 ! Solve for a test case with solute flux into the gridcells with x = 1.
@@ -166,7 +110,7 @@ i = 0
 do x = 1,NX
 	do y = 1,NY
 		do z = 1,NZ
-			if (occupancy(x,y,z)%indx(1) >= 0) then
+			if (occupancy(x,y,z)%indx(1) /= OUTSIDE_TAG) then
 				i = i+1
 				ODEdiff%ivar(x,y,z) = i
 				ODEdiff%varsite(i,:) = (/x,y,z/)
@@ -466,59 +410,6 @@ dCreact = dMdt*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM
 end subroutine
 
 !----------------------------------------------------------------------------------
-! Simple diffusion-decay for a single constituent (ODEdiff%ichemo)
-! Now all chemo constituents share the same FD template, and there are always
-! 6 neighbours (some may be boundary, with specified concentrations).
-! For now assume uniform diffusion coefficient for a constituent
-!----------------------------------------------------------------------------------
-subroutine deriv(t,v,dv,icase)
-real(REAL_KIND) :: t, v(*), dv(*)
-integer :: icase
-integer :: i, k, kv, n, ichemo
-real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
-logical :: bnd, dbug
-
-ichemo = icase
-DX2 = DELTA_X*DELTA_X
-decay_rate = chemo(ichemo)%decay_rate
-dc1 = chemo(ichemo)%diff_coef/DX2
-dc6 = 6*dc1 + decay_rate
-cbnd = chemo(ichemo)%bdry_conc
-n = ODEdiff%nvars
-!if (t < 1.0) write(*,*) icase,t
-do i = 1,n
-	C = allstate(i,:)
-	C(ichemo) = v(i)
-	dCsum = 0
-	do k = 1,7
-		kv = ODEdiff%icoef(i,k)
-!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
-!			bnd = .false.
-!		else								! boundary
-!			bnd = .true.
-!		endif
-		if (k == 1) then
-			dCdiff = -dc6
-		else
-			dCdiff = dc1
-		endif
-		if (kv == 0) then
-			val = cbnd
-		else
-			val = v(kv)
-		endif
-		dCsum = dCsum + dCdiff*val
-	enddo
-	call react(ichemo,i,C,dCreact)
-!	if (i == 6822) then
-!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
-!	endif
-	dv(i) = dCsum + dCreact
-enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine f_rkc(neqn,t,v,dvdt,icase)
 integer :: neqn, icase
@@ -561,51 +452,6 @@ enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
-! Now all chemo constituents share the same FD template, and there are always
-! 6 neighbours (some may be boundary, with specified concentrations).
-!----------------------------------------------------------------------------------
-subroutine deriv_all(t,v,dv)
-real(REAL_KIND) :: t, v(*), dv(*)
-integer :: i, k, kv, n, x, y, z, ichemo, idbug, ifdc, site(3), dx, dy, dz, ic, nf_FDC, nf_MRC
-real(REAL_KIND) :: csum(MAX_CHEMO), s, vtemp, ctemp, dc, DX2, val
-logical :: bnd, dbug
-
-DX2 = DELTA_X*DELTA_X
-n = ODEdiff%nvars
-do i = 1,n
-	csum = 0
-	do k = 1,7
-!		if (chemo(ODEdiff%ichemo)%coef(i,k) /= 0) then
-		if (ODEdiff%icoef(i,k) /= 0) then	! interior
-			bnd = .false.
-		else								! boundary
-			bnd = .true.
-		endif
-		do ichemo = 1,MAX_CHEMO
-			if (k == 1) then
-				dc = -chemo(ichemo)%decay_rate - 6*chemo(ichemo)%diff_coef/DX2	! ODEdiff%ncoef(i)
-			else
-				dc = chemo(ichemo)%diff_coef/DX2
-			endif
-			if (bnd) then
-				val = chemo(ichemo)%bdry_conc
-			else
-				kv = (ODEdiff%icoef(i,k)-1)*MAX_CHEMO + ichemo
-				val = v(kv)
-			endif
-			csum(ichemo) = csum(ichemo) + dc*val
-		enddo
-	enddo
-	! Need to add in reactions here
-	do ichemo = 1,MAX_CHEMO
-		kv = (i-1)*MAX_CHEMO + ichemo
-		dv(kv) = csum(ichemo)
-	enddo
-enddo
-
-end subroutine
-
-!----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine showresults(v)
 real(REAL_KIND) :: v(:)
@@ -639,27 +485,6 @@ do ic = 1,nchemo
 	call InitState(ichemo,allstate(1:nvars,ichemo))
 enddo
 end subroutine
-!----------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------
-subroutine TestSolver
-integer :: nvars, nt, ichemo, it
-real(REAL_KIND) :: tstart, dt
-real(REAL_KIND) :: timer1, timer2
-real(REAL_KIND) :: trun = 400
-
-nt = 20
-dt = trun/nt
-timer1 = wtime()
-tstart = 0
-do it = 1,nt
-!	write(*,'(a,i4,f8.1)') 'it, tstart: ',it,tstart
-	tstart = (it-1)*dt
-	call Solver(tstart,dt)
-enddo
-timer2 = wtime()
-write(*,'(a,f10.1)') 'Time: ',timer2-timer1
-stop
-end subroutine
 
 !----------------------------------------------------------------------------------
 ! In this version the diffusion/decay of each constituent is solved by a separate
@@ -683,7 +508,7 @@ real(REAL_KIND) :: timer1, timer2
 logical :: ok
 ! Variables for RKC
 integer :: info(4), idid
-real(REAL_KIND) :: rtol, atol(1)
+real(REAL_KIND) :: rtol, atol(1), sprad_ratio
 type(rkc_comm) :: comm_rkc(MAX_CHEMO)
 
 nvars = ODEdiff%nvars
@@ -692,7 +517,7 @@ state(:,:) = allstate(1:nvars,1:MAX_CHEMO)
 call showresults(state(:,OXYGEN))
 
 info(1) = 1
-info(2) = 1
+info(2) = 1		! 1 = use spcrad() to estimate spectral radius, 2 = let rkc do it 
 info(3) = 1
 info(4) = 0
 rtol = 1d-2
@@ -710,10 +535,77 @@ do ic = 1,nchemo
 		write(*,*) ' Failed at t = ',t,' with idid = ',idid
 		stop
 	endif
+	if (info(2) == 2 .and. ichemo == OXYGEN) then
+		sprad_ratio = rkc_sprad/blob_radius
+		write(*,'(a,2f8.4)') 'sprad_ratio: ',blob_radius,sprad_ratio
+	endif
 enddo
 !$omp end parallel do
 allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 deallocate(state)
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Initialise the state vector to the current concentrations
+!----------------------------------------------------------------------------------
+subroutine InitState(ichemo,state)
+integer :: ichemo
+real(REAL_KIND) :: state(:)
+integer :: x, y, z, i, site(3), nz
+real(REAL_KIND) :: smin, smax
+
+write(logmsg,*) 'InitState: ',chemo(ichemo)%name
+call logger(logmsg)
+smin = 1.0e10
+smax = -smin
+do i = 1,ODEdiff%nvars
+!	site = ODEdiff%varsite(i,:)
+	state(i) = chemo(ichemo)%bdry_conc
+!	state(i) = chemo(ichemo)%conc(site(1),site(2),site(3))
+!	if (state(i) < smin) smin = state(i)
+!	if (state(i) > smax) smax = state(i)
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Initialise the state vector to the current concentrations
+!----------------------------------------------------------------------------------
+subroutine InitStates(ichemo,n,allstate)
+integer :: ichemo,n
+real(REAL_KIND) :: allstate(n,*)
+integer :: x, y, z, i, site(3), nz
+real(REAL_KIND) :: smin, smax
+
+write(logmsg,*) 'InitState: ',chemo(ichemo)%name
+call logger(logmsg)
+smin = 1.0e10
+smax = -smin
+do i = 1,ODEdiff%nvars
+	site = ODEdiff%varsite(i,:)
+	allstate(i,ichemo) = chemo(ichemo)%conc(site(1),site(2),site(3))
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine TestSolver
+integer :: nvars, nt, ichemo, it
+real(REAL_KIND) :: tstart, dt
+real(REAL_KIND) :: timer1, timer2
+real(REAL_KIND) :: trun = 400
+
+nt = 20
+dt = trun/nt
+timer1 = wtime()
+tstart = 0
+do it = 1,nt
+!	write(*,'(a,i4,f8.1)') 'it, tstart: ',it,tstart
+	tstart = (it-1)*dt
+	call Solver(tstart,dt)
+enddo
+timer2 = wtime()
+write(*,'(a,f10.1)') 'Time: ',timer2-timer1
+stop
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -934,47 +826,6 @@ enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
-! Initialise the state vector to the current concentrations
-!----------------------------------------------------------------------------------
-subroutine InitState(ichemo,state)
-integer :: ichemo
-real(REAL_KIND) :: state(:)
-integer :: x, y, z, i, site(3), nz
-real(REAL_KIND) :: smin, smax
-
-write(logmsg,*) 'InitState: ',chemo(ichemo)%name
-call logger(logmsg)
-smin = 1.0e10
-smax = -smin
-do i = 1,ODEdiff%nvars
-!	site = ODEdiff%varsite(i,:)
-	state(i) = chemo(ichemo)%bdry_conc
-!	state(i) = chemo(ichemo)%conc(site(1),site(2),site(3))
-!	if (state(i) < smin) smin = state(i)
-!	if (state(i) > smax) smax = state(i)
-enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
-! Initialise the state vector to the current concentrations
-!----------------------------------------------------------------------------------
-subroutine InitStates(ichemo,n,allstate)
-integer :: ichemo,n
-real(REAL_KIND) :: allstate(n,*)
-integer :: x, y, z, i, site(3), nz
-real(REAL_KIND) :: smin, smax
-
-write(logmsg,*) 'InitState: ',chemo(ichemo)%name
-call logger(logmsg)
-smin = 1.0e10
-smax = -smin
-do i = 1,ODEdiff%nvars
-	site = ODEdiff%varsite(i,:)
-	allstate(i,ichemo) = chemo(ichemo)%conc(site(1),site(2),site(3))
-enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine SolveSteadystate_B
 integer flag, i, j, k, ichemo
@@ -1034,7 +885,7 @@ do ichemo = 1,MAX_CHEMO
 	do x = 1,NX
 		do y = 1,NY
 			do z = 1,NZ
-				if (occupancy(x,y,z)%indx(1) < 0) cycle
+				if (occupancy(x,y,z)%indx(1) /= OUTSIDE_TAG) cycle
 				i = ODEdiff%ivar(x,y,z)
 				chemo(ichemo)%conc(x,y,z) = state(i)
 				call compute_gradient(state,x,y,z,grad)
@@ -1178,6 +1029,162 @@ else
 	grad(3) = 0
 endif
 end subroutine
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+function f_deriv(t,v)
+use rksuite_90_prec, only:wp
+real(kind=wp), intent(in) :: t
+real(kind=wp), dimension(:), intent(in) :: v
+real(kind=wp), dimension(size(v,1)) :: f_deriv   
+
+integer :: icase
+integer :: i, k, kv, n, ichemo
+real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, dmax
+logical :: bnd, dbug
+
+!ichemo = icase
+ichemo = 1
+DX2 = DELTA_X*DELTA_X
+decay_rate = chemo(ichemo)%decay_rate
+dc1 = chemo(ichemo)%diff_coef/DX2
+dc6 = 6*dc1 + decay_rate
+cbnd = chemo(ichemo)%bdry_conc
+n = ODEdiff%nvars
+!if (t < 1.0) write(*,*) icase,t
+dmax = 0
+do i = 1,n
+	C = allstate(i,:)
+	C(ichemo) = v(i)
+	dCsum = 0
+	do k = 1,7
+		kv = ODEdiff%icoef(i,k)
+!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
+!			bnd = .false.
+!		else								! boundary
+!			bnd = .true.
+!		endif
+		if (k == 1) then
+			dCdiff = -dc6
+		else
+			dCdiff = dc1
+		endif
+		if (kv == 0) then
+			val = cbnd
+		else
+			val = v(kv)
+		endif
+		dCsum = dCsum + dCdiff*val
+	enddo
+	dCreact = 0
+	call react(ichemo,i,C,dCreact)
+!	if (i == 6822) then
+!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
+!	endif
+	f_deriv(i) = dCsum + dCreact
+!	dmax = max(dmax,f_deriv(i))
+enddo
+end function
+
+!----------------------------------------------------------------------------------
+! Simple diffusion-decay for a single constituent (ODEdiff%ichemo)
+! Now all chemo constituents share the same FD template, and there are always
+! 6 neighbours (some may be boundary, with specified concentrations).
+! For now assume uniform diffusion coefficient for a constituent
+!----------------------------------------------------------------------------------
+subroutine deriv(t,v,dv,icase)
+real(REAL_KIND) :: t, v(*), dv(*)
+integer :: icase
+integer :: i, k, kv, n, ichemo
+real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
+logical :: bnd, dbug
+
+ichemo = icase
+DX2 = DELTA_X*DELTA_X
+decay_rate = chemo(ichemo)%decay_rate
+dc1 = chemo(ichemo)%diff_coef/DX2
+dc6 = 6*dc1 + decay_rate
+cbnd = chemo(ichemo)%bdry_conc
+n = ODEdiff%nvars
+!if (t < 1.0) write(*,*) icase,t
+do i = 1,n
+	C = allstate(i,:)
+	C(ichemo) = v(i)
+	dCsum = 0
+	do k = 1,7
+		kv = ODEdiff%icoef(i,k)
+!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
+!			bnd = .false.
+!		else								! boundary
+!			bnd = .true.
+!		endif
+		if (k == 1) then
+			dCdiff = -dc6
+		else
+			dCdiff = dc1
+		endif
+		if (kv == 0) then
+			val = cbnd
+		else
+			val = v(kv)
+		endif
+		dCsum = dCsum + dCdiff*val
+	enddo
+	call react(ichemo,i,C,dCreact)
+!	if (i == 6822) then
+!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
+!	endif
+	dv(i) = dCsum + dCreact
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Now all chemo constituents share the same FD template, and there are always
+! 6 neighbours (some may be boundary, with specified concentrations).
+!----------------------------------------------------------------------------------
+subroutine deriv_all(t,v,dv)
+real(REAL_KIND) :: t, v(*), dv(*)
+integer :: i, k, kv, n, x, y, z, ichemo, idbug, ifdc, site(3), dx, dy, dz, ic, nf_FDC, nf_MRC
+real(REAL_KIND) :: csum(MAX_CHEMO), s, vtemp, ctemp, dc, DX2, val
+logical :: bnd, dbug
+
+DX2 = DELTA_X*DELTA_X
+n = ODEdiff%nvars
+do i = 1,n
+	csum = 0
+	do k = 1,7
+!		if (chemo(ODEdiff%ichemo)%coef(i,k) /= 0) then
+		if (ODEdiff%icoef(i,k) /= 0) then	! interior
+			bnd = .false.
+		else								! boundary
+			bnd = .true.
+		endif
+		do ichemo = 1,MAX_CHEMO
+			if (k == 1) then
+				dc = -chemo(ichemo)%decay_rate - 6*chemo(ichemo)%diff_coef/DX2	! ODEdiff%ncoef(i)
+			else
+				dc = chemo(ichemo)%diff_coef/DX2
+			endif
+			if (bnd) then
+				val = chemo(ichemo)%bdry_conc
+			else
+				kv = (ODEdiff%icoef(i,k)-1)*MAX_CHEMO + ichemo
+				val = v(kv)
+			endif
+			csum(ichemo) = csum(ichemo) + dc*val
+		enddo
+	enddo
+	! Need to add in reactions here
+	do ichemo = 1,MAX_CHEMO
+		kv = (i-1)*MAX_CHEMO + ichemo
+		dv(kv) = csum(ichemo)
+	enddo
+enddo
+
+end subroutine
+
 
 end module
 

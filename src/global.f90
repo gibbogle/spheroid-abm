@@ -18,6 +18,12 @@ integer, parameter :: LOGNORMAL_DIST   = 2
 integer, parameter :: EXPONENTIAL_DIST = 3
 integer, parameter :: CONSTANT_DIST    = 4
 
+integer, parameter :: DIVIDING  = 1
+integer, parameter :: QUIESCENT = 2
+integer, parameter :: DEAD      = 3
+
+integer, parameter :: OUTSIDE_TAG  = -1
+
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
@@ -30,7 +36,6 @@ integer, parameter :: TRACER = 3
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
 !integer, parameter :: MAX_RECEPTOR = 1
-integer, parameter :: OUTSIDE_TAG = -99999
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
 type occupancy_type

@@ -32,7 +32,7 @@ integer :: k, xx, yy, zz
 x = site(1)
 y = site(2)
 z = site(3)
-if (occupancy(x,y,z)%indx(1) < 0) then	! outside or DC
+if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) then	! outside
     isbdry = .false.
     return
 endif
@@ -298,7 +298,7 @@ dmax = -1.0e10
 kmax = 0
 do k = 1,27
 	site = psite + jumpvec(:,k)
-    if (occupancy(site(1),site(2),site(3))%indx(1) < 0) cycle   ! outside or DC
+    if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) cycle   ! outside
     r = site - Centre
     x2 = r(1)**2
     y2 = r(2)**2
@@ -330,7 +330,7 @@ if (associated(occupancy(site(1),site(2),site(3))%bdry)) then   ! remove it from
     psite = site
     do k = 1,27
 	    site = psite + jumpvec(:,k)
-        if (occupancy(site(1),site(2),site(3))%indx(1) < 0) cycle   ! outside or DC
+        if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) cycle   ! outside
         if (associated(occupancy(site(1),site(2),site(3))%bdry)) cycle   ! bdry
         if (isbdry(site)) then
             nbdry = nbdry + 1
@@ -421,7 +421,7 @@ do i = 2,1,-1
 	        site = csite + r*jumpvec(:,k)
 	        if (outside_xyz(site(1),site(2),site(3))) cycle
 	        indx = occupancy(site(1),site(2),site(3))%indx
-            if (indx(1) < 0) cycle  ! outside or DC
+            if (indx(1) == OUTSIDE_TAG) cycle  ! outside
             if (indx(1) == 0) then  ! use this slot
                 occupancy(site(1),site(2),site(3))%indx(1) = kcell
                 cell_list(kcell)%site = site
