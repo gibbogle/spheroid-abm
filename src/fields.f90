@@ -51,7 +51,7 @@ chemo(OXYGEN)%halflife = 0.0		! hours
 chemo(OXYGEN)%cell_rate = 2.3e-16	! mol.cell^-1.s^-1
 
 chemo(GLUCOSE)%name = 'Glucose'
-chemo(GLUCOSE)%used = .false.
+chemo(GLUCOSE)%used = .true.
 chemo(GLUCOSE)%use_secretion = .false.
 chemo(GLUCOSE)%bdry_rate = 0
 chemo(GLUCOSE)%bdry_conc = 9.0		! mM
@@ -81,14 +81,20 @@ end subroutine
 ! and T is the maximum expected time step
 ! This is to ensure that all the O2 in the site is not depleted in a time step, making
 ! O2 conc go negative.  For now it seems reasonable to assume that glucose uptake
-! varies in proportion to O2 uptake, i.e. we only need Oxygen hill
+! varies in proportion to O2 uptake, i.e. we only need Oxygen M-M
 !----------------------------------------------------------------------------------------
 subroutine SetMMParameters
+logical, parameter :: use_fixed_MM = .true.
 !real :: Vsite
 
-!Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
-chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%cell_rate*Tmax*1.0e6/Vsite
-chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%cell_rate*Tmax*1.0e6/Vsite
+if (use_fixed_MM) then
+	chemo(OXYGEN)%MM_C0 = 0.00133		! 1 mmHg = 1.33 uM (Kevin)
+	chemo(GLUCOSE)%MM_C0 = chemo(OXYGEN)%MM_C0*chemo(GLUCOSE)%cell_rate/chemo(OXYGEN)%cell_rate
+else
+	!Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
+	chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%cell_rate*Tmax*1.0e6/Vsite
+	chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%cell_rate*Tmax*1.0e6/Vsite
+endif
 write(logmsg,'(a,2e12.4)') 'Oxygen MM_C0: ',Tmax,chemo(OXYGEN)%MM_C0
 call logger(logmsg)
 write(logmsg,'(a,e12.4)') 'Glucose MM_C0: ',chemo(GLUCOSE)%MM_C0

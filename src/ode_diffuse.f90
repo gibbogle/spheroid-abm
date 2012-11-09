@@ -384,10 +384,18 @@ end subroutine
 ! We can use a Michaelis-Menten function to take the rate to zero as C -> 0.
 ! Note that currently Vsite is fixed - no accounting for cell death, gaps etc.
 !----------------------------------------------------------------------------------
-subroutine react(ichemo,isite,C,dCreact)
-integer :: ichemo, isite
+subroutine react(ichemo,iv,C,dCreact)
+integer :: ichemo, iv
+integer :: site(3), kcell
 real(REAL_KIND) :: C(:), dCreact
 real(REAL_KIND) :: metab, dMdt
+
+! Check for necrotic site - for now, no reactions
+site = ODEdiff%varsite(iv,:)
+if (occupancy(site(1),site(2),site(3))%indx(1) < 0) then
+	dCreact = 0
+	return
+endif
 
 if (ichemo /= TRACER) then
 	if (C(OXYGEN) > 0) then
