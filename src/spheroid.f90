@@ -247,7 +247,7 @@ divide_time_median = 60*60*divide_time_median	! hours -> seconds
 sigma = log(divide_time_shape)
 divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
 divide_dist%p2 = sigma
-
+divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
 ! Setup test_case
 test_case = .false.
 if (itestcase /= 0) then
@@ -315,6 +315,9 @@ do x = 1,NX
 					if (tdiv + tpast > 0) exit
 				enddo
 !				write(*,'(3f8.2)') tpast/3600,tdiv/3600,(tdiv+tpast)/3600
+				cell_list(k)%divide_volume = Vdivide
+				R = par_uni(kpar)
+				cell_list(k)%volume = Vdivide*0.5*(1 + R)
 				cell_list(k)%t_divide_last = tpast
 				cell_list(k)%t_divide_next = tdiv + tpast
 				occupancy(x,y,z)%indx(1) = k
@@ -536,7 +539,7 @@ if (mod(istep,60) == -1) then
 endif
 !call test_cell_division
 !call cell_division
-call grow_cells
+call grow_cells(DELTA_T)
 end subroutine
 
 !--------------------------------------------------------------------------------  

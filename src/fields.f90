@@ -32,6 +32,7 @@ end function
 ! Note units:
 ! distance		cm
 ! volume		cm^3
+! time			s
 ! diff coeff	cm^2.s^-1
 ! mass			mol
 ! concentration	mM where 1 mM = 1.0e-6 mol.cm^-3
@@ -77,18 +78,17 @@ end subroutine
 
 !----------------------------------------------------------------------------------------
 ! Consumption rate = Rmax*C/(MM_C0 + C)  (Michaelis-Menten)
-! where MM_C0 >= Rmax*T*10^6/Vsite is the O2 concentration at which cell uptake is halved,
+! where Km = MM_C0 >= Rmax*T*10^6/Vsite is the O2 concentration at which cell uptake is halved,
 ! and T is the maximum expected time step
 ! This is to ensure that all the O2 in the site is not depleted in a time step, making
 ! O2 conc go negative.  For now it seems reasonable to assume that glucose uptake
 ! varies in proportion to O2 uptake, i.e. we only need Oxygen M-M
 !----------------------------------------------------------------------------------------
 subroutine SetMMParameters
-logical, parameter :: use_fixed_MM = .true.
 !real :: Vsite
 
 if (use_fixed_MM) then
-	chemo(OXYGEN)%MM_C0 = 0.00133		! 1 mmHg = 1.33 uM (Kevin)
+	chemo(OXYGEN)%MM_C0 = 0.00133		! 1 mmHg = 1.33 uM (Kevin suggests 1 - 2 uM)
 	chemo(GLUCOSE)%MM_C0 = chemo(OXYGEN)%MM_C0*chemo(GLUCOSE)%cell_rate/chemo(OXYGEN)%cell_rate
 else
 	!Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X

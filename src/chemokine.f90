@@ -27,8 +27,8 @@ type chemokine_type
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: decay_rate
-	real(REAL_KIND) :: cell_rate
-	real(REAL_KIND) :: MM_C0
+	real(REAL_KIND) :: cell_rate		! Vmax
+	real(REAL_KIND) :: MM_C0			! Km
 	real(REAL_KIND), allocatable :: coef(:,:)
 	real(REAL_KIND), allocatable :: conc(:,:,:)
 	real(REAL_KIND), allocatable :: grad(:,:,:,:)

@@ -35,6 +35,11 @@ integer, parameter :: GLUCOSE = 2
 integer, parameter :: TRACER = 3
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
+logical, parameter :: use_fixed_MM = .true.
+logical, parameter :: use_division = .true.
+logical, parameter :: use_death = .true.
+logical, parameter :: use_react = .true.
+
 !integer, parameter :: MAX_RECEPTOR = 1
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
@@ -48,6 +53,8 @@ type cell_type
 	integer :: ID
 	integer :: site(3)
 	integer :: state
+	real(REAL_KIND) :: volume
+	real(REAL_KIND) :: divide_volume
 	real(REAL_KIND) :: t_divide_last
 	real(REAL_KIND) :: t_divide_next
 	logical :: exists
@@ -82,7 +89,7 @@ integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T
-real(REAL_KIND) :: divide_time_median, divide_time_shape
+real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 
 character*(128) :: inputfile
 character*(128) :: fixedfile

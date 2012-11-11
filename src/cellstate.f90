@@ -7,6 +7,8 @@ use fields
 use ode_diffuse
 implicit none
 
+real(REAL_KIND), parameter :: Vdivide = 1.6
+real(REAL_KIND), parameter :: dVdivide = 0.05
 real(REAL_KIND), parameter :: CO2_DEATH_THRESHOLD = 0.01
 integer :: kcell_dividing = 0
 
@@ -14,10 +16,15 @@ contains
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine grow_cells
+subroutine grow_cells(dt)
+real(REAL_KIND) :: dt
 
-call cell_division
-call cell_death
+if (use_division) then
+	call cell_division(dt)
+endif
+if (use_death) then
+	call cell_death
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -122,18 +129,30 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine cell_division
-integer :: kcell, nlist0
-real(REAL_KIND) :: tnow
+subroutine cell_division(dt)
+real(REAL_KIND) :: dt
+integer :: kcell, nlist0, site(3), iv
+real(REAL_KIND) :: tnow, CO2, metab, dVdt, rmax
 
 nlist0 = nlist
 tnow = istep*DELTA_T
+rmax = Vdivide/(2*divide_time_mean)
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
-	if (cell_list(kcell)%t_divide_next <= tnow) then
+	site = cell_list(kcell)%site
+	iv = ODEdiff%ivar(site(1),site(2),site(3))
+	CO2 = allstate(iv,OXYGEN)
+	metab = max(0.0,CO2)/(chemo(OXYGEN)%MM_C0 + CO2)
+	dVdt = rmax*metab
+	cell_list(kcell)%volume = cell_list(kcell)%volume + dVdt*dt
+	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then
 		kcell_dividing = kcell
 		call cell_divider(kcell)
 	endif
+!	if (cell_list(kcell)%t_divide_next <= tnow) then
+!		kcell_dividing = kcell
+!		call cell_divider(kcell)
+!	endif
 enddo
 end subroutine
 
@@ -144,7 +163,7 @@ subroutine cell_divider(kcell0)
 integer :: kcell0
 integer :: kpar=0
 integer :: j, k, kcell1, site0(3), site1(3), site2(3), site(3), npath, path(3,200)
-real(REAL_KIND) :: tnow
+real(REAL_KIND) :: tnow, R
 type (boundary_type), pointer :: bdry
 
 tnow = istep*DELTA_T
@@ -175,7 +194,10 @@ call extendODEdiff(site2)
 
 if (dbug) write(*,*) 'did push_path'
 cell_list(kcell0)%t_divide_last = tnow
-cell_list(kcell0)%t_divide_next = tnow + DivideTime()
+!cell_list(kcell0)%t_divide_next = tnow + DivideTime()
+cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
+R = par_uni(kpar)
+cell_list(kcell0)%divide_volume = Vdivide + dVdivide*(2*R-1)
 call add_cell(kcell0,kcell1,site0)
 
 ! Now need to fix the bdrylist.  
@@ -440,7 +462,8 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine add_cell(kcell0,kcell1,site)
 integer :: kcell0, kcell1, site(3)
-real(REAL_KIND) :: tnow
+integer :: kpar = 0
+real(REAL_KIND) :: tnow, R
 
 tnow = istep*DELTA_T
 lastID = lastID + 1
@@ -453,7 +476,10 @@ cell_list(kcell1)%site = site
 cell_list(kcell1)%ID = lastID
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%t_divide_last = tnow
-cell_list(kcell1)%t_divide_next = tnow + DivideTime()
+!cell_list(kcell1)%t_divide_next = tnow + DivideTime()
+cell_list(kcell1)%volume = cell_list(kcell0)%volume
+R = par_uni(kpar)
+cell_list(kcell1)%divide_volume = Vdivide + dVdivide*(2*R-1)
 occupancy(site(1),site(2),site(3))%indx(1) = kcell1
 end subroutine
 

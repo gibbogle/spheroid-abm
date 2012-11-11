@@ -391,19 +391,27 @@ real(REAL_KIND) :: C(:), dCreact
 real(REAL_KIND) :: metab, dMdt
 
 ! Check for necrotic site - for now, no reactions
-site = ODEdiff%varsite(iv,:)
-if (occupancy(site(1),site(2),site(3))%indx(1) < 0) then
-	dCreact = 0
-	return
-endif
-
-if (ichemo /= TRACER) then
-	if (C(OXYGEN) > 0) then
-		metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-	else
-		metab = 0
+if (use_death) then
+	site = ODEdiff%varsite(iv,:)
+	if (occupancy(site(1),site(2),site(3))%indx(1) < 0) then
+		dCreact = 0
+		return
 	endif
 endif
+
+dCreact = 0
+if (ichemo /= TRACER) then
+!	if (C(OXYGEN) > 0) then
+!		metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+!	else
+!		metab = 0
+!	endif
+	metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+!	dMdt = -metab*chemo(ichemo)%cell_rate	! mol/s
+!	dCreact = dMdt*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
+	dCreact = -metab*chemo(ichemo)%cell_rate*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
+endif
+return
 
 select case (ichemo)
 
@@ -426,6 +434,7 @@ integer :: i, k, kv, n, ichemo
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
 logical :: bnd, dbug
+real(REAL_KIND) :: metab, dMdt, vs	!GS
 
 !write(*,*) 'neqn: ',neqn
 ichemo = icase
@@ -436,6 +445,7 @@ dc6 = 6*dc1 + decay_rate
 cbnd = chemo(ichemo)%bdry_conc
 n = neqn
 !if (t < 1.0) write(*,*) icase,t
+vs = 1.0e6/Vsite	!GS
 do i = 1,n
 	C = allstate(i,:)
 	C(ichemo) = v(i)
@@ -454,7 +464,20 @@ do i = 1,n
 		endif
 		dCsum = dCsum + dCdiff*val
 	enddo
-	call react(ichemo,i,C,dCreact)
+	if (use_react) then
+		call react(ichemo,i,C,dCreact)
+	else
+        !GS - made some changes to reduce call to react timing
+        dCreact=0
+        if (ichemo==OXYGEN .or. ichemo==GLUCOSE) then
+!GS            metab=allstate(i,ichemo)
+!GS	        dMdt = -(metab/(chemo(ichemo)%MM_C0 + metab))*chemo(ichemo)%cell_rate	! mol/s
+			metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+!			dMdt = -metab*chemo(ichemo)%cell_rate	! mol/s
+!           dCreact = dMdt*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
+            dCreact =  -metab*chemo(ichemo)%cell_rate*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
+        endif
+    endif
 	dvdt(i) = dCsum + dCreact
 enddo
 end subroutine
