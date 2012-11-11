@@ -639,6 +639,114 @@ write(*,'(a,f10.1)') 'Time: ',timer2-timer1
 stop
 end subroutine
 
+!----------------------------------------------------------------------------------------
+! This subroutine is called from the GUI, and it passes back the chemokine gradient info
+! needed to size the gradient_array and interpret the data.
+! The argument axis takes values 1,2,3
+! 1 = Y-Z plane (normal to X axis)
+! 2 = X-Z plane (normal to Y axis)
+! 3 = X-Y plane (normal to Z axis)
+! The argument fraction is the fractional distance along the blob radius (-1,1)
+!----------------------------------------------------------------------------------------
+subroutine get_concentration2D_info(chem_used, ntsites, axis, fraction) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_concentration2d_info
+use, intrinsic :: iso_c_binding
+integer(c_int) :: chem_used(*), ntsites, axis
+real(c_float) :: fraction
+integer :: i, x, y, z, ns
+integer rng(3,2), rad(3)
+logical :: halve = .false.
+
+rng = blobrange
+rad(1) = Radius%x
+rad(2) = Radius%y
+rad(3) = Radius%z
+rng(axis,:) = Centre(axis) + fraction*rad(axis)
+do i = 1,4
+    if (chemo(i)%used) then
+        chem_used(i) = 1
+    else
+        chem_used(i) = 0
+    endif
+enddo
+ns = 0
+do z = rng(3,1),rng(3,2)
+    if (halve .and. axis /= 3 .and. mod(z,2) == 0) cycle
+    do y = rng(2,1),rng(2,2)
+        if (halve .and. axis /= 2 .and. mod(y,2) == 0) cycle
+        do x = rng(1,1),rng(1,2)
+            if (halve .and. axis /= 1 .and. mod(x,2) == 0) cycle
+!		    if (occupancy(x,y,z)%indx(1) < 0) cycle	! outside or DC
+		    if (.not.ChemoRegion(occupancy(x,y,z)%indx)) cycle	! outside or DC
+		    ns = ns+1
+        enddo
+    enddo
+enddo
+ntsites = ns
+end subroutine
+
+!----------------------------------------------------------------------------------------
+! The gradients are stored in a 1-D array of size = ntsites*(3 + nchem_used*3).
+! Here we can check the ntsites value.
+!----------------------------------------------------------------------------------------
+subroutine get_concentrations2D(chem_used, ntsites, gradient_array, axis, fraction, use_strength) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_gradients2d
+use, intrinsic :: iso_c_binding
+integer(c_int) :: chem_used(*), ntsites, axis, use_strength
+real(c_float) :: gradient_array(*), fraction
+integer :: x, y, z, i, j, k, ic, ns
+integer rng(3,2), rad(3)
+real :: strength
+logical :: halve = .false.
+
+rng = blobrange
+rad(1) = Radius%x
+rad(2) = Radius%y
+rad(3) = Radius%z
+rng(axis,:) = Centre(axis) + fraction*rad(axis)
+ns = 0
+k = 0
+do z = rng(3,1),rng(3,2)
+    if (halve .and. axis /= 3 .and. mod(z,2) == 0) cycle
+    do y = rng(2,1),rng(2,2)
+        if (halve .and. axis /= 2 .and. mod(y,2) == 0) cycle
+        do x = rng(1,1),rng(1,2)
+            if (halve .and. axis /= 1 .and. mod(x,2) == 0) cycle
+!		    if (occupancy(x,y,z)%indx(1) < 0) cycle	! outside or DC
+		    if (.not.ChemoRegion(occupancy(x,y,z)%indx)) cycle	! outside or DC
+		    ns = ns+1
+		    k = k+1
+		    gradient_array(k) = x
+		    k = k+1
+		    gradient_array(k) = y
+		    k = k+1
+		    gradient_array(k) = z
+		    do ic = 1,4
+		        if (use_strength == 1) then
+		            strength = receptor(ic)%strength
+		        else
+		            strength = 1
+		        endif
+	            do j = 1,3
+	                k = k+1
+			        if (chemo(ic)%used) then
+                        gradient_array(k) = strength*chemo(ic)%grad(j,x,y,z)
+                    else
+                        gradient_array(k) = 0
+                    endif
+                enddo
+            enddo
+        enddo
+    enddo
+enddo
+if (ns /= ntsites) then
+    write(logmsg,*) 'Error: get_gradients: inconsistent site count: ',ns,ntsites
+    call logger(logmsg)
+    stop
+endif
+!write(nflog,'(3f6.1,12f8.4)') gradient_array(1:ntsites*15) 
+end subroutine
+
 !----------------------------------------------------------------------------------
 ! In this version the diffusion/decay of each constituent is solved by a separate
 ! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
