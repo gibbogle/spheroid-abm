@@ -27,7 +27,7 @@ type chemokine_type
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: decay_rate
-	real(REAL_KIND) :: cell_rate		! Vmax
+	real(REAL_KIND) :: max_cell_rate		! Vmax
 	real(REAL_KIND) :: MM_C0			! Km
 	real(REAL_KIND), allocatable :: coef(:,:)
 	real(REAL_KIND), allocatable :: conc(:,:,:)
@@ -42,6 +42,9 @@ type ODEdiff_type
 	integer, allocatable :: varsite(:,:)
 	integer, allocatable :: icoef(:,:)
 !	integer, allocatable :: ncoef(:)
+	real(REAL_KIND) :: deltaC
+	real(REAL_KIND) :: k
+	real(REAL_KIND) :: C1
 end type
 type(ODEdiff_type) :: ODEdiff
 

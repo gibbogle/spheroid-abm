@@ -13,7 +13,7 @@
 #include "log.h"
 #include "transfer.h"
 
-#include "libBcell32.h"
+#include "libspheroid.h"
 
 LOG_USE();
 char msg[2048];
@@ -134,7 +134,8 @@ void ExecThread::run()
 {
 	LOG_MSG("Invoking DLL...");
 	int res=0;
-    int NX, NY, NZ;
+    int NX, NY, NZ, nsumm_interval;
+    double deltat;
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
@@ -150,7 +151,8 @@ void ExecThread::run()
 
 	paused = false;
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
-    get_dimensions(&NX,&NY,&NZ,&nsteps);
+    get_dimensions(&NX,&NY,&NZ,&nsteps,&deltat);
+    nsumm_interval = (60*60)/deltat;   // number of time steps per hours
 //	sprintf(msg,"exthread: nsteps: %d",nsteps);
 //	LOG_MSG(msg);
     mutex1.lock();
@@ -172,10 +174,10 @@ void ExecThread::run()
 		simulate_step(&res);
 		if (res == 1) break;
 		if (stopped) break;
-		if (i%240 == 0) {
+        if (i%nsumm_interval == 0) {
 			mutex1.lock();
 			get_summary(summaryData);
-            int iframe = i/240;
+            int iframe = i/nsumm_interval;
 //            saveGradient2D(iframe);
             mutex1.unlock();
 			emit summary();		// Emit signal to update summary plots, at hourly intervals

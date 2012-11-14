@@ -87,7 +87,7 @@ rate of BCR stimulation = Ks*(BCR avidity)*(antigen load)\n\
 "Lattice size",
 "Dimension of the lattice (number of sites in X,Y and Z directions).  Typically 5*BLOB_RADIUS is OK."},
 
-{"INITIAL_COUNT", 5000, 0, 0,
+{"INITIAL_COUNT", 1000, 0, 0,
 "Initial number of tumour cells",
 "Initial number of tumour cells"},
 
@@ -337,15 +337,35 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Length of the simulation.\n\
 [days]"},
 
-{"DELTA_T", 300, 0, 0,
+{"DELTA_T", 600, 0, 0,
 "Time step",
-"Length of main time step, for cell death, division, etc.\n\
+"Length of main time step, for cell death, division, etc.  Should be a divisor of 3600. \n\
 [days]"},
 
 {"NT_CONC", 10, 0, 0,
 "Number of ODE solver sub-steps.",
-"The number of subdivisions of the major time step, for the ODE diffusion-reaction solver.\n\
-[days]"},
+"The number of subdivisions of the major time step, for the ODE diffusion-reaction solver."},
+
+{"NMM3", 120000, 0, 0,
+"Cells/cubic mm",
+"Number of cells per cubic mm of non-necrotic tumour."},
+
+{"FLUID_FRACTION", 0.5, 0, 0,
+"Fluid fraction",
+"Fraction of non-necrotic tumour that is extracellular fluid."},
+
+{"VDIVIDE0", 1.6, 0, 0,
+"Nominal divide volume",
+"Nominal multiple of normal cell volume at which division occurs."},
+
+{"DVDIVIDE", 0.05, 0, 0,
+"Divide volume variation",
+"Variation (+/-) about nominal divide volume multiple."},
+
+{"DEATH_THRESHOLD", 0.0001, 0, 0,
+"O2 death threshold",
+"Concentration of O2 at which a cell begins to experience anoxia leading to cell death.\n\
+[mM]"},
 
 
 {"TEST_CASE", 0, 0, 0,
@@ -360,7 +380,7 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Second RNG seed",
 "The random number generator is seeded by a pair of integers.  Changing the seed generates a different Monte Carlo realization."},
 
-{"NCPU", 3, 1, 8,
+{"NCPU", 2, 1, 8,
 "Number of CPUs",
 "Number of CPUs to use for the simulation."},
 

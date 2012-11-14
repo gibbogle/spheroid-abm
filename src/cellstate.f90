@@ -7,9 +7,8 @@ use fields
 use ode_diffuse
 implicit none
 
-real(REAL_KIND), parameter :: Vdivide = 1.6
-real(REAL_KIND), parameter :: dVdivide = 0.05
-real(REAL_KIND), parameter :: CO2_DEATH_THRESHOLD = 0.01
+!real(REAL_KIND), parameter :: Vdivide0 = 1.6
+!real(REAL_KIND), parameter :: dVdivide = 0.05
 integer :: kcell_dividing = 0
 
 contains
@@ -136,7 +135,7 @@ real(REAL_KIND) :: tnow, CO2, metab, dVdt, rmax
 
 nlist0 = nlist
 tnow = istep*DELTA_T
-rmax = Vdivide/(2*divide_time_mean)
+rmax = Vdivide0/(2*divide_time_mean)
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
 	site = cell_list(kcell)%site
@@ -197,7 +196,7 @@ cell_list(kcell0)%t_divide_last = tnow
 !cell_list(kcell0)%t_divide_next = tnow + DivideTime()
 cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
 R = par_uni(kpar)
-cell_list(kcell0)%divide_volume = Vdivide + dVdivide*(2*R-1)
+cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 call add_cell(kcell0,kcell1,site0)
 
 ! Now need to fix the bdrylist.  
@@ -469,7 +468,6 @@ tnow = istep*DELTA_T
 lastID = lastID + 1
 nlist = nlist + 1
 Ncells = Ncells + 1
-Nsites = Nsites + 1
 kcell1 = nlist
 cell_list(kcell1)%state = cell_list(kcell0)%state
 cell_list(kcell1)%site = site
@@ -479,7 +477,7 @@ cell_list(kcell1)%t_divide_last = tnow
 !cell_list(kcell1)%t_divide_next = tnow + DivideTime()
 cell_list(kcell1)%volume = cell_list(kcell0)%volume
 R = par_uni(kpar)
-cell_list(kcell1)%divide_volume = Vdivide + dVdivide*(2*R-1)
+cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 occupancy(site(1),site(2),site(3))%indx(1) = kcell1
 end subroutine
 

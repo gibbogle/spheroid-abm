@@ -30,10 +30,6 @@ use rkc_90
 implicit none
 
 integer, parameter :: MAX_VARS = 100000
-real(REAL_KIND), parameter :: BASE_CHEMOKINE_SECRETION = 0.012
-real(REAL_KIND), parameter :: fluid_fraction = 0.5
-real(REAL_KIND), parameter :: Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
-real(REAL_KIND), parameter :: Tmax = 10
 
 integer, parameter :: RKF45_SOLVER = 1
 integer, parameter :: RKSUITE_SOLVER = 2
@@ -44,7 +40,6 @@ real(REAL_KIND), allocatable :: work_rkc(:,:)
 
 integer :: nchemo, chemomap(MAX_CHEMO)
 integer :: ivdbug
-
 contains
 
 !----------------------------------------------------------------------------------
@@ -271,6 +266,36 @@ enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
+! Makes a slight modification to the Michaelis-Menten function to create a
+! "soft landing" as C -> 0
+! f1(C) = (C-d)/(C0 + C-d)  is a shifted version of the MM curve
+! f0(C) = kC^2             is a function with derivative -> 0 as C -> 0
+! At C=e, we want f0(e) = f1(e), and f0'(e) = f1'(e)
+! =>
+! ke^2 = (e-d)/(C0 + e-d)
+! 2ke = C0/(Co + e-d)^2
+! => e/2 = (e-d)(C0 + e-d)/C0
+! Set x = e-d
+! C0(x+d) = 2x(C0+x)
+! => x = e-d = (sqrt(Co^2 + 8dC0) - C0)/4
+! k = (e-d)/(e^2(C0 + e-d))
+! We fix d (as small as possible, by trial and error) then deduce e, k.
+!----------------------------------------------------------------------------------
+subroutine AdjustMM
+real(REAL_KIND) :: deltaC, C0, C1
+
+C0 = chemo(OXYGEN)%MM_C0
+!deltaC = 5*CO2_DEATH_THRESHOLD
+deltaC = 0.0005
+C1 = deltaC + (sqrt(C0*C0 + 8*C0*deltaC) - C0)/4
+ODEdiff%k = (C1-deltaC)/(C1*C1*(C0+C1-deltaC))
+ODEdiff%C1 = C1
+ODEdiff%deltaC = deltaC
+write(logmsg,*) 'AdjustMM: C0, deltaC, C1, k: ',C0, ODEdiff%deltaC, ODEdiff%C1, ODEdiff%k
+call logger(logmsg)
+end subroutine
+
+!----------------------------------------------------------------------------------
 ! A cell has moved to site(:), which was previously exterior (boundary), and the 
 ! variable-site mappings need to be updated, together with %icoef(:,:)
 ! The relevant neighbours are at x +/- 1, y +/- 1, z +/- 1
@@ -285,6 +310,13 @@ x = site(1)
 y = site(2)
 z = site(3)
 n = ODEdiff%nvars + 1
+if (n > MAX_VARS) then
+	write(logmsg,*) 'Error: ExtendODEdiff: Too many variables: n > MAX_VARS: ',MAX_VARS
+	call logger(logmsg)
+	write(logmsg,*) 'Increase MAX_VARS and rebuild spheroid.DLL'
+	call logger(logmsg)
+	stop
+endif
 ODEdiff%ivar(x,y,z) = n
 ODEdiff%varsite(n,:) = site
 ODEdiff%nvars = n
@@ -298,7 +330,8 @@ x2 = x+1
 kv = ODEdiff%ivar(x2,y,z) 
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,2) /= 0) then
-		write(*,*) 'Error: ExtendODEDiff: icoef(kv,2): ',ODEdiff%icoef(kv,2)
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,2): ',ODEdiff%icoef(kv,2)
+		call logger(logmsg)
 		stop
 	endif
 	ODEdiff%icoef(kv,2) = n
@@ -310,7 +343,8 @@ x1 = x-1
 kv = ODEdiff%ivar(x1,y,z) 
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,3) /= 0) then
-		write(*,*) 'Error: ExtendODEDiff: icoef(kv,3): ',ODEdiff%icoef(kv,3)
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,3): ',ODEdiff%icoef(kv,3)
+		call logger(logmsg)
 		stop
 	endif
 	ODEdiff%icoef(kv,3) = n
@@ -322,7 +356,8 @@ y2 = y+1
 kv = ODEdiff%ivar(x,y2,z) 
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,4) /= 0) then
-		write(*,*) 'Error: ExtendODEDiff: icoef(kv,4): ',ODEdiff%icoef(kv,4)
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,4): ',ODEdiff%icoef(kv,4)
+		call logger(logmsg)
 		stop
 	endif
 	ODEdiff%icoef(kv,4) = n
@@ -334,7 +369,8 @@ y1 = y-1
 kv = ODEdiff%ivar(x,y1,z) 
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,5) /= 0) then
-		write(*,*) 'Error: ExtendODEDiff: icoef(kv,5): ',ODEdiff%icoef(kv,5)
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,5): ',ODEdiff%icoef(kv,5)
+		call logger(logmsg)
 		stop
 	endif
 	ODEdiff%icoef(kv,5) = n
@@ -346,7 +382,8 @@ z2 = z+1
 kv = ODEdiff%ivar(x,y,z2) 
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,6) /= 0) then
-		write(*,*) 'Error: ExtendODEDiff: icoef(kv,6): ',ODEdiff%icoef(kv,6)
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,6): ',ODEdiff%icoef(kv,6)
+		call logger(logmsg)
 		stop
 	endif
 	ODEdiff%icoef(kv,6) = n
@@ -358,7 +395,8 @@ z1 = z-1
 kv = ODEdiff%ivar(x,y,z1) 
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,7) /= 0) then
-		write(*,*) 'Error: ExtendODEDiff: icoef(kv,7): ',ODEdiff%icoef(kv,7)
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,7): ',ODEdiff%icoef(kv,7)
+		call logger(logmsg)
 		stop
 	endif
 	ODEdiff%icoef(kv,7) = n
@@ -390,6 +428,7 @@ integer :: ichemo, iv
 integer :: site(3), kcell
 real(REAL_KIND) :: C(:), dCreact
 real(REAL_KIND) :: metab, dMdt
+real(REAL_KIND) :: metab1, metab2, alpha
 
 ! Check for necrotic site - for now, no reactions
 if (use_death) then
@@ -402,24 +441,27 @@ endif
 
 dCreact = 0
 if (ichemo /= TRACER) then
-!	if (C(OXYGEN) > 0) then
-!		metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-!	else
-!		metab = 0
-!	endif
-	metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-!	dMdt = -metab*chemo(ichemo)%cell_rate	! mol/s
+!	metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+!	metab = max(CO2_DEATH_THRESHOLD,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+	if (C(OXYGEN) > ODEdiff%C1) then
+		metab = (C(OXYGEN)-ODEdiff%deltaC)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN) - ODEdiff%deltaC)
+	elseif (C(OXYGEN) > 0) then
+		metab = ODEdiff%k*C(OXYGEN)*C(OXYGEN)
+	else
+		metab = 0
+	endif
+!	dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
 !	dCreact = dMdt*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
-	dCreact = -metab*chemo(ichemo)%cell_rate*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
+	dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
 endif
 return
 
 select case (ichemo)
 
 case (OXYGEN)
-	dMdt = -metab*chemo(OXYGEN)%cell_rate	! mol/s
+	dMdt = -metab*chemo(OXYGEN)%max_cell_rate	! mol/s
 case (GLUCOSE)
-	dMdt = -metab*chemo(GLUCOSE)%cell_rate
+	dMdt = -metab*chemo(GLUCOSE)%max_cell_rate
 case (TRACER)
 	dMdt = 0
 end select
@@ -472,11 +514,12 @@ do i = 1,n
         dCreact=0
         if (ichemo==OXYGEN .or. ichemo==GLUCOSE) then
 !GS            metab=allstate(i,ichemo)
-!GS	        dMdt = -(metab/(chemo(ichemo)%MM_C0 + metab))*chemo(ichemo)%cell_rate	! mol/s
+!GS	        dMdt = -(metab/(chemo(ichemo)%MM_C0 + metab))*chemo(ichemo)%max_cell_rate	! mol/s
 			metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-!			dMdt = -metab*chemo(ichemo)%cell_rate	! mol/s
+!			metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+!			dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
 !           dCreact = dMdt*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
-            dCreact =  -metab*chemo(ichemo)%cell_rate*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
+            dCreact =  -metab*chemo(ichemo)%max_cell_rate*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
         endif
     endif
 	dvdt(i) = dCsum + dCreact
@@ -530,8 +573,8 @@ end subroutine
 !     blob changes (i.e. grows or shrinks).  This could entail variable renumbering.
 !   * work(:,:) is correctly sized (ODEdiff%nvars)
 !----------------------------------------------------------------------------------
-subroutine Solver(tstart,dt)
-!integer :: nchemo
+subroutine Solver(it,tstart,dt)
+integer :: it
 real(REAL_KIND) :: tstart, dt
 integer :: ichemo, nvars, ic
 real(REAL_KIND) :: t, tend
@@ -546,8 +589,9 @@ type(rkc_comm) :: comm_rkc(MAX_CHEMO)
 nvars = ODEdiff%nvars
 allocate(state(nvars,MAX_CHEMO))
 state(:,:) = allstate(1:nvars,1:MAX_CHEMO)
-call showresults(state(:,OXYGEN))
-
+if (it == 1) then
+	call showresults(state(:,OXYGEN))
+endif
 info(1) = 1
 info(2) = 1		! 1 = use spcrad() to estimate spectral radius, 2 = let rkc do it 
 info(3) = 1
@@ -564,12 +608,14 @@ do ic = 1,nchemo
 	tend = t + dt
 	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:,ichemo),t,tend,rtol,atol,info,work_rkc(:,ichemo),idid,ichemo)
 	if (idid /= 1) then
-		write(*,*) ' Failed at t = ',t,' with idid = ',idid
+		write(logmsg,*) ' Failed at t = ',t,' with idid = ',idid
+		call logger(logmsg)
 		stop
 	endif
 	if (info(2) == 2 .and. ichemo == OXYGEN) then
 		sprad_ratio = rkc_sprad/blob_radius
-		write(*,'(a,2f8.4)') 'sprad_ratio: ',blob_radius,sprad_ratio
+		write(logmsg,'(a,2f8.4)') 'sprad_ratio: ',blob_radius,sprad_ratio
+		call logger(logmsg)
 	endif
 enddo
 !$omp end parallel do
@@ -633,7 +679,7 @@ tstart = 0
 do it = 1,nt
 !	write(*,'(a,i4,f8.1)') 'it, tstart: ',it,tstart
 	tstart = (it-1)*dt
-	call Solver(tstart,dt)
+	call Solver(it,tstart,dt)
 enddo
 timer2 = wtime()
 write(*,'(a,f10.1)') 'Time: ',timer2-timer1
@@ -720,7 +766,6 @@ do k = 1,nt
 	!$omp parallel do private(tstart, tend, state, statep, flag, relerr, abserr, site, idid)
 	do ichemo = 1,nchemo
 		if (.not.chemo(ichemo)%used) cycle
-!	write(*,*) 'ichemo: ',ichemo
 		allocate(state(nvars))
 		allocate(statep(nvars))
 		state = allstate(1:nvars,ichemo)

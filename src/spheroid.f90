@@ -93,6 +93,7 @@ call make_split(.true.)
 if (use_ODE_diffusion) then
 	call SetupODEDiff
 	call InitConcs
+	call AdjustMM
 !	call TestODEDiffusion
 !	call TestSolver
 endif
@@ -219,9 +220,9 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine read_cell_params(ok)
 logical :: ok
-integer :: itestcase, ncpu_dummy
+integer :: itestcase, ncpu_dummy, Nmm3
 real(REAL_KIND) :: days
-real(REAL_KIND) :: sigma
+real(REAL_KIND) :: sigma, DXmm
 
 ok = .true.
 open(nfcell,file=inputfile,status='old')
@@ -233,6 +234,11 @@ read(nfcell,*) divide_time_shape
 read(nfcell,*) days							! number of days to simulate
 read(nfcell,*) DELTA_T						! time step size (sec)
 read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
+read(nfcell,*) Nmm3							! number of cells/mm^3
+read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is fluid
+read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
+read(nfcell,*) dVdivide						! variation about nominal divide volume
+read(nfcell,*) CO2_DEATH_THRESHOLD			! O2 concentration threshold for cell death (mM)
 read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
@@ -248,6 +254,10 @@ sigma = log(divide_time_shape)
 divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
 divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
+DXmm = 1.0/(Nmm3**(1./3))
+DELTA_X = DXmm/10
+Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
+
 ! Setup test_case
 test_case = .false.
 if (itestcase /= 0) then
@@ -315,9 +325,9 @@ do x = 1,NX
 					if (tdiv + tpast > 0) exit
 				enddo
 !				write(*,'(3f8.2)') tpast/3600,tdiv/3600,(tdiv+tpast)/3600
-				cell_list(k)%divide_volume = Vdivide
+				cell_list(k)%divide_volume = Vdivide0
 				R = par_uni(kpar)
-				cell_list(k)%volume = Vdivide*0.5*(1 + R)
+				cell_list(k)%volume = Vdivide0*0.5*(1 + R)
 				cell_list(k)%t_divide_last = tpast
 				cell_list(k)%t_divide_next = tdiv + tpast
 				occupancy(x,y,z)%indx(1) = k
@@ -478,15 +488,17 @@ end function
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_dimensions(NX_dim,NY_dim,NZ_dim,nsteps_dim) BIND(C)
+subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
 use, intrinsic :: iso_c_binding
 integer(c_int) :: NX_dim,NY_dim,NZ_dim,nsteps_dim
+real(c_double) :: deltat
 
 NX_dim = NX
 NY_dim = NY
 NZ_dim = NZ
 nsteps_dim = nsteps
+deltat = DELTA_T
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -509,7 +521,7 @@ nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
 istep = istep + 1
 if (mod(istep,nthour) == 0) then
-	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist
+	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
 	call logger(logmsg)
 endif
 !if (istep == 6216) dbug = .true.
@@ -518,7 +530,7 @@ if (compute_concentrations) then
 	do it = 1,NT_CONC
 		tstart = (it-1)*dt
 	!	call Solver(nchemo,tstart,dt)
-		call Solver(tstart,dt)
+		call Solver(it,tstart,dt)
 	enddo
 endif
 res = 0

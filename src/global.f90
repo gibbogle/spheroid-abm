@@ -27,15 +27,14 @@ integer, parameter :: OUTSIDE_TAG  = -1
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
-!real(REAL_KIND), parameter :: DELTA_T = 300	! sec = 10 min = big time step for cell state change (death, division, ...)
-real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
+!real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
+!real(REAL_KIND), parameter :: CO2_DEATH_THRESHOLD = 0.0001
 integer, parameter :: MAX_CHEMO = 3
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: TRACER = 3
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
-logical, parameter :: use_fixed_MM = .true.
 logical, parameter :: use_division = .true.
 logical, parameter :: use_death = .true.
 logical, parameter :: use_react = .true.
@@ -88,7 +87,8 @@ integer :: max_ngaps, ngaps, nadd_sites, Nsites
 integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
-real(REAL_KIND) :: DELTA_T
+real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite
+real(REAL_KIND) :: CO2_DEATH_THRESHOLD, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 
 character*(128) :: inputfile
