@@ -6,7 +6,7 @@
 #include <QThread>
 #include <QTcpServer>
 
-#include "libBcell32.h"
+#include "libspheroid.h"
 #include "SimpleView2DUI.h"
 
 class SocketHandler : public QThread

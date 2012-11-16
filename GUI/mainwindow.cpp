@@ -33,7 +33,10 @@ int istep;
 int summaryData[100];
 int nt_vtk;
 bool leftb;
+double DELTA_T;
 int ndistplots = 1;
+
+bool USE_GRAPHS = true;
 
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
 {}
@@ -86,6 +89,7 @@ MainWindow::MainWindow(QWidget *parent)
 	vtkfile = "basecase.pos";
 	savepos_start = 0;
 	ntimes = 0;
+    step = 0;
 	hour = 0;
 
 	param_to_sliderIndex = NULL;
@@ -96,6 +100,8 @@ MainWindow::MainWindow(QWidget *parent)
 	nParams = parm->nParams;
 	grph = new Graphs();
 	nGraphs = grph->nGraphs;
+    for(int i=0; i<nGraphs; i++)
+        pGraph[i] = NULL;
     LOG_QMSG("did Graphs");
 	createLists();
     LOG_QMSG("did createLists");
@@ -149,9 +155,9 @@ void MainWindow::createActions()
 		}
 	}
 	// Graph menu
-    connect(action_add_graph, SIGNAL(triggered()), this, SLOT(addGraph()));
-    connect(action_remove_graph, SIGNAL(triggered()), this, SLOT(removeGraph()));
-    connect(action_remove_all, SIGNAL(triggered()), this, SLOT(removeAllGraphs()));
+//    connect(action_add_graph, SIGNAL(triggered()), this, SLOT(addGraph()));
+//    connect(action_remove_graph, SIGNAL(triggered()), this, SLOT(removeGraph()));
+//    connect(action_remove_all, SIGNAL(triggered()), this, SLOT(removeAllGraphs()));
     connect(action_save_snapshot, SIGNAL(triggered()), this, SLOT(saveSnapshot()));
     connect(action_start_recording, SIGNAL(triggered()), this, SLOT(startRecorder()));
     connect(action_stop_recording, SIGNAL(triggered()), this, SLOT(stopRecorder()));
@@ -1389,7 +1395,8 @@ void MainWindow::preConnection()
     step = -1;
 
 	// Initialize graphs
-	initializeGraphs(newR);
+    if (USE_GRAPHS)	initializeGraphs(newR);
+    LOG_MSG("did initializeGraphs");
     posdata = false;
 	if (cbox_savepos->isChecked()) {
 		if (QFile::exists(vtkfile))
@@ -1410,37 +1417,51 @@ void MainWindow::errorPopup(QString errmsg)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::initializeGraphs(RESULT_SET *R)
 {
+//    LOG_MSG("initializeGraphs 1");
 	mdiArea->closeAllSubWindows();
 	mdiArea->show();
-	clearAllGraphs();
-
+//    LOG_MSG("initializeGraphs 2");
+    if (nGraphCases > 0) {
+//        LOG_MSG("initializeGraphs 3a");
+        clearAllGraphs();
+//        LOG_MSG("initializeGraphs 3b");
+    }
+//    sprintf(msg,"nGraphs: %d",nGraphs);
+//    LOG_MSG(msg);
 	for (int i=0; i<nGraphs; i++) {
 		QString tag = grph->get_tag(i);
+//        LOG_QMSG(tag);
 		QString title = grph->get_title(i);
 		QString yAxisTitle = grph->get_yAxisTitle(i);
-		pGraph[i] = new Plot(tag,R->casename);
-		pGraph[i]->setTitle(title);
-		pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
+        if (pGraph[i] == NULL) {
+            pGraph[i] = new Plot(tag,R->casename);
+            pGraph[i]->setTitle(title);
+            pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
+        }
 	}
+//    LOG_MSG("initializeGraphs 4");
 
 	nGraphCases = 1;
-	graphResultSet[0] = R;
+    graphResultSet[0] = R;
 
 	for (int i=0; i<nGraphs; i++) {
 		mdiArea->addSubWindow(pGraph[i]);
 		pGraph[i]->show();
 	}
+//    LOG_MSG("initializeGraphs 5");
 
 	if (show_outputdata) {
 		mdiArea->addSubWindow(box_outputData);	// Need another way of creating this window - should be floating
 		box_outputData->show();
 	}
+//    LOG_MSG("initializeGraphs 6");
 
     mdiArea->tileSubWindows();
 
 	for (int i=0; i<nGraphs; i++) {
 		pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
 	}
+//    LOG_MSG("initializeGraphs 7");
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1499,24 +1520,23 @@ void MainWindow::displayScene()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showSummary()
 {
-//	LOG_MSG("showSummary");
+//    LOG_MSG("showSummary");
 	step++;
-	if (step >= newR->nsteps) {
+    if (step >= newR->nsteps) {
 		LOG_MSG("ERROR: step >= nsteps");
 		return;
 	}
 
     exthread->mutex1.lock();
 
-//	hour = summaryData[0]*DELTA_T/60;
-    hour = summaryData[1]*DELTA_T/60;
+    hour = summaryData[0]*DELTA_T/(60*60);
+//    hour = summaryData[1]*DELTA_T/60;
+
     progress = int(100.*hour/hours);
 	progressBar->setValue(progress);
 	QString hourstr = QString::number(int(hour));
 	hour_display->setText(hourstr);
 
-//    sprintf(msg,"showSummary: step: %d summaryData[1]: %d hour: %f",step,summaryData[1],hour);
-//    LOG_MSG(msg);
 	QString casename = newR->casename;
     newR->tnow[step] = step;
 
@@ -1529,7 +1549,7 @@ void MainWindow::showSummary()
 	for (int i=0; i<nGraphs; i++) {
 		if (!grph->isActive(i)) continue;
 		pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename);
-	}
+    }
 
     exthread->mutex1.unlock();
 }
@@ -1699,14 +1719,18 @@ void MainWindow::stopServer()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::clearAllGraphs()
 {
-	if (nGraphCases > 0) {
-		for (int i=0; i<nGraphs; i++) {
-			if (!grph->isActive(i)) continue;
-			pGraph[i]->removeAllCurves();
-		}
+    if (nGraphCases > 0) {
+        if (nGraphs > 0) {
+            for (int i=0; i<nGraphs; i++) {
+                if (!grph->isActive(i)) continue;
+                LOG_QMSG(grph->get_tag(i));
+//                pGraph[i]->clear();
+//                pGraph[i]->removeAllCurves();
+            }
+        }
 		nGraphCases = 0;
 	}
-	for (int i=0; i<Plot::ncmax; i++) {
+    for (int i=0; i<Plot::ncmax; i++) {
 		graphCaseName[i] = "";
 		graphResultSet[i] = 0;
 	}
@@ -1832,7 +1856,7 @@ void MainWindow::removeGraph()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::removeAllGraphs()
 {
-	clearAllGraphs();
+    if (USE_GRAPHS) clearAllGraphs();
 }
 
 //---------------------------------------------------------------------

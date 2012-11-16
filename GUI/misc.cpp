@@ -151,8 +151,8 @@ void ExecThread::run()
 
 	paused = false;
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
-    get_dimensions(&NX,&NY,&NZ,&nsteps,&deltat);
-    nsumm_interval = (60*60)/deltat;   // number of time steps per hours
+    get_dimensions(&NX,&NY,&NZ,&nsteps,&DELTA_T);
+    nsumm_interval = (60*60)/DELTA_T;   // number of time steps per hour
 //	sprintf(msg,"exthread: nsteps: %d",nsteps);
 //	LOG_MSG(msg);
     mutex1.lock();
@@ -172,23 +172,21 @@ void ExecThread::run()
 		}
 		if (stopped) break;
 		simulate_step(&res);
-		if (res == 1) break;
+        if (res == 1) break;
 		if (stopped) break;
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
-			get_summary(summaryData);
+            get_summary(summaryData);
             int iframe = i/nsumm_interval;
 //            saveGradient2D(iframe);
             mutex1.unlock();
-			emit summary();		// Emit signal to update summary plots, at hourly intervals
-		}
+            emit summary();		// Emit signal to update summary plots, at hourly intervals
+        }
 		if (stopped) break;
 		if (i%nt_vtk == 0) {
 			if (showingVTK != 0) {
 				snapshot();
                 istep = i;
-//                sprintf(msg,"got snapshot: i: %d",i);
-//                LOG_MSG(msg);
                 sleep(10);
 			}
 		}

@@ -9,7 +9,7 @@ integer :: ncpu, res, summarydata(100)
 character*(128) :: infile, outfile, runfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
-integer :: jstep, hour, ntot, ncog, inflow
+integer :: jstep, hour, ntot, ncog, inflow, irun
 character*(128) :: b, c, progname
 real :: vasc
 real(8) :: t1, t2
@@ -59,6 +59,7 @@ do i = 1, cnt
     endif
 end do
 
+do irun = 1,5
 inbuflen = len(infile)
 outbuflen = len(outfile)
 write(*,*) 'call execute'
@@ -86,8 +87,10 @@ do jstep = 1,Nsteps
 !		write(nfrun,'(4(a,i6),a,f6.2)') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog,' inflow/hr: ',inflow,' vasc: ',vasc	
 	endif
 enddo
+call terminate_run(res)
 !call cpu_time(t2)
 t2 = wtime()
 write(*,*) 'time: ',t2-t1
+enddo
 end
 

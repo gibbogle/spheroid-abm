@@ -103,11 +103,21 @@ write(logmsg,*) 'AllocateConcArrays'
 call logger(logmsg)
 do ic = 1,MAX_CHEMO
 	if (chemo(ic)%used) then
+		if (allocated(chemo(ic)%conc)) then
+			call logger("chemo(ic)%conc already allocated")
+!			stop
+		endif
 		allocate(chemo(ic)%conc(NX,NY,NZ))
+		if (allocated(chemo(ic)%grad)) then
+			call logger("chemo(ic)%grad already allocated")
+!			stop
+		endif
 		allocate(chemo(ic)%grad(3,NX,NY,NZ))
 		chemo(ic)%conc = chemo(ic)%bdry_conc	
 	endif
 enddo
+write(logmsg,*) 'did AllocateConcArrays'
+call logger(logmsg)
 end subroutine
 
 !----------------------------------------------------------------------------------------

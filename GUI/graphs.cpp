@@ -1,26 +1,36 @@
 #include <qstring.h>
 #include "graphs.h"
 
-// summaryData(1:9) = (/int(tnow/60),istep,ntot,ncogseed,ncog,Ndead,int(InflowTotal*60/DELTA_T), int(100*vascularity), teffgen/)
+// summaryData(1:9) = (/ int(tnow/60),istep,ntot,ncogseed,ncog,Ndead,int(InflowTotal*60/DELTA_T), int(100*vascularity), teffgen/)
+
+// summaryData(1:4) = (/ istep, nlive, ndead, int(radius in um) /)
 
 Graphs::Graphs()
 {
 GRAPH_SET graphs[] = {
 
-{"dummy",
-"",
-"",
-0, false, 0, 1},
+    {"dummy",
+    "",
+    "",
+    0, false, 0, 1},
 
-{"ntot",
-"Total follicle B Cell Population",
-"No. of cells",
-2, true, 0, 1},
+    {"nlive",
+    "Number of Live Cells",
+    "No. of cells",
+    1, true, 0, 1},
 
-{"ncogseed",
-"Seed Cognate Cells",
-"No. of cells",
-3, true, 0, 1},
+    {"ndead",
+    "Number of Dead Cells",
+    "No. of cells",
+    2, true, 0, 1},
+
+    {"diameter",
+    "Spheroid Diameter",
+    "Diameter",
+    3, true, 0, 1},
+
+    };
+/*
 
 {"ncog",
 "Cognate B Cells in the Follicle",
@@ -37,8 +47,6 @@ GRAPH_SET graphs[] = {
 "No. of cells",
 8, true, 0, 1}
 
-	};
-/*
 // Data values: 2,3,4,5,6,7,9,12
 {"dummy",
 "",

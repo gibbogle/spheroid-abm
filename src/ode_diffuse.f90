@@ -619,6 +619,7 @@ do ic = 1,nchemo
 	endif
 enddo
 !$omp end parallel do
+!write(*,*) state(1,1) - allstate(1,1)
 allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 deallocate(state)
 end subroutine

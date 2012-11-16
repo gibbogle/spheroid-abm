@@ -307,6 +307,6 @@ public:
 	}
 };
 
-static const double DELTA_T = 0.25;
+//static const double DELTA_T = 0.25;
 
 #endif

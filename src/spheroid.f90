@@ -831,8 +831,11 @@ subroutine get_summary(summaryData) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
+integer :: diam_um
 
-summaryData(1:20) = 0
+!call SetRadius(Nsites)
+diam_um = 2*DELTA_X*Radius*10000
+summaryData(1:4) = (/ istep, Ncells, Nsites-Ncells, diam_um /)
 
 end subroutine
 
@@ -900,11 +903,19 @@ if (use_TCP) then
 		return
 	endif
 endif
+
+istep = 0
+NX=100
+NY=100
+NZ=100
+DELTA_T=600
+nsteps = 100
+res=0
+
 call setup(ncpu,infile,outfile,ok)
 if (ok) then
 !	clear_to_send = .true.
 !	simulation_start = .true.
-	istep = 0
 else
 	call logger('=== Setup failed ===')
 endif

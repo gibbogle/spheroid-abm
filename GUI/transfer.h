@@ -26,5 +26,6 @@ extern int summaryData[100];
 extern int nt_vtk;
 extern int istep;
 extern bool leftb;
+extern double DELTA_T;
 
 #endif // TRANSFER_H
