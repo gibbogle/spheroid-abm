@@ -221,8 +221,9 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 integer :: itestcase, ncpu_dummy, Nmm3
+integer :: iuse_oxygen, iuse_glucose
 real(REAL_KIND) :: days
-real(REAL_KIND) :: sigma, DXmm
+real(REAL_KIND) :: sigma, DXmm, t_hyp_hours
 
 ok = .true.
 open(nfcell,file=inputfile,status='old')
@@ -238,12 +239,21 @@ read(nfcell,*) Nmm3							! number of cells/mm^3
 read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is fluid
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
-read(nfcell,*) CO2_DEATH_THRESHOLD			! O2 concentration threshold for cell death (mM)
+read(nfcell,*) CO2_DEATH_THRESHOLD			! O2 concentration threshold for hypoxia (mM)
+read(nfcell,*) t_hyp_hours					! hypoxic time causing death (h)
 read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
+read(nfcell,*) iuse_oxygen
+read(nfcell,*) chemo(OXYGEN)%diff_coef
+read(nfcell,*) chemo(OXYGEN)%bdry_conc
+read(nfcell,*) chemo(OXYGEN)%max_cell_rate
+read(nfcell,*) iuse_glucose
+read(nfcell,*) chemo(GLUCOSE)%diff_coef
+read(nfcell,*) chemo(GLUCOSE)%bdry_conc
+read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
 read(nfcell,*) fixedfile					! file with "fixed" parameter values
 close(nfcell)
 
@@ -254,9 +264,13 @@ sigma = log(divide_time_shape)
 divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
 divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
+t_hypoxic_limit = 60*60*t_hyp_hours				! hours -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
 DELTA_X = DXmm/10
 Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
+
+chemo(OXYGEN)%used = (iuse_oxygen == 1)
+chemo(GLUCOSE)%used = (iuse_glucose == 1)
 
 ! Setup test_case
 test_case = .false.
@@ -330,7 +344,11 @@ do x = 1,NX
 				cell_list(k)%volume = Vdivide0*0.5*(1 + R)
 				cell_list(k)%t_divide_last = tpast
 				cell_list(k)%t_divide_next = tdiv + tpast
+				cell_list(k)%t_hypoxic = 0
 				occupancy(x,y,z)%indx(1) = k
+!				if (idbug == 0 .and. r2 > r2lim/4 .and. r2 < 1.2*r2lim/4) then
+!					idbug = lastID
+!				endif
 			else
 				occupancy(x,y,z)%indx(1) = OUTSIDE_TAG
 			endif
@@ -342,6 +360,8 @@ Nsites = k
 Ncells = k
 Ncells0 = Ncells		
 ok = .true.
+write(logmsg,*) 'idbug: ',idbug
+call logger(logmsg)
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -484,7 +504,6 @@ else
     slice_count = PI*r2
 endif
 end function
-
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
@@ -690,70 +709,75 @@ integer, parameter :: nax = 6			! number of points used to delineate the spheroi
 
 nTC_list = 0
 
-! Need some markers to delineate the follicle extent.  These nax "cells" are used to convey (the follicle centre
-! and) the approximate ellipsoidal blob limits in the 3 axis directions.
-do k = 1,nax
-	select case (k)
-!	case (1)
-!		x = Centre(1) + 0.5
-!		y = Centre(2) + 0.5
-!		z = Centre(3) + 0.5
-!		site = (/x, y, z/)
-!		itcstate = axis_centre
-	case (1)
-!		x = Centre(1) - Radius%x - 2
-		x = blobrange(1,1) - 1
-		y = Centre(2) + 0.5
-		z = Centre(3) + 0.5
-		site = (/x, y, z/)
-		itcstate = axis_end
-	case (2)
-!		x = Centre(1) + Radius%x + 2
-		x = blobrange(1,2) + 1
-		y = Centre(2) + 0.5
-		z = Centre(3) + 0.5
-		site = (/x, y, z/)
-		itcstate = axis_end
-	case (3)
-		x = Centre(1) + 0.5
-!		y = Centre(2) - Radius%y - 2
-		y = blobrange(2,1) - 1
-		z = Centre(3) + 0.5
-		site = (/x, y, z/)
-		itcstate = axis_bottom
-	case (4)
-		x = Centre(1) + 0.5
-!		y = Centre(2) + Radius%y + 2
-		y = blobrange(2,2) + 1
-		z = Centre(3) + 0.5
-		site = (/x, y, z/)
-		itcstate = axis_end
-	case (5)
-		x = Centre(1) + 0.5
-		y = Centre(2) + 0.5
-!		z = Centre(3) - Radius%z - 2
-		z = blobrange(3,1) - 1
-		site = (/x, y, z/)
-		itcstate = axis_end
-	case (6)
-		x = Centre(1) + 0.5
-		y = Centre(2) + 0.5
-!		z = Centre(3) + Radius%z + 2
-		z = blobrange(3,2) + 1
-		site = (/x, y, z/)
-		itcstate = axis_end
-	end select
+k = 0
+last_id1 = 0
+if (1 == 0) then
+	! Need some markers to delineate the follicle extent.  These nax "cells" are used to convey (the follicle centre
+	! and) the approximate ellipsoidal blob limits in the 3 axis directions.
+	do k = 1,nax
+		select case (k)
+	!	case (1)
+	!		x = Centre(1) + 0.5
+	!		y = Centre(2) + 0.5
+	!		z = Centre(3) + 0.5
+	!		site = (/x, y, z/)
+	!		itcstate = axis_centre
+		case (1)
+	!		x = Centre(1) - Radius%x - 2
+			x = blobrange(1,1) - 1
+			y = Centre(2) + 0.5
+			z = Centre(3) + 0.5
+			site = (/x, y, z/)
+			itcstate = axis_end
+		case (2)
+	!		x = Centre(1) + Radius%x + 2
+			x = blobrange(1,2) + 1
+			y = Centre(2) + 0.5
+			z = Centre(3) + 0.5
+			site = (/x, y, z/)
+			itcstate = axis_end
+		case (3)
+			x = Centre(1) + 0.5
+	!		y = Centre(2) - Radius%y - 2
+			y = blobrange(2,1) - 1
+			z = Centre(3) + 0.5
+			site = (/x, y, z/)
+			itcstate = axis_bottom
+		case (4)
+			x = Centre(1) + 0.5
+	!		y = Centre(2) + Radius%y + 2
+			y = blobrange(2,2) + 1
+			z = Centre(3) + 0.5
+			site = (/x, y, z/)
+			itcstate = axis_end
+		case (5)
+			x = Centre(1) + 0.5
+			y = Centre(2) + 0.5
+	!		z = Centre(3) - Radius%z - 2
+			z = blobrange(3,1) - 1
+			site = (/x, y, z/)
+			itcstate = axis_end
+		case (6)
+			x = Centre(1) + 0.5
+			y = Centre(2) + 0.5
+	!		z = Centre(3) + Radius%z + 2
+			z = blobrange(3,2) + 1
+			site = (/x, y, z/)
+			itcstate = axis_end
+		end select
 
-	j = ninfo*(k-1)
-	TC_list(j+1) = k-1
-	TC_list(j+2:j+4) = site
-	TC_list(j+5) = itcstate
-	last_id1 = k-1
-enddo
-k = last_id1 + 1
+		j = ninfo*(k-1)
+		TC_list(j+1) = k-1
+		TC_list(j+2:j+4) = site
+		TC_list(j+5) = itcstate
+		last_id1 = k-1
+	enddo
+	k = last_id1 + 1
+endif
 
 ! Cells
 do kcell = 1,nlist
+	if (idbug /= 0 .and. cell_list(kcell)%ID /= idbug) cycle
 	if (cell_list(kcell)%exists) then
 		k = k+1
 		j = ninfo*(k-1)
@@ -765,7 +789,8 @@ do kcell = 1,nlist
 		last_id2 = kcell + last_id1
 	endif
 enddo
-nTC_list = last_id2
+!nTC_list = last_id2
+nTC_list = k
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -836,6 +861,29 @@ integer :: diam_um
 !call SetRadius(Nsites)
 diam_um = 2*DELTA_X*Radius*10000
 summaryData(1:4) = (/ istep, Ncells, Nsites-Ncells, diam_um /)
+
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine get_fieldinfo(ns, nc) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_fieldinfo
+use, intrinsic :: iso_c_binding
+integer(c_int) :: ns, nc
+
+ns = 100
+nc = 2
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine get_fielddata(nfdata, fdata) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_fielddata
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nfdata
+type(FIELD_DATA) :: fdata(*)
+
+
 
 end subroutine
 

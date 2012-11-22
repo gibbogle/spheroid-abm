@@ -18,6 +18,7 @@ using namespace std;
 #include "misc.h"
 #include "plot.h"
 #include "myvtk.h"
+#include "field.h"
 #include "result_set.h"
 #include "log.h"
 #include "SimpleView3DUI.h"
@@ -84,6 +85,7 @@ private slots:
     void goToInputs();
     void goToOutputs();
     void goToVTK();
+    void goToField();
     void runServer();
     void pauseServer();
     void stopServer();
@@ -103,6 +105,10 @@ private slots:
     void showGradient2D();
     void setSavePosStart();
 
+    void on_radioButton_oxygen_clicked();
+
+    void on_radioButton_glucose_clicked(bool checked);
+
 public slots:
 	void preConnection();
 	void outputData(QString);
@@ -113,7 +119,9 @@ public slots:
 	void showSummary();
     void startRecorder();
     void stopRecorder();
-
+ //   void on_buttonButton_constituent_clicked();
+    void buttonClick_constituent(QAbstractButton* button);
+    void buttonClick_plane(QAbstractButton* button);
 private:
     void createActions();
 	void createLists();
@@ -123,6 +131,11 @@ private:
 	void reloadParams();
 
     void trackError();
+
+    void enableUseOxygen();
+    void disableUseOxygen();
+    void enableUseGlucose();
+    void disableUseGlucose();
 
 /*
 	void enableUseS1P();
@@ -279,7 +292,7 @@ private:
 	static const bool USE_RANGES = false;
 
 	MyVTK *vtk;
-//    SimpleView3D *mySimpleView3D;
+    Field *field;
 	ExecThread *exthread;
 };
 

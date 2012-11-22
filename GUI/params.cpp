@@ -367,6 +367,10 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Concentration of O2 at which a cell begins to experience anoxia leading to cell death.\n\
 [mM]"},
 
+{"T_HYPOXIC_LIMIT", 3.0, 0, 0,
+"Hypoxic time limit",
+"Length of time under hypoxia (O2 < death threshold) after which a cell dies.\n\
+[h]"},
 
 {"TEST_CASE", 0, 0, 0,
 "Test case #",
@@ -397,6 +401,38 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Fraction to display",
 "Fraction of non-cognate B cells to display."},
 */
+
+{"USE_OXYGEN", 1, 0, 1,
+"Use Oxygen?",
+"Oxygen is simulated"},
+
+{"OXYGEN_DIFF_COEF", 2.0e-5, 0, 0,
+ "OXYGEN diffusion coeff",
+ "OXYGEN diffusion coefficient"},
+
+{"OXYGEN_BDRY_CONC", 0.18, 0, 0,
+ "OXYGEN boundary concentration",
+ "OXYGEN boundary concentration"},
+
+{"OXYGEN_CONSUMPTION", 2.3e-16, 0, 0,
+ "OXYGEN consumption rate",
+ "OXYGEN consumption rate"},
+
+{"USE_GLUCOSE", 1, 0, 1,
+"Use Glucose?",
+"Glucose is simulated"},
+
+{"GLUCOSE_DIFF_COEF", 6.0e-7, 0, 0,
+ "GLUCOSE diffusion coeff",
+ "GLUCOSE diffusion coefficient"},
+
+{"GLUCOSE_BDRY_CONC", 9.0, 0, 0,
+ "GLUCOSE boundary concentration",
+ "GLUCOSE boundary concentration"},
+
+{"GLUCOSE_CONSUMPTION", 3.8e-17, 0, 0,
+ "GLUCOSE consumption rate",
+ "GLUCOSE consumption rate"},
 
 {"INPUT_FILE", 0, 0, 0,
 "spheroid_fixed.inpdata",

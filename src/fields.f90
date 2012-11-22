@@ -43,35 +43,35 @@ subroutine SetupChemo
 integer :: ichemo
 
 chemo(OXYGEN)%name = 'Oxygen'
-chemo(OXYGEN)%used = .true.
-chemo(OXYGEN)%use_secretion = .false.
-chemo(OXYGEN)%bdry_rate = 0
-chemo(OXYGEN)%bdry_conc = 0.18		! mM
-chemo(OXYGEN)%diff_coef = 2.0e-5	! cm^2.s^-1	! 2.0e-5
-chemo(OXYGEN)%halflife = 0.0		! hours
-chemo(OXYGEN)%max_cell_rate = 2.3e-16	! mol.cell^-1.s^-1
+!chemo(OXYGEN)%used = .true.
+!chemo(OXYGEN)%use_secretion = .false.
+!chemo(OXYGEN)%bdry_rate = 0
+!chemo(OXYGEN)%bdry_conc = 0.18		! mM
+!chemo(OXYGEN)%diff_coef = 2.0e-5	! cm^2.s^-1	! 2.0e-5
+!chemo(OXYGEN)%halflife = 0.0		! hours
+!chemo(OXYGEN)%max_cell_rate = 2.3e-16	! mol.cell^-1.s^-1
 
 chemo(GLUCOSE)%name = 'Glucose'
-chemo(GLUCOSE)%used = .false.
-chemo(GLUCOSE)%use_secretion = .false.
-chemo(GLUCOSE)%bdry_rate = 0
-chemo(GLUCOSE)%bdry_conc = 9.0		! mM
-chemo(GLUCOSE)%diff_coef = 6.0e-7	! cm^2s^-1
-chemo(GLUCOSE)%halflife = 0		! hours
-chemo(GLUCOSE)%max_cell_rate = 3.8e-17	! mol.cell^-1.s^-1
+!chemo(GLUCOSE)%used = .false.
+!chemo(GLUCOSE)%use_secretion = .false.
+!chemo(GLUCOSE)%bdry_rate = 0
+!chemo(GLUCOSE)%bdry_conc = 9.0		! mM
+!chemo(GLUCOSE)%diff_coef = 6.0e-7	! cm^2s^-1
+!chemo(GLUCOSE)%halflife = 0		! hours
+!chemo(GLUCOSE)%max_cell_rate = 3.8e-17	! mol.cell^-1.s^-1
 
 chemo(TRACER)%name = 'Tracer'
 chemo(TRACER)%used = .false.
-chemo(TRACER)%use_secretion = .false.
-chemo(TRACER)%bdry_rate = 0
-chemo(TRACER)%bdry_conc = 200
-chemo(TRACER)%diff_coef = 2.0e-6	! units?
-chemo(TRACER)%halflife = 0	! hours
-do ichemo = 1,MAX_CHEMO
-	if (.not.chemo(ichemo)%used) cycle
-	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
-!	write(*,*) 'decay_rate: ',ichemo,chemo(ichemo)%decay_rate
-enddo
+!chemo(TRACER)%use_secretion = .false.
+!chemo(TRACER)%bdry_rate = 0
+!chemo(TRACER)%bdry_conc = 200
+!chemo(TRACER)%diff_coef = 2.0e-6	! units?
+!chemo(TRACER)%halflife = 0	! hours
+!do ichemo = 1,MAX_CHEMO
+!	if (.not.chemo(ichemo)%used) cycle
+!	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
+!!	write(*,*) 'decay_rate: ',ichemo,chemo(ichemo)%decay_rate
+!enddo
 call AllocateConcArrays
 call SetMMParameters
 end subroutine

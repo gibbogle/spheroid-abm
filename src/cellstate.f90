@@ -22,13 +22,14 @@ if (use_division) then
 	call cell_division(dt)
 endif
 if (use_death) then
-	call cell_death
+	call cell_death(dt)
 endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine cell_death
+subroutine cell_death(dt)
+real(REAL_KIND) :: dt
 integer :: kcell, nlist0, site(3), i
 
 nlist0 = nlist
@@ -37,7 +38,10 @@ do kcell = 1,nlist
 	site = cell_list(kcell)%site
 	i = ODEdiff%ivar(site(1),site(2),site(3))
 	if (allstate(i,OXYGEN) < CO2_DEATH_THRESHOLD) then
-		call cell_dies(kcell)
+		cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
+		if (cell_list(kcell)%t_hypoxic > t_hypoxic_limit) then
+			call cell_dies(kcell)
+		endif
 	endif
 enddo
 end subroutine
@@ -157,8 +161,124 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Note: updating of concentrations is now done in extendODEdiff()
+! The dividing cell, kcell0, is at site0.
+! A neighbour site site01 is chosen randomly.  This becomes the site for the daughter cell.
 !-----------------------------------------------------------------------------------------
 subroutine cell_divider(kcell0)
+integer :: kcell0
+integer :: kpar=0
+integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), npath, path(3,200)
+real(REAL_KIND) :: tnow, R
+logical :: ok
+type (boundary_type), pointer :: bdry
+
+tnow = istep*DELTA_T
+site0 = cell_list(kcell0)%site
+ok = .false.
+do while (.not.ok)
+!	j = random_int(1,26,kpar)
+!	if (j >= 14) j = j+1
+!	site01 = site0 + jumpvec(:,j)
+	j = random_int(1,6,kpar)
+	site01 = site0 + neumann(:,j)
+	if (occupancy(site01(1),site01(2),site01(3))%indx(1) >= -100) ok = .true.	! site01 is not necrotic
+enddo
+!if (dbug) write(*,*) 'cell_divider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
+if (occupancy(site01(1),site01(2),site01(3))%indx(1) == OUTSIDE_TAG) then	! site01 is outside, use it directly
+	npath = 0
+	site1 = site0
+elseif (bdrylist_present(site01,bdrylist)) then	! site01 is on the boundary
+	npath = 1
+	site1 = site01
+	path(:,1) = site01
+else
+	call choose_bdrysite(site01,site1)
+	call get_path(site01,site1,path,npath)
+!	call clear_path(path,npath)
+endif
+!if (dbug) write(*,*) 'path: ',npath
+!do k = 1,npath
+!	if (dbug) write(*,'(i3,2x,3i4)') path(:,k)
+!enddo
+
+if (npath > 0) then
+	! Need to choose an outside site near site1
+	call get_outsidesite(site1,site2)
+	npath = npath+1
+	path(:,npath) = site2
+	if (dbug) write(*,*) 'outside site: ',site2,occupancy(site2(1),site2(2),site2(3))%indx
+	call push_path(path,npath)
+	if (dbug) write(*,*) 'did push_path'
+else
+	site2 = site01
+endif
+Nsites = Nsites + 1
+call SetRadius(Nsites)
+call extendODEdiff(site2)
+cell_list(kcell0)%t_divide_last = tnow
+!cell_list(kcell0)%t_divide_next = tnow + DivideTime()
+cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
+R = par_uni(kpar)
+cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+call add_cell(kcell0,kcell1,site01)
+
+! Now need to fix the bdrylist.  
+! site1 was on the boundary, but may no longer be.
+! site2 is now on the boundary
+! First add site2
+if (dbug) write(*,*) 'add site2 to bdrylist: ',site2
+if (isbdry(site2)) then   ! add it to the bdrylist
+    nbdry = nbdry + 1
+    allocate(bdry)
+    bdry%site = site2
+!    bdry%chemo_influx = .false.
+    nullify(bdry%next)
+    call bdrylist_insert(bdry,bdrylist)
+!    call AssignBdryRole(site,bdry)
+    occupancy(site2(1),site2(2),site2(3))%bdry => bdry
+    call SetBdryConcs(site2)
+else
+    write(logmsg,*) 'Added site is not bdry: ',site2,occupancy(site2(1),site2(2),site2(3))%indx
+	call logger(logmsg)
+    stop
+endif
+if (dbug) write(*,*) 'Check for changed boundary status'
+! Now check sites near site2 that may have changed their boundary status (including site1)
+do j = 1,6
+	site = site2 + neumann(:,j)
+	if (dbug) write(*,*) j,site
+	if (isbdry(site)) then
+		if (dbug) write(*,*) 'isbdry'
+		if (.not.bdrylist_present(site,bdrylist)) then	! add it
+			if (dbug) write(*,*) 'not present, add it'
+			nbdry = nbdry + 1
+			allocate(bdry)
+			bdry%site = site
+		!    bdry%chemo_influx = .false.
+			nullify(bdry%next)
+			call bdrylist_insert(bdry,bdrylist)
+		!    call AssignBdryRole(site,bdry)
+			occupancy(site(1),site(2),site(3))%bdry => bdry
+!		    call SetBdryConcs(site)
+		endif
+	else
+		if (dbug) write(*,*) 'not isbdry'
+		if (bdrylist_present(site,bdrylist)) then	! remove it
+			if (dbug) write(*,*) 'present, remove it'
+			call bdrylist_delete(site,bdrylist)
+			nullify(occupancy(site(1),site(2),site(3))%bdry)
+			nbdry = nbdry - 1
+!			call ResetConcs(site)
+		endif
+	endif
+enddo
+if (dbug) write(*,*) 'done!'
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Note: updating of concentrations is now done in extendODEdiff()
+!-----------------------------------------------------------------------------------------
+subroutine cell_divider1(kcell0)
 integer :: kcell0
 integer :: kpar=0
 integer :: j, k, kcell1, site0(3), site1(3), site2(3), site(3), npath, path(3,200)
@@ -189,6 +309,8 @@ path(:,npath) = site2
 if (dbug) write(*,*) 'outside site: ',site2,occupancy(site2(1),site2(2),site2(3))%indx
 
 call push_path(path,npath)
+Nsites = Nsites + 1
+call SetRadius(Nsites)
 call extendODEdiff(site2)
 
 if (dbug) write(*,*) 'did push_path'
@@ -197,7 +319,7 @@ cell_list(kcell0)%t_divide_last = tnow
 cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
 R = par_uni(kpar)
 cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
-call add_cell(kcell0,kcell1,site0)
+call add_cell(kcell0,kcell1,site0)	! daughter cell is placed at site0
 
 ! Now need to fix the bdrylist.  
 ! site1 was on the boundary, but may no longer be.
@@ -336,7 +458,7 @@ site1 = site0
 path(:,k) = site1
 do 
 	dmax = 0
-	do j = 1,26
+	do j = 1,27
 		if (j == 14) cycle
 !		jump = neumann(:,j)
 		jump = jumpvec(:,j)
@@ -397,6 +519,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Find a path of sites leading from site1 to site2
+! The first site in the list is site1, the last is site2
 !-----------------------------------------------------------------------------------------
 subroutine get_path(site1,site2,path,npath)
 integer :: site1(3), site2(3), path(3,200), npath
@@ -411,6 +534,9 @@ do
 	d2min = 1.0e10
 	do j = 1,6
 		jump = neumann(:,j)
+!	do j = 1,27
+!		if (j == 14) cycle
+!		jump = jumpvec(:,j)
 		v = site + jump
 		if (occupancy(v(1),v(2),v(3))%indx(1) == OUTSIDE_TAG) cycle
 		if (occupancy(v(1),v(2),v(3))%indx(1) < -100) cycle		! necrotic
@@ -425,10 +551,40 @@ do
 	k = k+1
 	if (dbug) write(*,*) k,site,jmin,d2min
 	path(:,k) = site
+	if (occupancy(site(1),site(2),site(3))%indx(1) < -100) then		! necrotic
+		write(logmsg,*) 'Error: get_path: necrotic site in path: ',site
+		call logger(logmsg)
+		stop
+	endif
 	if (site(1) == site2(1) .and. site(2) == site2(2) .and. site(3) == site2(3)) exit
 enddo
 npath = k
 
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! If there are any necrotic sites in the path, they are first shifted closer to the centre,
+! then the path is adjusted.
+!-----------------------------------------------------------------------------------------
+subroutine clear_path(path,npath)
+integer :: npath, path(3,*)
+logical :: clear
+integer :: k, kcell, kvacant, site(3)
+
+do
+	clear = .true.
+	do k = 1,npath
+		site = path(:,k)
+		kcell = occupancy(site(1),site(2),site(3))%indx(1)
+		if (kcell < 0) then
+			clear = .false.
+			kvacant = k
+			exit
+		endif
+	enddo
+	if (clear) return
+	
+enddo			
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -442,7 +598,7 @@ do k = npath-1,1,-1
 	site1 = path(:,k)
 	kcell = occupancy(site1(1),site1(2),site1(3))%indx(1)
 	if (kcell < 0) then
-		write(*,'(a,4i6)') 'Error: push_path: kcell<0: site: ',kcell,site1
+		write(*,'(a,4i6)') 'Error: push_path: kcell<0: k, npath, site: ',kcell,k,npath,site1
 		write(*,'(a,4i6)') '                  dividing cell: ',kcell_dividing,cell_list(kcell_dividing)%site
 		stop
 	endif
@@ -453,32 +609,34 @@ do k = npath-1,1,-1
 	occupancy(site2(1),site2(2),site2(3))%indx(1) = kcell
 enddo
 occupancy(site1(1),site1(2),site1(3))%indx = 0
-Nsites = Nsites + 1
-call SetRadius(Nsites)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! The daughter cell kcell1 is given the same characteristics as kcell0 and placed at site1.
+! Random variation is introduced into %divide_volume.
 !-----------------------------------------------------------------------------------------
-subroutine add_cell(kcell0,kcell1,site)
-integer :: kcell0, kcell1, site(3)
+subroutine add_cell(kcell0,kcell1,site1)
+integer :: kcell0, kcell1, site1(3)
 integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
 
 tnow = istep*DELTA_T
-lastID = lastID + 1
+!lastID = lastID + 1
 nlist = nlist + 1
 Ncells = Ncells + 1
 kcell1 = nlist
 cell_list(kcell1)%state = cell_list(kcell0)%state
-cell_list(kcell1)%site = site
-cell_list(kcell1)%ID = lastID
+cell_list(kcell1)%site = site1
+!cell_list(kcell1)%ID = lastID
+cell_list(kcell1)%ID = cell_list(kcell0)%ID
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%t_divide_last = tnow
 !cell_list(kcell1)%t_divide_next = tnow + DivideTime()
 cell_list(kcell1)%volume = cell_list(kcell0)%volume
 R = par_uni(kpar)
 cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
-occupancy(site(1),site(2),site(3))%indx(1) = kcell1
+cell_list(kcell1)%t_hypoxic = 0
+occupancy(site1(1),site1(2),site1(3))%indx(1) = kcell1
 end subroutine
 
 !-----------------------------------------------------------------------------------------

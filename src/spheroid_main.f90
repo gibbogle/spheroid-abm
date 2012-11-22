@@ -59,7 +59,7 @@ do i = 1, cnt
     endif
 end do
 
-do irun = 1,5
+do irun = 1,1
 inbuflen = len(infile)
 outbuflen = len(outfile)
 write(*,*) 'call execute'

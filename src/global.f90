@@ -5,6 +5,7 @@ module global
 use omp_lib
 use par_zig_mod
 use winsock
+use, intrinsic :: ISO_C_BINDING
 
 implicit none
 
@@ -56,6 +57,7 @@ type cell_type
 	real(REAL_KIND) :: divide_volume
 	real(REAL_KIND) :: t_divide_last
 	real(REAL_KIND) :: t_divide_next
+	real(REAL_KIND) :: t_hypoxic
 	logical :: exists
 end type
 
@@ -69,6 +71,13 @@ type dist_type
 	real(REAL_KIND) :: p1, p2, p3
 end type
 
+type, bind(C) :: field_data
+	integer(c_int) :: site(3)
+	integer(c_int) :: state
+	real(c_double) :: volume
+	real(c_double) :: conc(4)
+end type
+	
 type(dist_type) :: divide_dist
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
@@ -88,7 +97,7 @@ integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite
-real(REAL_KIND) :: CO2_DEATH_THRESHOLD, Vdivide0, dVdivide
+real(REAL_KIND) :: CO2_DEATH_THRESHOLD, t_hypoxic_limit, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 
 character*(128) :: inputfile
@@ -104,6 +113,7 @@ logical :: stopped, clear_to_send
 logical :: simulation_start, par_zig_init, initialized
 logical :: dbug = .false.
 
+integer :: idbug = 0
 integer :: seed(2)
 
 !DEC$ ATTRIBUTES DLLEXPORT :: nsteps

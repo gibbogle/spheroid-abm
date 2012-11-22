@@ -11,6 +11,7 @@
 #include "misc.h"
 #include "plot.h"
 #include "myvtk.h"
+#include "field.h"
 #include "transfer.h"
 
 #ifdef linux
@@ -116,6 +117,7 @@ MainWindow::MainWindow(QWidget *parent)
     vtk = new MyVTK(mdiArea_VTK, widget_key);
 	vtk->init();
 	tabs->setCurrentIndex(0);
+    field = new Field();
 	goToInputs();
 }
 
@@ -130,6 +132,7 @@ void MainWindow::createActions()
 	action_save_snapshot->setEnabled(false);
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
+    action_field->setEnabled(false);
     action_start_recording->setEnabled(true);
     action_stop_recording->setEnabled(false);
     text_more->setEnabled(false);
@@ -140,6 +143,7 @@ void MainWindow::createActions()
     connect(action_inputs, SIGNAL(triggered()), SLOT(goToInputs()));
     connect(action_outputs, SIGNAL(triggered()), SLOT(goToOutputs()));
 	connect(action_VTK, SIGNAL(triggered()), SLOT(goToVTK()));
+    connect(action_field, SIGNAL(triggered()), SLOT(goToField()));
     connect(action_run, SIGNAL(triggered()), SLOT(runServer()));
     connect(action_pause, SIGNAL(triggered()), SLOT(pauseServer()));
     connect(action_stop, SIGNAL(triggered()), SLOT(stopServer()));
@@ -163,6 +167,11 @@ void MainWindow::createActions()
     connect(action_stop_recording, SIGNAL(triggered()), this, SLOT(stopRecorder()));
 //    connect(action_show_gradient3D, SIGNAL(triggered()), this, SLOT(showGradient3D()));
 //    connect(action_show_gradient2D, SIGNAL(triggered()), this, SLOT(showGradient2D()));
+
+    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
+    connect(buttonGroup_plane, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_plane(QAbstractButton*)));
+//    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
+
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -400,6 +409,27 @@ void MainWindow::loadParams()
                         w_c->setCurrentIndex(val);
 					} else if (qsname.startsWith("cbox_")) {
 						QCheckBox *w_cb = (QCheckBox *)w;
+
+                        bool use_OXYGEN = qsname.contains("USE_OXYGEN");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_OXYGEN)
+                                enableUseOxygen();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_OXYGEN)
+                                disableUseOxygen();
+                        }
+                        bool use_GLUCOSE = qsname.contains("USE_GLUCOSE");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_GLUCOSE)
+                                enableUseGlucose();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_OXYGEN)
+                                disableUseGlucose();
+                        }
 
                         /*
 						// Chemokines
@@ -1116,13 +1146,27 @@ void MainWindow::goToOutputs()
 //-------------------------------------------------------------
 void MainWindow::goToVTK()
 {
-//	if (started) {
-		stackedWidget->setCurrentIndex(2);
-		action_outputs->setEnabled(true);
-		action_inputs->setEnabled(true);
-		action_VTK->setEnabled(false);
-		showingVTK = 1;
-//	}
+    stackedWidget->setCurrentIndex(2);
+    action_outputs->setEnabled(true);
+    action_inputs->setEnabled(true);
+    action_field->setEnabled(true);
+    action_VTK->setEnabled(false);
+    showingVTK = 1;
+}
+
+//-------------------------------------------------------------
+// Switches to the field screen
+//-------------------------------------------------------------
+void MainWindow::goToField()
+{
+    stackedWidget->setCurrentIndex(3);
+    action_outputs->setEnabled(true);
+    action_inputs->setEnabled(true);
+    action_field->setEnabled(true);
+    action_VTK->setEnabled(true);
+    action_field->setEnabled(false);
+    showingVTK = 0;
+    field->displayField(page_2D);
 }
 
 //-------------------------------------------------------------
@@ -1266,6 +1310,7 @@ void MainWindow::runServer()
 		action_save_snapshot->setEnabled(false);
         action_show_gradient3D->setEnabled(false);
         action_show_gradient2D->setEnabled(false);
+        action_field->setEnabled(false);
         paused = false;
         return;
 	}
@@ -1307,9 +1352,10 @@ void MainWindow::runServer()
 	action_save_snapshot->setEnabled(false);
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
+    action_field->setEnabled(false);
     tab_B->setEnabled(false);
 //    tab_DC->setEnabled(false);
-    tab_TCR->setEnabled(false);
+    tab_chemo->setEnabled(false);
     tab_run->setEnabled(false);
 
 	if (show_outputdata)
@@ -1632,9 +1678,10 @@ void MainWindow::postConnection()
 	action_save_snapshot->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
+    action_field->setEnabled(true);
 //    tab_B->setEnabled(true);
 //    tab_DC->setEnabled(true);
-//    tab_TCR->setEnabled(true);
+    tab_chemo->setEnabled(true);
     tab_run->setEnabled(true);
 
 	// Check if a result set of this name is already in the list, if so remove it
@@ -1681,6 +1728,7 @@ void MainWindow::pauseServer()
 	action_save_snapshot->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
+    action_field->setEnabled(true);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1713,6 +1761,7 @@ void MainWindow::stopServer()
 	action_save_snapshot->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
+    action_field->setEnabled(true);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1948,7 +1997,31 @@ void MainWindow::changeParam()
 		} else if (wname.contains("cbox_")) {
 			QCheckBox *checkBox = (QCheckBox *)w;
 			int v;
-			/*
+
+            bool use_OXYGEN = wname.contains("USE_OXYGEN");
+            if (checkBox->isChecked()) {
+                v = 1;
+                if (use_OXYGEN)
+                    enableUseOxygen();
+            } else {
+                v = 0;
+                if (use_OXYGEN)
+                    disableUseOxygen();
+            }
+
+            bool use_GLUCOSE = wname.contains("USE_GLUCOSE");
+            if (checkBox->isChecked()) {
+                v = 1;
+                if (use_GLUCOSE)
+                    enableUseGlucose();
+            } else {
+                v = 0;
+                if (use_GLUCOSE)
+                    disableUseGlucose();
+            }
+
+
+            /*
 			bool in_vitro = wname.contains("IN_VITRO");
 			int v;
 			if (checkBox->isChecked()) {
@@ -2088,6 +2161,58 @@ void MainWindow::changeParam()
 	}
 }
 
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseOxygen()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_OXYGEN")) {
+            w->setEnabled(true);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseOxygen()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_OXYGEN")) {
+            w->setEnabled(false);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseGlucose()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_GLUCOSE")) {
+            w->setEnabled(true);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseGlucose()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_GLUCOSE")) {
+            w->setEnabled(false);
+        }
+    }
+}
+
 /*
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -2138,7 +2263,8 @@ void MainWindow::disableUseCCL21()
 			w->setEnabled(false);
 		}
 	}
-}//--------------------------------------------------------------------------------------------------------
+}
+//--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::enableUseOXY()
 {
@@ -2617,7 +2743,6 @@ void MainWindow::on_action_show_gradient2D_triggered()
 }
 
 
-
 //==================================================================================================================
 // Code below here is not used
 //----------------------------
@@ -2804,3 +2929,25 @@ QString MainWindow::strippedName(const QString &fullFileName)
     return QFileInfo(fullFileName).fileName();
 }
 */
+
+void MainWindow::on_radioButton_oxygen_clicked()
+{
+
+}
+
+void MainWindow::on_radioButton_glucose_clicked(bool checked)
+{
+
+}
+
+void MainWindow::buttonClick_constituent(QAbstractButton* button)
+{
+    LOG_MSG("buttonClick_constituent");
+    field->setConstituent(button);
+}
+
+void MainWindow::buttonClick_plane(QAbstractButton* button)
+{
+    LOG_MSG("buttonClick_plane");
+    field->setPlane(button);
+}
