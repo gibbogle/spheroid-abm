@@ -866,13 +866,27 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_fieldinfo(ns, nc) BIND(C)
+subroutine get_fieldinfo(axis, fraction, ns, nc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_fieldinfo
 use, intrinsic :: iso_c_binding
-integer(c_int) :: ns, nc
+integer(c_int) :: axis, ns, nc
+real(c_double) :: fraction
+integer rng(3,2), kcell, x, y, z
 
-ns = 100
 nc = 2
+rng(:,1) = Centre(:) - (Radius + 2)
+rng(:,2) = Centre(:) + (Radius + 2)
+rng(axis,:) = Centre(axis) + fraction*Radius
+ns = 0
+do z = rng(3,1),rng(3,2)
+    do y = rng(2,1),rng(2,2)
+        do x = rng(1,1),rng(1,2)
+            kcell = occupancy(x,y,z)%indx(1)
+            if (kcell == OUTSIDE_TAG) cycle
+            ns = ns + 1
+        enddo
+    enddo
+enddo
 end subroutine
 
 !--------------------------------------------------------------------------------

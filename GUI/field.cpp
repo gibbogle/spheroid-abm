@@ -5,8 +5,9 @@ LOG_USE();
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-Field::Field()
+Field::Field(QWidget *page2D)
 {
+	field_page = page2D;
     axis = X_AXIS;
     fraction = 0;
     constituent = OXYGEN;
@@ -27,6 +28,7 @@ void Field::setConstituent(QAbstractButton *button)
 //    msgBox.setText("setConstituent");
 //    msgBox.exec();
     LOG_MSG("setConstituent");
+	int prev_constituent = constituent;
     QString text = button->text();
     if (text.compare("Oxygen") == 0)
         constituent = OXYGEN;
@@ -36,6 +38,10 @@ void Field::setConstituent(QAbstractButton *button)
         constituent = DRUG_A;
     else if (text.compare("Drug B") == 0)
         constituent = DRUG_B;
+	if (constituent != prev_constituent) {
+		constituent_changed = true;
+		displayField();
+	}
 }
 
 //------------------------------------------------------------------------------------------------
@@ -52,13 +58,29 @@ void Field::setPlane(QAbstractButton *button)
 //    } else {
 //        LOG_MSG("Button not checked");
 //    }
+	int prev_axis = axis;
     if (text.compare("X-Y") == 0)
         axis = Z_AXIS;
     else if (text.compare("Y-Z") == 0)
         axis = X_AXIS;
     else if (text.compare("X-Z") == 0)
         axis = Y_AXIS;
-    slice_changed = true;
+	if (axis != prev_axis) {
+		slice_changed = true;
+		displayField();
+	}
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void Field::setFraction(QString text)
+{
+	double prev_fraction = fraction;
+	fraction = text.toDouble();
+	if (fraction != prev_fraction) {
+		slice_changed = true;
+		displayField();
+	}
 }
 
 //------------------------------------------------------------------------------------------------
@@ -131,7 +153,7 @@ void Field::chooseParameters()
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void Field::displayField(QWidget *field_page)
+void Field::displayField()
 {
 //    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 800, 800));
@@ -139,9 +161,14 @@ void Field::displayField(QWidget *field_page)
     QGraphicsTextItem *text;
     int nsites, nconst;
 
-    get_fieldinfo(&nsites, &nconst);
-    this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
-    get_fielddata(&nsites, this->data);
+	if (slice_changed) {
+		get_fieldinfo(&axis, &fraction, &nsites, &nconst);
+		sprintf(msg,"nsites: %d",nsites);
+		LOG_MSG(msg);
+		this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
+		get_fielddata(&nsites, this->data);
+		slice_changed = false;
+	}
 
     brush.setColor(QColor(150,100,0));
     brush.setStyle(Qt::SolidPattern);

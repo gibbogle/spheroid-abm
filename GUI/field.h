@@ -25,28 +25,31 @@ typedef field_data FIELD_DATA;
 #define DRUG_B 3
 
 extern "C" {
-    void get_fieldinfo(int *, int *);
+	void get_fieldinfo(int *, double *, int *, int *);
     void get_fielddata(int *, FIELD_DATA *);
 }
 
 class Field : public QMainWindow
 {
 public:
-    Field();
+	Field(QWidget *);
     ~Field();
     void chooseParameters();
-    void displayField(QWidget *);
+	void displayField();
 
+	QWidget *field_page;
     int axis;
     double fraction;
     int constituent;
     bool slice_changed;
-    FIELD_DATA *data;
+	bool constituent_changed;
+	FIELD_DATA *data;
     char msg[1024];
 
-public slots:
+//public slots:
     void setConstituent(QAbstractButton* button);
     void setPlane(QAbstractButton* button);
+	void setFraction(QString text);
 };
 
 #endif // FIELD_H

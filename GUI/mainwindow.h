@@ -122,6 +122,8 @@ public slots:
  //   void on_buttonButton_constituent_clicked();
     void buttonClick_constituent(QAbstractButton* button);
     void buttonClick_plane(QAbstractButton* button);
+	void textChanged_fraction(QString text);
+	void textEdited_fraction(QString text);
 private:
     void createActions();
 	void createLists();

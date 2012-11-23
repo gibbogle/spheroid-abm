@@ -117,7 +117,7 @@ MainWindow::MainWindow(QWidget *parent)
     vtk = new MyVTK(mdiArea_VTK, widget_key);
 	vtk->init();
 	tabs->setCurrentIndex(0);
-    field = new Field();
+	field = new Field(page_2D);
 	goToInputs();
 }
 
@@ -171,6 +171,8 @@ void MainWindow::createActions()
     connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
     connect(buttonGroup_plane, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_plane(QAbstractButton*)));
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
+//	connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
+	connect(lineEdit_fraction, SIGNAL(textEdited(QString)), this, SLOT(textEdited_fraction(QString)));
 
 }
 
@@ -1166,7 +1168,7 @@ void MainWindow::goToField()
     action_VTK->setEnabled(true);
     action_field->setEnabled(false);
     showingVTK = 0;
-    field->displayField(page_2D);
+	field->displayField();
 }
 
 //-------------------------------------------------------------
@@ -2950,4 +2952,16 @@ void MainWindow::buttonClick_plane(QAbstractButton* button)
 {
     LOG_MSG("buttonClick_plane");
     field->setPlane(button);
+}
+
+void MainWindow::textChanged_fraction(QString text)
+{
+	LOG_MSG("textChanged_fraction");
+	field->setFraction(text);
+}
+
+void MainWindow::textEdited_fraction(QString text)
+{
+	LOG_MSG("textEdited_fraction");
+	field->setFraction(text);
 }

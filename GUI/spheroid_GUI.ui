@@ -2372,7 +2372,7 @@ padding: 8px
          </attribute>
         </widget>
        </widget>
-       <widget class="QLineEdit" name="line_fraction">
+       <widget class="QLineEdit" name="lineEdit_fraction">
         <property name="geometry">
          <rect>
           <x>900</x>
@@ -2412,7 +2412,7 @@ padding: 8px
      <x>0</x>
      <y>0</y>
      <width>1319</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -2713,7 +2713,7 @@ padding: 8px
  </resources>
  <connections/>
  <buttongroups>
-  <buttongroup name="buttonGroup_plane"/>
   <buttongroup name="buttonGroup_constituent"/>
+  <buttongroup name="buttonGroup_plane"/>
  </buttongroups>
 </ui>
