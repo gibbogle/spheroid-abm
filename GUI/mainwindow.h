@@ -116,7 +116,8 @@ public slots:
 	void timer_update();
 	void errorPopup(QString);
 	void displayScene();
-	void showSummary();
+    void displayFld();
+    void showSummary();
     void startRecorder();
     void stopRecorder();
  //   void on_buttonButton_constituent_clicked();

@@ -10,7 +10,7 @@ use winsock
 
 IMPLICIT NONE
 
-contains
+contains 
 
 !-----------------------------------------------------------------------------------------
 ! This subroutine is called to initialize a simulation run.
@@ -153,8 +153,11 @@ call rng_initialisation
 call logger("did rng_initialisation")
 
 ! These are deallocated here instead of in subroutine wrapup so that when a simulation run ends 
-! it will still be possible to view the chemokine concentration gradient fields.
+! it will still be possible to view the cell distributions and chemokine concentration fields.
 if (allocated(occupancy)) deallocate(occupancy)
+if (allocated(cell_list)) deallocate(cell_list)
+if (allocated(allstate)) deallocate(allstate)
+if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
 !do ichemo = 1,MAX_CHEMO
 !	if (allocated(chemo(ichemo)%coef)) deallocate(chemo(ichemo)%coef)
 !	if (allocated(chemo(ichemo)%conc)) deallocate(chemo(ichemo)%conc)
@@ -865,18 +868,31 @@ summaryData(1:4) = (/ istep, Ncells, Nsites-Ncells, diam_um /)
 end subroutine
 
 !--------------------------------------------------------------------------------
+! Note: axis = 0,1,2
 !--------------------------------------------------------------------------------
-subroutine get_fieldinfo(axis, fraction, ns, nc) BIND(C)
+subroutine get_fieldinfo(nxx, axis, fraction, ns, nc, cused) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_fieldinfo
 use, intrinsic :: iso_c_binding
-integer(c_int) :: axis, ns, nc
+integer(c_int) :: nxx, axis, ns, nc, cused(*)
 real(c_double) :: fraction
-integer rng(3,2), kcell, x, y, z
+integer rng(3,2), ichemo, kcell, x, y, z
 
-nc = 2
+nxx = NX
+nc = MAX_CHEMO
+do ichemo = 1,MAX_CHEMO
+    if (chemo(ichemo)%used) then
+        cused(ichemo) = 1
+    else
+        cused(ichemo) = 0
+    endif
+enddo
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
 rng(axis,:) = Centre(axis) + fraction*Radius
+write(logmsg,*) 'Centre, Radius, axis, fraction: ',Centre, Radius, axis, fraction
+call logger(logmsg)
+write(logmsg,*) 'rng: ',rng
+call logger(logmsg)
 ns = 0
 do z = rng(3,1),rng(3,2)
     do y = rng(2,1),rng(2,2)
@@ -887,17 +903,49 @@ do z = rng(3,1),rng(3,2)
         enddo
     enddo
 enddo
+write(logmsg,*) 'get_fieldinfo: ns: ',ns
+call logger(logmsg)
 end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_fielddata(nfdata, fdata) BIND(C)
+subroutine get_fielddata(axis, fraction, nfdata, nc, fdata) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_fielddata
 use, intrinsic :: iso_c_binding
-integer(c_int) :: nfdata
+real(c_double) :: fraction
+integer(c_int) :: axis, nc, nfdata
 type(FIELD_DATA) :: fdata(*)
+integer rng(3,2), kcell, x, y, z, i, ns
 
-
+rng(:,1) = Centre(:) - (Radius + 2)
+rng(:,2) = Centre(:) + (Radius + 2)
+rng(axis,:) = Centre(axis) + fraction*Radius
+ns = 0
+do z = rng(3,1),rng(3,2)
+    do y = rng(2,1),rng(2,2)
+        do x = rng(1,1),rng(1,2)
+            kcell = occupancy(x,y,z)%indx(1)
+            if (kcell == OUTSIDE_TAG) cycle
+            ns = ns + 1
+	        i = ODEdiff%ivar(x,y,z)
+            fdata(ns)%site = (/x,y,z/)
+            fdata(ns)%state = 1
+            if (kcell > 0) then
+                fdata(ns)%volume = cell_list(kcell)%volume
+            else
+                fdata(ns)%volume = 0
+            endif
+            fdata(ns)%conc(1:nc) = allstate(i,1:nc)
+        enddo
+    enddo
+enddo
+write(logmsg,*) 'get_fielddata: ns: ',ns
+call logger(logmsg)
+if (ns /= nfdata) then
+    write(logmsg,*) 'Error: inconsistent nsites: ',nfdata, ns
+    call logger(logmsg)
+    stop
+endif
 
 end subroutine
 
@@ -1101,6 +1149,8 @@ if (use_TCP) then
 		endif
 	endif
 endif
+write(logmsg,*) 'awp_0%is_open: ',awp_0%is_open
+call logger(logmsg)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1114,8 +1164,8 @@ ierr = 0
 if (allocated(zoffset)) deallocate(zoffset)
 if (allocated(zdomain)) deallocate(zdomain)
 !if (allocated(occupancy)) deallocate(occupancy)
-if (allocated(cell_list)) deallocate(cell_list,stat=ierr)
-if (allocated(allstate)) deallocate(allstate)
+!if (allocated(cell_list)) deallocate(cell_list)
+!if (allocated(allstate)) deallocate(allstate)
 if (allocated(allstatep)) deallocate(allstatep)
 if (allocated(work_rkc)) deallocate(work_rkc)
 do ichemo = 1,MAX_CHEMO
@@ -1123,7 +1173,7 @@ do ichemo = 1,MAX_CHEMO
 	if (allocated(chemo(ichemo)%conc)) deallocate(chemo(ichemo)%conc)
 	if (allocated(chemo(ichemo)%grad)) deallocate(chemo(ichemo)%grad)
 enddo
-if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
+!if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
 if (allocated(ODEdiff%varsite)) deallocate(ODEdiff%varsite)
 if (allocated(ODEdiff%icoef)) deallocate(ODEdiff%icoef)
 call logger('deallocated all arrays')

@@ -638,6 +638,8 @@ contains
 !  Use the y array for temporary storage here.         
 !---------------------------------------------
         call f(neqn,t + h*thjm1,yjm1,y,icase)
+!GS added omp here
+!$omp parallel do 
         do i = 1, neqn
           y(i) = mu*yjm1(i) + nu*yjm2(i) + (one - mu - nu)*yn(i) + h*mus*(y(i) - ajm1*fn(i))
         enddo
@@ -646,6 +648,7 @@ contains
 !  Shift the data for the next stage.
 !------------------------------------
         if(j .lt. m) then
+!$omp parallel do 
           do i = 1, neqn
             yjm2(i) = yjm1(i)
             yjm1(i) = y(i)

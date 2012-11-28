@@ -193,10 +193,10 @@ void ExecThread::run()
 		if (stopped) break;
 	}
     LOG_MSG("ExecThread::run: stopped or completed");
-	snapshot();
+    snapshot();
     sprintf(msg,"got snapshot:");
     LOG_MSG(msg);
-    sleep(10);
+    sleep(100);
 	LOG_MSG("ExecThread::run: call terminate_run");
 	terminate_run(&res);
 
@@ -210,8 +210,7 @@ void ExecThread::run()
 //-----------------------------------------------------------------------------------------
 void ExecThread::snapshot()
 {
-	mutex2.lock();
-//	get_scene(&nBC_list,BC_list,&nDC_list,DC_list,&nbond_list,bond_list);
+//	mutex2.lock();
     get_scene(&ncell_list,cell_list);
     if (ncell_list > MAX_CELLS) {
         LOG_MSG("Error: MAX_CELLS exceeded");
@@ -231,8 +230,9 @@ void ExecThread::snapshot()
 		exit(1);
 	}
     */
-	mutex2.unlock();
-	emit display(); // Emit signal to update VTK display
+//	mutex2.unlock();
+    emit displayF(); // Emit signal to update Field display
+    emit display(); // Emit signal to update VTK display
 }
 
 //-----------------------------------------------------------------------------------------
