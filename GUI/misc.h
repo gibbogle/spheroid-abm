@@ -47,6 +47,7 @@ public:
 	ExecThread(QString);
 	void run();
 	void snapshot();
+//    void showfield();
     void saveGradient2D(int k);
 	void pause();
 	void unpause();
@@ -57,8 +58,9 @@ public:
 	bool stopped;
     QMutex mutex1, mutex2;
 signals:
-	void display();
-	void summary();
+    void display();
+    void displayF();
+    void summary();
 };
 
 bool quitMessage(QString);

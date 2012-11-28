@@ -6,6 +6,8 @@
 #include <QtGui>
 //#include <QTranslator>
 
+#define CANVAS_WIDTH 620
+
 struct field_data {
     int site[3];
     int state;
@@ -15,31 +17,38 @@ struct field_data {
 
 typedef field_data FIELD_DATA;
 
-#define X_AXIS 0
-#define Y_AXIS 1
-#define Z_AXIS 2
+#define X_AXIS 1
+#define Y_AXIS 2
+#define Z_AXIS 3
 
 #define OXYGEN 0
 #define GLUCOSE 1
 #define DRUG_A 2
 #define DRUG_B 3
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 extern "C" {
-	void get_fieldinfo(int *, double *, int *, int *);
-    void get_fielddata(int *, FIELD_DATA *);
+    void get_fieldinfo(int *, int *, double *, int *, int *, int *);
+    void get_fielddata(int *, double *, int *, int *, FIELD_DATA *);
 }
 
 class Field : public QMainWindow
 {
 public:
-	Field(QWidget *);
+    Field(QWidget *);
     ~Field();
     void chooseParameters();
 	void displayField();
+    void setSliceChanged();
+    void chooseColor(double fr, int rgbcol[]);
 
-	QWidget *field_page;
+    QWidget *field_page;
+    int NX;
     int axis;
     double fraction;
+    int nsites, nconst, cused[10];
     int constituent;
     bool slice_changed;
 	bool constituent_changed;

@@ -117,8 +117,10 @@ MainWindow::MainWindow(QWidget *parent)
     vtk = new MyVTK(mdiArea_VTK, widget_key);
 	vtk->init();
 	tabs->setCurrentIndex(0);
-	field = new Field(page_2D);
-	goToInputs();
+    field = new Field(page_2D);
+    widget_canvas->setFixedWidth(CANVAS_WIDTH/2);
+    widget_canvas->setFixedHeight(CANVAS_WIDTH);
+    goToInputs();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -167,7 +169,6 @@ void MainWindow::createActions()
     connect(action_stop_recording, SIGNAL(triggered()), this, SLOT(stopRecorder()));
 //    connect(action_show_gradient3D, SIGNAL(triggered()), this, SLOT(showGradient3D()));
 //    connect(action_show_gradient2D, SIGNAL(triggered()), this, SLOT(showGradient2D()));
-
     connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
     connect(buttonGroup_plane, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_plane(QAbstractButton*)));
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
@@ -190,7 +191,7 @@ void MainWindow::createLists()
 
 	for (int i=0; i<lineEdit_list.length(); i++) {
 		widget_list.append(lineEdit_list[i]);
-	}
+    }
 	for (int i=0; i<spin_list.length(); i++) {
 		widget_list.append(spin_list[i]);
 	}
@@ -1129,6 +1130,7 @@ void MainWindow::goToInputs()
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(true);
     action_VTK->setEnabled(true);
+//    action_field->setEnabled(true);
 }
 
 //-------------------------------------------------------------
@@ -1141,6 +1143,7 @@ void MainWindow::goToOutputs()
     action_outputs->setEnabled(false);
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
+    action_field->setEnabled(true);
 }
 
 //-------------------------------------------------------------
@@ -1300,6 +1303,7 @@ void MainWindow::showGradient3D()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::runServer()
 {
+    field->setSliceChanged();
 	if (paused) {
 		if (vtk->playing) {
 			vtk->playon();
@@ -1312,6 +1316,8 @@ void MainWindow::runServer()
 		action_save_snapshot->setEnabled(false);
         action_show_gradient3D->setEnabled(false);
         action_show_gradient2D->setEnabled(false);
+        if (!action_field->isEnabled())
+            goToOutputs();
         action_field->setEnabled(false);
         paused = false;
         return;
@@ -1400,7 +1406,8 @@ void MainWindow::runServer()
 	started = true;
 	exthread = new ExecThread(inputFile);
 	connect(exthread, SIGNAL(display()), this, SLOT(displayScene()));
-	connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
+    connect(exthread, SIGNAL(displayF()), this, SLOT(displayFld()));
+    connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
 	exthread->ncpu = ncpu;
 	exthread->nsteps = int(hours*60/DELTA_T);
 	exthread->paused = false;
@@ -2964,4 +2971,10 @@ void MainWindow::textEdited_fraction(QString text)
 {
 	LOG_MSG("textEdited_fraction");
 	field->setFraction(text);
+}
+
+void MainWindow::displayFld(){
+//    exthread->mutex2.lock();
+//    field->displayField();
+//    exthread->mutex2.unlock();
 }

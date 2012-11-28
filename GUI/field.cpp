@@ -8,7 +8,7 @@ LOG_USE();
 Field::Field(QWidget *page2D)
 {
 	field_page = page2D;
-    axis = X_AXIS;
+    axis = Z_AXIS;
     fraction = 0;
     constituent = OXYGEN;
     slice_changed = true;
@@ -76,11 +76,19 @@ void Field::setPlane(QAbstractButton *button)
 void Field::setFraction(QString text)
 {
 	double prev_fraction = fraction;
+    LOG_MSG("setFraction");
 	fraction = text.toDouble();
 	if (fraction != prev_fraction) {
 		slice_changed = true;
 		displayField();
 	}
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void Field::setSliceChanged()
+{
+    slice_changed = true;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -156,74 +164,159 @@ void Field::chooseParameters()
 void Field::displayField()
 {
 //    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
-    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 800, 800));
+    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
     QBrush brush;
     QGraphicsTextItem *text;
-    int nsites, nconst;
+    int i, xindex, yindex, ix, iy, cp, dp, c, rmax, w, xp0, rgbcol[3];
+    double xp, yp, d0, d, volume, scale;
+    double a, b;
 
+    LOG_MSG("displayField");
 	if (slice_changed) {
-		get_fieldinfo(&axis, &fraction, &nsites, &nconst);
+        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, cused);
 		sprintf(msg,"nsites: %d",nsites);
 		LOG_MSG(msg);
 		this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
-		get_fielddata(&nsites, this->data);
+        get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
 		slice_changed = false;
 	}
+    // Get picture limits, set size of square
+    // Paint squares
 
-    brush.setColor(QColor(150,100,0));
+    if (axis == X_AXIS) {           // Y-Z plane
+        xindex = 1;
+        yindex = 2;
+    } else if (axis == Y_AXIS) {   // X-Z plane
+        xindex = 0;
+        yindex = 2;
+    } else if (axis == Z_AXIS) {   // X-Y plane
+        xindex = 0;
+        yindex = 1;
+    }
+    c = NX/2;     // Centre is at (c,c)
+    rmax = 0;
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+        rmax = MAX(rmax,ix - c);
+        rmax = MAX(rmax,c+1 - ix);
+        rmax = MAX(rmax,iy - c);
+        rmax = MAX(rmax,c+1 - iy);
+    }
+    // rmax is the max number of site squares on any side of the centre (c,c) where c = NX/2
+    // and each site square has width=1, and the site with ix extends from ix-1 to ix (etc.)
+    cp = CANVAS_WIDTH/2;
+    dp = int(0.95*CANVAS_WIDTH);
+    w = int(dp/(2*rmax));  // width of mapped site square on canvas in pixels
+    sprintf(msg,"NX,c,rmax,cp,dp,w: %d %d %d %d %d %d",NX,c,rmax,cp,dp,w);
+    LOG_MSG(msg);
+    // Blob slice is assumed to extend from c-rmax to c+rmax in both directions.
+    // Note that a site square has a width = 1, i.e. extends (-0.5, 0.5) about the nominal position.
+    // This must fit into a canvas of width and height = CANVAS_WIDTH
+//    a = (dp - cp)/(2*rmax - c);
+//    b = cp - a*c;
+    // A site square at (ix,iy) maps to a canvas square of size (w,w) with:
+    // (xp,yp)at (xp0 + (ix-1)*w, xp0 + (iy-1)*w) (presumably this is flipped in the y, i.e. about x axis)
+    // where xp0 = cp - rmax*w
+    xp0 = cp - rmax*w;
+    d0 = w;
+    double cmax = 0;
+    for (i=0; i<nsites; i++) {
+        cmax = MAX(cmax,data[i].conc[constituent]);
+    }
+
     brush.setStyle(Qt::SolidPattern);
-    scene->addEllipse(10,10,20,20,Qt::NoPen, brush);
-    text = scene->addText("FDC");
-    text->setPos(35, 10);
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+        xp = cp + (ix-c)*w;
+        yp = cp + (iy-1-c)*w;
+        double f = data[i].conc[constituent]/cmax;
+        chooseColor(f,rgbcol);
+        brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+        sprintf(msg,"i,rgbcol,f: %d %d %d %d %f",i,rgbcol[0],rgbcol[1],rgbcol[2],f);
+        LOG_MSG(msg);
+        scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+    }
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+        xp = cp + (ix-c)*w;
+        yp = cp + (iy-1-c)*w;
+        volume = this->data[i].volume;
+        if (volume > 0) {
+            scale = pow(volume,0.3333);
+            d = scale*d0;
+            brush.setColor(QColor(0,255,0));
+            scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
+        }
+    }
 
-    brush.setColor(QColor(200,60,100));
-    brush.setStyle(Qt::SolidPattern);
-    scene->addEllipse(10,40,20,20,Qt::NoPen, brush);
-    text = scene->addText("MRC");
-    text->setPos(35, 40);
+//    brush.setColor(QColor(150,100,0));
+//    brush.setStyle(Qt::SolidPattern);
+//    scene->addEllipse(10,10,20,20,Qt::NoPen, brush);
+//    text = scene->addText("FDC");
+//    text->setPos(35, 10);
 
-    brush.setColor(QColor(30,20,255));
-    scene->addEllipse(10,70,20,20,Qt::NoPen, brush);
-    text = scene->addText("Naive B cell");
-    text->setPos(35, 70);
+//    brush.setColor(QColor(200,60,100));
+//    brush.setStyle(Qt::SolidPattern);
+//    scene->addEllipse(10,40,20,20,Qt::NoPen, brush);
+//    text = scene->addText("MRC");
+//    text->setPos(35, 40);
 
-    brush.setColor(QColor(0,200,255));
-    scene->addEllipse(10,100,20,20,Qt::NoPen, brush);
-    text = scene->addText("CCR7 UP");
-    text->setPos(35, 100);
+//    brush.setColor(QColor(30,20,255));
+//    scene->addEllipse(10,70,20,20,Qt::NoPen, brush);
+//    text = scene->addText("Naive B cell");
+//    text->setPos(35, 70);
 
-    brush.setColor(QColor(50,255,150));
-    scene->addEllipse(10,130,20,20,Qt::NoPen, brush);
-    text = scene->addText("EBI2 UP");
-    text->setPos(35, 130);
+//    brush.setColor(QColor(0,200,255));
+//    scene->addEllipse(10,100,20,20,Qt::NoPen, brush);
+//    text = scene->addText("CCR7 UP");
+//    text->setPos(35, 100);
 
-    brush.setColor(QColor(255,255,0));
-    scene->addEllipse(10,160,20,20,Qt::NoPen, brush);
-    text = scene->addText("BCL6 HI");
-    text->setPos(35, 160);
+//    brush.setColor(QColor(50,255,150));
+//    scene->addEllipse(10,130,20,20,Qt::NoPen, brush);
+//    text = scene->addText("EBI2 UP");
+//    text->setPos(35, 130);
 
-    brush.setColor(QColor(0,150,0));
-    scene->addEllipse(10,190,20,20,Qt::NoPen, brush);
-    text = scene->addText("BCL6 LO");
-    text->setPos(35, 190);
+//    brush.setColor(QColor(255,255,0));
+//    scene->addEllipse(10,160,20,20,Qt::NoPen, brush);
+//    text = scene->addText("BCL6 HI");
+//    text->setPos(35, 160);
 
-    brush.setColor(QColor(128,128,128));
-    scene->addEllipse(10,220,20,20,Qt::NoPen, brush);
-    text = scene->addText("Max divisions");
-    text->setPos(35, 220);
+//    brush.setColor(QColor(0,150,0));
+//    scene->addEllipse(10,190,20,20,Qt::NoPen, brush);
+//    text = scene->addText("BCL6 LO");
+//    text->setPos(35, 190);
 
-    brush.setColor(QColor(255,0,0));
-    scene->addEllipse(10,250,20,20,Qt::NoPen, brush);
-    text = scene->addText("Plasma cell");
-    text->setPos(35, 250);
+//    brush.setColor(QColor(128,128,128));
+//    scene->addEllipse(10,220,20,20,Qt::NoPen, brush);
+//    text = scene->addText("Max divisions");
+//    text->setPos(35, 220);
 
-    brush.setColor(QColor(255,130,0));
-    scene->addEllipse(10,280,20,20,Qt::NoPen, brush);
-    text = scene->addText("CD4 T cell");
-    text->setPos(35, 280);
+//    brush.setColor(QColor(255,0,0));
+//    scene->addEllipse(10,250,20,20,Qt::NoPen, brush);
+//    text = scene->addText("Plasma cell");
+//    text->setPos(35, 250);
+
+//    brush.setColor(QColor(255,130,0));
+//    scene->addEllipse(10,280,20,20,Qt::NoPen, brush);
+//    text = scene->addText("CD4 T cell");
+//    text->setPos(35, 280);
 
     QGraphicsView* view = new QGraphicsView(field_page);
     view->setScene(scene);
-    view->setGeometry(QRect(0, 0, 810, 810));
+    view->setGeometry(QRect(0, 0, 700, 700));
     view->show();
+}
+
+void Field::chooseColor(double f, int rgbcol[])
+{
+    if (cused[constituent] == 1) {
+        rgbcol[0] = int((1-f)*255);
+        rgbcol[1] = 0;
+        rgbcol[2] = int(f*255);
+    } else {
+        rgbcol[0] = rgbcol[1] = rgbcol[2] = 255;
+    }
 }

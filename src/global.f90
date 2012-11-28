@@ -143,6 +143,8 @@ error = 0
 if (use_TCP) then
     if (awp_0%is_open) then
         call winsock_send(awp_0,trim(msg)//LF,len_trim(msg)+1,error)
+    else
+        write(99,*) trim(msg)
     endif
 else
 	write(*,*) trim(msg)
