@@ -223,8 +223,8 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine read_cell_params(ok)
 logical :: ok
-integer :: itestcase, ncpu_dummy, Nmm3
-integer :: iuse_oxygen, iuse_glucose
+integer :: itestcase, ncpu_dummy, Nmm3, ichemo
+integer :: iuse(MAX_CHEMO)
 real(REAL_KIND) :: days
 real(REAL_KIND) :: sigma, DXmm, t_hyp_hours
 
@@ -249,14 +249,22 @@ read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
-read(nfcell,*) iuse_oxygen
+read(nfcell,*) iuse(OXYGEN)
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
-read(nfcell,*) iuse_glucose
+read(nfcell,*) iuse(GLUCOSE)
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
+read(nfcell,*) iuse(DRUG_A)
+read(nfcell,*) chemo(DRUG_A)%diff_coef
+read(nfcell,*) chemo(DRUG_A)%bdry_conc
+read(nfcell,*) chemo(DRUG_A)%max_cell_rate
+read(nfcell,*) iuse(DRUG_B)
+read(nfcell,*) chemo(DRUG_B)%diff_coef
+read(nfcell,*) chemo(DRUG_B)%bdry_conc
+read(nfcell,*) chemo(DRUG_B)%max_cell_rate
 read(nfcell,*) fixedfile					! file with "fixed" parameter values
 close(nfcell)
 
@@ -269,12 +277,14 @@ divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
 t_hypoxic_limit = 60*60*t_hyp_hours				! hours -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
-DELTA_X = DXmm/10
+DELTA_X = DXmm/10                               ! cm
 Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
 
-chemo(OXYGEN)%used = (iuse_oxygen == 1)
-chemo(GLUCOSE)%used = (iuse_glucose == 1)
-
+!chemo(OXYGEN)%used = (iuse_oxygen == 1)
+!chemo(GLUCOSE)%used = (iuse_glucose == 1)
+do ichemo = 1,MAX_CHEMO
+    chemo(ichemo)%used = (iuse(ichemo) == 1)
+enddo
 ! Setup test_case
 test_case = .false.
 if (itestcase /= 0) then
@@ -348,6 +358,9 @@ do x = 1,NX
 				cell_list(k)%t_divide_last = tpast
 				cell_list(k)%t_divide_next = tdiv + tpast
 				cell_list(k)%t_hypoxic = 0
+				cell_list(k)%oxygen = 0
+				cell_list(k)%drug_A = 0
+				cell_list(k)%drug_B = 0
 				occupancy(x,y,z)%indx(1) = k
 !				if (idbug == 0 .and. r2 > r2lim/4 .and. r2 < 1.2*r2lim/4) then
 !					idbug = lastID
@@ -948,6 +961,42 @@ if (ns /= nfdata) then
 endif
 
 end subroutine
+
+!--------------------------------------------------------------------------------
+! Returns all the concentrations along a line through the blob centre.
+!--------------------------------------------------------------------------------
+subroutine get_concdata(ns, dx, conc) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
+use, intrinsic :: iso_c_binding
+integer(c_int) :: ns
+real(c_double) :: dx, conc(*)
+integer rng(3,2), i, k, ichemo, kcell, x, y, z
+
+dx = DELTA_X
+rng(:,1) = Centre(:) - (Radius + 2)
+rng(:,2) = Centre(:) + (Radius + 2)
+!rng(axis,:) = Centre(axis) + fraction*Radius
+y = Centre(2) + 0.5
+z = Centre(3) + 0.5
+ns = 0
+do x = rng(1,1),rng(1,2)
+    kcell = occupancy(x,y,z)%indx(1)
+    if (kcell == OUTSIDE_TAG) cycle
+    ns = ns + 1
+    do ichemo = 1,MAX_CHEMO
+        k = (ns-1)*MAX_CHEMO + ichemo
+        if (chemo(ichemo)%used) then
+	        i = ODEdiff%ivar(x,y,z)
+            conc(k) = allstate(i,ichemo)
+        else
+            conc(k) = 0
+        endif
+        write(logmsg,*) ns,k,ichemo,conc(k)
+        call logger(logmsg)
+    enddo
+enddo
+end subroutine
+
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------

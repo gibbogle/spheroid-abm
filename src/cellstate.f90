@@ -636,6 +636,9 @@ cell_list(kcell1)%volume = cell_list(kcell0)%volume
 R = par_uni(kpar)
 cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 cell_list(kcell1)%t_hypoxic = 0
+cell_list(kcell1)%oxygen = cell_list(kcell0)%oxygen
+cell_list(kcell1)%drug_A = cell_list(kcell0)%drug_A
+cell_list(kcell1)%drug_B = cell_list(kcell0)%drug_B
 occupancy(site1(1),site1(2),site1(3))%indx(1) = kcell1
 end subroutine
 

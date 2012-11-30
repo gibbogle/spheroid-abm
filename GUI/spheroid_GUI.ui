@@ -42,7 +42,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>3</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -73,7 +73,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>1</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -958,7 +958,7 @@ padding: 8px
              <rect>
               <x>50</x>
               <y>40</y>
-              <width>403</width>
+              <width>422</width>
               <height>112</height>
              </rect>
             </property>
@@ -1017,10 +1017,22 @@ padding: 8px
              </item>
              <item row="0" column="3">
               <widget class="QLabel" name="label_OXYGEN">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
                <property name="minimumSize">
                 <size>
-                 <width>100</width>
+                 <width>0</width>
                  <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
                 </size>
                </property>
                <property name="font">
@@ -1036,6 +1048,18 @@ padding: 8px
              </item>
              <item row="0" column="4">
               <widget class="QLabel" name="label_GLUCOSE">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -1051,7 +1075,7 @@ padding: 8px
               <widget class="QLineEdit" name="line_GLUCOSE_BDRY_CONC">
                <property name="maximumSize">
                 <size>
-                 <width>100</width>
+                 <width>60</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -1064,7 +1088,7 @@ padding: 8px
               <widget class="QLineEdit" name="line_GLUCOSE_DIFF_COEF">
                <property name="maximumSize">
                 <size>
-                 <width>100</width>
+                 <width>60</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -1077,7 +1101,7 @@ padding: 8px
               <widget class="QLineEdit" name="line_OXYGEN_DIFF_COEF">
                <property name="maximumSize">
                 <size>
-                 <width>100</width>
+                 <width>60</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -1090,7 +1114,7 @@ padding: 8px
               <widget class="QLineEdit" name="line_OXYGEN_BDRY_CONC">
                <property name="maximumSize">
                 <size>
-                 <width>100</width>
+                 <width>60</width>
                  <height>16777215</height>
                 </size>
                </property>
@@ -1101,6 +1125,12 @@ padding: 8px
              </item>
              <item row="1" column="3">
               <widget class="QCheckBox" name="cbox_USE_OXYGEN">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string/>
                </property>
@@ -1111,6 +1141,12 @@ padding: 8px
              </item>
              <item row="1" column="4">
               <widget class="QCheckBox" name="cbox_USE_GLUCOSE">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="text">
                 <string/>
                </property>
@@ -1155,6 +1191,12 @@ padding: 8px
              </item>
              <item row="4" column="3">
               <widget class="QLineEdit" name="line_OXYGEN_CONSUMPTION">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                </property>
@@ -1162,6 +1204,172 @@ padding: 8px
              </item>
              <item row="4" column="4">
               <widget class="QLineEdit" name="line_GLUCOSE_CONSUMPTION">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="5">
+              <widget class="QLabel" name="label_DRUG_A">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Drug A</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="5">
+              <widget class="QCheckBox" name="cbox_USE_DRUG_B_2">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="5">
+              <widget class="QLineEdit" name="line_DRUG_A_DIFF_COEF">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="5">
+              <widget class="QLineEdit" name="line_DRUG_A_BDRY_CONC">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="5">
+              <widget class="QLineEdit" name="line_DRUG_A_CONSUMPTION">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="6">
+              <widget class="QLabel" name="label_DRUG_B">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Drug B</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="6">
+              <widget class="QCheckBox" name="cbox_USE_DRUG_B">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="6">
+              <widget class="QLineEdit" name="line_DRUG_B_DIFF_COEF">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="3" column="6">
+              <widget class="QLineEdit" name="line_DRUG_B_BDRY_CONC">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="4" column="6">
+              <widget class="QLineEdit" name="line_DRUG_B_CONSUMPTION">
+               <property name="maximumSize">
+                <size>
+                 <width>60</width>
+                 <height>16777215</height>
+                </size>
+               </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                </property>
@@ -2253,16 +2461,16 @@ padding: 8px
         </property>
         <property name="baseSize">
          <size>
-          <width>600</width>
-          <height>600</height>
+          <width>700</width>
+          <height>700</height>
          </size>
         </property>
        </widget>
        <widget class="QGroupBox" name="groupBox_constituent">
         <property name="geometry">
          <rect>
-          <x>900</x>
-          <y>10</y>
+          <x>710</x>
+          <y>0</y>
           <width>91</width>
           <height>141</height>
          </rect>
@@ -2341,8 +2549,8 @@ padding: 8px
        <widget class="QGroupBox" name="groupBox_plane">
         <property name="geometry">
          <rect>
-          <x>900</x>
-          <y>170</y>
+          <x>710</x>
+          <y>150</y>
           <width>91</width>
           <height>111</height>
          </rect>
@@ -2405,8 +2613,8 @@ padding: 8px
        <widget class="QLineEdit" name="lineEdit_fraction">
         <property name="geometry">
          <rect>
-          <x>900</x>
-          <y>290</y>
+          <x>710</x>
+          <y>270</y>
           <width>41</width>
           <height>20</height>
          </rect>
@@ -2421,9 +2629,9 @@ padding: 8px
        <widget class="QLabel" name="label_fraction">
         <property name="geometry">
          <rect>
-          <x>950</x>
-          <y>290</y>
-          <width>51</width>
+          <x>760</x>
+          <y>270</y>
+          <width>41</width>
           <height>21</height>
          </rect>
         </property>

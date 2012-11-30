@@ -8,6 +8,7 @@ LOG_USE();
 Field::Field(QWidget *page2D)
 {
 	field_page = page2D;
+    MAX_CHEMO = 4;
     axis = Z_AXIS;
     fraction = 0;
     constituent = OXYGEN;
@@ -319,4 +320,46 @@ void Field::chooseColor(double f, int rgbcol[])
     } else {
         rgbcol[0] = rgbcol[1] = rgbcol[2] = 255;
     }
+}
+
+void Field::makeConcPlot(QMdiArea *mdiArea)
+{
+    QString tag = "conc";
+    QString title = "Concentration";
+    pG = new Plot(tag,tag);
+//    pG->setGeometry(QRect(100, 100, 300, 200));
+    pG->setTitle(title);
+//    pG->setAxisTitle(QwtPlot::yLeft, title);
+
+    mdiArea->addSubWindow(pG);
+    pG->show();
+}
+
+void Field::updateConcPlot()
+{
+    int nc, nmu, i, ichemo;
+    double dx, x[1000], y[1000], conc[4000], cmax;
+
+    get_concdata(&nc, &dx, conc);
+    nmu = int(nc*dx*1.0e4);
+    sprintf(msg,"updateConcPlot: %d %f %d",nc,dx,nmu);
+    LOG_MSG(msg);
+    pG->setAxisScale(QwtPlot::xBottom, 0, nmu, 0);
+    QPen *pen = new QPen();
+    QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
+    pen->setColor(pencolor[0]);
+    pG->curve[0]->setPen(*pen);
+    ichemo = constituent;
+    cmax = 0;
+    for (i=0; i<nc; i++) {
+        x[i] = i*dx*1.0e4;
+        y[i] = conc[i*MAX_CHEMO+ichemo];
+        sprintf(msg,"%d %f %f",i,x[i],y[i]);
+        LOG_MSG(msg);
+        cmax = MAX(cmax,y[i]);
+    }
+    pG->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);
+    pG->curve[0]->setData(x, y, nc);
+    pG->replot();
+    delete pen;
 }

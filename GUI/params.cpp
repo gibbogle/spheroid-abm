@@ -434,6 +434,38 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
  "GLUCOSE consumption rate",
  "GLUCOSE consumption rate"},
 
+    {"USE_DRUG_A", 0, 0, 1,
+    "Use Drug A?",
+    "Drug A is simulated"},
+
+    {"DRUG_A_DIFF_COEF", 6.0e-7, 0, 0,
+     "DRUG_A diffusion coeff",
+     "DRUG_A diffusion coefficient"},
+
+    {"DRUG_A_BDRY_CONC", 9.0, 0, 0,
+     "DRUG_A boundary concentration",
+     "DRUG_A boundary concentration"},
+
+    {"DRUG_A_CONSUMPTION", 3.8e-17, 0, 0,
+     "DRUG_A consumption rate",
+     "DRUG_A consumption rate"},
+
+    {"USE_DRUG_B", 0, 0, 1,
+    "Use Drug B?",
+    "Drug B is simulated"},
+
+    {"DRUG_B_DIFF_COEF", 6.0e-7, 0, 0,
+     "DRUG_B diffusion coeff",
+     "DRUG_B diffusion coefficient"},
+
+    {"DRUG_B_BDRY_CONC", 9.0, 0, 0,
+     "DRUG_B boundary concentration",
+     "DRUG_B boundary concentration"},
+
+    {"DRUG_B_CONSUMPTION", 3.8e-17, 0, 0,
+     "DRUG_B consumption rate",
+     "DRUG_B consumption rate"},
+
 {"INPUT_FILE", 0, 0, 0,
 "spheroid_fixed.inpdata",
 "The auxiliary input file contains data that (almost!) never changes"}

@@ -30,10 +30,11 @@ integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,
 
 !real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
 !real(REAL_KIND), parameter :: CO2_DEATH_THRESHOLD = 0.0001
-integer, parameter :: MAX_CHEMO = 3
+integer, parameter :: MAX_CHEMO = 4
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
-integer, parameter :: TRACER = 3
+integer, parameter :: DRUG_A = 3
+integer, parameter :: DRUG_B = 4
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
 logical, parameter :: use_division = .true.
@@ -53,6 +54,9 @@ type cell_type
 	integer :: ID
 	integer :: site(3)
 	integer :: state
+	real(REAL_KIND) :: oxygen
+	real(REAL_KIND) :: drug_A
+	real(REAL_KIND) :: drug_B
 	real(REAL_KIND) :: volume
 	real(REAL_KIND) :: divide_volume
 	real(REAL_KIND) :: t_divide_last
