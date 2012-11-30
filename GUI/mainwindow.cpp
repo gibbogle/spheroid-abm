@@ -1511,6 +1511,8 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	}
 //    LOG_MSG("initializeGraphs 6");
 
+    field->makeConcPlot(mdiArea);
+
     mdiArea->tileSubWindows();
 
 	for (int i=0; i<nGraphs; i++) {
@@ -1606,6 +1608,7 @@ void MainWindow::showSummary()
 		pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename);
     }
 
+    field->updateConcPlot();
     exthread->mutex1.unlock();
 }
 //--------------------------------------------------------------------------------------------------------

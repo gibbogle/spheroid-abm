@@ -4,7 +4,7 @@
 #include <QDialog>
 #include <QMessageBox>
 #include <QtGui>
-//#include <QTranslator>
+#include "plot.h"
 
 #define CANVAS_WIDTH 620
 
@@ -32,6 +32,7 @@ typedef field_data FIELD_DATA;
 extern "C" {
     void get_fieldinfo(int *, int *, double *, int *, int *, int *);
     void get_fielddata(int *, double *, int *, int *, FIELD_DATA *);
+    void get_concdata(int *, double *, double *);
 }
 
 class Field : public QMainWindow
@@ -43,16 +44,20 @@ public:
 	void displayField();
     void setSliceChanged();
     void chooseColor(double fr, int rgbcol[]);
+    void makeConcPlot(QMdiArea *);
+    void updateConcPlot();
 
     QWidget *field_page;
     int NX;
     int axis;
     double fraction;
+    int MAX_CHEMO;
     int nsites, nconst, cused[10];
     int constituent;
     bool slice_changed;
 	bool constituent_changed;
 	FIELD_DATA *data;
+    Plot *pG;
     char msg[1024];
 
 //public slots:

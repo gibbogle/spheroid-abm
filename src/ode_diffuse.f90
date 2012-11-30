@@ -440,7 +440,7 @@ if (use_death) then
 endif
 
 dCreact = 0
-if (ichemo /= TRACER) then
+!if (ichemo /= TRACER) then
 !	metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
 !	metab = max(CO2_DEATH_THRESHOLD,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
 	if (C(OXYGEN) > ODEdiff%C1) then
@@ -453,7 +453,7 @@ if (ichemo /= TRACER) then
 !	dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
 !	dCreact = dMdt*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
 	dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
-endif
+!endif
 return
 
 select case (ichemo)
@@ -462,7 +462,9 @@ case (OXYGEN)
 	dMdt = -metab*chemo(OXYGEN)%max_cell_rate	! mol/s
 case (GLUCOSE)
 	dMdt = -metab*chemo(GLUCOSE)%max_cell_rate
-case (TRACER)
+case (DRUG_A)
+	dMdt = 0
+case (DRUG_B)
 	dMdt = 0
 end select
 dCreact = dMdt*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)

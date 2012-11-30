@@ -24,7 +24,11 @@ Plot::Plot(QString aname, QString acasename, QWidget *parent)
 	}
 	ncurves = 0;
 	yscale = 0;
-	setAxisTitle(QwtPlot::xBottom, "Time (hours)");
+    if (acasename.compare("conc")==0) {
+        setAxisTitle(QwtPlot::xBottom, "Distance (um)");
+    } else {
+        setAxisTitle(QwtPlot::xBottom, "Time (hours)");
+    }
 	if (name.compare("") != 0) {
 		curve[0] = new QwtPlotCurve(acasename);
 		curve[0]->attach(this);

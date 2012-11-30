@@ -56,7 +56,7 @@ void SocketHandler::run()
 	QString addressStr = "127.0.0.1";
 	QHostAddress hostAddress;
 	hostAddress.setAddress(addressStr);
-        tcpServer = new QTcpServer(this);
+    tcpServer = new QTcpServer(this);
 	stopped = false;
 	connect(tcpServer, SIGNAL(newConnection()), this, SLOT(processor()), Qt::DirectConnection);
     if (!tcpServer->listen(hostAddress,qport)) {

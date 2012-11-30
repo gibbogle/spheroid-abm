@@ -9,11 +9,6 @@ Graphs::Graphs()
 {
 GRAPH_SET graphs[] = {
 
-    {"dummy",
-    "",
-    "",
-    0, false, 0, 1},
-
     {"nlive",
     "Number of Live Cells",
     "No. of cells",
@@ -24,13 +19,20 @@ GRAPH_SET graphs[] = {
     "No. of cells",
     2, true, 0, 1},
 
-    {"diameter",
-    "Spheroid Diameter",
-    "Diameter",
-    3, true, 0, 1},
+    {"dummy",
+    "",
+    "",
+    3, false, 0, 1},
 
-    };
+};
+
 /*
+
+{"diameter",
+"Spheroid Diameter",
+"Diameter",
+3, true, 0, 1},
+
 
 {"ncog",
 "Cognate B Cells in the Follicle",
