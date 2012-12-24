@@ -23,6 +23,9 @@ extern int ncell_list;
 //extern QMutex mutex1, mutex2;
 
 extern int summaryData[100];
+extern double concData[4000];
+extern int conc_nc;
+extern double conc_dx;
 extern int nt_vtk;
 extern int istep;
 extern bool leftb;

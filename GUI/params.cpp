@@ -332,7 +332,7 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Division time shape parameter",
 "The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters."},
 
-{"NDAYS", 1.0, 0.0, 30.0,
+{"NDAYS", 5.0, 0.0, 30.0,
 "Number of days",
 "Length of the simulation.\n\
 [days]"},
@@ -434,7 +434,7 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
  "GLUCOSE consumption rate",
  "GLUCOSE consumption rate"},
 
-    {"USE_DRUG_A", 0, 0, 1,
+    {"USE_DRUG_A", 1, 0, 1,
     "Use Drug A?",
     "Drug A is simulated"},
 
@@ -442,11 +442,11 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
      "DRUG_A diffusion coeff",
      "DRUG_A diffusion coefficient"},
 
-    {"DRUG_A_BDRY_CONC", 9.0, 0, 0,
+    {"DRUG_A_BDRY_CONC", 0.01, 0, 0,
      "DRUG_A boundary concentration",
      "DRUG_A boundary concentration"},
 
-    {"DRUG_A_CONSUMPTION", 3.8e-17, 0, 0,
+    {"DRUG_A_CONSUMPTION", 0, 0, 0,
      "DRUG_A consumption rate",
      "DRUG_A consumption rate"},
 
@@ -462,9 +462,65 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
      "DRUG_B boundary concentration",
      "DRUG_B boundary concentration"},
 
-    {"DRUG_B_CONSUMPTION", 3.8e-17, 0, 0,
+    {"DRUG_B_CONSUMPTION", 0, 0, 0,
      "DRUG_B consumption rate",
      "DRUG_B consumption rate"},
+
+    {"DRUG_A_DECAY", 1, 0, 0,
+     "DRUG_A decay",
+     "DRUG_A boundary conc decays with the specified half-life"},
+
+    {"DRUG_A_HALFLIFE", 0.5, 0, 0,
+     "DRUG_A half-life",
+     "DRUG_A half-life"},
+
+    {"DRUG_B_DECAY", 0, 0, 0,
+     "DRUG_B decay",
+     "DRUG_B boundary conc decays with the specified half-life"},
+
+    {"DRUG_B_HALFLIFE", 0.5, 0, 0,
+     "DRUG_B half-life",
+     "DRUG_B half-life"},
+
+    {"SN30K_KMET0", 1.54, 0, 0,
+     "Kmet0",
+     "SN30000 max value of 1st order rate constant for metabolism under zero oxygen"},
+
+    {"SN30K_C1", 0.0, 0, 0,
+     "C1",
+     "SN30000 C1 in function for oxygen-dependence of rate of metabolism"},
+
+    {"SN30K_C2", 1.0, 0, 0,
+     "C2",
+     "SN30000 C2 in function for oxygen-dependence of rate of metabolism"},
+
+    {"SN30K_KO2", 1.14, 0, 0,
+     "KO2",
+     "SN30000 KO2 in function for oxygen-dependence of rate of metabolism"},
+
+    {"SN30K_GAMMA", 1.0, 0, 0,
+     "gamma",
+     "SN30000 gamma"},
+
+    {"SN30K_KLESION", 0.001, 0, 0,
+     "Klesion",
+     "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
+
+    {"KILL_O2_CONC", 0.0, 0, 0,
+     "O2 conc",
+     "SN30000 constant O2 concentration in kill experiment"},
+
+    {"KILL_DRUG_CONC", 0.01, 0, 0,
+     "Drug conc",
+     "SN30000 constant drug concentration in kill experiment"},
+
+    {"KILL_DURATION", 60, 0, 0,
+     "Duration",
+     "SN30000 duration of kill experiment"},
+
+    {"KILL_FRACTION", 0.9, 0, 0,
+     "Kill fraction",
+     "SN30000 fraction of cells killed in the experiment"},
 
 {"INPUT_FILE", 0, 0, 0,
 "spheroid_fixed.inpdata",

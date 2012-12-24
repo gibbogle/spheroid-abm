@@ -3,6 +3,10 @@
 
 LOG_USE();
 
+double concData[4000];
+int conc_nc;
+double conc_dx;
+
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 Field::Field(QWidget *page2D)
@@ -338,9 +342,13 @@ void Field::makeConcPlot(QMdiArea *mdiArea)
 void Field::updateConcPlot()
 {
     int nc, nmu, i, ichemo;
-    double dx, x[1000], y[1000], conc[4000], cmax;
+    double dx, x[1000], y[1000], *conc, cmax;
 
-    get_concdata(&nc, &dx, conc);
+//    get_concdata(&nc, &dx, conc);
+    dx = conc_dx;
+    nc = conc_nc;
+    conc = concData;
+    if (nc == 0) return;
     nmu = int(nc*dx*1.0e4);
     sprintf(msg,"updateConcPlot: %d %f %d",nc,dx,nmu);
     LOG_MSG(msg);

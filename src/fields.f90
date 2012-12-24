@@ -60,20 +60,23 @@ chemo(GLUCOSE)%name = 'Glucose'
 !chemo(GLUCOSE)%halflife = 0		! hours
 !chemo(GLUCOSE)%max_cell_rate = 3.8e-17	! mol.cell^-1.s^-1
 
+chemo(:)%halflife = 0
+chemo(:)%cell_diff = 5.0	    ! no units, just testing
+
 chemo(DRUG_A)%name = 'Drug_A'
-chemo(DRUG_A)%used = .false.
+!chemo(DRUG_A)%used = .false.
 chemo(DRUG_B)%name = 'Drug_B'
-chemo(DRUG_B)%used = .false.
+!chemo(DRUG_B)%used = .false.
 !chemo(TRACER)%use_secretion = .false.
 !chemo(TRACER)%bdry_rate = 0
 !chemo(TRACER)%bdry_conc = 200
 !chemo(TRACER)%diff_coef = 2.0e-6	! units?
 !chemo(TRACER)%halflife = 0	! hours
-!do ichemo = 1,MAX_CHEMO
-!	if (.not.chemo(ichemo)%used) cycle
-!	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
 !!	write(*,*) 'decay_rate: ',ichemo,chemo(ichemo)%decay_rate
-!enddo
+enddo
 call AllocateConcArrays
 call SetMMParameters
 end subroutine

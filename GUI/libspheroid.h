@@ -12,6 +12,7 @@ void terminate_run(int *);
 void get_dimensions(int *,int *,int *, int *, double *);
 void get_scene(int *, int *);
 void get_summary(int *);
+void get_concdata(int *, double *, double *);
 //
 //
 #ifdef __cplusplus

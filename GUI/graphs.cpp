@@ -4,6 +4,7 @@
 // summaryData(1:9) = (/ int(tnow/60),istep,ntot,ncogseed,ncog,Ndead,int(InflowTotal*60/DELTA_T), int(100*vascularity), teffgen/)
 
 // summaryData(1:4) = (/ istep, nlive, ndead, int(radius in um) /)
+// summaryData(1:6) = (/ istep, Ncells, Ndead, Ndrugdead, Ntagged, diam_um /)
 
 Graphs::Graphs()
 {
@@ -19,10 +20,20 @@ GRAPH_SET graphs[] = {
     "No. of cells",
     2, true, 0, 1},
 
-    {"dummy",
-    "",
-    "",
-    3, false, 0, 1},
+    {"ndrugdead",
+    "Number of Drug-killed Cells",
+    "No. of cells",
+    3, true, 0, 1},
+
+    {"ntagged",
+    "Number of Tagged Cells",
+    "No. of cells",
+    4, true, 0, 1},
+
+    {"diameter",
+    "Spheroid Diameter",
+    "Diameter (um)",
+    5, true, 0, 1},
 
 };
 
@@ -97,7 +108,7 @@ GRAPH_SET graphs[] = {
 
 };
 	*/
-
+    diam_number = 5;
 	nGraphs = sizeof(graphs)/sizeof(GRAPH_SET);
 	graphList = new GRAPH_SET[nGraphs];
 	for (int i=0; i<nGraphs; i++) {

@@ -32,7 +32,7 @@ typedef field_data FIELD_DATA;
 extern "C" {
     void get_fieldinfo(int *, int *, double *, int *, int *, int *);
     void get_fielddata(int *, double *, int *, int *, FIELD_DATA *);
-    void get_concdata(int *, double *, double *);
+//    void get_concdata(int *, double *, double *);
 }
 
 class Field : public QMainWindow
