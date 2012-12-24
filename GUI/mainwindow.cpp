@@ -868,11 +868,11 @@ void MainWindow::reloadParams()
 					}
 				}
 			}
-			if (!found) {
-				LOG_MSG("Widget tag not found:");
-				LOG_QMSG(qsname);
-				LOG_QMSG(wtag);
-			}
+//			if (!found) {
+//				LOG_MSG("Widget tag not found:");
+//				LOG_QMSG(qsname);
+//				LOG_QMSG(wtag);
+//			}
 		}
 	}				
 }
@@ -958,6 +958,7 @@ void MainWindow::readInputFile()
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open ..."), ".", tr("Input Files (*.inp)"));
 	if (fileName.compare("") == 0)
 		return;
+    paramSaved = false;
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
         QMessageBox::warning(this, tr("Application"),
@@ -1434,7 +1435,7 @@ void MainWindow::preConnection()
 	QString casename = QFileInfo(inputFile).baseName();
 	vtkfile = casename + ".pos";
 	newR->casename = casename;
-//	LOG_QMSG(newR->casename);
+    LOG_QMSG(newR->casename);
 	int nsteps = int(hours+1.5);
 	newR->nsteps = nsteps;
 	newR->tnow = new double[nsteps];
@@ -1482,18 +1483,23 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 //        LOG_MSG("initializeGraphs 3b");
     }
 //    sprintf(msg,"nGraphs: %d",nGraphs);
-//    LOG_MSG(msg);
+    LOG_MSG(msg);
 	for (int i=0; i<nGraphs; i++) {
 		QString tag = grph->get_tag(i);
 //        LOG_QMSG(tag);
 		QString title = grph->get_title(i);
 		QString yAxisTitle = grph->get_yAxisTitle(i);
+
+        if (pGraph[i] != NULL) {
+            pGraph[i]->deleteLater();
+            pGraph[i] = NULL;
+        }
         if (pGraph[i] == NULL) {
             pGraph[i] = new Plot(tag,R->casename);
             pGraph[i]->setTitle(title);
             pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
         }
-	}
+    }
 //    LOG_MSG("initializeGraphs 4");
 
 	nGraphCases = 1;
@@ -1577,6 +1583,7 @@ void MainWindow::displayScene()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showSummary()
 {
+    double val;
 //    LOG_MSG("showSummary");
 	step++;
     if (step >= newR->nsteps) {
@@ -1600,7 +1607,12 @@ void MainWindow::showSummary()
 	for (int i=0; i<nGraphs; i++) {
 		if (!grph->isActive(i)) continue;
 		int k = grph->get_dataIndex(i);
-		newR->pData[i][step] = summaryData[k]*grph->get_scaling(i);
+        if (i == grph->diam_number) {
+            val = summaryData[k]/1000.;
+        } else {
+            val = summaryData[k];
+        }
+        newR->pData[i][step] = val*grph->get_scaling(i);
 	}
 
 	for (int i=0; i<nGraphs; i++) {

@@ -23,6 +23,7 @@ public:
 	~Graphs();
 	GRAPH_SET get_graph(int);
 	int nGraphs;
+    int diam_number;
 	int get_dataIndex(int);
 	QString get_tag(int);
 	QString get_title(int);

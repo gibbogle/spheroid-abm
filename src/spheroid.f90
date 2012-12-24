@@ -91,12 +91,14 @@ call make_split(.true.)
 !call checkcellcount(ok)
 
 if (use_ODE_diffusion) then
-	call SetupODEDiff
+!	call SetupODEDiff
 	call InitConcs
 	call AdjustMM
 !	call TestODEDiffusion
 !	call TestSolver
 endif
+Ntodie = 0
+Ndrugdead = 0
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
@@ -224,11 +226,12 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 integer :: itestcase, ncpu_dummy, Nmm3, ichemo
-integer :: iuse(MAX_CHEMO)
+integer :: iuse(MAX_CHEMO), idecay(MAX_CHEMO)
 real(REAL_KIND) :: days
 real(REAL_KIND) :: sigma, DXmm, t_hyp_hours
 
 ok = .true.
+idecay = 0
 open(nfcell,file=inputfile,status='old')
 
 read(nfcell,*) NX							! rule of thumb: about 4*BLOB_RADIUS
@@ -265,6 +268,20 @@ read(nfcell,*) iuse(DRUG_B)
 read(nfcell,*) chemo(DRUG_B)%diff_coef
 read(nfcell,*) chemo(DRUG_B)%bdry_conc
 read(nfcell,*) chemo(DRUG_B)%max_cell_rate
+read(nfcell,*) idecay(DRUG_A)
+read(nfcell,*) chemo(DRUG_A)%bdry_halflife  ! h
+read(nfcell,*) idecay(DRUG_B)
+read(nfcell,*) chemo(DRUG_B)%bdry_halflife
+read(nfcell,*) SN30K%Kmet0
+read(nfcell,*) SN30K%C1
+read(nfcell,*) SN30K%C2
+read(nfcell,*) SN30K%KO2
+read(nfcell,*) SN30K%gamma
+read(nfcell,*) SN30K%Klesion
+read(nfcell,*) SN30K%kill_O2
+read(nfcell,*) SN30K%kill_drug
+read(nfcell,*) SN30K%kill_duration
+read(nfcell,*) SN30K%kill_fraction
 read(nfcell,*) fixedfile					! file with "fixed" parameter values
 close(nfcell)
 
@@ -276,6 +293,19 @@ divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))
 divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
 t_hypoxic_limit = 60*60*t_hyp_hours				! hours -> seconds
+
+do ichemo = 1,MAX_CHEMO
+    if (idecay(ichemo) == 1) then
+        chemo(ichemo)%bdry_decay = .true.
+        chemo(ichemo)%bdry_decay_rate = DecayRate(chemo(ichemo)%bdry_halflife)
+    else
+        chemo(ichemo)%bdry_decay = .false.
+        chemo(ichemo)%bdry_decay_rate = 0
+    endif
+    write(*,*) 'bdry_decay_rate: ',ichemo,chemo(ichemo)%bdry_decay_rate
+enddo
+SN30K%KO2 = 1.0e-3*SN30K%KO2                    ! um -> mM
+SN30K%kill_duration = 60*SN30K%kill_duration    ! minutes -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
 DELTA_X = DXmm/10                               ! cm
 Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
@@ -284,6 +314,7 @@ Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
 !chemo(GLUCOSE)%used = (iuse_glucose == 1)
 do ichemo = 1,MAX_CHEMO
     chemo(ichemo)%used = (iuse(ichemo) == 1)
+    write(*,*) 'used: ',ichemo,chemo(ichemo)%used
 enddo
 ! Setup test_case
 test_case = .false.
@@ -308,6 +339,7 @@ write(logmsg,'(a,2i6,f6.0)') 'nsteps, NT_CONC, DELTA_T: ',nsteps,NT_CONC,DELTA_T
 call logger(logmsg)
 !call setup_dists
 
+call determine_Kd
 ok = .true.
 end subroutine
 
@@ -320,10 +352,33 @@ ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! The rate of cell killing, which becomes a cell death probability rate, is inferred from
+! the cell kill experiment.
+! The basic assumption is that the rate of killing is proportional to the drug metabolism rate:
+! killing rate = c = Kd.dM/dt
+! where dM/dt = F(O2).kmet0.Ci
+! In the kill experiment both O2 and Ci are held constant:
+! O2 = CkillO2, Ci = Ckill
+! In this case c is constant and the cell population N(t) is given by:
+! N(t) = N(0).exp(-ct), i.e.
+! c = -log(N(T)/N(0))/T where T is the duration of the experiment
+! N(T)/N(0) = 1 - f, where f = kill fraction
+! c = Kd.F(CkillO2).kmet0.Ckill
+! therefore
+! Kd = -log(1-f)/(T.F(CkillO2).kmet0.Ckill)
+!-----------------------------------------------------------------------------------------
+subroutine determine_Kd
+real(REAL_KIND) :: kmet
+
+kmet = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + SN30K%kill_O2))*SN30K%Kmet0
+SN30K%Kd = -log(1-SN30K%kill_fraction)/(SN30K%kill_duration*kmet*SN30K%kill_drug)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine placeCells(ok)
 logical :: ok
-integer :: x, y, z, k, site(3), kpar=0
+integer :: x, y, z, k, site(3), ichemo, kpar=0
 real(REAL_KIND) :: r2lim,r2,rad(3)
 real(REAL_KIND) :: R, tpast, tdiv
 
@@ -344,6 +399,7 @@ do x = 1,NX
 				cell_list(k)%ID = lastID
 				cell_list(k)%site = site
 				cell_list(k)%state = 1
+                cell_list(k)%todie = .false.
 				cell_list(k)%exists = .true.
 				do
 					R = par_uni(kpar)
@@ -358,9 +414,10 @@ do x = 1,NX
 				cell_list(k)%t_divide_last = tpast
 				cell_list(k)%t_divide_next = tdiv + tpast
 				cell_list(k)%t_hypoxic = 0
-				cell_list(k)%oxygen = 0
-				cell_list(k)%drug_A = 0
-				cell_list(k)%drug_B = 0
+				cell_list(k)%conc = 0
+				cell_list(k)%conc(OXYGEN) = chemo(OXYGEN)%bdry_conc
+				cell_list(k)%conc(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
+				cell_list(k)%M = 0
 				occupancy(x,y,z)%indx(1) = k
 !				if (idbug == 0 .and. r2 > r2lim/4 .and. r2 < 1.2*r2lim/4) then
 !					idbug = lastID
@@ -371,6 +428,11 @@ do x = 1,NX
 		enddo
 	enddo
 enddo
+do ichemo = 1,MAX_CHEMO
+    occupancy(:,:,:)%C(ichemo) = 0
+enddo
+occupancy(:,:,:)%C(OXYGEN) = chemo(OXYGEN)%bdry_conc
+occupancy(:,:,:)%C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
 nlist = k
 Nsites = k
 Ncells = k
@@ -536,6 +598,28 @@ nsteps_dim = nsteps
 deltat = DELTA_T
 end subroutine
 
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine InitConcs
+integer :: nextra, ic, ichemo, kcell, site(3)
+
+write(logmsg,*) 'InitConcs: ',nchemo
+call logger(logmsg)
+allocate(allstate(MAX_VARS,MAX_CHEMO))
+allocate(work_rkc(8+4*MAX_VARS,MAX_CHEMO))
+
+do kcell = 1,Ncells
+    site = cell_list(kcell)%site
+    do ic = 1,nchemo
+	    ichemo = chemomap(ic)
+        occupancy(site(1),site(2),site(3))%C(ic) = chemo(ichemo)%bdry_conc
+    enddo
+enddo
+!do ic = 1,nchemo
+!	ichemo = chemomap(ic)
+!	call InitState(ichemo,allstate(1:nextra,ichemo))
+!enddo
+end subroutine
 !-----------------------------------------------------------------------------------------
 ! Advance simulation through one big time step (DELTA_T)
 ! The concentration fields are first solved through NT_CONC subdivisions of DELTA_T,
@@ -552,8 +636,15 @@ real(REAL_KIND) :: r(3), rmax, tstart, dt
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo
 
+if (Ncells == 0) then
+    res = 2
+    return
+endif
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
+if (istep == 0) then
+    call SetupODEdiff
+endif
 istep = istep + 1
 if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
@@ -561,13 +652,16 @@ if (mod(istep,nthour) == 0) then
 endif
 !if (istep == 6216) dbug = .true.
 !call make_split(.true.)
-if (compute_concentrations) then
-	do it = 1,NT_CONC
-		tstart = (it-1)*dt
-	!	call Solver(nchemo,tstart,dt)
-		call Solver(it,tstart,dt)
-	enddo
-endif
+call grow_cells(DELTA_T)
+call SetupODEdiff
+call SiteCellToState
+do it = 1,NT_CONC
+	tstart = (it-1)*dt
+	t_simulation = (istep-1)*DELTA_T + tstart
+!	call Solver(nchemo,tstart,dt)
+	call Solver(it,tstart,dt,Ncells)
+enddo
+call StateToSiteCell
 res = 0
 if (mod(istep,60) == -1) then
 	rmax = 0
@@ -579,14 +673,10 @@ if (mod(istep,60) == -1) then
 	write(logmsg,'(3i6,2f6.1)') istep, hour, Ncells, Radius, rmax
 	call logger(logmsg)
 !	call CheckBdryList
-	if (compute_concentrations) then	
-		call ShowConcs
-	endif
+	call ShowConcs
 !	call check_bdry
 endif
 !call test_cell_division
-!call cell_division
-call grow_cells(DELTA_T)
 end subroutine
 
 !--------------------------------------------------------------------------------  
@@ -867,16 +957,23 @@ end function
 
 
 !-----------------------------------------------------------------------------------------
+! Total deaths = Ndead
+! Drug deaths = Ndrugdead
+! Hypoxia deaths = Ndead - Ndrugdead
+! Total tagged for drug death on division = Ntodie
+! Current tagged = Ntodie - Ndrugdead
 !-----------------------------------------------------------------------------------------
 subroutine get_summary(summaryData) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
-integer :: diam_um
+integer :: Ndead, Ntagged, diam_um
 
 !call SetRadius(Nsites)
 diam_um = 2*DELTA_X*Radius*10000
-summaryData(1:4) = (/ istep, Ncells, Nsites-Ncells, diam_um /)
+Ndead = Nsites - Ncells
+Ntagged = Ntodie - Ndrugdead
+summaryData(1:6) = (/ istep, Ncells, Ndead, Ndrugdead, Ntagged, diam_um /)
 
 end subroutine
 
@@ -963,37 +1060,64 @@ endif
 end subroutine
 
 !--------------------------------------------------------------------------------
-! Returns all the concentrations along a line through the blob centre.
+! Returns all the extracellular concentrations along a line through the blob centre.
 !--------------------------------------------------------------------------------
 subroutine get_concdata(ns, dx, conc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
 use, intrinsic :: iso_c_binding
 integer(c_int) :: ns
 real(c_double) :: dx, conc(*)
+real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer rng(3,2), i, k, ichemo, kcell, x, y, z
 
+write(logmsg,*) 'get_concdata'
+call logger(logmsg)
 dx = DELTA_X
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
 !rng(axis,:) = Centre(axis) + fraction*Radius
 y = Centre(2) + 0.5
 z = Centre(3) + 0.5
-ns = 0
+ns = 1
 do x = rng(1,1),rng(1,2)
     kcell = occupancy(x,y,z)%indx(1)
     if (kcell == OUTSIDE_TAG) cycle
     ns = ns + 1
     do ichemo = 1,MAX_CHEMO
+        i = ODEdiff%ivar(x,y,z)
         k = (ns-1)*MAX_CHEMO + ichemo
         if (chemo(ichemo)%used) then
-	        i = ODEdiff%ivar(x,y,z)
-            conc(k) = allstate(i,ichemo)
+            if (i > 0) then
+                conc(k) = allstate(i,ichemo)
+            else
+                conc(k) = 0
+            endif
         else
             conc(k) = 0
         endif
-        write(logmsg,*) ns,k,ichemo,conc(k)
-        call logger(logmsg)
+!        write(logmsg,'(7i4,f8.4)') x,y,z,i,ns,k,ichemo,conc(k)
+!        call logger(logmsg)
     enddo
+enddo
+! Add concentrations at the two boundaries
+! At ns=1, at at ns=ns+1
+ns = ns+1
+do ichemo = 1,MAX_CHEMO
+    if (chemo(ichemo)%used) then
+        cbnd = BdryConc(ichemo,t_simulation)
+        k = ichemo
+        conc(k) = cbnd
+        k = (ns-1)*MAX_CHEMO + ichemo
+        conc(k) = cbnd
+    else
+        k = ichemo
+        conc(k) = 0
+        k = (ns-1)*MAX_CHEMO + ichemo
+        conc(k) = 0
+    endif
+enddo
+do k = 1,MAX_CHEMO*ns
+    conc(k) = max(cmin,conc(k))
 enddo
 end subroutine
 
@@ -1179,6 +1303,8 @@ call wrapup
 
 if (res == 0) then
 	call logger(' Execution successful!')
+elseif (res == 2) then
+	call logger(' Execution successful, no live cells')
 else
 	call logger('  === Execution failed ===')
 !	call sleeper(1)

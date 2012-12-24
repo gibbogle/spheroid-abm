@@ -157,6 +157,8 @@ void ExecThread::run()
 //	LOG_MSG(msg);
     mutex1.lock();
     get_summary(summaryData);
+//    get_concdata(&conc_nc, &conc_dx, concData);
+    conc_nc = 0;
     mutex1.unlock();
     emit summary();		// Emit signal to initialise summary plots
     for (int i=1; i<= nsteps; i++) {
@@ -171,18 +173,21 @@ void ExecThread::run()
             sleep(100);
 		}
 		if (stopped) break;
-		simulate_step(&res);
-        if (res == 1) break;
-		if (stopped) break;
+//        simulate_step(&res);
+//        if (res == 1) break;
+//        if (stopped) break;
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
             get_summary(summaryData);
+            get_concdata(&conc_nc, &conc_dx, concData);
             int iframe = i/nsumm_interval;
 //            saveGradient2D(iframe);
             mutex1.unlock();
             emit summary();		// Emit signal to update summary plots, at hourly intervals
         }
-		if (stopped) break;
+        simulate_step(&res);
+        if (res != 0) break;
+        if (stopped) break;
 		if (i%nt_vtk == 0) {
 			if (showingVTK != 0) {
 				snapshot();

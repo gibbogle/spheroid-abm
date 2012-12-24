@@ -35,6 +35,9 @@ integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: DRUG_A = 3
 integer, parameter :: DRUG_B = 4
+integer, parameter :: EXTRA = 1
+integer, parameter :: INTRA = 2
+integer, parameter :: SN30000 = DRUG_A  ! else = 0
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
 logical, parameter :: use_division = .true.
@@ -46,7 +49,7 @@ real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
 type occupancy_type
 	integer :: indx(2)
-	real(REAL_KIND) :: C
+	real(REAL_KIND) :: C(MAX_CHEMO)
 	type(boundary_type), pointer :: bdry
 end type
 
@@ -54,15 +57,32 @@ type cell_type
 	integer :: ID
 	integer :: site(3)
 	integer :: state
-	real(REAL_KIND) :: oxygen
-	real(REAL_KIND) :: drug_A
-	real(REAL_KIND) :: drug_B
+	real(REAL_KIND) :: conc(MAX_CHEMO)
+!	real(REAL_KIND) :: oxygen
+!	real(REAL_KIND) :: drug_A
+!	real(REAL_KIND) :: drug_B
 	real(REAL_KIND) :: volume
 	real(REAL_KIND) :: divide_volume
 	real(REAL_KIND) :: t_divide_last
 	real(REAL_KIND) :: t_divide_next
 	real(REAL_KIND) :: t_hypoxic
+	real(REAL_KIND) :: M
+	logical :: todie
 	logical :: exists
+end type
+
+type SN30K_type
+	real(REAL_KIND) :: C1
+	real(REAL_KIND) :: C2
+	real(REAL_KIND) :: Kmet0    
+	real(REAL_KIND) :: KO2
+	real(REAL_KIND) :: gamma
+	real(REAL_KIND) :: Klesion
+	real(REAL_KIND) :: kill_O2
+	real(REAL_KIND) :: kill_drug
+	real(REAL_KIND) :: kill_duration
+	real(REAL_KIND) :: kill_fraction
+	real(REAL_KIND) :: Kd
 end type
 
 type boundary_type
@@ -97,13 +117,15 @@ integer :: jumpvec(3,27)
 
 integer :: max_nlist, nlist, Ncells, Ncells0, lastNcells, lastID
 integer :: max_ngaps, ngaps, nadd_sites, Nsites
+integer :: Ntodie, Ndrugdead
 integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite
 real(REAL_KIND) :: CO2_DEATH_THRESHOLD, t_hypoxic_limit, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
-
+real(REAL_KIND) :: t_simulation
+type(SN30K_type) :: SN30K
 character*(128) :: inputfile
 character*(128) :: fixedfile
 character*(128) :: outputfile
