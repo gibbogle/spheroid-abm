@@ -227,11 +227,11 @@ ok = .false.
 k = 0
 do while (.not.ok)
     k = k + 1
-	j = random_int(1,26,kpar)
-	if (j >= 14) j = j+1
-	site01 = site0 + jumpvec(:,j)
-!	j = random_int(1,6,kpar)
-!	site01 = site0 + neumann(:,j)
+!	j = random_int(1,26,kpar)       ! This generates disconnected cells at the boundary
+!	if (j >= 14) j = j+1
+!	site01 = site0 + jumpvec(:,j)
+	j = random_int(1,6,kpar)
+	site01 = site0 + neumann(:,j)
 	if (k > 50 .or. occupancy(site01(1),site01(2),site01(3))%indx(1) >= -100) ok = .true.	! site01 is not necrotic
 enddo
 !if (dbug) write(*,*) 'cell_divider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
@@ -526,7 +526,6 @@ do
 	dmax = 0
 	do j = 1,27
 		if (j == 14) cycle
-!		jump = neumann(:,j)
 		jump = jumpvec(:,j)
 		site = site1 + jump
 		if (occupancy(site(1),site(2),site(3))%indx(1) < -100) cycle
@@ -542,7 +541,6 @@ do
 			jmax = j
 		endif
 	enddo
-!	site1 = site1 + neumann(:,jmax)
 	site1 = site1 + jumpvec(:,jmax)
 	k = k+1
 	path(:,k) = site1
