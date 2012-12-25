@@ -17,7 +17,7 @@
    </font>
   </property>
   <property name="windowTitle">
-   <string>B Cell Follicle ABM</string>
+   <string>Tumour Spheroid ABM</string>
   </property>
   <property name="windowIcon">
    <iconset>
@@ -42,7 +42,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -1873,6 +1873,12 @@ padding: 8px
        </layout>
       </widget>
       <widget class="QWidget" name="page_output">
+       <property name="maximumSize">
+        <size>
+         <width>1350</width>
+         <height>650</height>
+        </size>
+       </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QMdiArea" name="mdiArea">
@@ -1884,8 +1890,14 @@ padding: 8px
           </property>
           <property name="minimumSize">
            <size>
-            <width>451</width>
-            <height>541</height>
+            <width>1000</width>
+            <height>500</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>1350</width>
+            <height>650</height>
            </size>
           </property>
           <property name="sizeIncrement">
@@ -1941,8 +1953,8 @@ padding: 8px
          <rect>
           <x>50</x>
           <y>30</y>
-          <width>700</width>
-          <height>700</height>
+          <width>650</width>
+          <height>650</height>
          </rect>
         </property>
        </widget>

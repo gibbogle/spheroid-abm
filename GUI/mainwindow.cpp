@@ -116,7 +116,13 @@ MainWindow::MainWindow(QWidget *parent)
     timer = new QTimer(this);
     vtk = new MyVTK(mdiArea_VTK, widget_key);
 	vtk->init();
-	tabs->setCurrentIndex(0);
+    QRect rect;
+    rect.setX(50);
+    rect.setY(30);
+    rect.setHeight(600);
+    rect.setWidth(600);
+    mdiArea_VTK->setGeometry(rect);
+    tabs->setCurrentIndex(1);
     field = new Field(page_2D);
     widget_canvas->setFixedWidth(CANVAS_WIDTH/2);
     widget_canvas->setFixedHeight(CANVAS_WIDTH);
@@ -1362,7 +1368,7 @@ void MainWindow::runServer()
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
     action_field->setEnabled(false);
-    tab_B->setEnabled(false);
+    tab_tumour->setEnabled(false);
 //    tab_DC->setEnabled(false);
     tab_chemo->setEnabled(false);
     tab_run->setEnabled(false);
@@ -1505,6 +1511,10 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	nGraphCases = 1;
     graphResultSet[0] = R;
 
+    QRect rect;
+    rect.setHeight(400);
+    rect.setWidth(1340);
+    mdiArea->setGeometry(rect);
 	for (int i=0; i<nGraphs; i++) {
 		mdiArea->addSubWindow(pGraph[i]);
 		pGraph[i]->show();
