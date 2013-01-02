@@ -436,8 +436,28 @@ void MainWindow::loadParams()
                                 enableUseGlucose();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_OXYGEN)
+                            if (use_GLUCOSE)
                                 disableUseGlucose();
+                        }
+                        bool use_DRUG_A = qsname.contains("USE_DRUG_A");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_DRUG_A)
+                                enableUseDrugA();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_DRUG_A)
+                                disableUseDrugA();
+                        }
+                        bool use_DRUG_B = qsname.contains("USE_DRUG_B");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_DRUG_B)
+                                enableUseDrugB();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_DRUG_B)
+                                disableUseDrugB();
                         }
 
                         /*
@@ -760,6 +780,48 @@ void MainWindow::reloadParams()
                         w_c->setCurrentIndex(val);
 					} else if (qsname.startsWith("cbox_")) {
 						QCheckBox *w_cb = (QCheckBox *)w;
+                        LOG_QMSG(qsname);
+
+                        bool use_OXYGEN = qsname.contains("USE_OXYGEN");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_OXYGEN)
+                                enableUseOxygen();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_OXYGEN)
+                                disableUseOxygen();
+                        }
+                        bool use_GLUCOSE = qsname.contains("USE_GLUCOSE");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_GLUCOSE)
+                                enableUseGlucose();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_GLUCOSE)
+                                disableUseGlucose();
+                        }
+                        bool use_DRUG_A = qsname.contains("USE_DRUG_A");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_DRUG_A)
+                                enableUseDrugA();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_DRUG_A)
+                                disableUseDrugA();
+                        }
+                        bool use_DRUG_B = qsname.contains("USE_DRUG_B");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_DRUG_B)
+                                enableUseDrugB();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_DRUG_B)
+                                disableUseDrugB();
+                        }
 
                         /*
 						// Chemokines
@@ -2054,6 +2116,27 @@ void MainWindow::changeParam()
                     disableUseGlucose();
             }
 
+            bool use_DRUG_A = wname.contains("USE_DRUG_A");
+            if (checkBox->isChecked()) {
+                v = 1;
+                if (use_DRUG_A)
+                    enableUseDrugA();
+            } else {
+                v = 0;
+                if (use_DRUG_A)
+                    disableUseDrugA();
+            }
+
+            bool use_DRUG_B = wname.contains("USE_DRUG_B");
+            if (checkBox->isChecked()) {
+                v = 1;
+                if (use_DRUG_B)
+                    enableUseDrugB();
+            } else {
+                v = 0;
+                if (use_DRUG_B)
+                    disableUseDrugB();
+            }
 
             /*
 			bool in_vitro = wname.contains("IN_VITRO");
@@ -2242,6 +2325,58 @@ void MainWindow::disableUseGlucose()
         QLineEdit *w = lineEdit_list[i];
         QString wname = w->objectName();
         if (wname.contains("line_GLUCOSE")) {
+            w->setEnabled(false);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseDrugA()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_DRUG_A")) {
+            w->setEnabled(true);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseDrugA()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_DRUG_A")) {
+            w->setEnabled(false);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseDrugB()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_DRUG_B")) {
+            w->setEnabled(true);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseDrugB()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_DRUG_B")) {
             w->setEnabled(false);
         }
     }
