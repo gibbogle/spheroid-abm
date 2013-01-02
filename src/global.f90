@@ -122,7 +122,7 @@ integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite
-real(REAL_KIND) :: CO2_DEATH_THRESHOLD, t_hypoxic_limit, Vdivide0, dVdivide
+real(REAL_KIND) :: CO2_DEATH_THRESHOLD, THRESHOLD_FACTOR, t_hypoxic_limit, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 real(REAL_KIND) :: t_simulation
 type(SN30K_type) :: SN30K

@@ -52,7 +52,7 @@ do kcell = 1,nlist
 !	if (allstate(i,OXYGEN) < CO2_DEATH_THRESHOLD) then
     died = .false.
     C_O2 = cell_list(kcell)%conc(OXYGEN)
-	if (C_O2 < 1.5*CO2_DEATH_THRESHOLD) then
+	if (C_O2 < THRESHOLD_FACTOR*CO2_DEATH_THRESHOLD) then
 		cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
 		if (cell_list(kcell)%t_hypoxic > t_hypoxic_limit) then
 			call cell_dies(kcell)

@@ -246,6 +246,7 @@ read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
 read(nfcell,*) CO2_DEATH_THRESHOLD			! O2 concentration threshold for hypoxia (mM)
+read(nfcell,*) THRESHOLD_FACTOR			    ! multiplying factor for O2 concentration threshold for hypoxia
 read(nfcell,*) t_hyp_hours					! hypoxic time causing death (h)
 read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
