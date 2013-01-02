@@ -87,7 +87,7 @@ rate of BCR stimulation = Ks*(BCR avidity)*(antigen load)\n\
 "Lattice size",
 "Dimension of the lattice (number of sites in X,Y and Z directions).  Typically 5*BLOB_RADIUS is OK."},
 
-{"INITIAL_COUNT", 1000, 0, 0,
+{"INITIAL_COUNT", 3000, 0, 0,
 "Initial number of tumour cells",
 "Initial number of tumour cells"},
 
@@ -367,6 +367,10 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Concentration of O2 at which a cell begins to experience anoxia leading to cell death.\n\
 [mM]"},
 
+{"THRESHOLD_FACTOR", 1.5, 0, 0,
+"O2 death threshold factor",
+"Multiplying factor for death threshold of O2 concentration."},
+
 {"T_HYPOXIC_LIMIT", 3.0, 0, 0,
 "Hypoxic time limit",
 "Length of time under hypoxia (O2 < death threshold) after which a cell dies.\n\
@@ -388,7 +392,7 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
 "Number of CPUs",
 "Number of CPUs to use for the simulation."},
 
-{"NT_ANIMATION", 20, 0, 0,
+{"NT_ANIMATION", 1, 0, 0,
  "Animation interval (timesteps)",
  "Interval between animation screen updates (timesteps).  One timestep = 15 sec."},
 
@@ -434,7 +438,7 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
  "GLUCOSE consumption rate",
  "GLUCOSE consumption rate"},
 
-    {"USE_DRUG_A", 1, 0, 1,
+    {"USE_DRUG_A", 0, 0, 1,
     "Use Drug A?",
     "Drug A is simulated"},
 
@@ -466,7 +470,7 @@ The specified probability applies to residence time Tres = 15 hr, and will be sc
      "DRUG_B consumption rate",
      "DRUG_B consumption rate"},
 
-    {"DRUG_A_DECAY", 1, 0, 0,
+    {"DRUG_A_DECAY", 0, 0, 0,
      "DRUG_A decay",
      "DRUG_A boundary conc decays with the specified half-life"},
 
