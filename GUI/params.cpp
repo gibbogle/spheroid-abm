@@ -52,7 +52,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Cells/cubic mm",
 "Number of cells per cubic mm of non-necrotic tumour."},
 
-{"FLUID_FRACTION", 0.5, 0, 0,
+{"FLUID_FRACTION", 0.25, 0, 0,
 "Fluid fraction",
 "Fraction of non-necrotic tumour that is extracellular fluid."},
 
