@@ -1541,7 +1541,7 @@ void MainWindow::errorPopup(QString errmsg)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::initializeGraphs(RESULT_SET *R)
 {
-//    LOG_MSG("initializeGraphs 1");
+    LOG_MSG("initializeGraphs 1");
 	mdiArea->closeAllSubWindows();
 	mdiArea->show();
 //    LOG_MSG("initializeGraphs 2");
@@ -1580,7 +1580,7 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	for (int i=0; i<nGraphs; i++) {
 		mdiArea->addSubWindow(pGraph[i]);
 		pGraph[i]->show();
-	}
+    }
 //    LOG_MSG("initializeGraphs 5");
 
 	if (show_outputdata) {

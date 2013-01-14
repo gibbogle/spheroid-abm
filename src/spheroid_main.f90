@@ -59,38 +59,39 @@ do i = 1, cnt
     endif
 end do
 
-do irun = 1,1
-inbuflen = len(infile)
-outbuflen = len(outfile)
-write(*,*) 'call execute'
-write(nfrun,*) 'infile: ',infile
-write(nfrun,*) 'outfile: ',outfile
-call execute(ncpu,infile,inbuflen,outfile,outbuflen)
-!call cpu_time(t1)
-t1 = wtime()
-write(*,*) 'did execute: nsteps: ',nsteps
-do jstep = 1,Nsteps
-!	write(*,*) 'jstep: ',jstep
-	call simulate_step(res)
-	if (res /= 0) then
-		write(*,*) 'Error exit'
-		stop
-	endif
-	if (mod(jstep,240) == 0) then
-		call get_summary(summarydata)
-!		hour = summaryData(1)
-!		ntot = summaryData(3)
-!		ncog = summaryData(5)
-!		inflow = summaryData(7)
-!		vasc = summaryData(8)/100.
-!		write(*,'(4(a,i6),a,f6.2)') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog,' inflow/hr: ',inflow,' vasc: ',vasc	
-!		write(nfrun,'(4(a,i6),a,f6.2)') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog,' inflow/hr: ',inflow,' vasc: ',vasc	
-	endif
-enddo
-call terminate_run(res)
-!call cpu_time(t2)
-t2 = wtime()
-write(*,*) 'time: ',t2-t1
+do irun = 1,2
+	write(*,*) 'irun: ',irun
+	inbuflen = len(infile)
+	outbuflen = len(outfile)
+	write(*,*) 'call execute'
+	write(nfrun,*) 'infile: ',infile
+	write(nfrun,*) 'outfile: ',outfile
+	call execute(ncpu,infile,inbuflen,outfile,outbuflen)
+	!call cpu_time(t1)
+	t1 = wtime()
+	write(*,*) 'did execute: nsteps: ',nsteps
+	do jstep = 1,Nsteps
+	!	write(*,*) 'jstep: ',jstep
+		call simulate_step(res)
+		if (res /= 0) then
+			write(*,*) 'Error exit'
+			stop
+		endif
+		if (mod(jstep,240) == 0) then
+			call get_summary(summarydata)
+	!		hour = summaryData(1)
+	!		ntot = summaryData(3)
+	!		ncog = summaryData(5)
+	!		inflow = summaryData(7)
+	!		vasc = summaryData(8)/100.
+	!		write(*,'(4(a,i6),a,f6.2)') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog,' inflow/hr: ',inflow,' vasc: ',vasc	
+	!		write(nfrun,'(4(a,i6),a,f6.2)') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog,' inflow/hr: ',inflow,' vasc: ',vasc	
+		endif
+	enddo
+	call terminate_run(res)
+	!call cpu_time(t2)
+	t2 = wtime()
+	write(*,*) 'time: ',t2-t1
 enddo
 end
 

@@ -165,6 +165,7 @@ if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
 !	if (allocated(chemo(ichemo)%conc)) deallocate(chemo(ichemo)%conc)
 !	if (allocated(chemo(ichemo)%grad)) deallocate(chemo(ichemo)%grad)
 !enddo
+call logger('did deallocation')
 
 !nsteps_per_min = 1.0/DELTA_T
 NY = NX
@@ -309,7 +310,8 @@ SN30K%KO2 = 1.0e-3*SN30K%KO2                    ! um -> mM
 SN30K%kill_duration = 60*SN30K%kill_duration    ! minutes -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
 DELTA_X = DXmm/10                               ! cm
-Vsite = fluid_fraction*DELTA_X*DELTA_X*DELTA_X
+Vsite = DELTA_X*DELTA_X*DELTA_X		! total site volume (cm^3)
+Vextra = fluid_fraction*Vsite		! extracellular volume in a site
 
 !chemo(OXYGEN)%used = (iuse_oxygen == 1)
 !chemo(GLUCOSE)%used = (iuse_glucose == 1)
@@ -1181,7 +1183,9 @@ call logger(logmsg)
 write(logmsg,*) 'outputfile: ', outfile 
 call logger(logmsg)
 if (use_TCP) then
+!	call logger('call connector')
 	call connecter(ok)
+!	call logger('did connector')
 	if (.not.ok) then
 		call logger('Failed to make TCP connections')
 		return
@@ -1242,6 +1246,8 @@ call Set_Winsock_Port (awp,error)
 
 if (.not.awp%is_open) then
     write(nflog,*) 'Error: connection: awp not open: ',port
+else
+    write(nflog,*) 'connection: awp open: ',port, error
 endif
 end subroutine
 
@@ -1253,6 +1259,7 @@ integer :: error
 
 ! Main connection
 ok = .true.
+error = 0
 call connection(awp_0,TCP_PORT_0,error)
 if (awp_0%handle < 0 .or. error /= 0) then
     write(logmsg,'(a)') 'TCP connection to TCP_PORT_0 failed'

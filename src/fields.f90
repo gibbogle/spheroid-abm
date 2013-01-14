@@ -83,7 +83,7 @@ end subroutine
 
 !----------------------------------------------------------------------------------------
 ! Consumption rate = Rmax*C/(MM_C0 + C)  (Michaelis-Menten)
-! where Km = MM_C0 >= Rmax*T*10^6/Vsite is the O2 concentration at which cell uptake is halved,
+! where Km = MM_C0 >= Rmax*T*10^6/Vextra is the O2 concentration at which cell uptake is halved,
 ! and T is the maximum expected time step
 ! This is to ensure that all the O2 in the site is not depleted in a time step, making
 ! O2 conc go negative.  For now it seems reasonable to assume that glucose uptake
@@ -110,11 +110,13 @@ do ic = 1,MAX_CHEMO
 	if (chemo(ic)%used) then
 		if (allocated(chemo(ic)%conc)) then
 			call logger("chemo(ic)%conc already allocated")
+			deallocate(chemo(ic)%conc)
 !			stop
 		endif
 		allocate(chemo(ic)%conc(NX,NY,NZ))
 		if (allocated(chemo(ic)%grad)) then
 			call logger("chemo(ic)%grad already allocated")
+			deallocate(chemo(ic)%grad)
 !			stop
 		endif
 		allocate(chemo(ic)%grad(3,NX,NY,NZ))

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
-    <height>729</height>
+    <width>1294</width>
+    <height>817</height>
    </rect>
   </property>
   <property name="font">
@@ -42,7 +42,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -1884,8 +1884,8 @@ padding: 8px
           </property>
           <property name="minimumSize">
            <size>
-            <width>451</width>
-            <height>541</height>
+            <width>800</width>
+            <height>720</height>
            </size>
           </property>
           <property name="sizeIncrement">
@@ -2223,8 +2223,8 @@ padding: 8px
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1000</width>
-     <height>21</height>
+     <width>1294</width>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
