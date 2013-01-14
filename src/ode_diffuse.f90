@@ -493,12 +493,12 @@ end subroutine
 ! cell state and the concentration.  The consumption rate must in any case be less
 ! than some fraction of the total mass in the site (to avoid negative concentrations).
 ! We can use a Michaelis-Menten function to take the rate to zero as C -> 0.
-! Note that currently Vsite is fixed - no accounting for cell death, gaps etc.
+! Note that currently Vextra is fixed - no accounting for cell death, gaps etc.
 !----------------------------------------------------------------------------------
-subroutine extra_react(ichemo,iv,C,dCreact)
+subroutine extra_react(ichemo,iv,C,vol,dCreact)
 integer :: ichemo, iv
 integer :: site(3), kcell
-real(REAL_KIND) :: C(:), dCreact
+real(REAL_KIND) :: C(:), vol, dCreact
 real(REAL_KIND) :: metab, dMdt
 real(REAL_KIND) :: metab1, metab2, alpha
 
@@ -523,12 +523,13 @@ if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
 		metab = 0
 	endif
 !	dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
-!	dCreact = dMdt*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
-	dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
+!	dCreact = dMdt*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
+	dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 endif
 return
 
 end subroutine
+
 
 !----------------------------------------------------------------------------------
 ! In the original version, the neqn variables (for any constituent) are associated
@@ -562,98 +563,11 @@ end subroutine
 !
 ! Then kcell is recovered from ki: ki -> ie -> site -> indx(1)
 ! or from cell_index(ki)
-!----------------------------------------------------------------------------------
-subroutine f_rkc1(neqn,t,v,dvdt,icase)
-integer :: neqn, icase
-real(REAL_KIND) :: t, v(neqn), dvdt(neqn)
-integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell
-real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO), Ce, Ci
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
-logical :: bnd, dbug
-real(REAL_KIND) :: metab, dMdt, vs
-logical :: use_compartments = .true.
-
-!write(*,*) 'neqn: ',neqn
-ichemo = icase
-DX2 = DELTA_X*DELTA_X
-decay_rate = chemo(ichemo)%decay_rate
-dc1 = chemo(ichemo)%diff_coef/DX2
-dc6 = 6*dc1 + decay_rate
-!cbnd = chemo(ichemo)%bdry_conc
-cbnd = BdryConc(ichemo,t_simulation)
-!if (t < 1.0) write(*,*) icase,t
-vs = 1.0e6/Vsite
-do i = 1,ODEdiff%nextra
-	C = allstate(i,:)
-	C(ichemo) = v(i)
-	dCsum = 0
-	do k = 1,7
-		kv = ODEdiff%icoef(i,k)
-		if (k == 1) then
-			dCdiff = -dc6
-		else
-			dCdiff = dc1
-		endif
-		if (kv == 0) then
-			val = cbnd
-		else
-			val = v(kv)
-		endif
-		dCsum = dCsum + dCdiff*val
-	enddo
-    dCreact=0
-!	if (use_react) then
-!		call extra_react(ichemo,i,C,dCreact)
-!	if (use_compartments) then
-!!    	site = ODEdiff%varsite(i,:)
-!!	    kcell = occupancy(site(1),site(2),site(3))%indx(1)  ! this can be stored directly as a link to i
-!        ki = intra_index(i)
-!	    if (ki > 0) then     ! there is an intracellular compartment
-!	        if (EXPLICIT_INTRA) then
-!	            Ce = allstate(ki+ODEdiff%nextra,ichemo)
-!	        else
-!	            Ce = v(ki+ODEdiff%nextra)
-!    	    endif
-!   	        dCreact = chemo(ichemo)%cell_diff*(Ce - C(ichemo))    !*vs
-!	        !dCreact = chemo(ichemo)%cell_diff*(cell_list(kcell)%conc(ichemo) - C(ichemo))*vs
-!	        ! Note: %cell_diff is the constant coef that determines the rate of diffusion across the cell membrane
-!	        !       the mass rate (mol/s) must be converted to concentration rate (mM/s)
-!	        !       the conversion factor is different for the extracellular and intracellular compartments
-!	        !       how to handle changing cell volume during growth?
-!	    endif
-!	else
-!        !GS - made some changes to reduce call to react timing
-!        if (ichemo==OXYGEN .or. ichemo==GLUCOSE) then
-!!GS            metab=allstate(i,ichemo)
-!!GS	        dMdt = -(metab/(chemo(ichemo)%MM_C0 + metab))*chemo(ichemo)%max_cell_rate	! mol/s
-!			metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-!!			metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-!!			dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
-!!           dCreact = dMdt*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
-!            dCreact =  -metab*chemo(ichemo)%max_cell_rate*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
-!        endif
-!    endif
-	dvdt(i) = dCsum + dCreact
-!	write(*,*) i,dCsum,dCreact
-enddo
-!if (dCreact > 0) stop
-if (EXPLICIT_INTRA) return
-!do ki = 1,ODEdiff%nintra
-!    dCsum = 0
-!    i = ki + ODEdiff%nextra
-!    ie = extra_index(ki)
-!	C = allstate(i,:)   ! intracellular
-!	C(ichemo) = v(i)
-!	! reactions here + cross-membrane diffusion
-!!	call react(ichemo,i,C,dCreact)
-!	dCreact = chemo(ichemo)%cell_diff*(v(ki+ODEdiff%nextra) - C(ichemo))    !*vs
-!	dCsum = -1.0*C(ichemo)
-!	dvdt(i) = dCsum + dCreact
-!enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
+!.....................................................................................
 ! This version has the intracellular variables interleaved with the extracellular.
+! Volumes:
+! If cell volume did not change, and there was no cell death, every site would contain
+! fixed extra- and intracellular volumes, Vextra + Vcell = Vextra
 !----------------------------------------------------------------------------------
 subroutine f_rkc(neqn,t,v,dvdt,icase)
 integer :: neqn, icase
@@ -662,7 +576,7 @@ integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, Cin(MAX_CHEMO), Cex
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
 logical :: bnd, dbug
-real(REAL_KIND) :: metab, dMdt, vs
+real(REAL_KIND) :: metab, dMdt
 logical :: use_compartments = .true.
 logical :: intracellular, cell_exists
 
@@ -675,21 +589,23 @@ dc6 = 6*dc1 + decay_rate
 !cbnd = chemo(ichemo)%bdry_conc
 cbnd = BdryConc(ichemo,t_simulation)
 !if (t < 1.0) write(*,*) icase,t
-vs = 1.0e6/Vsite
 do i = 1,neqn
     if (ODEdiff%vartype(i) == EXTRA) then
         intracellular = .false.
+		vol = Vextra
         Cex = v(i)
         cell_exists = .false.
         if (i < neqn) then
             if (ODEdiff%vartype(i+1) == INTRA) then
                 cell_exists = .true.
+                vol = Vsite
 	            Cin = allstate(i+1,:)
 	            Cin(ichemo) = v(i+1)
 	        endif
 	    endif
 	else
         intracellular = .true.
+		vol = Vsite - Vextra	! for now, ignoring cell volume change!!!!!
         Cex = v(i-1)
 	    Cin = allstate(i,:)
 	    Cin(ichemo) = v(i)
@@ -711,14 +627,15 @@ do i = 1,neqn
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
-		    call extra_react(ichemo,i,Cin,dCreact)
-		    dCreact = -chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
+		    call extra_react(ichemo,i,Cin,vol,dCreact)
+!		    dCreact = -chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))		! there was a mistake here!!!!
+		    dCreact = dCreact - chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
 		else
             dCreact=0
 		endif
     	dvdt(i) = dCsum + dCreact
 	else
-	    call intra_react(ichemo,Cin,Cex,dCreact)
+	    call intra_react(ichemo,Cin,Cex,vol,dCreact)
 	    dvdt(i) = dCreact
 	endif
 enddo
@@ -727,9 +644,9 @@ end subroutine
 !----------------------------------------------------------------------------------
 ! Reactions here + cross-membrane diffusion
 !----------------------------------------------------------------------------------
-subroutine intra_react(ichemo,Cin,Cex,dCreact)
+subroutine intra_react(ichemo,Cin,Cex,vol,dCreact)
 integer :: ichemo
-real(REAL_KIND) :: Cin(:), Cex, dCreact
+real(REAL_KIND) :: Cin(:), Cex, vol, dCreact
 real(REAL_KIND) :: metab
 
 dCreact = 0
@@ -742,7 +659,7 @@ if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
 	    metab = 0
 	    write(*,*) 'metab = 0'
     endif
-    dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
+    dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == SN30000) then
     dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(ichemo)
 endif
@@ -806,7 +723,7 @@ else
 endif
 
 dCreact = 0
-dCreact(1:2) = -metab*chemo(1:2)%max_cell_rate*1.0e6/Vsite	! convert mass rate (mol/s) to concentration rate (mM/s)
+dCreact(1:2) = -metab*chemo(1:2)%max_cell_rate*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
 
 do ichemo = 1,nchemo
     dCreact(ichemo) = dCreact(ichemo) + chemo(ichemo)%cell_diff*(Ce(ichemo) - C(ichemo)) !- 0.01*C(ichemo)
@@ -1458,6 +1375,7 @@ DX2 = DELTA_X*DELTA_X
 decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
+vol = Vsite
 !cbnd = chemo(ichemo)%bdry_conc
 cbnd = BdryConc(ichemo,t_simulation)
 n = ODEdiff%nextra
@@ -1487,7 +1405,7 @@ do i = 1,n
 		dCsum = dCsum + dCdiff*val
 	enddo
 	dCreact = 0
-	call extra_react(ichemo,i,C,dCreact)
+	call extra_react(ichemo,i,C,vol,dCreact)
 !	if (i == 6822) then
 !		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
 !	endif
@@ -1515,6 +1433,7 @@ DX2 = DELTA_X*DELTA_X
 decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
+vol = Vsite
 !cbnd = chemo(ichemo)%bdry_conc
 cbnd = BdryConc(ichemo,t_simulation)
 n = ODEdiff%nextra
@@ -1542,7 +1461,7 @@ do i = 1,n
 		endif
 		dCsum = dCsum + dCdiff*val
 	enddo
-	call extra_react(ichemo,i,C,dCreact)
+	call extra_react(ichemo,i,C,vol,dCreact)
 !	if (i == 6822) then
 !		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
 !	endif
@@ -1594,6 +1513,128 @@ do i = 1,n
 	enddo
 enddo
 
+end subroutine
+
+!----------------------------------------------------------------------------------
+! In the original version, the neqn variables (for any constituent) are associated
+! with the lattice sites encompassed by the blob.  Not all of these sites contain
+! live cells.
+! This can be generalized by making the ODEdiff variables apply to the extracellular
+! concentration fields.
+! One approach is to extend the vector of extracellular variables, for a given 
+! constituent, to include the corresponding vector of intracellular variables for
+! that constituent.  The approach would then be to treat all other constituents as
+! constant for the purposes of solving for one constituent.
+! Need a mapping between extra_index <-> intra_index
+!                        1,...,nextra    1,...,nintra
+! Say:
+! intra_index(ie) = ki, 0 if no cell at site for extracellular variable ie
+! extra_index(ki) = ie
+! ki = 0
+! do ie = 1, nextra
+!   site = ODEdiff%varsite(ie,:)
+!	kcell = occupancy(site(1),site(2),site(3))%indx(1)
+!   if (kcell > 0) then
+!       ki = ki + 1
+!       intra_index(ie) = ki
+!       extra_index(ki) = ie
+!       cell_index(ki) = kcell
+!       allstate(nextra+ki,:) = cell_list(kcell)%conc
+!   else
+!       intra_index(ie) = 0
+!   endif
+! enddo 
+!
+! Then kcell is recovered from ki: ki -> ie -> site -> indx(1)
+! or from cell_index(ki)
+!----------------------------------------------------------------------------------
+subroutine f_rkc1(neqn,t,v,dvdt,icase)
+integer :: neqn, icase
+real(REAL_KIND) :: t, v(neqn), dvdt(neqn)
+integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell
+real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO), Ce, Ci
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
+logical :: bnd, dbug
+real(REAL_KIND) :: metab, dMdt, vs
+logical :: use_compartments = .true.
+
+!write(*,*) 'neqn: ',neqn
+ichemo = icase
+DX2 = DELTA_X*DELTA_X
+decay_rate = chemo(ichemo)%decay_rate
+dc1 = chemo(ichemo)%diff_coef/DX2
+dc6 = 6*dc1 + decay_rate
+!cbnd = chemo(ichemo)%bdry_conc
+cbnd = BdryConc(ichemo,t_simulation)
+!if (t < 1.0) write(*,*) icase,t
+vs = 1.0e6/Vextra
+do i = 1,ODEdiff%nextra
+	C = allstate(i,:)
+	C(ichemo) = v(i)
+	dCsum = 0
+	do k = 1,7
+		kv = ODEdiff%icoef(i,k)
+		if (k == 1) then
+			dCdiff = -dc6
+		else
+			dCdiff = dc1
+		endif
+		if (kv == 0) then
+			val = cbnd
+		else
+			val = v(kv)
+		endif
+		dCsum = dCsum + dCdiff*val
+	enddo
+    dCreact=0
+!	if (use_react) then
+!		call extra_react(ichemo,i,C,dCreact)
+!	if (use_compartments) then
+!!    	site = ODEdiff%varsite(i,:)
+!!	    kcell = occupancy(site(1),site(2),site(3))%indx(1)  ! this can be stored directly as a link to i
+!        ki = intra_index(i)
+!	    if (ki > 0) then     ! there is an intracellular compartment
+!	        if (EXPLICIT_INTRA) then
+!	            Ce = allstate(ki+ODEdiff%nextra,ichemo)
+!	        else
+!	            Ce = v(ki+ODEdiff%nextra)
+!    	    endif
+!   	        dCreact = chemo(ichemo)%cell_diff*(Ce - C(ichemo))    !*vs
+!	        !dCreact = chemo(ichemo)%cell_diff*(cell_list(kcell)%conc(ichemo) - C(ichemo))*vs
+!	        ! Note: %cell_diff is the constant coef that determines the rate of diffusion across the cell membrane
+!	        !       the mass rate (mol/s) must be converted to concentration rate (mM/s)
+!	        !       the conversion factor is different for the extracellular and intracellular compartments
+!	        !       how to handle changing cell volume during growth?
+!	    endif
+!	else
+!        !GS - made some changes to reduce call to react timing
+!        if (ichemo==OXYGEN .or. ichemo==GLUCOSE) then
+!!GS            metab=allstate(i,ichemo)
+!!GS	        dMdt = -(metab/(chemo(ichemo)%MM_C0 + metab))*chemo(ichemo)%max_cell_rate	! mol/s
+!			metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+!!			metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
+!!			dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
+!!           dCreact = dMdt*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
+!            dCreact =  -metab*chemo(ichemo)%max_cell_rate*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
+!        endif
+!    endif
+	dvdt(i) = dCsum + dCreact
+!	write(*,*) i,dCsum,dCreact
+enddo
+!if (dCreact > 0) stop
+if (EXPLICIT_INTRA) return
+!do ki = 1,ODEdiff%nintra
+!    dCsum = 0
+!    i = ki + ODEdiff%nextra
+!    ie = extra_index(ki)
+!	C = allstate(i,:)   ! intracellular
+!	C(ichemo) = v(i)
+!	! reactions here + cross-membrane diffusion
+!!	call react(ichemo,i,C,dCreact)
+!	dCreact = chemo(ichemo)%cell_diff*(v(ki+ODEdiff%nextra) - C(ichemo))    !*vs
+!	dCsum = -1.0*C(ichemo)
+!	dvdt(i) = dCsum + dCreact
+!enddo
 end subroutine
 
 
