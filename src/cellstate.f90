@@ -26,7 +26,51 @@ endif
 if (use_death) then
 	call cell_death(dt)
 endif
+if (use_migration) then
+	call cell_migration
+endif
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Cells move to preferable nearby sites.
+!-----------------------------------------------------------------------------------------
+subroutine cell_migration
+integer :: kcell, i, indx, site0(3), site(3)
+real(REAL_KIND) :: C0(MAX_CHEMO), C(MAX_CHEMO)
+
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	site0 = cell_list(kcell)%site
+	C0 = occupancy(site0(1),site0(2),site0(3))%C(:)
+	do i = 1,27
+		if (i == 14) cycle
+		site = site0 + jumpvec(:,i)
+		indx = occupancy(site(1),site(2),site(3))%indx(1)
+		if (indx < -100) then	! necrotic site
+			C = occupancy(site(1),site(2),site(3))%C(:)
+			if (preferable_site(C,C0)) then
+				cell_list(kcell)%site = site
+				occupancy(site(1),site(2),site(3))%indx(1) = kcell
+				occupancy(site0(1),site0(2),site0(3))%indx(1) = indx
+				exit
+			endif
+		endif
+	enddo
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Test if site with concentrations C(:) is preferable to one with C0(:)
+!-----------------------------------------------------------------------------------------
+logical function preferable_site(C,C0)
+real(REAL_KIND) :: C0(:), C(:)
+
+if (C(OXYGEN) > C0(OXYGEN)) then
+	preferable_site = .true.
+else
+	preferable_site = .false.
+endif
+end function
 
 !-----------------------------------------------------------------------------------------
 ! Cells can die of hypoxia, or they can be tagged for death at division time if the drug

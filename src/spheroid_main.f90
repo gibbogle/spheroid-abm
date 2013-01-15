@@ -59,7 +59,7 @@ do i = 1, cnt
     endif
 end do
 
-do irun = 1,2
+do irun = 1,1
 	write(*,*) 'irun: ',irun
 	inbuflen = len(infile)
 	outbuflen = len(outfile)
