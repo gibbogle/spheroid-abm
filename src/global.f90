@@ -43,6 +43,7 @@ logical, parameter :: compute_concentrations = .true.
 logical, parameter :: use_division = .true.
 logical, parameter :: use_death = .true.
 logical, parameter :: use_react = .true.
+logical, parameter :: use_migration = .true.
 
 !integer, parameter :: MAX_RECEPTOR = 1
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)

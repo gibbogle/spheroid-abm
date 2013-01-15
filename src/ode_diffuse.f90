@@ -567,7 +567,8 @@ end subroutine
 ! This version has the intracellular variables interleaved with the extracellular.
 ! Volumes:
 ! If cell volume did not change, and there was no cell death, every site would contain
-! fixed extra- and intracellular volumes, Vextra + Vcell = Vextra
+! fixed extra- and intracellular volumes, Vextra + Vcell = Vsite
+! When there is no cell the extracellular volume is Vsite.
 !----------------------------------------------------------------------------------
 subroutine f_rkc(neqn,t,v,dvdt,icase)
 integer :: neqn, icase
@@ -627,9 +628,8 @@ do i = 1,neqn
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
-		    call extra_react(ichemo,i,Cin,vol,dCreact)
-!		    dCreact = -chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))		! there was a mistake here!!!!
-		    dCreact = dCreact - chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
+!		    call extra_react(ichemo,i,Cin,vol,dCreact)
+		    dCreact = -chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
 		else
             dCreact=0
 		endif
@@ -643,6 +643,7 @@ end subroutine
 
 !----------------------------------------------------------------------------------
 ! Reactions here + cross-membrane diffusion
+! Should metab depend on cell volume, stage in cell cycle?
 !----------------------------------------------------------------------------------
 subroutine intra_react(ichemo,Cin,Cex,vol,dCreact)
 integer :: ichemo
