@@ -25,6 +25,9 @@ integer, parameter :: DEAD      = 3
 
 integer, parameter :: OUTSIDE_TAG  = -1
 
+integer, parameter :: DIVIDE_ALWAYS_PUSH  = 1
+integer, parameter :: DIVIDE_USE_CLEAR_SITE  = 2
+
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
@@ -117,7 +120,7 @@ real(REAL_KIND) :: blob_radius, Radius, Centre(3)
 integer :: jumpvec(3,27)
 
 integer :: max_nlist, nlist, Ncells, Ncells0, lastNcells, lastID
-integer :: max_ngaps, ngaps, nadd_sites, Nsites
+integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ntodie, Ndrugdead
 integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
@@ -140,6 +143,8 @@ logical :: stopped, clear_to_send
 logical :: simulation_start, par_zig_init, initialized
 logical :: dbug = .false.
 
+integer :: divide_option = DIVIDE_USE_CLEAR_SITE
+!integer :: divide_option = DIVIDE_ALWAYS_PUSH
 integer :: idbug = 0
 integer :: seed(2)
 
