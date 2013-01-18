@@ -439,7 +439,8 @@ occupancy(:,:,:)%C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
 nlist = k
 Nsites = k
 Ncells = k
-Ncells0 = Ncells		
+Ncells0 = Ncells
+Nreuse = 0	
 ok = .true.
 write(logmsg,*) 'idbug: ',idbug
 call logger(logmsg)
@@ -974,7 +975,7 @@ integer :: Ndead, Ntagged, diam_um
 
 !call SetRadius(Nsites)
 diam_um = 2*DELTA_X*Radius*10000
-Ndead = Nsites - Ncells
+Ndead = Nsites + Nreuse - Ncells
 Ntagged = Ntodie - Ndrugdead
 summaryData(1:6) = (/ istep, Ncells, Ndead, Ndrugdead, Ntagged, diam_um /)
 

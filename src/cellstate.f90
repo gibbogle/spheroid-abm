@@ -35,41 +35,49 @@ end subroutine
 ! Cells move to preferable nearby sites.
 !-----------------------------------------------------------------------------------------
 subroutine cell_migration
-integer :: kcell, i, indx, site0(3), site(3)
-real(REAL_KIND) :: C0(MAX_CHEMO), C(MAX_CHEMO)
+integer :: kcell, j, indx, site0(3), site(3), jmax
+real(REAL_KIND) :: C0(MAX_CHEMO), C(MAX_CHEMO), v0, v, vmax, d0, d
 
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	site0 = cell_list(kcell)%site
 	C0 = occupancy(site0(1),site0(2),site0(3))%C(:)
-	do i = 1,27
-		if (i == 14) cycle
-		site = site0 + jumpvec(:,i)
+	v0 = site_value(C0)
+	d0 = cdistance(site0)
+	jmax = 0
+	vmax = -1.0e10
+	do j = 1,27
+		if (j == 14) cycle
+		site = site0 + jumpvec(:,j)
 		indx = occupancy(site(1),site(2),site(3))%indx(1)
 		if (indx < -100) then	! necrotic site
 			C = occupancy(site(1),site(2),site(3))%C(:)
-			if (preferable_site(C,C0)) then
-				cell_list(kcell)%site = site
-				occupancy(site(1),site(2),site(3))%indx(1) = kcell
-				occupancy(site0(1),site0(2),site0(3))%indx(1) = indx
-				exit
+			v = site_value(C)
+			d = cdistance(site)
+			if (d > d0 .and. v > v0) then
+				vmax = v
+				jmax = j
 			endif
 		endif
 	enddo
+	if (jmax > 0) then
+		site = site0 + jumpvec(:,jmax)
+		indx = occupancy(site(1),site(2),site(3))%indx(1)
+		cell_list(kcell)%site = site
+		occupancy(site(1),site(2),site(3))%indx(1) = kcell
+		occupancy(site0(1),site0(2),site0(3))%indx(1) = indx
+!		write(*,'(i2,2f8.4,3i4,f6.1,4x,3i4,f6.1)') jmax,v0,vmax,site0,d0,site,d
+	endif
 enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Test if site with concentrations C(:) is preferable to one with C0(:)
+! A measure of the attractiveness of a site with concentrations C(:)
 !-----------------------------------------------------------------------------------------
-logical function preferable_site(C,C0)
-real(REAL_KIND) :: C0(:), C(:)
+real(REAL_KIND) function site_value(C)
+real(REAL_KIND) :: C(:)
 
-if (C(OXYGEN) > C0(OXYGEN)) then
-	preferable_site = .true.
-else
-	preferable_site = .false.
-endif
+site_value = C(OXYGEN)
 end function
 
 !-----------------------------------------------------------------------------------------
@@ -259,14 +267,45 @@ end subroutine
 subroutine cell_divider(kcell0)
 integer :: kcell0
 integer :: kpar=0
-integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichemo
+integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, jmax
 integer :: npath, path(3,200)
-real(REAL_KIND) :: tnow, R
-logical :: ok
+real(REAL_KIND) :: tnow, R, v, vmax
+logical :: ok, is_clear
 type (boundary_type), pointer :: bdry
 
 tnow = istep*DELTA_T
+cell_list(kcell0)%t_divide_last = tnow
+cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
+R = par_uni(kpar)
+cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+cell_list(kcell0)%M = cell_list(kcell0)%M/2
+
 site0 = cell_list(kcell0)%site
+is_clear = .false.
+if (divide_option == DIVIDE_USE_CLEAR_SITE) then	! look for the best nearby clear site, if it exists use it
+	jmax = 0
+	vmax = -1.0e10
+	do j = 1,27
+		if (j == 14) cycle
+		site01 = site0 + jumpvec(:,j)
+		if (occupancy(site01(1),site01(2),site01(3))%indx(1) < -100) then
+			site01 = site0 + jumpvec(:,j)
+			v = site_value(occupancy(site01(1),site01(2),site01(3))%C(:))
+			if (v > vmax) then
+				vmax = v
+				jmax = j
+			endif
+		endif
+	enddo
+	if (jmax > 0) then	! use this site for the progeny cell
+		is_clear = .true.
+		site01 = site0 + jumpvec(:,jmax)
+		call add_cell(kcell0,kcell1,site01)
+		Nreuse = Nreuse + 1
+		return
+	endif
+endif
+
 ok = .false.
 k = 0
 do while (.not.ok)
@@ -320,12 +359,6 @@ call SetRadius(Nsites)
 !do ichemo = 1,MAX_CHEMO
 !    occupancy(site2(1),site2(2),site2(3))%C(ichemo) = chemo(ichemo)%bdry_conc
 !enddo
-cell_list(kcell0)%t_divide_last = tnow
-!cell_list(kcell0)%t_divide_next = tnow + DivideTime()
-cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
-R = par_uni(kpar)
-cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
-cell_list(kcell0)%M = cell_list(kcell0)%M/2
 call add_cell(kcell0,kcell1,site01)
 
 ! Now need to fix the bdrylist.  
@@ -669,13 +702,13 @@ do
 !	site = site + neumann(:,jmin)
 	site = site + jumpvec(:,jmin)
 	k = k+1
-	if (k>100) write(*,'(11i4,f8.1)') k,site1,site2,site,jmin,d2min
+!	if (k>100) write(*,'(11i4,f8.1)') k,site1,site2,site,jmin,d2min
 	path(:,k) = site
-	if (occupancy(site(1),site(2),site(3))%indx(1) < -100) then		! necrotic
-		write(logmsg,*) 'Error: get_path: necrotic site in path: ',site
-		call logger(logmsg)
+!	if (occupancy(site(1),site(2),site(3))%indx(1) < -100) then		! necrotic
+!		write(logmsg,*) 'Error: get_path: necrotic site in path: ',site
+!		call logger(logmsg)
 !		stop
-	endif
+!	endif
 	if (site(1) == site2(1) .and. site(2) == site2(2) .and. site(3) == site2(3)) exit
 enddo
 npath = k
