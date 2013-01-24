@@ -78,7 +78,7 @@ call make_split(.true.)
 !if (save_input) then
 !    call save_inputfile(inputfile)
 !    call save_parameters
-!	call save_inputfile(fixedfile)
+!	call save_inputfile(treatmentfile)
 !endif
 !
 !call AllocateConcArrays
@@ -226,7 +226,7 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine read_cell_params(ok)
 logical :: ok
-integer :: itestcase, ncpu_dummy, Nmm3, ichemo
+integer :: itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
 integer :: iuse(MAX_CHEMO), idecay(MAX_CHEMO)
 real(REAL_KIND) :: days
 real(REAL_KIND) :: sigma, DXmm, t_hyp_hours
@@ -244,6 +244,7 @@ read(nfcell,*) DELTA_T						! time step size (sec)
 read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
 read(nfcell,*) Nmm3							! number of cells/mm^3
 read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is fluid
+read(nfcell,*) medium_volume				! volume of medium that the spheroid is growing in
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
 read(nfcell,*) CO2_DEATH_THRESHOLD			! O2 concentration threshold for hypoxia (mM)
@@ -262,18 +263,11 @@ read(nfcell,*) iuse(GLUCOSE)
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
-read(nfcell,*) iuse(DRUG_A)
-read(nfcell,*) chemo(DRUG_A)%diff_coef
-read(nfcell,*) chemo(DRUG_A)%bdry_conc
-read(nfcell,*) chemo(DRUG_A)%max_cell_rate
-read(nfcell,*) iuse(DRUG_B)
-read(nfcell,*) chemo(DRUG_B)%diff_coef
-read(nfcell,*) chemo(DRUG_B)%bdry_conc
-read(nfcell,*) chemo(DRUG_B)%max_cell_rate
-read(nfcell,*) idecay(DRUG_A)
-read(nfcell,*) chemo(DRUG_A)%bdry_halflife  ! h
-read(nfcell,*) idecay(DRUG_B)
-read(nfcell,*) chemo(DRUG_B)%bdry_halflife
+read(nfcell,*) iuse(SN30000)
+read(nfcell,*) chemo(SN30000)%bdry_conc
+read(nfcell,*) idecay(SN30000)
+read(nfcell,*) chemo(SN30000)%bdry_halflife  ! h
+read(nfcell,*) SN30K%diff_coef
 read(nfcell,*) SN30K%Kmet0
 read(nfcell,*) SN30K%C1
 read(nfcell,*) SN30K%C2
@@ -284,7 +278,12 @@ read(nfcell,*) SN30K%kill_O2
 read(nfcell,*) SN30K%kill_drug
 read(nfcell,*) SN30K%kill_duration
 read(nfcell,*) SN30K%kill_fraction
-read(nfcell,*) fixedfile					! file with "fixed" parameter values
+read(nfcell,*) iuse(DRUG_B)
+read(nfcell,*) chemo(DRUG_B)%bdry_conc
+read(nfcell,*) idecay(DRUG_B)
+read(nfcell,*) chemo(DRUG_B)%bdry_halflife
+read(nfcell,*) itreatment
+read(nfcell,*) treatmentfile					! file with treatment programme
 close(nfcell)
 
 blob_radius = (initial_count*3./(4.*PI))**(1./3)
@@ -296,16 +295,8 @@ divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
 t_hypoxic_limit = 60*60*t_hyp_hours				! hours -> seconds
 
-do ichemo = 1,MAX_CHEMO
-    if (idecay(ichemo) == 1) then
-        chemo(ichemo)%bdry_decay = .true.
-        chemo(ichemo)%bdry_decay_rate = DecayRate(chemo(ichemo)%bdry_halflife)
-    else
-        chemo(ichemo)%bdry_decay = .false.
-        chemo(ichemo)%bdry_decay_rate = 0
-    endif
-    write(*,*) 'bdry_decay_rate: ',ichemo,chemo(ichemo)%bdry_decay_rate
-enddo
+chemo(SN30000)%diff_coef = SN30K%diff_coef
+chemo(SN30000_METAB)%diff_coef = chemo(SN30000)%diff_coef
 SN30K%KO2 = 1.0e-3*SN30K%KO2                    ! um -> mM
 SN30K%kill_duration = 60*SN30K%kill_duration    ! minutes -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
@@ -313,23 +304,42 @@ DELTA_X = DXmm/10                               ! cm
 Vsite = DELTA_X*DELTA_X*DELTA_X		! total site volume (cm^3)
 Vextra = fluid_fraction*Vsite		! extracellular volume in a site
 
-!chemo(OXYGEN)%used = (iuse_oxygen == 1)
-!chemo(GLUCOSE)%used = (iuse_glucose == 1)
-do ichemo = 1,MAX_CHEMO
+do ichemo = 1,DRUG_A-1
     chemo(ichemo)%used = (iuse(ichemo) == 1)
-    write(*,*) 'used: ',ichemo,chemo(ichemo)%used
 enddo
+if (itreatment == 1) then
+	use_treatment = .true.
+	call read_treatment(ok)
+	if (.not.ok) then
+		write(logmsg,'(a,a)') 'Error reading treatment programme file: ',treatmentfile
+		call logger(logmsg)
+		return
+	endif
+else	
+	use_treatment = .false.
+	do ichemo = DRUG_A,MAX_CHEMO
+		chemo(ichemo)%used = (iuse(ichemo) == 1)
+	enddo
+	do ichemo = DRUG_A,MAX_CHEMO
+		if (idecay(ichemo) == 1) then
+			chemo(ichemo)%bdry_decay = .true.
+			chemo(ichemo)%bdry_decay_rate = DecayRate(chemo(ichemo)%bdry_halflife)
+		else
+			chemo(ichemo)%bdry_decay = .false.
+			chemo(ichemo)%bdry_decay_rate = 0
+		endif
+	enddo
+endif
+do ichemo = DRUG_A,MAX_CHEMO
+	if (chemo(ichemo)%used) then
+		chemo(ichemo+1)%used = .true.	! the metabolite is also simulated
+	endif
+enddo
+
 ! Setup test_case
 test_case = .false.
 if (itestcase /= 0) then
     test_case(itestcase) = .true.
-endif
-
-call read_fixed_params(ok)
-if (.not.ok) then
-	write(logmsg,'(a,a)') 'Error reading fixed input data file: ',fixedfile
-	call logger(logmsg)
-	return
 endif
 
 if (mod(NX,2) /= 0) NX = NX+1					! ensure that NX is even
@@ -340,17 +350,102 @@ call logger(logmsg)
 Nsteps = days*24*60*60/DELTA_T		! DELTA_T in seconds
 write(logmsg,'(a,2i6,f6.0)') 'nsteps, NT_CONC, DELTA_T: ',nsteps,NT_CONC,DELTA_T
 call logger(logmsg)
-!call setup_dists
 
 call determine_Kd
 ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! This overrides the drug usage specified by USE_DRUG_A etc
 !-----------------------------------------------------------------------------------------
-subroutine read_fixed_params(ok)
+subroutine read_treatment(ok)
 logical :: ok
+character*(64) :: line
+integer :: ichemo, idrug, nmax, i
+real(REAL_KIND) :: tstart,tend,conc,dose
 
+allocate(treatment(0:2))
+
+use_treatment = .true.
+chemo(DRUG_A)%used = .false.
+chemo(DRUG_B)%used = .false.
+use_radiation = .false.
+open(nftreatment,file=treatmentfile,status='old')
+nmax = 0
+do
+	read(nftreatment,'(a)',end=99) line
+	if (line(1:6) == 'DRUG_A') then
+		ichemo = DRUG_A
+		idrug = 1
+	elseif (line(1:6) == 'DRUG_B') then
+		ichemo = DRUG_B
+		idrug = 2
+	elseif (line(1:9) == 'RADIATION') then
+		ichemo = 0
+		idrug = 0
+	endif
+	if (ichemo > 0) then
+		chemo(ichemo)%used = .true.
+		read(nftreatment,'(a)') chemo(ichemo)%name
+		read(nftreatment,*) treatment(idrug)%n
+		nmax = max(nmax,treatment(idrug)%n)
+		do i = 1,treatment(idrug)%n
+			read(nftreatment,*) tstart
+			read(nftreatment,*) tend
+			read(nftreatment,*) conc
+		enddo
+	else
+		use_radiation = .true.
+		read(nftreatment,*) treatment(idrug)%n
+		nmax = max(nmax,treatment(idrug)%n)
+		do i = 1,treatment(idrug)%n
+			read(nftreatment,*) tstart
+			read(nftreatment,*) dose
+		enddo
+	endif
+	cycle
+99	exit
+enddo
+rewind(nftreatment)
+do idrug = 0,2
+	allocate(treatment(idrug)%tstart(nmax))
+	allocate(treatment(idrug)%tend(nmax))
+	allocate(treatment(idrug)%conc(nmax))
+	allocate(treatment(idrug)%dose(nmax))
+enddo
+do
+	read(nftreatment,'(a)',end=199) line
+	if (line(1:6) == 'DRUG_A') then
+		ichemo = DRUG_A
+		idrug = 1
+	elseif (line(1:6) == 'DRUG_B') then
+		ichemo = DRUG_B
+		idrug = 2
+	elseif (line(1:9) == 'RADIATION') then
+		ichemo = 0
+		idrug = 0
+	endif
+	if (ichemo > 0) then
+		chemo(ichemo)%used = .true.
+		read(nftreatment,'(a)') chemo(ichemo)%name
+		read(nftreatment,*) treatment(idrug)%n
+		do i = 1,treatment(idrug)%n
+			read(nftreatment,*) treatment(idrug)%tstart(i)
+			read(nftreatment,*) treatment(idrug)%tend(i)
+			read(nftreatment,*) treatment(idrug)%conc(i)
+		enddo
+	else
+		use_radiation = .true.
+		read(nftreatment,*) treatment(idrug)%n
+		do i = 1,treatment(idrug)%n
+			read(nftreatment,*) treatment(idrug)%tstart(i)
+			read(nftreatment,*) treatment(idrug)%dose(i)
+		enddo
+	endif
+	cycle
+199	exit
+enddo
+		
 ok = .true.
 end subroutine
 

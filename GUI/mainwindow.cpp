@@ -439,15 +439,15 @@ void MainWindow::loadParams()
                             if (use_GLUCOSE)
                                 disableUseGlucose();
                         }
-                        bool use_DRUG_A = qsname.contains("USE_DRUG_A");
+                        bool use_SN30K = qsname.contains("USE_SN30K");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-                            if (use_DRUG_A)
-                                enableUseDrugA();
+                            if (use_SN30K)
+                                enableUseSN30K();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_DRUG_A)
-                                disableUseDrugA();
+                            if (use_SN30K)
+                                disableUseSN30K();
                         }
                         bool use_DRUG_B = qsname.contains("USE_DRUG_B");
                         if (p.value == 1) {
@@ -458,6 +458,16 @@ void MainWindow::loadParams()
                             w_cb->setChecked(false);
                             if (use_DRUG_B)
                                 disableUseDrugB();
+                        }
+                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_TREATMENT_FILE)
+                                enableUseTreatmentFile();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_TREATMENT_FILE)
+                                disableUseTreatmentFile();
                         }
 
                         /*
@@ -802,15 +812,15 @@ void MainWindow::reloadParams()
                             if (use_GLUCOSE)
                                 disableUseGlucose();
                         }
-                        bool use_DRUG_A = qsname.contains("USE_DRUG_A");
+                        bool use_SN30K = qsname.contains("USE_SN30K");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-                            if (use_DRUG_A)
-                                enableUseDrugA();
+                            if (use_SN30K)
+                                enableUseSN30K();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_DRUG_A)
-                                disableUseDrugA();
+                            if (use_SN30K)
+                                disableUseSN30K();
                         }
                         bool use_DRUG_B = qsname.contains("USE_DRUG_B");
                         if (p.value == 1) {
@@ -821,6 +831,16 @@ void MainWindow::reloadParams()
                             w_cb->setChecked(false);
                             if (use_DRUG_B)
                                 disableUseDrugB();
+                        }
+                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_TREATMENT_FILE)
+                                enableUseTreatmentFile();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_TREATMENT_FILE)
+                                disableUseTreatmentFile();
                         }
 
                         /*
@@ -999,9 +1019,7 @@ void MainWindow::writeout()
 	for (int k=0; k<parm->nParams; k++) {
 		PARAM_SET p = parm->get_param(k);
 		double val = p.value;
-		if (p.tag.compare("INPUT_FILE") == 0)
-			line = p.label;
-		else if (p.tag.compare("DC_INJECTION_FILE") == 0)
+        if (p.tag.compare("TREATMENT_FILE") == 0)
 			line = p.label;
 		else if (val == int(val)) 	// whole number, write as integer
 			line = QString::number(int(val));
@@ -2116,15 +2134,15 @@ void MainWindow::changeParam()
                     disableUseGlucose();
             }
 
-            bool use_DRUG_A = wname.contains("USE_DRUG_A");
+            bool use_SN30K = wname.contains("USE_SN30K");
             if (checkBox->isChecked()) {
                 v = 1;
-                if (use_DRUG_A)
-                    enableUseDrugA();
+                if (use_SN30K)
+                    enableUseSN30K();
             } else {
                 v = 0;
-                if (use_DRUG_A)
-                    disableUseDrugA();
+                if (use_SN30K)
+                    disableUseSN30K();
             }
 
             bool use_DRUG_B = wname.contains("USE_DRUG_B");
@@ -2138,6 +2156,16 @@ void MainWindow::changeParam()
                     disableUseDrugB();
             }
 
+            bool use_TREATMENT_FILE = wname.contains("USE_TREATMENT_FILE");
+            if (checkBox->isChecked()) {
+                v = 1;
+                if (use_TREATMENT_FILE)
+                    enableUseTreatmentFile();
+            } else {
+                v = 0;
+                if (use_TREATMENT_FILE)
+                    disableUseTreatmentFile();
+            }
             /*
 			bool in_vitro = wname.contains("IN_VITRO");
 			int v;
@@ -2332,12 +2360,12 @@ void MainWindow::disableUseGlucose()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::enableUseDrugA()
+void MainWindow::enableUseSN30K()
 {
     for (int i=0; i<lineEdit_list.length(); i++) {
         QLineEdit *w = lineEdit_list[i];
         QString wname = w->objectName();
-        if (wname.contains("line_DRUG_A")) {
+        if (wname.contains("line_SN30K")) {
             w->setEnabled(true);
         }
     }
@@ -2345,12 +2373,12 @@ void MainWindow::enableUseDrugA()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::disableUseDrugA()
+void MainWindow::disableUseSN30K()
 {
     for (int i=0; i<lineEdit_list.length(); i++) {
         QLineEdit *w = lineEdit_list[i];
         QString wname = w->objectName();
-        if (wname.contains("line_DRUG_A")) {
+        if (wname.contains("line_SN30K")) {
             w->setEnabled(false);
         }
     }
@@ -2382,6 +2410,31 @@ void MainWindow::disableUseDrugB()
     }
 }
 
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseTreatmentFile()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("text_TREATMENT_FILE")) {
+            w->setEnabled(true);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseTreatmentFile()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("text_TREATMENT_FILE")) {
+            w->setEnabled(false);
+        }
+    }
+}
 /*
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------

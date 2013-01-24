@@ -28,25 +28,29 @@ integer, parameter :: OUTSIDE_TAG  = -1
 integer, parameter :: DIVIDE_ALWAYS_PUSH  = 1
 integer, parameter :: DIVIDE_USE_CLEAR_SITE  = 2
 
-integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
+integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
 !real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
 !real(REAL_KIND), parameter :: CO2_DEATH_THRESHOLD = 0.0001
-integer, parameter :: MAX_CHEMO = 4
+integer, parameter :: MAX_CHEMO = 6
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: DRUG_A = 3
-integer, parameter :: DRUG_B = 4
+integer, parameter :: DRUG_METAB_A = 4
+integer, parameter :: DRUG_B = 5
+integer, parameter :: DRUG_METAB_B = 6
 integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
-integer, parameter :: SN30000 = DRUG_A  ! else = 0
+integer, parameter :: SN30000 = DRUG_A
+integer, parameter :: SN30000_METAB = DRUG_METAB_A
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
 logical, parameter :: use_division = .true.
 logical, parameter :: use_death = .true.
 logical, parameter :: use_react = .true.
 logical, parameter :: use_migration = .true.
+logical, parameter :: use_medium_flux = .true.
 
 !integer, parameter :: MAX_RECEPTOR = 1
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
@@ -76,6 +80,7 @@ type cell_type
 end type
 
 type SN30K_type
+	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: C1
 	real(REAL_KIND) :: C2
 	real(REAL_KIND) :: Kmet0    
@@ -105,10 +110,20 @@ type, bind(C) :: field_data
 	real(c_double) :: volume
 	real(c_double) :: conc(4)
 end type
+
+type treatment_type
+	character*(16) :: name
+	integer :: n
+	real(REAL_KIND), allocatable :: tstart(:)
+	real(REAL_KIND), allocatable :: tend(:)
+	real(REAL_KIND), allocatable :: conc(:)
+	real(REAL_KIND), allocatable :: dose(:)
+end type
 	
 type(dist_type) :: divide_dist
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
+type(treatment_type), allocatable :: treatment(:)
 !type(boundary_type), pointer :: bdrylist
 
 integer :: NX, NY, NZ
@@ -125,13 +140,13 @@ integer :: Ntodie, Ndrugdead
 integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
-real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra
+real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volume
 real(REAL_KIND) :: CO2_DEATH_THRESHOLD, THRESHOLD_FACTOR, t_hypoxic_limit, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 real(REAL_KIND) :: t_simulation
 type(SN30K_type) :: SN30K
 character*(128) :: inputfile
-character*(128) :: fixedfile
+character*(128) :: treatmentfile
 character*(128) :: outputfile
 character*(2048) :: logmsg
 logical :: test_case(4)
@@ -141,6 +156,7 @@ logical :: use_TCP = .true.         ! turned off in para_main()
 logical :: use_CPORT1 = .false.
 logical :: stopped, clear_to_send
 logical :: simulation_start, par_zig_init, initialized
+logical :: use_radiation, use_treatment
 logical :: dbug = .false.
 
 integer :: divide_option = DIVIDE_USE_CLEAR_SITE

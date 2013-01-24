@@ -53,7 +53,7 @@ real(REAL_KIND) function BdryConc(ichemo,t)
 integer :: ichemo
 real(REAL_KIND) :: t
 
-if (.not.chemo(ichemo)%bdry_decay) then
+if (use_medium_flux .or. .not.chemo(ichemo)%bdry_decay) then
     BdryConc = chemo(ichemo)%bdry_conc
 else
     BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%bdry_decay_rate*t)
@@ -526,8 +526,6 @@ if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
 !	dCreact = dMdt*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
 	dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 endif
-return
-
 end subroutine
 
 
@@ -663,6 +661,8 @@ if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
     dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == SN30000) then
     dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(ichemo)
+elseif (ichemo == SN30000_METAB) then
+    dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
 endif
 dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - Cin(ichemo)) 
 end subroutine
@@ -704,31 +704,6 @@ call logger(logmsg)
 !call logger(logmsg)
 !write(logmsg,'(a,10f7.4)') 'Diff:   ',((v(ODEdiff%ivar(x,y,z))-Cin(z))/Cin(z),z=z1,z2)	
 !call logger(logmsg)
-end subroutine
-
-!----------------------------------------------------------------------------------
-! Reactions here + cross-membrane diffusion
-!----------------------------------------------------------------------------------
-subroutine intra_react1(nchemo,C,Ce,dCreact)
-integer :: nchemo
-real(REAL_KIND) :: C(:), Ce(:), dCreact(:)
-integer :: ichemo
-real(REAL_KIND) :: metab
-
-if (C(OXYGEN) > ODEdiff%C1) then
-	metab = (C(OXYGEN)-ODEdiff%deltaC)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN) - ODEdiff%deltaC)
-elseif (C(OXYGEN) > 0) then
-	metab = ODEdiff%k*C(OXYGEN)*C(OXYGEN)
-else
-	metab = 0
-endif
-
-dCreact = 0
-dCreact(1:2) = -metab*chemo(1:2)%max_cell_rate*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
-
-do ichemo = 1,nchemo
-    dCreact(ichemo) = dCreact(ichemo) + chemo(ichemo)%cell_diff*(Ce(ichemo) - C(ichemo)) !- 0.01*C(ichemo)
-enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -822,10 +797,10 @@ enddo
 !    enddo
 !endif
 
-!if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
-!    call update_M(dt,state)
-!endif
-!write(*,*) state(1,1) - allstate(1,1)
+if (use_medium_flux) then
+	call update_medium(ntvars,state,dt)
+endif
+
 allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 ! Note: some time we need to copy the state values to the cell_list() array.
 
@@ -837,26 +812,39 @@ deallocate(state)
 end subroutine
 
 !----------------------------------------------------------------------------------
-! For all living cells, update the total amount of SN30000 metabolized.
-! The rate depends on the oxygen concentration C_ox and the SN30000 level, C_drug
+! The medium concentrations are updated explicitly, assuming a sphere with boundary
+! concentrations equal to the mean extracellular concentrations of boundary sites.
+! Note that concentrations of O2 and glucose are not varied.
 !----------------------------------------------------------------------------------
-subroutine update_M(dt,state)
-real(REAL_KIND) :: dt
-real(REAL_KIND) :: state(:,:)
-real(REAL_KIND) :: C_ox, C_drug, dCdt
-integer :: i, kcell
-real(REAL_KIND) :: Vcell = 1.0
+subroutine update_medium(ntvars,state,dt)
+integer :: ntvars
+real(REAL_KIND) :: dt, state(:,:)
+integer :: nb, i, k
+real(REAL_KIND) :: Cbnd(MAX_CHEMO), F(MAX_CHEMO)
+logical :: bnd
 
-do i = 1,ODEdiff%nvars
-    if (ODEdiff%vartype(i) == INTRA) then
-        kcell = ODEdiff%cell_index(i)
-        C_ox = state(i,OXYGEN)
-        C_drug = state(i,DRUG_A)
-        dCdt = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + C_ox))*SN30K%Kmet0*C_drug
-        cell_list(kcell)%M = cell_list(kcell)%M + Vcell*dCdt*dt
-!        write(*,'(2i6,4e12.4)') i,kcell,C_ox,C_drug,Vcell*dCdt*dt,cell_list(kcell)%M
-    endif
+! First need the spheroid radius
+call SetRadius(Nsites)
+! Now compute the mean boundary site concentrations Cbnd(:)
+nb = 0
+Cbnd = 0
+do i = 1,ntvars
+	if (ODEdiff%vartype(i) /= EXTRA) cycle
+	bnd = .false.
+	do k = 1,7
+		if (ODEdiff%icoef(i,k) == 0) then
+			bnd = .true.
+			exit
+		endif
+	enddo
+	if (bnd) then
+		nb = nb + 1
+		Cbnd = Cbnd + state(i,:)
+	endif
 enddo
+Cbnd = Cbnd/nb
+F(:) = 4*PI*Radius*Radius*chemo(:)%diff_coef*(Cbnd(:) - chemo(:)%bdry_conc*dt)/DELTA_X
+chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1637,6 +1625,56 @@ if (EXPLICIT_INTRA) return
 !	dvdt(i) = dCsum + dCreact
 !enddo
 end subroutine
+
+!----------------------------------------------------------------------------------
+! Reactions here + cross-membrane diffusion
+!----------------------------------------------------------------------------------
+subroutine intra_react1(nchemo,C,Ce,dCreact)
+integer :: nchemo
+real(REAL_KIND) :: C(:), Ce(:), dCreact(:)
+integer :: ichemo
+real(REAL_KIND) :: metab
+
+if (C(OXYGEN) > ODEdiff%C1) then
+	metab = (C(OXYGEN)-ODEdiff%deltaC)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN) - ODEdiff%deltaC)
+elseif (C(OXYGEN) > 0) then
+	metab = ODEdiff%k*C(OXYGEN)*C(OXYGEN)
+else
+	metab = 0
+endif
+
+dCreact = 0
+dCreact(1:2) = -metab*chemo(1:2)%max_cell_rate*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
+
+do ichemo = 1,nchemo
+    dCreact(ichemo) = dCreact(ichemo) + chemo(ichemo)%cell_diff*(Ce(ichemo) - C(ichemo)) 
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! For all living cells, update the total amount of SN30000 metabolized.
+! The rate depends on the oxygen concentration C_ox and the SN30000 level, C_drug
+! NOT USED
+!----------------------------------------------------------------------------------
+subroutine update_M(dt,state)
+real(REAL_KIND) :: dt
+real(REAL_KIND) :: state(:,:)
+real(REAL_KIND) :: C_ox, C_drug, dCdt
+integer :: i, kcell
+real(REAL_KIND) :: Vcell = 1.0
+
+do i = 1,ODEdiff%nvars
+    if (ODEdiff%vartype(i) == INTRA) then
+        kcell = ODEdiff%cell_index(i)
+        C_ox = state(i,OXYGEN)
+        C_drug = state(i,DRUG_A)
+        dCdt = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + C_ox))*SN30K%Kmet0*C_drug
+        cell_list(kcell)%M = cell_list(kcell)%M + Vcell*dCdt*dt
+!        write(*,'(2i6,4e12.4)') i,kcell,C_ox,C_drug,Vcell*dCdt*dt,cell_list(kcell)%M
+    endif
+enddo
+end subroutine
+
 
 
 end module
