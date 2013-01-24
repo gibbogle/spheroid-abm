@@ -19,7 +19,7 @@ implicit none
 !type(receptor_type), target :: receptor(MAX_RECEPTOR)
 
 type chemokine_type
-	character(8) :: name
+	character(16) :: name
 	logical :: used
 	logical :: use_secretion
 	real(REAL_KIND) :: bdry_rate

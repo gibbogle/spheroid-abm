@@ -140,6 +140,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! When a cell dies the site takes occupancy()%indx = -kcell.  This is a necrotic volume.
 ! Such necrotic sites migrate towards the blob centre.
+! The cell contents should be released into the site.
 !-----------------------------------------------------------------------------------------
 subroutine cell_dies(kcell)
 integer :: kcell

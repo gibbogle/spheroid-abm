@@ -56,6 +56,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Fluid fraction",
 "Fraction of non-necrotic tumour that is extracellular fluid."},
 
+{"MEDIUM_VOLUME", 1.0, 0, 0,
+"Medium volume",
+"Volume of the medium in which the spheroid is growing."},
+
 {"VDIVIDE0", 1.6, 0, 0,
 "Nominal divide volume",
 "Nominal multiple of normal cell volume at which division occurs."},
@@ -103,16 +107,16 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Oxygen is simulated"},
 
 {"OXYGEN_DIFF_COEF", 2.0e-5, 0, 0,
- "OXYGEN diffusion coeff",
- "OXYGEN diffusion coefficient"},
+ "Diffusion coeff",
+ "Constituent diffusion coefficient"},
 
 {"OXYGEN_BDRY_CONC", 0.18, 0, 0,
- "OXYGEN boundary concentration",
- "OXYGEN boundary concentration"},
+ "Boundary concentration",
+ "Constituent concentration in the medium"},
 
 {"OXYGEN_CONSUMPTION", 2.3e-16, 0, 0,
- "OXYGEN consumption rate",
- "OXYGEN consumption rate"},
+ "Max consumption rate",
+ "Maximum rate of consumption of the constituent"},
 
 {"USE_GLUCOSE", 1, 0, 1,
 "Use Glucose?",
@@ -130,53 +134,25 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "GLUCOSE consumption rate",
  "GLUCOSE consumption rate"},
 
-{"USE_DRUG_A", 0, 0, 1,
-"Use Drug A?",
-"Drug A is simulated"},
+{"USE_SN30K", 0, 0, 1,
+"Use SN30000?",
+"SN30000 is simulated"},
 
-{"DRUG_A_DIFF_COEF", 6.0e-7, 0, 0,
- "DRUG_A diffusion coeff",
- "DRUG_A diffusion coefficient"},
+{"SN30K_BDRY_CONC", 0.01, 0, 0,
+ "SN30000 boundary concentration",
+ "SN30000 concentration in the medium"},
 
-{"DRUG_A_BDRY_CONC", 0.01, 0, 0,
- "DRUG_A boundary concentration",
- "DRUG_A boundary concentration"},
+{"SN30K_DECAY", 0, 0, 0,
+ "SN30000 decay",
+ "SN30000 boundary conc decays with the specified half-life"},
 
-{"DRUG_A_CONSUMPTION", 0, 0, 0,
- "DRUG_A consumption rate",
- "DRUG_A consumption rate"},
+{"SN30K_HALFLIFE", 2.0, 0, 0,
+ "SN30000 half-life",
+ "SN30000 half-life"},
 
-{"USE_DRUG_B", 0, 0, 1,
-"Use Drug B?",
-"Drug B is simulated"},
-
-{"DRUG_B_DIFF_COEF", 6.0e-7, 0, 0,
- "DRUG_B diffusion coeff",
- "DRUG_B diffusion coefficient"},
-
-{"DRUG_B_BDRY_CONC", 9.0, 0, 0,
- "DRUG_B boundary concentration",
- "DRUG_B boundary concentration"},
-
-{"DRUG_B_CONSUMPTION", 0, 0, 0,
- "DRUG_B consumption rate",
- "DRUG_B consumption rate"},
-
-{"DRUG_A_DECAY", 0, 0, 0,
- "DRUG_A decay",
- "DRUG_A boundary conc decays with the specified half-life"},
-
-{"DRUG_A_HALFLIFE", 2.0, 0, 0,
- "DRUG_A half-life",
- "DRUG_A half-life"},
-
-{"DRUG_B_DECAY", 0, 0, 0,
- "DRUG_B decay",
- "DRUG_B boundary conc decays with the specified half-life"},
-
-{"DRUG_B_HALFLIFE", 2.0, 0, 0,
- "DRUG_B half-life",
- "DRUG_B half-life"},
+{"SN30K_DIFF_COEF", 6.0e-7, 0, 0,
+ "SN30000 diffusion coeff",
+ "SN30000 diffusion coefficient"},
 
 {"SN30K_KMET0", 1.54, 0, 0,
  "Kmet0",
@@ -202,25 +178,45 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion",
  "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
 
-{"KILL_O2_CONC", 0.0, 0, 0,
+{"SN30K_KILL_O2_CONC", 0.0, 0, 0,
  "O2 conc",
  "SN30000 constant O2 concentration in kill experiment"},
 
-{"KILL_DRUG_CONC", 0.01, 0, 0,
+{"SN30K_KILL_DRUG_CONC", 0.01, 0, 0,
  "Drug conc",
  "SN30000 constant drug concentration in kill experiment"},
 
-{"KILL_DURATION", 60, 0, 0,
+{"SN30K_KILL_DURATION", 60, 0, 0,
  "Duration",
  "SN30000 duration of kill experiment"},
 
-{"KILL_FRACTION", 0.9, 0, 0,
+{"SN30K_KILL_FRACTION", 0.9, 0, 0,
  "Kill fraction",
  "SN30000 fraction of cells killed in the experiment"},
 
-{"INPUT_FILE", 0, 0, 0,
-"spheroid_fixed.inpdata",
-"The auxiliary input file contains data that (almost!) never changes"}
+{"USE_DRUG_B", 0, 0, 1,
+"Use Drug B?",
+"Drug B is simulated"},
+
+{"DRUG_B_BDRY_CONC", 9.0, 0, 0,
+ "DRUG_B boundary concentration",
+ "DRUG_B boundary concentration"},
+
+{"DRUG_B_DECAY", 0, 0, 0,
+ "DRUG_B decay",
+ "DRUG_B boundary conc decays with the specified half-life"},
+
+{"DRUG_B_HALFLIFE", 2.0, 0, 0,
+ "DRUG_B half-life",
+ "DRUG_B half-life"},
+
+{"USE_TREATMENT_FILE", 1, 0, 1,
+"Use treatment file?",
+"Treatment programme is specified in the treatment file"},
+
+{"TREATMENT_FILE", 0, 0, 0,
+"treatment.data",
+"The treatment file contains data describing the drug and radiation dosing schedule"}
 
 };
 	nParams = sizeof(params)/sizeof(PARAM_SET);

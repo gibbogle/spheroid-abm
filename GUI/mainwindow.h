@@ -143,10 +143,12 @@ private:
     void disableUseOxygen();
     void enableUseGlucose();
     void disableUseGlucose();
-    void enableUseDrugA();
-    void disableUseDrugA();
+    void enableUseSN30K();
+    void disableUseSN30K();
     void enableUseDrugB();
     void disableUseDrugB();
+    void enableUseTreatmentFile();
+    void disableUseTreatmentFile();
 
 /*
 	void enableUseS1P();
