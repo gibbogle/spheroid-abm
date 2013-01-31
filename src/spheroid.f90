@@ -227,12 +227,13 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 integer :: itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
-integer :: iuse(MAX_CHEMO), idecay(MAX_CHEMO)
+integer :: iuse(MAX_CHEMO), idecay(MAX_CHEMO), imetabolite(MAX_CHEMO)
 real(REAL_KIND) :: days
 real(REAL_KIND) :: sigma, DXmm, t_hyp_hours
 
 ok = .true.
 idecay = 0
+imetabolite = 0
 open(nfcell,file=inputfile,status='old')
 
 read(nfcell,*) NX							! rule of thumb: about 4*BLOB_RADIUS
@@ -267,6 +268,7 @@ read(nfcell,*) iuse(SN30000)
 read(nfcell,*) chemo(SN30000)%bdry_conc
 read(nfcell,*) idecay(SN30000)
 read(nfcell,*) chemo(SN30000)%bdry_halflife  ! h
+read(nfcell,*) imetabolite(SN30000)
 read(nfcell,*) SN30K%diff_coef
 read(nfcell,*) SN30K%Kmet0
 read(nfcell,*) SN30K%C1
@@ -282,11 +284,12 @@ read(nfcell,*) iuse(DRUG_B)
 read(nfcell,*) chemo(DRUG_B)%bdry_conc
 read(nfcell,*) idecay(DRUG_B)
 read(nfcell,*) chemo(DRUG_B)%bdry_halflife
+read(nfcell,*) imetabolite(DRUG_B)
 read(nfcell,*) itreatment
 read(nfcell,*) treatmentfile					! file with treatment programme
 close(nfcell)
 
-blob_radius = (initial_count*3./(4.*PI))**(1./3)
+blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
 divide_time_median = 60*60*divide_time_median	! hours -> seconds
 sigma = log(divide_time_shape)
@@ -330,12 +333,13 @@ else
 		endif
 	enddo
 endif
-do ichemo = DRUG_A,MAX_CHEMO
-	if (chemo(ichemo)%used) then
-		chemo(ichemo+1)%used = .true.	! the metabolite is also simulated
-	endif
-enddo
-
+if (use_metabolites) then
+	do ichemo = DRUG_A,MAX_CHEMO
+		if (chemo(ichemo)%used .and. imetabolite(ichemo) == 1) then
+			chemo(ichemo+1)%used = .true.	! the metabolite is also simulated
+		endif
+	enddo
+endif
 ! Setup test_case
 test_case = .false.
 if (itestcase /= 0) then
@@ -1126,6 +1130,13 @@ integer(c_int) :: axis, nc, nfdata
 type(FIELD_DATA) :: fdata(*)
 integer rng(3,2), kcell, x, y, z, i, ns
 
+write(logmsg,*) 'get_fielddata: nfdata, nc: ',nfdata, nc
+call logger(logmsg)
+if (nc > MAX_CHEMO) then
+	write(logmsg,*) 'Error: get_fielddata: dimension of conc(MAX_CHEMO) not big enough!'
+	call logger(logmsg)
+	stop
+endif
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
 rng(axis,:) = Centre(axis) + fraction*Radius
@@ -1161,16 +1172,17 @@ end subroutine
 !--------------------------------------------------------------------------------
 ! Returns all the extracellular concentrations along a line through the blob centre.
 !--------------------------------------------------------------------------------
-subroutine get_concdata(ns, dx, conc) BIND(C)
+subroutine get_concdata(maxchemo, ns, dx, conc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
 use, intrinsic :: iso_c_binding
-integer(c_int) :: ns
+integer(c_int) :: maxchemo, ns
 real(c_double) :: dx, conc(*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer rng(3,2), i, k, ichemo, kcell, x, y, z
 
 write(logmsg,*) 'get_concdata'
 call logger(logmsg)
+maxchemo = MAX_CHEMO
 dx = DELTA_X
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
@@ -1218,6 +1230,7 @@ enddo
 do k = 1,MAX_CHEMO*ns
     conc(k) = max(cmin,conc(k))
 enddo
+call logger('did get_concdata')
 end subroutine
 
 

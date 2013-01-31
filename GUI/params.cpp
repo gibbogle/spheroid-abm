@@ -150,6 +150,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "SN30000 half-life",
  "SN30000 half-life"},
 
+{"SN30K_METABOLITE", 0, 0, 0,
+ "SN30000 metabolite",
+ "SN30000 simulate metabolite"},
+
 {"SN30K_DIFF_COEF", 6.0e-7, 0, 0,
  "SN30000 diffusion coeff",
  "SN30000 diffusion coefficient"},
@@ -210,7 +214,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "DRUG_B half-life",
  "DRUG_B half-life"},
 
-{"USE_TREATMENT_FILE", 1, 0, 1,
+{"DRUG_B_METABOLITE", 0, 0, 0,
+ "DRUG_B metabolite",
+ "DRUG_B simulate metabolite"},
+
+{"USE_TREATMENT_FILE", 0, 0, 1,
 "Use treatment file?",
 "Treatment programme is specified in the treatment file"},
 

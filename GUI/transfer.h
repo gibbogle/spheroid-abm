@@ -26,6 +26,7 @@ extern int summaryData[100];
 extern double concData[4000];
 extern int conc_nc;
 extern double conc_dx;
+extern int MAX_CHEMO;
 extern int nt_vtk;
 extern int istep;
 extern bool leftb;

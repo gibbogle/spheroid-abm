@@ -7,12 +7,13 @@
 #include "plot.h"
 
 #define CANVAS_WIDTH 620
+#define MAX_CONC 6
 
 struct field_data {
     int site[3];
     int state;
     double volume;
-    double conc[4];
+    double conc[MAX_CONC];
 };
 
 typedef field_data FIELD_DATA;
@@ -51,7 +52,7 @@ public:
     int NX;
     int axis;
     double fraction;
-    int MAX_CHEMO;
+//    int MAX_CHEMO;
     int nsites, nconst, cused[10];
     int constituent;
     bool slice_changed;

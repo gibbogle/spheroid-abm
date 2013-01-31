@@ -6,13 +6,14 @@ LOG_USE();
 double concData[4000];
 int conc_nc;
 double conc_dx;
+int MAX_CHEMO;
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 Field::Field(QWidget *page2D)
 {
 	field_page = page2D;
-    MAX_CHEMO = 4;
+//    MAX_CHEMO = 6;
     axis = Z_AXIS;
     fraction = 0;
     constituent = OXYGEN;
@@ -181,10 +182,15 @@ void Field::displayField()
         get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, cused);
 		sprintf(msg,"nsites: %d",nsites);
 		LOG_MSG(msg);
-		this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
+        if (nconst != MAX_CONC) {
+            sprintf(msg,"Error: MAX_CONC != MAX_CHEMO in field.h");
+            LOG_MSG(msg);
+            exit(1);
+        }
+        this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
         get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
 		slice_changed = false;
-	}
+    }
     // Get picture limits, set size of square
     // Paint squares
 
@@ -256,6 +262,7 @@ void Field::displayField()
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
         }
     }
+    LOG_MSG("did all sites");
 
 //    brush.setColor(QColor(150,100,0));
 //    brush.setStyle(Qt::SolidPattern);
@@ -311,8 +318,11 @@ void Field::displayField()
 
     QGraphicsView* view = new QGraphicsView(field_page);
     view->setScene(scene);
+    LOG_MSG("did setScene");
     view->setGeometry(QRect(0, 0, 700, 700));
+    LOG_MSG("did setGeometry");
     view->show();
+    LOG_MSG("did displayField");
 }
 
 void Field::chooseColor(double f, int rgbcol[])
