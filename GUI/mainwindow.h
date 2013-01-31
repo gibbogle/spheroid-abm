@@ -76,7 +76,6 @@ protected:
 private slots:
     void on_action_show_gradient2D_triggered();
     void on_action_show_gradient3D_triggered();
-    void on_cbox_SHOW_NONCOGNATE_toggled(bool checked);
     void newFile();
     void open();
     void about();
@@ -129,6 +128,7 @@ public slots:
     void buttonClick_plane(QAbstractButton* button);
 	void textChanged_fraction(QString text);
 	void textEdited_fraction(QString text);
+    void on_cbox_use_drugA_toggled(bool checked);
 private:
     void createActions();
 	void createLists();

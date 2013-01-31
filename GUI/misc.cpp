@@ -179,7 +179,7 @@ void ExecThread::run()
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
             get_summary(summaryData);
-            get_concdata(&conc_nc, &conc_dx, concData);
+            get_concdata(&MAX_CHEMO, &conc_nc, &conc_dx, concData);
             int iframe = i/nsumm_interval;
 //            saveGradient2D(iframe);
             mutex1.unlock();

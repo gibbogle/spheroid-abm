@@ -180,6 +180,7 @@ void MainWindow::createActions()
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
 //	connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
 	connect(lineEdit_fraction, SIGNAL(textEdited(QString)), this, SLOT(textEdited_fraction(QString)));
+    connect((QCheckBox *)cbox_USE_SN30K,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugA_toggled(bool)));
 
 }
 
@@ -2944,16 +2945,6 @@ int SliderPlus::nTicks() {
     return n;
 }
 
-void MainWindow::on_cbox_SHOW_NONCOGNATE_toggled(bool checked)
-{
-    QLineEdit *le = findChild<QLineEdit*>("line_DISPLAY_FRACTION");
-    if (checked) {
-        le->setEnabled(true);
-    } else {
-        le->setEnabled(false);
-    }
-}
-
 void MainWindow::on_action_show_gradient3D_triggered()
 {
     showGradient3D();
@@ -2964,10 +2955,40 @@ void MainWindow::on_action_show_gradient2D_triggered()
     showGradient2D();
 }
 
+void MainWindow::on_cbox_use_drugA_toggled(bool checked)
+{
+    QRadioButton *rb = findChild<QRadioButton*>("radioButton_drugA");
+    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_SN30K_metabolite");
+    if (checked) {
+        rb->setEnabled(true);
+        cbm->setEnabled(true);
+        if (cbm->isChecked()) {
+            LOG_MSG("cbm is checked");
+            rbm->setEnabled(true);
+        }
+    } else {
+        rb->setEnabled(false);
+        rbm->setEnabled(false);
+        cbm->setEnabled(false);
+    }
+}
+
 
 //==================================================================================================================
 // Code below here is not used
 //----------------------------
+/*
+void MainWindow::on_cbox_SHOW_NONCOGNATE_toggled(bool checked)
+{
+    QLineEdit *le = findChild<QLineEdit*>("line_DISPLAY_FRACTION");
+    if (checked) {
+        le->setEnabled(true);
+    } else {
+        le->setEnabled(false);
+    }
+}
+*/
 void MainWindow::closeEvent(QCloseEvent *event)
 {
 //    event->accept();

@@ -34,6 +34,7 @@ integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,
 !real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
 !real(REAL_KIND), parameter :: CO2_DEATH_THRESHOLD = 0.0001
 integer, parameter :: MAX_CHEMO = 6
+!integer, parameter :: MAX_CONC = 6
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: DRUG_A = 3
@@ -51,6 +52,7 @@ logical, parameter :: use_death = .true.
 logical, parameter :: use_react = .true.
 logical, parameter :: use_migration = .true.
 logical, parameter :: use_medium_flux = .true.
+logical, parameter :: use_metabolites = .true.
 
 !integer, parameter :: MAX_RECEPTOR = 1
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
@@ -108,7 +110,7 @@ type, bind(C) :: field_data
 	integer(c_int) :: site(3)
 	integer(c_int) :: state
 	real(c_double) :: volume
-	real(c_double) :: conc(4)
+	real(c_double) :: conc(MAX_CHEMO)	! This needs to agree with the definition in field.h
 end type
 
 type treatment_type

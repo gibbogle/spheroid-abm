@@ -53,7 +53,7 @@ real(REAL_KIND) function BdryConc(ichemo,t)
 integer :: ichemo
 real(REAL_KIND) :: t
 
-if (use_medium_flux .or. .not.chemo(ichemo)%bdry_decay) then
+if ((use_medium_flux .and. medium_volume > 0) .or. .not.chemo(ichemo)%bdry_decay) then
     BdryConc = chemo(ichemo)%bdry_conc
 else
     BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%bdry_decay_rate*t)
@@ -797,7 +797,7 @@ enddo
 !    enddo
 !endif
 
-if (use_medium_flux) then
+if (use_medium_flux .and. medium_volume > 0) then
 	call update_medium(ntvars,state,dt)
 endif
 
@@ -843,7 +843,8 @@ do i = 1,ntvars
 	endif
 enddo
 Cbnd = Cbnd/nb
-F(:) = 4*PI*Radius*Radius*chemo(:)%diff_coef*(Cbnd(:) - chemo(:)%bdry_conc*dt)/DELTA_X
+F(:) = 4*PI*Radius*Radius*DELTA_X*chemo(:)%diff_coef*(Cbnd(:) - chemo(:)%bdry_conc*dt)
+!write(*,*) 'Radius, C, F: ',Radius, chemo(DRUG_A)%bdry_conc, F(DRUG_A)
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
 end subroutine
 
