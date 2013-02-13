@@ -61,6 +61,7 @@ signals:
     void display();
     void displayF();
     void summary();
+    void setupC(int, bool *);
 };
 
 bool quitMessage(QString);

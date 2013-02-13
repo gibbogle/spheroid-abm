@@ -8,6 +8,11 @@ int conc_nc;
 double conc_dx;
 int MAX_CHEMO;
 
+double volProb[100];
+int vol_nv;
+double vol_v0;
+double vol_dv;
+
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 Field::Field(QWidget *page2D)
@@ -17,6 +22,7 @@ Field::Field(QWidget *page2D)
     axis = Z_AXIS;
     fraction = 0;
     constituent = OXYGEN;
+    constituentText = "Oxygen";
     slice_changed = true;
 }
 
@@ -36,15 +42,20 @@ void Field::setConstituent(QAbstractButton *button)
     LOG_MSG("setConstituent");
 	int prev_constituent = constituent;
     QString text = button->text();
+    constituentText = text;
     if (text.compare("Oxygen") == 0)
         constituent = OXYGEN;
     else if (text.compare("Glucose") == 0)
         constituent = GLUCOSE;
     else if (text.compare("Drug A") == 0)
         constituent = DRUG_A;
+    else if (text.compare("Drug A metabolite") == 0)
+        constituent = DRUG_METAB_A;
     else if (text.compare("Drug B") == 0)
         constituent = DRUG_B;
-	if (constituent != prev_constituent) {
+    else if (text.compare("Drug B metabolite") == 0)
+        constituent = DRUG_METAB_B;
+    if (constituent != prev_constituent) {
 		constituent_changed = true;
 		displayField();
 	}
@@ -262,97 +273,47 @@ void Field::displayField()
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
         }
     }
-    LOG_MSG("did all sites");
-
-//    brush.setColor(QColor(150,100,0));
-//    brush.setStyle(Qt::SolidPattern);
-//    scene->addEllipse(10,10,20,20,Qt::NoPen, brush);
-//    text = scene->addText("FDC");
-//    text->setPos(35, 10);
-
-//    brush.setColor(QColor(200,60,100));
-//    brush.setStyle(Qt::SolidPattern);
-//    scene->addEllipse(10,40,20,20,Qt::NoPen, brush);
-//    text = scene->addText("MRC");
-//    text->setPos(35, 40);
-
-//    brush.setColor(QColor(30,20,255));
-//    scene->addEllipse(10,70,20,20,Qt::NoPen, brush);
-//    text = scene->addText("Naive B cell");
-//    text->setPos(35, 70);
-
-//    brush.setColor(QColor(0,200,255));
-//    scene->addEllipse(10,100,20,20,Qt::NoPen, brush);
-//    text = scene->addText("CCR7 UP");
-//    text->setPos(35, 100);
-
-//    brush.setColor(QColor(50,255,150));
-//    scene->addEllipse(10,130,20,20,Qt::NoPen, brush);
-//    text = scene->addText("EBI2 UP");
-//    text->setPos(35, 130);
-
-//    brush.setColor(QColor(255,255,0));
-//    scene->addEllipse(10,160,20,20,Qt::NoPen, brush);
-//    text = scene->addText("BCL6 HI");
-//    text->setPos(35, 160);
-
-//    brush.setColor(QColor(0,150,0));
-//    scene->addEllipse(10,190,20,20,Qt::NoPen, brush);
-//    text = scene->addText("BCL6 LO");
-//    text->setPos(35, 190);
-
-//    brush.setColor(QColor(128,128,128));
-//    scene->addEllipse(10,220,20,20,Qt::NoPen, brush);
-//    text = scene->addText("Max divisions");
-//    text->setPos(35, 220);
-
-//    brush.setColor(QColor(255,0,0));
-//    scene->addEllipse(10,250,20,20,Qt::NoPen, brush);
-//    text = scene->addText("Plasma cell");
-//    text->setPos(35, 250);
-
-//    brush.setColor(QColor(255,130,0));
-//    scene->addEllipse(10,280,20,20,Qt::NoPen, brush);
-//    text = scene->addText("CD4 T cell");
-//    text->setPos(35, 280);
 
     QGraphicsView* view = new QGraphicsView(field_page);
     view->setScene(scene);
-    LOG_MSG("did setScene");
     view->setGeometry(QRect(0, 0, 700, 700));
-    LOG_MSG("did setGeometry");
     view->show();
-    LOG_MSG("did displayField");
 }
 
 void Field::chooseColor(double f, int rgbcol[])
 {
     if (cused[constituent] == 1) {
-        rgbcol[0] = int((1-f)*255);
+        rgbcol[2] = int((1-f)*255);
         rgbcol[1] = 0;
-        rgbcol[2] = int(f*255);
+        rgbcol[0] = int(f*255);
     } else {
         rgbcol[0] = rgbcol[1] = rgbcol[2] = 255;
     }
 }
 
+void Field::getTitle(QString *title)
+{
+    *title = constituentText + " Concentration";
+}
+
 void Field::makeConcPlot(QMdiArea *mdiArea)
 {
     QString tag = "conc";
-    QString title = "Concentration";
-    pG = new Plot(tag,tag);
-//    pG->setGeometry(QRect(100, 100, 300, 200));
-    pG->setTitle(title);
-//    pG->setAxisTitle(QwtPlot::yLeft, title);
+    QString title;
+    pGconc = new Plot(tag,tag);
+    getTitle(&title);
+    LOG_QMSG(title);
+    pGconc->setTitle(title);
 
-    mdiArea->addSubWindow(pG);
-    pG->show();
+    mdiArea->addSubWindow(pGconc);
+    pGconc->show();
 }
 
 void Field::updateConcPlot()
 {
     int nc, nmu, i, ichemo;
     double dx, x[1000], y[1000], *conc, cmax;
+    QString title = "Concentration";
 
 //    get_concdata(&nc, &dx, conc);
     dx = conc_dx;
@@ -362,11 +323,14 @@ void Field::updateConcPlot()
     nmu = int(nc*dx*1.0e4);
     sprintf(msg,"updateConcPlot: %d %f %d",nc,dx,nmu);
     LOG_MSG(msg);
-    pG->setAxisScale(QwtPlot::xBottom, 0, nmu, 0);
+    getTitle(&title);
+    LOG_QMSG(title);
+    pGconc->setTitle(title);
+    pGconc->setAxisScale(QwtPlot::xBottom, 0, nmu, 0);
     QPen *pen = new QPen();
     QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
     pen->setColor(pencolor[0]);
-    pG->curve[0]->setPen(*pen);
+    pGconc->curve[0]->setPen(*pen);
     ichemo = constituent;
     cmax = 0;
     for (i=0; i<nc; i++) {
@@ -376,8 +340,54 @@ void Field::updateConcPlot()
         LOG_MSG(msg);
         cmax = MAX(cmax,y[i]);
     }
-    pG->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);
-    pG->curve[0]->setData(x, y, nc);
-    pG->replot();
+    pGconc->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);
+    pGconc->curve[0]->setData(x, y, nc);
+    pGconc->replot();
     delete pen;
 }
+
+void Field::makeVolPlot(QMdiArea *mdiArea)
+{
+    vol_nv = 20;
+    QString tag = "vol";
+    QString title = "Volume Distribution";
+    pGvol = new Plot(tag,tag);
+    pGvol->setTitle(title);
+
+    mdiArea->addSubWindow(pGvol);
+    pGvol->show();
+}
+
+void Field::updateVolPlot()
+{
+    int i;
+    double x[100], y[100], *prob, pmax, v1, v2;
+
+//    LOG_MSG("UpdateVolPlot");
+    prob = volProb;
+    v1 = vol_v0 - vol_dv/2;
+    v2 = vol_v0 + (vol_nv-0.5)*vol_dv;
+    sprintf(msg,"updateVolPlot: %d %f %f %f %f",vol_nv,vol_dv,vol_v0, v1, v2);
+    LOG_MSG(msg);
+    pGvol->setAxisScale(QwtPlot::xBottom, v1, v2, 0);
+    QPen *pen = new QPen();
+    QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
+    pen->setColor(pencolor[0]);
+    pGvol->curve[0]->setPen(*pen);
+
+    pmax = 0;
+    for (i=0; i<vol_nv; i++) {
+        x[i] = vol_v0 + i*vol_dv;
+        y[i] = prob[i];
+//        sprintf(msg,"%d %f %f",i,x[i],y[i]);
+//        LOG_MSG(msg);
+        pmax = MAX(pmax,y[i]);
+    }
+    pmax = 2.0/vol_nv;  // try this
+    pGvol->setAxisScale(QwtPlot::yLeft, 0, pmax, 0);
+    pGvol->curve[0]->setData(x, y, vol_nv);
+
+    pGvol->replot();
+    delete pen;
+}
+

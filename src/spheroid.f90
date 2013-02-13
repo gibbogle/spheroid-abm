@@ -97,8 +97,11 @@ if (use_ODE_diffusion) then
 !	call TestODEDiffusion
 !	call TestSolver
 endif
-Ntodie = 0
-Ndrugdead = 0
+Nradiation_tag = 0
+Ndrug_tag = 0
+Nradiation_dead = 0
+Ndrug_dead = 0
+t_simulation = 0
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
@@ -361,6 +364,13 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! This overrides the drug usage specified by USE_DRUG_A etc
+! RADIATION -> 0
+! DRUG_A -> 1
+! DRUG_B -> 2
+! By default this assumes two drugs.
+! Times are hours
+! Drug concs are mM
+! Radiation dose is Gy
 !-----------------------------------------------------------------------------------------
 subroutine read_treatment(ok)
 logical :: ok
@@ -368,16 +378,16 @@ character*(64) :: line
 integer :: ichemo, idrug, nmax, i
 real(REAL_KIND) :: tstart,tend,conc,dose
 
-allocate(treatment(0:2))
+allocate(protocol(0:2))
 
 use_treatment = .true.
-chemo(DRUG_A)%used = .false.
-chemo(DRUG_B)%used = .false.
+chemo(GLUCOSE+1:)%used = .false.
 use_radiation = .false.
 open(nftreatment,file=treatmentfile,status='old')
 nmax = 0
 do
 	read(nftreatment,'(a)',end=99) line
+	if (line(1:3) == 'END' .or. line(1:3) == 'end') exit
 	if (line(1:6) == 'DRUG_A') then
 		ichemo = DRUG_A
 		idrug = 1
@@ -389,20 +399,21 @@ do
 		idrug = 0
 	endif
 	if (ichemo > 0) then
-		chemo(ichemo)%used = .true.
 		read(nftreatment,'(a)') chemo(ichemo)%name
-		read(nftreatment,*) treatment(idrug)%n
-		nmax = max(nmax,treatment(idrug)%n)
-		do i = 1,treatment(idrug)%n
-			read(nftreatment,*) tstart
-			read(nftreatment,*) tend
-			read(nftreatment,*) conc
-		enddo
+		read(nftreatment,*) protocol(idrug)%n
+		nmax = max(nmax,protocol(idrug)%n)
+		if (protocol(idrug)%n > 0) then
+			do i = 1,protocol(idrug)%n
+				read(nftreatment,*) tstart
+				read(nftreatment,*) tend
+				read(nftreatment,*) conc
+			enddo
+		endif
 	else
 		use_radiation = .true.
-		read(nftreatment,*) treatment(idrug)%n
-		nmax = max(nmax,treatment(idrug)%n)
-		do i = 1,treatment(idrug)%n
+		read(nftreatment,*) protocol(idrug)%n
+		nmax = max(nmax,protocol(idrug)%n)
+		do i = 1,protocol(idrug)%n
 			read(nftreatment,*) tstart
 			read(nftreatment,*) dose
 		enddo
@@ -411,14 +422,18 @@ do
 99	exit
 enddo
 rewind(nftreatment)
+write(*,*) 'nmax: ',nmax
 do idrug = 0,2
-	allocate(treatment(idrug)%tstart(nmax))
-	allocate(treatment(idrug)%tend(nmax))
-	allocate(treatment(idrug)%conc(nmax))
-	allocate(treatment(idrug)%dose(nmax))
+	allocate(protocol(idrug)%tstart(nmax))
+	allocate(protocol(idrug)%tend(nmax))
+	allocate(protocol(idrug)%conc(nmax))
+	allocate(protocol(idrug)%dose(nmax))
+	allocate(protocol(idrug)%started(nmax))
+	allocate(protocol(idrug)%ended(nmax))
 enddo
 do
 	read(nftreatment,'(a)',end=199) line
+	if (line(1:3) == 'END' .or. line(1:3) == 'end') exit
 	if (line(1:6) == 'DRUG_A') then
 		ichemo = DRUG_A
 		idrug = 1
@@ -430,26 +445,35 @@ do
 		idrug = 0
 	endif
 	if (ichemo > 0) then
-		chemo(ichemo)%used = .true.
 		read(nftreatment,'(a)') chemo(ichemo)%name
-		read(nftreatment,*) treatment(idrug)%n
-		do i = 1,treatment(idrug)%n
-			read(nftreatment,*) treatment(idrug)%tstart(i)
-			read(nftreatment,*) treatment(idrug)%tend(i)
-			read(nftreatment,*) treatment(idrug)%conc(i)
-		enddo
+		read(nftreatment,*) protocol(idrug)%n
+		if (protocol(idrug)%n > 0) then
+			chemo(ichemo)%used = .true.
+			do i = 1,protocol(idrug)%n
+				read(nftreatment,*) tstart
+				protocol(idrug)%tstart(i) = 3600*tstart		! hours -> seconds
+				read(nftreatment,*) tend
+				protocol(idrug)%tend(i) = 3600*tend
+				read(nftreatment,*) protocol(idrug)%conc(i)
+			enddo
+		endif
 	else
 		use_radiation = .true.
-		read(nftreatment,*) treatment(idrug)%n
-		do i = 1,treatment(idrug)%n
-			read(nftreatment,*) treatment(idrug)%tstart(i)
-			read(nftreatment,*) treatment(idrug)%dose(i)
+		read(nftreatment,*) protocol(idrug)%n
+		do i = 1,protocol(idrug)%n
+			read(nftreatment,*) tstart
+			protocol(idrug)%tstart(i) = 3600*tstart
+			read(nftreatment,*) protocol(idrug)%dose(i)
 		enddo
 	endif
 	cycle
 199	exit
 enddo
-		
+close(nftreatment)
+do i = 0,2
+	protocol(i)%started = .false.
+	protocol(i)%ended = .false.
+enddo	
 ok = .true.
 end subroutine
 
@@ -501,7 +525,8 @@ do x = 1,NX
 				cell_list(k)%ID = lastID
 				cell_list(k)%site = site
 				cell_list(k)%state = 1
-                cell_list(k)%todie = .false.
+                cell_list(k)%drug_tag = .false.
+                cell_list(k)%radiation_tag = .false.
 				cell_list(k)%exists = .true.
 				do
 					R = par_uni(kpar)
@@ -688,17 +713,23 @@ end function
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat) BIND(C)
+subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat, maxchemo, cused) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
 use, intrinsic :: iso_c_binding
-integer(c_int) :: NX_dim,NY_dim,NZ_dim,nsteps_dim
+integer(c_int) :: NX_dim,NY_dim,NZ_dim,nsteps_dim, maxchemo
 real(c_double) :: deltat
+logical(c_bool) :: cused(*)
+integer :: ichemo
 
 NX_dim = NX
 NY_dim = NY
 NZ_dim = NZ
 nsteps_dim = nsteps
 deltat = DELTA_T
+maxchemo = MAX_CHEMO
+do ichemo = 1,MAX_CHEMO
+	cused(ichemo) = chemo(ichemo)%used
+enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -723,6 +754,57 @@ enddo
 !	call InitState(ichemo,allstate(1:nextra,ichemo))
 !enddo
 end subroutine
+
+!----------------------------------------------------------------------------------
+! Radiation treatment is stored in protocol(0)
+! 
+!----------------------------------------------------------------------------------
+subroutine treatment(radiation_dose)
+real(REAL_KIND) :: radiation_dose
+integer :: i, idrug, ichemo, ichemo_metab
+
+radiation_dose = 0
+do i = 1,protocol(0)%n
+	if (t_simulation >= protocol(0)%tstart(i) .and. .not.protocol(0)%started(i)) then
+		radiation_dose = protocol(0)%dose(i)
+		protocol(0)%started(i) = .true.
+		protocol(0)%ended(i) = .true.
+		exit
+	endif
+enddo
+do idrug = 1,2
+	ichemo = idrug + GLUCOSE
+	if (idrug == 1) then
+		ichemo_metab = DRUG_A_METAB
+	elseif (idrug == 2) then
+		ichemo_metab = DRUG_B_METAB
+	endif
+	do i = 1,protocol(idrug)%n
+		if (i == 1 .and. t_simulation < protocol(idrug)%tstart(i)) then
+			chemo(ichemo)%bdry_conc = 0
+			chemo(ichemo_metab)%bdry_conc = 0
+			exit
+		endif
+		if (t_simulation >= protocol(idrug)%tstart(i) .and. .not.protocol(idrug)%started(i)) then
+			chemo(ichemo)%bdry_conc = protocol(idrug)%conc(i)
+			protocol(idrug)%started(i) = .true.
+			protocol(idrug)%ended(i) = .false.
+!			write(*,*) 'Started DRUG_A: ',chemo(ichemo)%bdry_conc
+			exit
+		endif
+	enddo
+	do i = 1,protocol(idrug)%n
+		if (t_simulation >= protocol(idrug)%tend(i) .and. .not.protocol(idrug)%ended(i)) then
+			chemo(ichemo)%bdry_conc = 0
+			chemo(ichemo_metab)%bdry_conc = 0
+			protocol(idrug)%ended(i) = .true.
+!			write(*,*) 'Ended DRUG_A'
+			exit
+		endif
+	enddo
+enddo	
+end subroutine
+
 !-----------------------------------------------------------------------------------------
 ! Advance simulation through one big time step (DELTA_T)
 ! The concentration fields are first solved through NT_CONC subdivisions of DELTA_T,
@@ -735,7 +817,7 @@ subroutine simulate_step(res) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 integer :: kcell, site(3), hour, it, nthour, kpar=0
-real(REAL_KIND) :: r(3), rmax, tstart, dt
+real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo
 
@@ -753,15 +835,20 @@ if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
 	call logger(logmsg)
 endif
-!if (istep == 6216) dbug = .true.
-!call make_split(.true.)
-call grow_cells(DELTA_T)
+t_simulation = (istep-1)*DELTA_T	! seconds
+if (use_treatment) then
+	call treatment(radiation_dose)
+	if (radiation_dose > 0) then
+		write(logmsg,'(a,f6.1)') 'Radiation dose: ',radiation_dose
+		call logger(logmsg)
+	endif
+endif
+call grow_cells(radiation_dose,DELTA_T)
 call SetupODEdiff
 call SiteCellToState
 do it = 1,NT_CONC
 	tstart = (it-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
-!	call Solver(nchemo,tstart,dt)
 	call Solver(it,tstart,dt,Ncells)
 enddo
 call StateToSiteCell
@@ -1063,20 +1150,24 @@ end function
 ! Total deaths = Ndead
 ! Drug deaths = Ndrugdead
 ! Hypoxia deaths = Ndead - Ndrugdead
-! Total tagged for drug death on division = Ntodie
-! Current tagged = Ntodie - Ndrugdead
+! Total tagged for drug death on division = Ndrug_tag
+! Current tagged = Ntodie - Ntagdead
 !-----------------------------------------------------------------------------------------
 subroutine get_summary(summaryData) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
-integer :: Ndead, Ntagged, diam_um
+integer :: Ndead, Ntagged, Ntodie, Ntagdead, diam_um
 
 !call SetRadius(Nsites)
 diam_um = 2*DELTA_X*Radius*10000
+Ntodie = Nradiation_tag + Ndrug_tag
+Ntagdead = Nradiation_dead + Ndrug_dead
 Ndead = Nsites + Nreuse - Ncells
-Ntagged = Ntodie - Ndrugdead
-summaryData(1:6) = (/ istep, Ncells, Ndead, Ndrugdead, Ntagged, diam_um /)
+Ntagged = Ntodie - Ntagdead
+write(logmsg,*) 'Ntagged: ',Ntagged
+call logger(logmsg)
+summaryData(1:8) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, 0, 0 /)
 
 end subroutine
 
@@ -1172,17 +1263,16 @@ end subroutine
 !--------------------------------------------------------------------------------
 ! Returns all the extracellular concentrations along a line through the blob centre.
 !--------------------------------------------------------------------------------
-subroutine get_concdata(maxchemo, ns, dx, conc) BIND(C)
+subroutine get_concdata(ns, dx, conc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
 use, intrinsic :: iso_c_binding
-integer(c_int) :: maxchemo, ns
+integer(c_int) :: ns
 real(c_double) :: dx, conc(*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer rng(3,2), i, k, ichemo, kcell, x, y, z
 
-write(logmsg,*) 'get_concdata'
-call logger(logmsg)
-maxchemo = MAX_CHEMO
+!write(logmsg,*) 'get_concdata'
+!call logger(logmsg)
 dx = DELTA_X
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
@@ -1230,9 +1320,44 @@ enddo
 do k = 1,MAX_CHEMO*ns
     conc(k) = max(cmin,conc(k))
 enddo
-call logger('did get_concdata')
+!call logger('did get_concdata')
 end subroutine
 
+!--------------------------------------------------------------------------------
+! Returns the distribution of cell volume.
+! nv is passed from the GUI
+! Min divide volume = Vdivide0 - dVdivide
+! therefore Vmin = (Vdivide0 - dVdivide)/2
+! Max divide volume = Vmax = Vdivide0 + dVdivide
+! dv = (Vmax - Vmin)/nv
+! v0 = Vmin + dv/2
+!--------------------------------------------------------------------------------
+subroutine get_volprob(nv, v0, dv, prob) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_volprob
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nv
+real(c_double) :: v0, dv, prob(*)
+integer :: n, kcell, k
+real(REAL_KIND) :: v, Vmin, Vmax
+
+Vmin = (Vdivide0 - dVdivide)/2
+Vmax = Vdivide0 + dVdivide
+dv = (Vmax - Vmin)/nv
+v0 = Vmin + dv/2
+prob(1:nv) = 0
+n = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	v = cell_list(kcell)%volume
+	k = (v - Vmin)/dv + 1
+	k = min(k,nv)
+	prob(k) = prob(k) + 1
+	n = n+1
+enddo
+prob(1:nv) = prob(1:nv)/n
+write(logmsg,'(a,i3,2f8.2)') 'get_volprob: ',nv,dv,v0
+call logger(logmsg)
+end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -1448,7 +1573,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine wrapup
-integer :: ierr, ichemo
+integer :: ierr, ichemo, idrug
 logical :: isopen
 
 call logger('doing wrapup ...')
@@ -1468,6 +1593,17 @@ enddo
 !if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
 if (allocated(ODEdiff%varsite)) deallocate(ODEdiff%varsite)
 if (allocated(ODEdiff%icoef)) deallocate(ODEdiff%icoef)
+if (allocated(protocol)) then
+	do idrug = 0,2	!<------  change this to a variable
+		if (allocated(protocol(idrug)%tstart)) deallocate(protocol(idrug)%tstart)
+		if (allocated(protocol(idrug)%tend)) deallocate(protocol(idrug)%tend)
+		if (allocated(protocol(idrug)%conc)) deallocate(protocol(idrug)%conc)
+		if (allocated(protocol(idrug)%dose)) deallocate(protocol(idrug)%dose)
+		if (allocated(protocol(idrug)%started)) deallocate(protocol(idrug)%started)
+		if (allocated(protocol(idrug)%ended)) deallocate(protocol(idrug)%ended)
+	enddo
+	deallocate(protocol)
+endif
 call logger('deallocated all arrays')
 
 ! Close all open files

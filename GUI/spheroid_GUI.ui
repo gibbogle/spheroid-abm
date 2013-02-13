@@ -42,7 +42,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -1055,7 +1055,10 @@ padding: 8px
               </widget>
              </item>
              <item row="5" column="2">
-              <widget class="QCheckBox" name="cbox_SN30K_metabolite">
+              <widget class="QCheckBox" name="cbox_SN30K_METABOLITE">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string/>
                </property>
@@ -1063,6 +1066,9 @@ padding: 8px
              </item>
              <item row="5" column="3">
               <widget class="QCheckBox" name="cbox_DRUG_B_metabolite">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string/>
                </property>
@@ -1951,7 +1957,7 @@ padding: 8px
           </property>
           <property name="minimumSize">
            <size>
-            <width>800</width>
+            <width>1100</width>
             <height>720</height>
            </size>
           </property>
@@ -2112,108 +2118,96 @@ padding: 8px
          <rect>
           <x>710</x>
           <y>0</y>
-          <width>151</width>
-          <height>141</height>
+          <width>131</width>
+          <height>161</height>
          </rect>
         </property>
         <property name="title">
          <string>Constituent</string>
         </property>
-        <widget class="QRadioButton" name="radioButton_oxygen">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>20</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Oxygen</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-         <attribute name="buttonGroup">
-          <string>buttonGroup_constituent</string>
-         </attribute>
-        </widget>
-        <widget class="QRadioButton" name="radioButton_glucose">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>50</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Glucose</string>
-         </property>
-         <attribute name="buttonGroup">
-          <string>buttonGroup_constituent</string>
-         </attribute>
-        </widget>
-        <widget class="QRadioButton" name="radioButton_drugA">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>80</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Drug A</string>
-         </property>
-         <attribute name="buttonGroup">
-          <string>buttonGroup_constituent</string>
-         </attribute>
-        </widget>
-        <widget class="QRadioButton" name="radioButton_drugB">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>110</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Drug B</string>
-         </property>
-         <attribute name="buttonGroup">
-          <string>buttonGroup_constituent</string>
-         </attribute>
-        </widget>
-        <widget class="QRadioButton" name="radioButton_drugA_metabolite">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="geometry">
-          <rect>
-           <x>80</x>
-           <y>80</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>metabolite</string>
-         </property>
-        </widget>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QRadioButton" name="radioButton_oxygen">
+           <property name="text">
+            <string>Oxygen</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_glucose">
+           <property name="text">
+            <string>Glucose</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_drugA">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Drug A</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_drugA_metabolite">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Drug A metabolite</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_drugB">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Drug B</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_drugB_metabolite">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Drug B metabolite</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
        <widget class="QGroupBox" name="groupBox_plane">
         <property name="geometry">
          <rect>
           <x>710</x>
-          <y>150</y>
+          <y>170</y>
           <width>91</width>
           <height>111</height>
          </rect>
@@ -2277,7 +2271,7 @@ padding: 8px
         <property name="geometry">
          <rect>
           <x>710</x>
-          <y>270</y>
+          <y>290</y>
           <width>41</width>
           <height>20</height>
          </rect>
@@ -2293,7 +2287,7 @@ padding: 8px
         <property name="geometry">
          <rect>
           <x>760</x>
-          <y>270</y>
+          <y>290</y>
           <width>41</width>
           <height>21</height>
          </rect>

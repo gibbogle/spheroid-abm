@@ -26,6 +26,8 @@ Plot::Plot(QString aname, QString acasename, QWidget *parent)
 	yscale = 0;
     if (acasename.compare("conc")==0) {
         setAxisTitle(QwtPlot::xBottom, "Distance (um)");
+    } else if (acasename.compare("vol")==0) {
+        setAxisTitle(QwtPlot::xBottom, "Volume fraction");
     } else {
         setAxisTitle(QwtPlot::xBottom, "Time (hours)");
     }

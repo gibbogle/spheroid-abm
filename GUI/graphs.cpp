@@ -10,13 +10,23 @@ Graphs::Graphs()
 {
 GRAPH_SET graphs[] = {
 
+    {"dummy1",
+    "",
+    "",
+    0, false, 0, 1},
+
+    {"dummy2",
+    "",
+    "",
+    0, false, 0, 1},
+
     {"nlive",
     "Number of Live Cells",
     "No. of cells",
     1, true, 0, 1},
 
-    {"ndead",
-    "Number of Dead Cells",
+    {"nradiationdead",
+    "Number of Radiation-killed Cells",
     "No. of cells",
     2, true, 0, 1},
 
@@ -37,78 +47,8 @@ GRAPH_SET graphs[] = {
 
 };
 
-/*
 
-{"diameter",
-"Spheroid Diameter",
-"Diameter",
-3, true, 0, 1},
-
-
-{"ncog",
-"Cognate B Cells in the Follicle",
-"No. of cells",
-4, true, 0, 1},
-
-{"inflow",
-"B Cells Influx (/h)",
-"No. of cells/h",
-6, true, 0, 1},
-
-{"teffgen",
-"Efferent Activated Cells",
-"No. of cells",
-8, true, 0, 1}
-
-// Data values: 2,3,4,5,6,7,9,12
-{"dummy",
-"",
-"",
-0, false, 0, 1},
-
-{"teffgen",
-"Efferent Activated Cells",
-"No. of cells",
-12, true, 0, 1},
-
-{"ncogseed",
-"Seed Cognate Cells",
-"No. of cells",
-5, true, 0, 1},
-
-{"nbnd",
-"Bound Cognate Cells",
-"No. of cells",
-9, true, 0, 1},
-
-{"act",
-"Total DC Antigen Activity",
-"",
-3, true, 0, .01},
-
-{"nDC",
-"Antigen Presenting Cells",
-"No. of cells",
-2, true, 0, 1},
-
-{"ncog_PER",
-"Activated T Cells in Periphery",
-"No. of cells",
-7, true, 0, 1},
-
-{"ncog_LN",
-"Cognate T Cells in LN",
-"No. of cells",
-6, true, 0, 1},
-
-{"ntot_LN",
-"Total T Cell Population in LN",
-"No. of cells",
-4, true, 0, 1}
-
-};
-	*/
-    diam_number = 5;
+//    diam_number = 7;
 	nGraphs = sizeof(graphs)/sizeof(GRAPH_SET);
 	graphList = new GRAPH_SET[nGraphs];
 	for (int i=0; i<nGraphs; i++) {

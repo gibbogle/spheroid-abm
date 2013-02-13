@@ -94,7 +94,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Second RNG seed",
 "The random number generator is seeded by a pair of integers.  Changing the seed generates a different Monte Carlo realization."},
 
-{"NCPU", 2, 1, 8,
+{"NCPU", 4, 1, 8,
 "Number of CPUs",
 "Number of CPUs to use for the simulation."},
 

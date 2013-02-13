@@ -48,6 +48,8 @@ contains
 
 !----------------------------------------------------------------------------------
 ! t in seconds
+! %bdry_decay = .true. for the case that a simple exponential decay of bdry conc
+! is specified.
 !----------------------------------------------------------------------------------
 real(REAL_KIND) function BdryConc(ichemo,t)
 integer :: ichemo
@@ -108,7 +110,8 @@ real(REAL_KIND) :: secretion
 integer :: ierr
 logical :: left, right
 
-call logger('Set diffusion parameters')
+!call logger('Set diffusion parameters')
+	
 if (.not.allocated(ODEdiff%ivar)) then
 	allocate(ODEdiff%ivar(NX,NY,NZ))
 endif
@@ -124,6 +127,7 @@ endif
 if (.not.allocated(ODEdiff%cell_index)) then
 	allocate(ODEdiff%cell_index(MAX_VARS))
 endif
+
 !DX = 1.0
 !DX2 = DX*DX
 ODEdiff%ivar = 0
@@ -270,6 +274,7 @@ do ichemo = 1,MAX_CHEMO
 		chemomap(nchemo) = ichemo
 	endif
 enddo
+!write(*,*) 'chemomap: ',nchemo,chemomap(1:nchemo)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -512,7 +517,7 @@ if (use_death) then
 endif
 
 dCreact = 0
-if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
+if (ichemo == OXYGEN) then
 !	metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
 !	metab = max(CO2_DEATH_THRESHOLD,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
 	if (C(OXYGEN) > ODEdiff%C1) then
@@ -525,6 +530,8 @@ if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
 !	dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
 !	dCreact = dMdt*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
 	dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+elseif (ichemo == GLUCOSE) then
+	dCreact = -chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 endif
 end subroutine
 
@@ -626,7 +633,6 @@ do i = 1,neqn
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
-!		    call extra_react(ichemo,i,Cin,vol,dCreact)
 		    dCreact = -chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
 		else
             dCreact=0
@@ -649,7 +655,7 @@ real(REAL_KIND) :: Cin(:), Cex, vol, dCreact
 real(REAL_KIND) :: metab
 
 dCreact = 0
-if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
+if (ichemo == OXYGEN) then
     if (Cin(OXYGEN) > ODEdiff%C1) then
 	    metab = (Cin(OXYGEN)-ODEdiff%deltaC)/(chemo(OXYGEN)%MM_C0 + Cin(OXYGEN) - ODEdiff%deltaC)
     elseif (Cin(OXYGEN) > 0) then
@@ -659,6 +665,8 @@ if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
 	    write(*,*) 'metab = 0'
     endif
     dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+elseif (ichemo == GLUCOSE) then
+    dCreact = -chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == SN30000) then
     dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(ichemo)
 elseif (ichemo == SN30000_METAB) then
@@ -696,6 +704,8 @@ do z = z1,NZ/2+9
 !        Ce(z) = 0
 !    endif
 enddo
+!write(logmsg,'(a,2f7.4)') 'Medium: ',chemo(DRUG_A)%bdry_conc,chemo(DRUG_METAB_A)%bdry_conc
+!call logger(logmsg)
 write(logmsg,'(a,i6,10f7.4)') 'E:',ODEdiff%nextra,(v(ODEdiff%ivar(x,y,z)),z=z1,z2)	
 call logger(logmsg)
 write(logmsg,'(a,i6,10f7.4)') 'I:',ODEdiff%nintra,(Cin(z),z=z1,z2)	
@@ -744,9 +754,10 @@ endif
 allocate(state(ntvars,MAX_CHEMO))
 
 state(:,:) = allstate(1:ntvars,1:MAX_CHEMO)
-if (it == 1) then
-	call showresults(state(:,OXYGEN))
-endif
+!if (it == 1) then
+!	call showresults(state(:,DRUG_A))
+!	call showresults(state(:,DRUG_METAB_A))
+!endif
 
 info(1) = 1
 info(2) = 1		! 1 = use spcrad() to estimate spectral radius, 2 = let rkc do it 
@@ -820,14 +831,15 @@ subroutine update_medium(ntvars,state,dt)
 integer :: ntvars
 real(REAL_KIND) :: dt, state(:,:)
 integer :: nb, i, k
-real(REAL_KIND) :: Cbnd(MAX_CHEMO), F(MAX_CHEMO)
+real(REAL_KIND) :: Csurface(MAX_CHEMO), F(MAX_CHEMO), area
 logical :: bnd
 
+if (.not.chemo(DRUG_A)%used .and. .not.chemo(DRUG_B)%used) return
 ! First need the spheroid radius
 call SetRadius(Nsites)
 ! Now compute the mean boundary site concentrations Cbnd(:)
 nb = 0
-Cbnd = 0
+Csurface = 0
 do i = 1,ntvars
 	if (ODEdiff%vartype(i) /= EXTRA) cycle
 	bnd = .false.
@@ -839,12 +851,13 @@ do i = 1,ntvars
 	enddo
 	if (bnd) then
 		nb = nb + 1
-		Cbnd = Cbnd + state(i,:)
+		Csurface = Csurface + state(i,:)
 	endif
 enddo
-Cbnd = Cbnd/nb
-F(:) = 4*PI*Radius*Radius*DELTA_X*chemo(:)%diff_coef*(Cbnd(:) - chemo(:)%bdry_conc*dt)
-!write(*,*) 'Radius, C, F: ',Radius, chemo(DRUG_A)%bdry_conc, F(DRUG_A)
+Csurface = Csurface/nb
+area = 4*PI*Radius*Radius*DELTA_X*DELTA_X
+F(:) = area*chemo(:)%diff_coef*(Csurface(:) - chemo(:)%bdry_conc)/DELTA_X
+!write(*,*) 'Radius, C, F: ',area, Csurface(DRUG_A), chemo(DRUG_A)%bdry_conc, F(DRUG_A)
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
 end subroutine
 
@@ -1396,11 +1409,7 @@ do i = 1,n
 	enddo
 	dCreact = 0
 	call extra_react(ichemo,i,C,vol,dCreact)
-!	if (i == 6822) then
-!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
-!	endif
 	f_deriv(i) = dCsum + dCreact
-!	dmax = max(dmax,f_deriv(i))
 enddo
 end function
 

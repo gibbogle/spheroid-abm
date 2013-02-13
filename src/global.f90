@@ -34,24 +34,23 @@ integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,
 !real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
 !real(REAL_KIND), parameter :: CO2_DEATH_THRESHOLD = 0.0001
 integer, parameter :: MAX_CHEMO = 6
-!integer, parameter :: MAX_CONC = 6
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: DRUG_A = 3
-integer, parameter :: DRUG_METAB_A = 4
+integer, parameter :: DRUG_A_METAB = 4
 integer, parameter :: DRUG_B = 5
-integer, parameter :: DRUG_METAB_B = 6
+integer, parameter :: DRUG_B_METAB = 6
 integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
 integer, parameter :: SN30000 = DRUG_A
-integer, parameter :: SN30000_METAB = DRUG_METAB_A
+integer, parameter :: SN30000_METAB = DRUG_A_METAB
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
 logical, parameter :: use_division = .true.
 logical, parameter :: use_death = .true.
 logical, parameter :: use_react = .true.
 logical, parameter :: use_migration = .true.
-logical, parameter :: use_medium_flux = .true.
+logical, parameter :: use_medium_flux = .true.	! flux of constituents between spheroid and medium is accounted for.
 logical, parameter :: use_metabolites = .true.
 
 !integer, parameter :: MAX_RECEPTOR = 1
@@ -77,7 +76,7 @@ type cell_type
 	real(REAL_KIND) :: t_divide_next
 	real(REAL_KIND) :: t_hypoxic
 	real(REAL_KIND) :: M
-	logical :: todie
+	logical :: radiation_tag, drug_tag
 	logical :: exists
 end type
 
@@ -114,18 +113,26 @@ type, bind(C) :: field_data
 end type
 
 type treatment_type
-	character*(16) :: name
 	integer :: n
+	character*(16) :: name
 	real(REAL_KIND), allocatable :: tstart(:)
 	real(REAL_KIND), allocatable :: tend(:)
 	real(REAL_KIND), allocatable :: conc(:)
 	real(REAL_KIND), allocatable :: dose(:)
+	logical, allocatable :: started(:)
+	logical, allocatable :: ended(:)
+end type
+
+type LQ_type
+	real(REAL_KIND) :: OER_am, OER_bm
+	real(REAL_KIND) :: alpha_H, beta_H
+	real(REAL_KIND) :: K_ms
 end type
 	
 type(dist_type) :: divide_dist
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
-type(treatment_type), allocatable :: treatment(:)
+type(treatment_type), allocatable :: protocol(:)
 !type(boundary_type), pointer :: bdrylist
 
 integer :: NX, NY, NZ
@@ -138,7 +145,7 @@ integer :: jumpvec(3,27)
 
 integer :: max_nlist, nlist, Ncells, Ncells0, lastNcells, lastID
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
-integer :: Ntodie, Ndrugdead
+integer :: Ndrug_tag, Nradiation_tag, Ndrug_dead, Nradiation_dead
 integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
@@ -147,6 +154,7 @@ real(REAL_KIND) :: CO2_DEATH_THRESHOLD, THRESHOLD_FACTOR, t_hypoxic_limit, Vdivi
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 real(REAL_KIND) :: t_simulation
 type(SN30K_type) :: SN30K
+type(LQ_type) :: LQ
 character*(128) :: inputfile
 character*(128) :: treatmentfile
 character*(128) :: outputfile
