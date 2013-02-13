@@ -129,6 +129,11 @@ public slots:
 	void textChanged_fraction(QString text);
 	void textEdited_fraction(QString text);
     void on_cbox_use_drugA_toggled(bool checked);
+    void on_cbox_drugA_metabolite_toggled(bool checked);
+    void on_cbox_use_drugB_toggled(bool checked);
+    void on_cbox_drugB_metabolite_toggled(bool checked);
+    void setupConc(int nc, bool *used);
+
 private:
     void createActions();
 	void createLists();

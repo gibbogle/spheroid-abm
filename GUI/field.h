@@ -25,7 +25,9 @@ typedef field_data FIELD_DATA;
 #define OXYGEN 0
 #define GLUCOSE 1
 #define DRUG_A 2
-#define DRUG_B 3
+#define DRUG_METAB_A 3
+#define DRUG_B 4
+#define DRUG_METAB_B 5
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -45,8 +47,11 @@ public:
 	void displayField();
     void setSliceChanged();
     void chooseColor(double fr, int rgbcol[]);
+    void getTitle(QString *);
     void makeConcPlot(QMdiArea *);
     void updateConcPlot();
+    void makeVolPlot(QMdiArea *);
+    void updateVolPlot();
 
     QWidget *field_page;
     int NX;
@@ -54,11 +59,12 @@ public:
     double fraction;
 //    int MAX_CHEMO;
     int nsites, nconst, cused[10];
+    QString constituentText;
     int constituent;
     bool slice_changed;
 	bool constituent_changed;
 	FIELD_DATA *data;
-    Plot *pG;
+    Plot *pGconc, *pGvol;
     char msg[1024];
 
 //public slots:

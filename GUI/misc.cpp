@@ -139,6 +139,8 @@ void ExecThread::run()
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
+    bool cused[16];
+
 	infile_path = inputFile;
 	QString casename = QFileInfo(inputFile).baseName();
 	len_infile = infile_path.length();
@@ -151,13 +153,13 @@ void ExecThread::run()
 
 	paused = false;
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
-    get_dimensions(&NX,&NY,&NZ,&nsteps,&DELTA_T);
+    get_dimensions(&NX,&NY,&NZ,&nsteps,&DELTA_T, &MAX_CHEMO, cused);
+    emit setupC(MAX_CHEMO, cused);
     nsumm_interval = (60*60)/DELTA_T;   // number of time steps per hour
 //	sprintf(msg,"exthread: nsteps: %d",nsteps);
 //	LOG_MSG(msg);
     mutex1.lock();
     get_summary(summaryData);
-//    get_concdata(&conc_nc, &conc_dx, concData);
     conc_nc = 0;
     mutex1.unlock();
     emit summary();		// Emit signal to initialise summary plots
@@ -179,7 +181,8 @@ void ExecThread::run()
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
             get_summary(summaryData);
-            get_concdata(&MAX_CHEMO, &conc_nc, &conc_dx, concData);
+            get_concdata(&conc_nc, &conc_dx, concData);
+            get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
             int iframe = i/nsumm_interval;
 //            saveGradient2D(iframe);
             mutex1.unlock();
@@ -215,27 +218,11 @@ void ExecThread::run()
 //-----------------------------------------------------------------------------------------
 void ExecThread::snapshot()
 {
-//	mutex2.lock();
     get_scene(&ncell_list,cell_list);
     if (ncell_list > MAX_CELLS) {
         LOG_MSG("Error: MAX_CELLS exceeded");
         exit(1);
     }
-    /*
-    if (nBC_list > MAX_BC) {
-		LOG_MSG("Error: MAX_TC exceeded");
-		exit(1);
-	}
-	if (nDC_list > MAX_DC) {
-		LOG_MSG("Error: MAX_DC exceeded");
-		exit(1);
-	}
-	if (nbond_list > MAX_BOND) {
-		LOG_MSG("Error: MAX_BOND exceeded");
-		exit(1);
-	}
-    */
-//	mutex2.unlock();
     emit displayF(); // Emit signal to update Field display
     emit display(); // Emit signal to update VTK display
 }

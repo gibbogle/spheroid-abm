@@ -17,9 +17,12 @@ contains
 ! Need to initialize site and cell concentrations when a cell divides and when there is
 ! cell death.
 !-----------------------------------------------------------------------------------------
-subroutine grow_cells(dt)
-real(REAL_KIND) :: dt
+subroutine grow_cells(dose,dt)
+real(REAL_KIND) :: dose, dt
 
+if (use_radiation .and. dose > 0) then
+	call irradiation(dose)
+endif
 if (use_division) then
 	call cell_division(dt)
 endif
@@ -29,6 +32,42 @@ endif
 if (use_migration) then
 	call cell_migration
 endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Irradiate cells with dose.
+!-----------------------------------------------------------------------------------------
+subroutine irradiation(dose)
+real(REAL_KIND) :: dose
+integer :: kcell, site(3), iv, kpar=0
+real(REAL_KIND) :: C_O2, OER_alpha_d, OER_beta_d, expon, kill_prob, R
+
+LQ%OER_am = 2.5
+LQ%OER_bm = 3.0
+LQ%alpha_H = 0.0473
+LQ%beta_H = 0.0017
+LQ%K_ms = 4.3e-3	! mM
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	if (cell_list(kcell)%radiation_tag) cycle	! we do not tag twicw (yet)
+	site = cell_list(kcell)%site
+	iv = ODEdiff%ivar(site(1),site(2),site(3))
+	if (iv < 1) then
+	    write(*,*) 'irradiation: ',kcell,site,iv
+	    stop
+	endif
+	C_O2 = allstate(iv,OXYGEN)
+	OER_alpha_d = dose*(LQ%OER_am*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
+	OER_beta_d = dose*(LQ%OER_bm*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
+	expon = LQ%alpha_H*OER_alpha_d + LQ%beta_H*OER_alpha_d**2
+	kill_prob = 1 - exp(-expon)
+!	write(*,'(i6,3e12.4)') kcell,C_O2,expon,kill_prob
+	R = par_uni(kpar)
+	if (R < kill_prob) then
+		cell_list(kcell)%radiation_tag = .true.
+		Nradiation_tag = Nradiation_tag + 1
+	endif
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -118,8 +157,8 @@ do kcell = 1,nlist
 !	    write(*,'(4f10.5)') kmet,cell_list(kcell)%conc(DRUG_A),dMdt,pdeath
 	    if (par_uni(kpar) < pdeath) then
 !			call cell_dies(kcell)
-            cell_list(kcell)%todie = .true.
-            Ntodie = Ntodie + 1
+            cell_list(kcell)%drug_tag = .true.
+            Ndrug_tag = Ndrug_tag + 1
 		endif
 	endif
 enddo
@@ -217,7 +256,7 @@ subroutine cell_division(dt)
 real(REAL_KIND) :: dt
 integer :: kcell, nlist0, site(3), iv
 integer :: divide_list(1000), ndivide, i
-real(REAL_KIND) :: tnow, CO2, metab, dVdt, rmax
+real(REAL_KIND) :: tnow, C_O2, metab, dVdt, rmax
 character*(20) :: msg
 
 nlist0 = nlist
@@ -226,32 +265,31 @@ rmax = Vdivide0/(2*divide_time_mean)
 ndivide = 0
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
-	if (cell_list(kcell)%todie) then
-	    call cell_dies(kcell)
-	    Ndrugdead = Ndrugdead + 1
-	    cycle
-	endif
 	site = cell_list(kcell)%site
 	iv = ODEdiff%ivar(site(1),site(2),site(3))
 	if (iv < 1) then
 	    write(*,*) 'cell_division: ',kcell,site,iv
 	    stop
 	endif
-	CO2 = allstate(iv,OXYGEN)
-	metab = max(0.0,CO2)/(chemo(OXYGEN)%MM_C0 + CO2)
+	C_O2 = allstate(iv,OXYGEN)
+	metab = max(0.0,C_O2)/(chemo(OXYGEN)%MM_C0 + C_O2)
 	dVdt = rmax*metab
 	cell_list(kcell)%volume = cell_list(kcell)%volume + dVdt*dt
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then
+		if (cell_list(kcell)%radiation_tag) then
+			call cell_dies(kcell)
+			Nradiation_dead = Nradiation_dead + 1
+!			write(*,*) 'Cell died: ',kcell,
+			cycle
+		endif
+		if (cell_list(kcell)%drug_tag) then
+			call cell_dies(kcell)
+			Ndrug_dead = Ndrug_dead + 1
+			cycle
+		endif
 	    ndivide = ndivide + 1
 	    divide_list(ndivide) = kcell
-!		kcell_dividing = kcell
-!		call cell_divider(kcell)
-!		write(msg,'(a,i5)') 'divided: ',kcell
 	endif
-!	if (cell_list(kcell)%t_divide_next <= tnow) then
-!		kcell_dividing = kcell
-!		call cell_divider(kcell)
-!	endif
 enddo
 do i = 1,ndivide
     kcell = divide_list(i)
@@ -787,7 +825,8 @@ cell_list(kcell1)%state = cell_list(kcell0)%state
 cell_list(kcell1)%site = site1
 !cell_list(kcell1)%ID = lastID
 cell_list(kcell1)%ID = cell_list(kcell0)%ID
-cell_list(kcell1)%todie = .false.
+cell_list(kcell1)%radiation_tag = .false.
+cell_list(kcell1)%drug_tag = .false.
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%t_divide_last = tnow
 !cell_list(kcell1)%t_divide_next = tnow + DivideTime()
