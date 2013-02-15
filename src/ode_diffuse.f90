@@ -1,5 +1,5 @@
 ! Solving 3D diffusion-decay eqtn as an ODE system.
-! 
+!
 ! Each chemokine has a list of sites with a specified rate of secretion into each site.
 ! The list needs to be updated when the boundary changes, or when FDCs move and/or the number
 ! changes.
@@ -22,9 +22,9 @@ end function
 module ode_diffuse
 
 use chemokine
-use rkf45s
-use rksuite_90
-use rksuite_90_prec, only:wp
+!use rkf45s
+!use rksuite_90
+!use rksuite_90_prec, only:wp
 use rkc_90
 
 implicit none
@@ -75,7 +75,7 @@ end function
 ! 6 <-- (x,y,z-1)
 ! 7 <-- (x,y,z+1)
 !
-! PLUS for reactions, MAX_CHEMO 
+! PLUS for reactions, MAX_CHEMO
 ! In each case, provided ivar(:,:,:) > 0
 !
 ! If diffusion in an axis direction is suppressed (there is a boundary on one or
@@ -111,7 +111,7 @@ integer :: ierr
 logical :: left, right
 
 !call logger('Set diffusion parameters')
-	
+
 if (.not.allocated(ODEdiff%ivar)) then
 	allocate(ODEdiff%ivar(NX,NY,NZ))
 endif
@@ -187,7 +187,7 @@ do i = 1,ODEdiff%nvars
 	z = site(3)
 	ODEdiff%icoef(i,:) = 0
 	ODEdiff%icoef(i,1) = i
-	
+
 	left = .true.
 	right = .true.
 	if (x==1) then
@@ -197,7 +197,7 @@ do i = 1,ODEdiff%nvars
 	elseif (ODEdiff%ivar(x-1,y,z) == 0) then
 		left = .false.
 	endif
-	if (x==NX) then 
+	if (x==NX) then
 !		right = .false.
 		ierr = 2
 		exit
@@ -219,7 +219,7 @@ do i = 1,ODEdiff%nvars
 	elseif (ODEdiff%ivar(x,y-1,z) == 0) then
 		left = .false.
 	endif
-	if (y==NY) then 
+	if (y==NY) then
 !		right = .false.
 		ierr = 4
 		exit
@@ -241,7 +241,7 @@ do i = 1,ODEdiff%nvars
 	elseif (ODEdiff%ivar(x,y,z-1) == 0) then
 		left = .false.
 	endif
-	if (z==NZ) then 
+	if (z==NZ) then
 !		right = .false.
 		ierr = 6
 		exit
@@ -322,7 +322,7 @@ call logger(logmsg)
 end subroutine
 
 !----------------------------------------------------------------------------------
-! A cell has moved to site(:), which was previously exterior (boundary), and the 
+! A cell has moved to site(:), which was previously exterior (boundary), and the
 ! variable-site mappings need to be updated, together with %icoef(:,:)
 ! The relevant neighbours are at x +/- 1, y +/- 1, z +/- 1
 ! %nextra is incremented, and allstate(nextra,:) is initialized.
@@ -348,12 +348,12 @@ ODEdiff%varsite(n,:) = site
 ODEdiff%nextra = n
 ODEdiff%icoef(n,:) = 0
 ODEdiff%icoef(n,1) = n
-! See which neighbours of site are interior, and require to have 
+! See which neighbours of site are interior, and require to have
 ! %icoef = 0 replaced by %icoef = n
 nb = 0
 csum = 0
 x2 = x+1
-kv = ODEdiff%ivar(x2,y,z) 
+kv = ODEdiff%ivar(x2,y,z)
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,2) /= 0) then
 		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,2): ',ODEdiff%icoef(kv,2)
@@ -366,7 +366,7 @@ if (kv > 0) then
 	csum = csum + allstate(kv,:)
 endif
 x1 = x-1
-kv = ODEdiff%ivar(x1,y,z) 
+kv = ODEdiff%ivar(x1,y,z)
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,3) /= 0) then
 		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,3): ',ODEdiff%icoef(kv,3)
@@ -379,7 +379,7 @@ if (kv > 0) then
 	csum = csum + allstate(kv,:)
 endif
 y2 = y+1
-kv = ODEdiff%ivar(x,y2,z) 
+kv = ODEdiff%ivar(x,y2,z)
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,4) /= 0) then
 		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,4): ',ODEdiff%icoef(kv,4)
@@ -392,7 +392,7 @@ if (kv > 0) then
 	csum = csum + allstate(kv,:)
 endif
 y1 = y-1
-kv = ODEdiff%ivar(x,y1,z) 
+kv = ODEdiff%ivar(x,y1,z)
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,5) /= 0) then
 		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,5): ',ODEdiff%icoef(kv,5)
@@ -405,7 +405,7 @@ if (kv > 0) then
 	csum = csum + allstate(kv,:)
 endif
 z2 = z+1
-kv = ODEdiff%ivar(x,y,z2) 
+kv = ODEdiff%ivar(x,y,z2)
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,6) /= 0) then
 		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,6): ',ODEdiff%icoef(kv,6)
@@ -418,7 +418,7 @@ if (kv > 0) then
 	csum = csum + allstate(kv,:)
 endif
 z1 = z-1
-kv = ODEdiff%ivar(x,y,z1) 
+kv = ODEdiff%ivar(x,y,z1)
 if (kv > 0) then
 	if (ODEdiff%icoef(kv,7) /= 0) then
 		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,7): ',ODEdiff%icoef(kv,7)
@@ -469,7 +469,7 @@ enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
-! Copy allstate(:,:) to site and cell concentrations 
+! Copy allstate(:,:) to site and cell concentrations
 !----------------------------------------------------------------------------------
 subroutine StateToSiteCell
 integer :: i, site(3), kcell
@@ -542,7 +542,7 @@ end subroutine
 ! live cells.
 ! This can be generalized by making the ODEdiff variables apply to the extracellular
 ! concentration fields.
-! One approach is to extend the vector of extracellular variables, for a given 
+! One approach is to extend the vector of extracellular variables, for a given
 ! constituent, to include the corresponding vector of intracellular variables for
 ! that constituent.  The approach would then be to treat all other constituents as
 ! constant for the purposes of solving for one constituent.
@@ -564,7 +564,7 @@ end subroutine
 !   else
 !       intra_index(ie) = 0
 !   endif
-! enddo 
+! enddo
 !
 ! Then kcell is recovered from ki: ki -> ie -> site -> indx(1)
 ! or from cell_index(ki)
@@ -672,7 +672,7 @@ elseif (ichemo == SN30000) then
 elseif (ichemo == SN30000_METAB) then
     dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
 endif
-dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - Cin(ichemo)) 
+dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -706,13 +706,13 @@ do z = z1,NZ/2+9
 enddo
 !write(logmsg,'(a,2f7.4)') 'Medium: ',chemo(DRUG_A)%bdry_conc,chemo(DRUG_METAB_A)%bdry_conc
 !call logger(logmsg)
-write(logmsg,'(a,i6,10f7.4)') 'E:',ODEdiff%nextra,(v(ODEdiff%ivar(x,y,z)),z=z1,z2)	
+write(logmsg,'(a,i6,10f7.4)') 'E:',ODEdiff%nextra,(v(ODEdiff%ivar(x,y,z)),z=z1,z2)
 call logger(logmsg)
-write(logmsg,'(a,i6,10f7.4)') 'I:',ODEdiff%nintra,(Cin(z),z=z1,z2)	
+write(logmsg,'(a,i6,10f7.4)') 'I:',ODEdiff%nintra,(Cin(z),z=z1,z2)
 call logger(logmsg)
-!write(logmsg,'(a,i6,10f7.4)') 'M:',ODEdiff%nintra,(drugM(z),z=z1,z2)	
+!write(logmsg,'(a,i6,10f7.4)') 'M:',ODEdiff%nintra,(drugM(z),z=z1,z2)
 !call logger(logmsg)
-!write(logmsg,'(a,10f7.4)') 'Diff:   ',((v(ODEdiff%ivar(x,y,z))-Cin(z))/Cin(z),z=z1,z2)	
+!write(logmsg,'(a,10f7.4)') 'Diff:   ',((v(ODEdiff%ivar(x,y,z))-Cin(z))/Cin(z),z=z1,z2)
 !call logger(logmsg)
 end subroutine
 
@@ -724,7 +724,7 @@ end subroutine
 ! The ODE solver is RKC
 ! The subroutine assumes that:
 !   * ODEdiff has been set up with the correct mappings
-!   * allstate(:,:) holds the most recent solution, including estimates when the 
+!   * allstate(:,:) holds the most recent solution, including estimates when the
 !     blob changes (i.e. grows or shrinks).  This could entail variable renumbering.
 !   * work(:,:) is correctly sized (ODEdiff%nextra)
 !----------------------------------------------------------------------------------
@@ -760,7 +760,7 @@ state(:,:) = allstate(1:ntvars,1:MAX_CHEMO)
 !endif
 
 info(1) = 1
-info(2) = 1		! 1 = use spcrad() to estimate spectral radius, 2 = let rkc do it 
+info(2) = 1		! 1 = use spcrad() to estimate spectral radius, 2 = let rkc do it
 info(3) = 1
 info(4) = 0
 rtol = 1d-2
@@ -864,7 +864,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 ! Update intracellular concentrations for cell kcell by time dt.
 ! The extracellular concentrations are Cextra(:)
-! The mass rate of transport is as for the extracellular calculation (they must 
+! The mass rate of transport is as for the extracellular calculation (they must
 ! balance) but the conversion to concentration change is different (volume is different).
 !----------------------------------------------------------------------------------
 subroutine intracellular(kcell,Cextra,dt)
@@ -914,7 +914,7 @@ do i = 1,ODEdiff%nextra
 enddo
 end subroutine
 
-!---------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine TestSolver
 integer :: nvars, nt, ichemo, it, ncells
@@ -961,9 +961,9 @@ real(REAL_KIND) :: abserr_par(MAX_CHEMO), relerr_par(MAX_CHEMO)
 integer, parameter :: SOLVER = RKC_SOLVER
 
 ! Variables for RKSUITE
-type(rk_comm_real_1d) :: comm
-real(kind=wp) :: t_start, t_end, tolerance, t_want, t_inc, t_got
-real(kind=wp), allocatable :: thresholds(:)
+!type(rk_comm_real_1d) :: comm
+real(REAL_KIND) :: t_start, t_end, tolerance, t_want, t_inc, t_got
+real(REAL_KIND), allocatable :: thresholds(:)
 
 ! Variables for RKC
 real(REAL_KIND), allocatable :: work(:,:)
@@ -997,7 +997,7 @@ do ichemo = 1,nchemo
 		tolerance = 1.0e-4
 		allocate(thresholds(nvars))
 		thresholds = 0.1
-		call rk_setup(comm, tstart, allstate(1:nvars,ichemo), t_end,  tolerance, thresholds)
+!		call rk_setup(comm, tstart, allstate(1:nvars,ichemo), t_end,  tolerance, thresholds)
 	elseif (SOLVER == RKC_SOLVER) then
 		info(1) = 1
 		info(2) = 1
@@ -1038,7 +1038,7 @@ do k = 1,nt
 		tend = tstart + dt
 		flag = flag_par(ichemo)
 		if (SOLVER == RKF45_SOLVER) then
-			if (REAL_KIND == SP) then	
+			if (REAL_KIND == SP) then
 !				call r4_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
 			else
 				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
@@ -1054,13 +1054,12 @@ do k = 1,nt
 			abserr_par(ichemo) = abserr
 			relerr_par(ichemo) = relerr
 		elseif (SOLVER == RKSUITE_SOLVER) then
-			call range_integrate(comm, f_deriv, tend, t_got, state, statep, flag)
+!			call range_integrate(comm, f_deriv, tend, t_got, state, statep, flag)
 			if (flag /= 1 .and. flag /= 3 .and. flag /= 4) then
 				write(logmsg,*) 'Bad flag: ',flag
 				call logger(logmsg)
 				stop
 			endif
-			write(*,'(a,3f10.3)') 'tstart: ',tstart,tend,t_got
 		elseif (SOLVER == RKC_SOLVER) then
 			idid = 0
 			call rkc(comm_rkc(ichemo),nvars,f_rkc,state,tstart,tend,rtol,atol,info,work(:,ichemo),idid,ichemo)
@@ -1119,7 +1118,7 @@ end subroutine
 subroutine TestAddSite
 integer :: i, j, x, y, z, site(3), kpar=0
 
-do 
+do
 	i = random_int(1,ODEdiff%nextra,kpar)
 	do j = 1,7
 		if (ODEdiff%icoef(i,j) == 0) then
@@ -1196,7 +1195,7 @@ do ichemo = 1,MAX_CHEMO
 	do k = 1,nt(ibnd)
 		tstart = (k-1)*dt
 		tend = tstart + dt
-		if (REAL_KIND == SP) then	
+		if (REAL_KIND == SP) then
 !			call r4_rkf45 ( deriv, ODEdiff%nextra, state, statep, tstart, tend, relerr, abserr, flag )
 		else
 !			call r8_rkf45 ( deriv, ODEdiff%nextra, state, statep, tstart, tend, relerr, abserr, flag )
@@ -1286,7 +1285,7 @@ if (i1 > 0) then
 else
 	c1 = c0
 	del = del - 1
-endif			
+endif
 if (i2 > 0) then
 	c2 = conc(i2)
 else
@@ -1297,7 +1296,7 @@ if (del > 0) then
 	grad(1) = (c2 - c1)/del
 else
 	grad(1) = 0
-endif			
+endif
 
 del = 2
 if (y > 1) then
@@ -1315,7 +1314,7 @@ if (i1 > 0) then
 else
 	c1 = c0
 	del = del - 1
-endif			
+endif
 if (i2 > 0) then
 	c2 = conc(i2)
 else
@@ -1344,7 +1343,7 @@ if (i1 > 0) then
 else
 	c1 = c0
 	del = del - 1
-endif			
+endif
 if (i2 > 0) then
 	c2 = conc(i2)
 else
@@ -1361,10 +1360,10 @@ end subroutine
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 function f_deriv(t,v)
-use rksuite_90_prec, only:wp
-real(kind=wp), intent(in) :: t
-real(kind=wp), dimension(:), intent(in) :: v
-real(kind=wp), dimension(size(v,1)) :: f_deriv   
+!use rksuite_90_prec, only:wp
+real(REAL_KIND), intent(in) :: t
+real(REAL_KIND), dimension(:), intent(in) :: v
+real(REAL_KIND), dimension(size(v,1)) :: f_deriv
 
 integer :: icase
 integer :: i, k, kv, n, ichemo
@@ -1520,7 +1519,7 @@ end subroutine
 ! live cells.
 ! This can be generalized by making the ODEdiff variables apply to the extracellular
 ! concentration fields.
-! One approach is to extend the vector of extracellular variables, for a given 
+! One approach is to extend the vector of extracellular variables, for a given
 ! constituent, to include the corresponding vector of intracellular variables for
 ! that constituent.  The approach would then be to treat all other constituents as
 ! constant for the purposes of solving for one constituent.
@@ -1542,7 +1541,7 @@ end subroutine
 !   else
 !       intra_index(ie) = 0
 !   endif
-! enddo 
+! enddo
 !
 ! Then kcell is recovered from ki: ki -> ie -> site -> indx(1)
 ! or from cell_index(ki)
@@ -1657,7 +1656,7 @@ dCreact = 0
 dCreact(1:2) = -metab*chemo(1:2)%max_cell_rate*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
 
 do ichemo = 1,nchemo
-    dCreact(ichemo) = dCreact(ichemo) + chemo(ichemo)%cell_diff*(Ce(ichemo) - C(ichemo)) 
+    dCreact(ichemo) = dCreact(ichemo) + chemo(ichemo)%cell_diff*(Ce(ichemo) - C(ichemo))
 enddo
 end subroutine
 
