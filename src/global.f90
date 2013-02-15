@@ -12,7 +12,7 @@ implicit none
 !INTEGER,  PARAMETER  ::  DP=SELECTED_REAL_KIND( 12, 60 )
 INTEGER,  PARAMETER  ::  SP = kind(1.0), DP = kind(1.0d0)
 integer, parameter :: REAL_KIND = DP
-integer, parameter :: TCP_PORT_0 = 5000		! main communication port (logging) 
+integer, parameter :: TCP_PORT_0 = 5000		! main communication port (logging)
 integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
 integer, parameter :: NORMAL_DIST      = 1
 integer, parameter :: LOGNORMAL_DIST   = 2
@@ -84,7 +84,7 @@ type SN30K_type
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: C1
 	real(REAL_KIND) :: C2
-	real(REAL_KIND) :: Kmet0    
+	real(REAL_KIND) :: Kmet0
 	real(REAL_KIND) :: KO2
 	real(REAL_KIND) :: gamma
 	real(REAL_KIND) :: Klesion
@@ -128,7 +128,7 @@ type LQ_type
 	real(REAL_KIND) :: alpha_H, beta_H
 	real(REAL_KIND) :: K_ms
 end type
-	
+
 type(dist_type) :: divide_dist
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
@@ -181,7 +181,7 @@ contains
 !-----------------------------------------------------------------------------------------
 ! WTIME returns a reading of the wall clock time.
 !-----------------------------------------------------------------------------------------
-real(DP) function wtime
+real(DP) function wtime()
 !DEC$ ATTRIBUTES DLLEXPORT :: wtime
   integer :: clock_max, clock_rate, clock_reading
 
@@ -353,7 +353,7 @@ end subroutine
 
 !--------------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------------
-real(REAL_KIND) function DivideTime
+real(REAL_KIND) function DivideTime()
 real(REAL_KIND) :: p1, p2
 integer :: kpar = 0
 
@@ -373,7 +373,7 @@ end function
 
 !--------------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------------
-real function DivisionTime
+real function DivisionTime()
 integer :: kpar = 0
 real(REAL_KIND), parameter :: rndfraction = 0.2
 

@@ -51,12 +51,12 @@
 #endif
 
 /* Defines to make routines fortran-callable */
-//#if defined(__INTEL_COMPILER) || defined(_MSC_VER)
-#ifdef _WIN32
+#if defined(__INTEL_COMPILER) || defined(_MSC_VER)	// swapped these lines for gfortran build
+//#ifdef _WIN32
 #define tcp_close TCP_CLOSE
 #define tcp_read TCP_READ
 #define tcp_write TCP_WRITE
-#define sleeper SLEEPER	
+#define sleeper SLEEPER
 #else
 #define tcp_close tcp_close_
 #define tcp_read tcp_read_
