@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1036</width>
-    <height>729</height>
+    <width>1294</width>
+    <height>893</height>
    </rect>
   </property>
   <property name="font">
@@ -50,6 +50,30 @@ padding: 8px
          <number>0</number>
         </property>
         <item>
+         <widget class="QLabel" name="label_input">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Segoe UI</family>
+            <pointsize>16</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Inputs</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QTabWidget" name="tabs">
           <property name="enabled">
            <bool>true</bool>
@@ -79,7 +103,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -207,7 +231,7 @@ padding: 8px
               </widget>
              </item>
              <item row="1" column="0">
-              <widget class="QLabel" name="label_used">
+              <widget class="QMyLabel" name="label_constused">
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -220,7 +244,7 @@ padding: 8px
               </widget>
              </item>
              <item row="2" column="0">
-              <widget class="QLabel" name="label_diffcoef">
+              <widget class="QMyLabel" name="label_OXYGEN_DIFF_COEF">
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -233,7 +257,7 @@ padding: 8px
               </widget>
              </item>
              <item row="3" column="0">
-              <widget class="QLabel" name="label_bdryconc">
+              <widget class="QMyLabel" name="label_OXYGEN_BDRY_CONC">
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -400,7 +424,7 @@ padding: 8px
               </widget>
              </item>
              <item row="4" column="0">
-              <widget class="QLabel" name="label_consumption">
+              <widget class="QMyLabel" name="label_OXYGEN_CONSUMPTION">
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -450,14 +474,14 @@ padding: 8px
            <widget class="QWidget" name="gridLayoutWidget_2">
             <property name="geometry">
              <rect>
-              <x>60</x>
-              <y>200</y>
-              <width>196</width>
-              <height>152</height>
+              <x>390</x>
+              <y>40</y>
+              <width>201</width>
+              <height>178</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_6">
-             <item row="0" column="1">
+             <item row="1" column="1">
               <widget class="QMyLabel" name="label_SN30K_KMET0">
                <property name="minimumSize">
                 <size>
@@ -470,7 +494,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="0" column="2">
+             <item row="1" column="2">
               <widget class="QLineEdit" name="line_SN30K_KMET0">
                <property name="maximumSize">
                 <size>
@@ -486,14 +510,14 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="2" column="1">
               <widget class="QMyLabel" name="label_SN30K_C1">
                <property name="text">
                 <string>C1</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="2">
+             <item row="2" column="2">
               <widget class="QLineEdit" name="line_SN30K_C1">
                <property name="maximumSize">
                 <size>
@@ -503,14 +527,14 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="2" column="1">
+             <item row="3" column="1">
               <widget class="QMyLabel" name="label_SN30K_C2">
                <property name="text">
                 <string>C2</string>
                </property>
               </widget>
              </item>
-             <item row="2" column="2">
+             <item row="3" column="2">
               <widget class="QLineEdit" name="line_SN30K_C2">
                <property name="maximumSize">
                 <size>
@@ -520,14 +544,14 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="3" column="1">
+             <item row="4" column="1">
               <widget class="QMyLabel" name="label_SN30K_KO2">
                <property name="text">
                 <string>KO2</string>
                </property>
               </widget>
              </item>
-             <item row="3" column="2">
+             <item row="4" column="2">
               <widget class="QLineEdit" name="line_SN30K_KO2">
                <property name="maximumSize">
                 <size>
@@ -537,14 +561,14 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="4" column="1">
+             <item row="5" column="1">
               <widget class="QMyLabel" name="label_SN30K_GAMMA">
                <property name="text">
                 <string>gamma</string>
                </property>
               </widget>
              </item>
-             <item row="4" column="2">
+             <item row="5" column="2">
               <widget class="QLineEdit" name="line_SN30K_GAMMA">
                <property name="maximumSize">
                 <size>
@@ -554,49 +578,49 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="0" column="3">
+             <item row="1" column="3">
               <widget class="QLabel" name="units_KMET0">
                <property name="text">
                 <string>min^-1</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="3">
+             <item row="2" column="3">
               <widget class="QLabel" name="units_C1">
                <property name="text">
                 <string/>
                </property>
               </widget>
              </item>
-             <item row="2" column="3">
+             <item row="3" column="3">
               <widget class="QLabel" name="units_C2">
                <property name="text">
                 <string/>
                </property>
               </widget>
              </item>
-             <item row="3" column="3">
+             <item row="4" column="3">
               <widget class="QLabel" name="units_KO2">
                <property name="text">
                 <string>uM</string>
                </property>
               </widget>
              </item>
-             <item row="4" column="3">
+             <item row="5" column="3">
               <widget class="QLabel" name="units_GAMMA">
                <property name="text">
                 <string>uM^-2</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="1">
+             <item row="6" column="1">
               <widget class="QMyLabel" name="label_SN30K_KLESION">
                <property name="text">
                 <string>Klesion</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="2">
+             <item row="6" column="2">
               <widget class="QLineEdit" name="line_SN30K_KLESION">
                <property name="maximumSize">
                 <size>
@@ -606,13 +630,43 @@ padding: 8px
                </property>
               </widget>
              </item>
+             <item row="0" column="2">
+              <widget class="QLineEdit" name="line_SN30K_DIFF_COEF">
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="baseSize">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QMyLabel" name="label_SN30K_DIFF_COEF">
+               <property name="text">
+                <string>Diff coefficient</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QLabel" name="units_diffcoef_3">
+               <property name="text">
+                <string>cm2/s</string>
+               </property>
+              </widget>
+             </item>
             </layout>
            </widget>
            <widget class="QLabel" name="label_SN30K">
             <property name="geometry">
              <rect>
-              <x>60</x>
-              <y>180</y>
+              <x>420</x>
+              <y>20</y>
               <width>131</width>
               <height>16</height>
              </rect>
@@ -630,22 +684,22 @@ padding: 8px
            <widget class="QWidget" name="gridLayoutWidget_3">
             <property name="geometry">
              <rect>
-              <x>310</x>
-              <y>200</y>
-              <width>191</width>
+              <x>390</x>
+              <y>240</y>
+              <width>201</width>
               <height>100</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_7">
              <item row="0" column="0">
-              <widget class="QLabel" name="label_KILL_O2_CONC">
+              <widget class="QMyLabel" name="label_SN30K_KILL_O2_CONC">
                <property name="text">
                 <string>O2 conc</string>
                </property>
               </widget>
              </item>
              <item row="0" column="1">
-              <widget class="QLineEdit" name="line_KILL_O2_CONC">
+              <widget class="QLineEdit" name="line_SN30K_KILL_O2_CONC">
                <property name="maximumSize">
                 <size>
                  <width>50</width>
@@ -662,14 +716,14 @@ padding: 8px
               </widget>
              </item>
              <item row="1" column="0">
-              <widget class="QLabel" name="label_KILL_DRUG_CONC">
+              <widget class="QMyLabel" name="label_SN30K_KILL_DRUG_CONC">
                <property name="text">
                 <string>Drug conc</string>
                </property>
               </widget>
              </item>
              <item row="1" column="1">
-              <widget class="QLineEdit" name="line_KILL_DRUG_CONC">
+              <widget class="QLineEdit" name="line_SN30K_KILL_DRUG_CONC">
                <property name="maximumSize">
                 <size>
                  <width>50</width>
@@ -686,14 +740,14 @@ padding: 8px
               </widget>
              </item>
              <item row="2" column="0">
-              <widget class="QLabel" name="label_KILL_DURATION">
+              <widget class="QMyLabel" name="label_SN30K_KILL_DURATION">
                <property name="text">
                 <string>Duration</string>
                </property>
               </widget>
              </item>
              <item row="2" column="1">
-              <widget class="QLineEdit" name="line_KILL_DURATION">
+              <widget class="QLineEdit" name="line_SN30K_KILL_DURATION">
                <property name="maximumSize">
                 <size>
                  <width>50</width>
@@ -710,14 +764,14 @@ padding: 8px
               </widget>
              </item>
              <item row="3" column="0">
-              <widget class="QLabel" name="label_KILL_FRACTION">
+              <widget class="QMyLabel" name="label_SN30K_KILL_FRACTION">
                <property name="text">
                 <string>Kill fraction</string>
                </property>
               </widget>
              </item>
              <item row="3" column="1">
-              <widget class="QLineEdit" name="line_KILL_FRACTION">
+              <widget class="QLineEdit" name="line_SN30K_KILL_FRACTION">
                <property name="maximumSize">
                 <size>
                  <width>50</width>
@@ -731,9 +785,9 @@ padding: 8px
            <widget class="QLabel" name="label_SN30K_KILL">
             <property name="geometry">
              <rect>
-              <x>310</x>
-              <y>180</y>
-              <width>151</width>
+              <x>390</x>
+              <y>220</y>
+              <width>91</width>
               <height>16</height>
              </rect>
             </property>
@@ -750,9 +804,9 @@ padding: 8px
            <widget class="QWidget" name="gridLayoutWidget_4">
             <property name="geometry">
              <rect>
-              <x>490</x>
-              <y>40</y>
-              <width>300</width>
+              <x>50</x>
+              <y>190</y>
+              <width>303</width>
               <height>138</height>
              </rect>
             </property>
@@ -771,7 +825,7 @@ padding: 8px
               </widget>
              </item>
              <item row="1" column="0">
-              <widget class="QLabel" name="label_used_1">
+              <widget class="QMyLabel" name="label_drugused">
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -784,20 +838,7 @@ padding: 8px
               </widget>
              </item>
              <item row="2" column="0">
-              <widget class="QLabel" name="label_diffcoef_1">
-               <property name="font">
-                <font>
-                 <weight>75</weight>
-                 <bold>true</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Diffusion Coefficient</string>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="label_bdryconc_1">
+              <widget class="QMyLabel" name="label_bdryconc_1">
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -810,21 +851,14 @@ padding: 8px
               </widget>
              </item>
              <item row="2" column="1">
-              <widget class="QLabel" name="units_diffcoef_2">
-               <property name="text">
-                <string>cm2/s</string>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="1">
               <widget class="QLabel" name="units_bdryconc_2">
                <property name="text">
                 <string>mM</string>
                </property>
               </widget>
              </item>
-             <item row="5" column="0">
-              <widget class="QLabel" name="label_halflife">
+             <item row="4" column="0">
+              <widget class="QMyLabel" name="label_halflife">
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -836,15 +870,15 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="5" column="1">
+             <item row="4" column="1">
               <widget class="QLabel" name="units_halflife">
                <property name="text">
                 <string>hours</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="3">
-              <widget class="QLabel" name="label_DRUG_A">
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_SN30000">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -864,12 +898,12 @@ padding: 8px
                 </font>
                </property>
                <property name="text">
-                <string>Drug A</string>
+                <string>SN30000</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="3">
-              <widget class="QCheckBox" name="cbox_USE_DRUG_A">
+             <item row="1" column="2">
+              <widget class="QCheckBox" name="cbox_USE_SN30K">
                <property name="maximumSize">
                 <size>
                  <width>60</width>
@@ -884,8 +918,8 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="2" column="3">
-              <widget class="QLineEdit" name="line_DRUG_A_DIFF_COEF">
+             <item row="2" column="2">
+              <widget class="QLineEdit" name="line_SN30K_BDRY_CONC">
                <property name="maximumSize">
                 <size>
                  <width>50</width>
@@ -897,8 +931,8 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="3" column="3">
-              <widget class="QLineEdit" name="line_DRUG_A_BDRY_CONC">
+             <item row="4" column="2">
+              <widget class="QLineEdit" name="line_SN30K_HALFLIFE">
                <property name="maximumSize">
                 <size>
                  <width>50</width>
@@ -910,20 +944,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="5" column="3">
-              <widget class="QLineEdit" name="line_DRUG_A_HALFLIFE">
-               <property name="maximumSize">
-                <size>
-                 <width>50</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="4">
+             <item row="0" column="3">
               <widget class="QLabel" name="label_DRUG_B">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -948,7 +969,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="1" column="4">
+             <item row="1" column="3">
               <widget class="QCheckBox" name="cbox_USE_DRUG_B">
                <property name="maximumSize">
                 <size>
@@ -964,20 +985,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="2" column="4">
-              <widget class="QLineEdit" name="line_DRUG_B_DIFF_COEF">
-               <property name="maximumSize">
-                <size>
-                 <width>50</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="4">
+             <item row="2" column="3">
               <widget class="QLineEdit" name="line_DRUG_B_BDRY_CONC">
                <property name="maximumSize">
                 <size>
@@ -990,7 +998,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="5" column="4">
+             <item row="4" column="3">
               <widget class="QLineEdit" name="line_DRUG_B_HALFLIFE">
                <property name="maximumSize">
                 <size>
@@ -1003,8 +1011,8 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="4" column="0">
-              <widget class="QLabel" name="label_decay">
+             <item row="3" column="0">
+              <widget class="QMyLabel" name="label_decay">
                <property name="font">
                 <font>
                  <weight>75</weight>
@@ -1016,8 +1024,8 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="4" column="3">
-              <widget class="QCheckBox" name="cbox_DRUG_A_DECAY">
+             <item row="3" column="2">
+              <widget class="QCheckBox" name="cbox_SN30K_DECAY">
                <property name="text">
                 <string/>
                </property>
@@ -1026,8 +1034,41 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="4" column="4">
+             <item row="3" column="3">
               <widget class="QCheckBox" name="cbox_DRUG_B_DECAY">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="0">
+              <widget class="QLabel" name="label_metabolite">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Simulate metabolite</string>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="2">
+              <widget class="QCheckBox" name="cbox_SN30K_METABOLITE">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="5" column="3">
+              <widget class="QCheckBox" name="cbox_DRUG_B_METABOLITE">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string/>
                </property>
@@ -1044,7 +1085,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>30</x>
-              <y>10</y>
+              <y>30</y>
               <width>431</width>
               <height>446</height>
              </rect>
@@ -1519,14 +1560,14 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="7" column="0">
+             <item row="8" column="0">
               <widget class="QMyLabel" name="label_VDIVIDE0">
                <property name="text">
                 <string>label_VDIVIDE0</string>
                </property>
               </widget>
              </item>
-             <item row="7" column="1">
+             <item row="8" column="1">
               <spacer name="horizontalSpacer_39">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1539,7 +1580,7 @@ padding: 8px
                </property>
               </spacer>
              </item>
-             <item row="7" column="2">
+             <item row="8" column="2">
               <widget class="QLineEdit" name="line_VDIVIDE0">
                <property name="maximumSize">
                 <size>
@@ -1552,14 +1593,14 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="8" column="0">
+             <item row="9" column="0">
               <widget class="QMyLabel" name="label_DVDIVIDE">
                <property name="text">
                 <string>label_DVDIVIDE</string>
                </property>
               </widget>
              </item>
-             <item row="8" column="1">
+             <item row="9" column="1">
               <spacer name="horizontalSpacer_40">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1572,7 +1613,7 @@ padding: 8px
                </property>
               </spacer>
              </item>
-             <item row="8" column="2">
+             <item row="9" column="2">
               <widget class="QLineEdit" name="line_DVDIVIDE">
                <property name="maximumSize">
                 <size>
@@ -1585,14 +1626,14 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="9" column="0">
+             <item row="10" column="0">
               <widget class="QMyLabel" name="label_DEATH_THRESHOLD">
                <property name="text">
                 <string>label_DEATH_THRESHOLD</string>
                </property>
               </widget>
              </item>
-             <item row="9" column="1">
+             <item row="10" column="1">
               <spacer name="horizontalSpacer_41">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1605,7 +1646,7 @@ padding: 8px
                </property>
               </spacer>
              </item>
-             <item row="9" column="2">
+             <item row="10" column="2">
               <widget class="QLineEdit" name="line_DEATH_THRESHOLD">
                <property name="maximumSize">
                 <size>
@@ -1618,7 +1659,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="9" column="3">
+             <item row="10" column="3">
               <widget class="QLabel" name="units_DEATH_THRESHOLD">
                <property name="text">
                 <string>mM</string>
@@ -1672,27 +1713,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="10" column="0">
-              <widget class="QMyLabel" name="label_THRESHOLD_FACTOR">
-               <property name="text">
-                <string>label_THRESHOLD_FACTOR</string>
-               </property>
-              </widget>
-             </item>
-             <item row="10" column="2">
-              <widget class="QLineEdit" name="line_THRESHOLD_FACTOR">
-               <property name="maximumSize">
-                <size>
-                 <width>120</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="10" column="1">
+             <item row="7" column="1">
               <spacer name="horizontalSpacer_43">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1704,6 +1725,33 @@ padding: 8px
                 </size>
                </property>
               </spacer>
+             </item>
+             <item row="7" column="0">
+              <widget class="QMyLabel" name="label_MEDIUM_VOLUME">
+               <property name="text">
+                <string>label_MEDIUM_VOLUME</string>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="2">
+              <widget class="QLineEdit" name="line_MEDIUM_VOLUME">
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="7" column="3">
+              <widget class="QLabel" name="units_MEDIUM_VOLUME">
+               <property name="text">
+                <string>cm3</string>
+               </property>
+              </widget>
              </item>
             </layout>
            </widget>
@@ -1774,27 +1822,30 @@ padding: 8px
              <bool>false</bool>
             </property>
            </widget>
-           <widget class="QMyLabel" name="label_INPUT_FILE">
+           <widget class="QMyLabel" name="label_TREATMENT_FILE">
             <property name="geometry">
              <rect>
-              <x>190</x>
-              <y>470</y>
-              <width>121</width>
+              <x>200</x>
+              <y>480</y>
+              <width>101</width>
               <height>21</height>
              </rect>
             </property>
             <property name="text">
-             <string>Auxiliary input data file</string>
+             <string>Treatment data file</string>
             </property>
            </widget>
-           <widget class="QLineEdit" name="text_INPUT_FILE">
+           <widget class="QLineEdit" name="text_TREATMENT_FILE">
             <property name="geometry">
              <rect>
               <x>310</x>
-              <y>470</y>
-              <width>151</width>
+              <y>480</y>
+              <width>121</width>
               <height>20</height>
              </rect>
+            </property>
+            <property name="text">
+             <string>treatment.data</string>
             </property>
            </widget>
            <widget class="QCheckBox" name="cbox_savepos">
@@ -1842,6 +1893,19 @@ padding: 8px
              <string>Fraction to display</string>
             </property>
            </widget>
+           <widget class="QCheckBox" name="cbox_USE_TREATMENT_FILE">
+            <property name="geometry">
+             <rect>
+              <x>440</x>
+              <y>480</y>
+              <width>51</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Used</string>
+            </property>
+           </widget>
           </widget>
          </widget>
         </item>
@@ -1882,12 +1946,6 @@ padding: 8px
        </layout>
       </widget>
       <widget class="QWidget" name="page_output">
-       <property name="maximumSize">
-        <size>
-         <width>1350</width>
-         <height>650</height>
-        </size>
-       </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
          <widget class="QMdiArea" name="mdiArea">
@@ -1899,14 +1957,8 @@ padding: 8px
           </property>
           <property name="minimumSize">
            <size>
-            <width>1000</width>
-            <height>500</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>1350</width>
-            <height>650</height>
+            <width>1100</width>
+            <height>720</height>
            </size>
           </property>
           <property name="sizeIncrement">
@@ -1962,8 +2014,8 @@ padding: 8px
          <rect>
           <x>50</x>
           <y>30</y>
-          <width>650</width>
-          <height>650</height>
+          <width>700</width>
+          <height>700</height>
          </rect>
         </property>
        </widget>
@@ -2066,86 +2118,96 @@ padding: 8px
          <rect>
           <x>710</x>
           <y>0</y>
-          <width>91</width>
-          <height>141</height>
+          <width>131</width>
+          <height>161</height>
          </rect>
         </property>
         <property name="title">
          <string>Constituent</string>
         </property>
-        <widget class="QRadioButton" name="radioButton_oxygen">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>20</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Oxygen</string>
-         </property>
-         <property name="checked">
-          <bool>true</bool>
-         </property>
-         <attribute name="buttonGroup">
-          <string>buttonGroup_constituent</string>
-         </attribute>
-        </widget>
-        <widget class="QRadioButton" name="radioButton_glucose">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>50</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Glucose</string>
-         </property>
-         <attribute name="buttonGroup">
-          <string>buttonGroup_constituent</string>
-         </attribute>
-        </widget>
-        <widget class="QRadioButton" name="radioButton_drugA">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>80</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Drug A</string>
-         </property>
-         <attribute name="buttonGroup">
-          <string>buttonGroup_constituent</string>
-         </attribute>
-        </widget>
-        <widget class="QRadioButton" name="radioButton_drugB">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>110</y>
-           <width>82</width>
-           <height>18</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Drug B</string>
-         </property>
-         <attribute name="buttonGroup">
-          <string>buttonGroup_constituent</string>
-         </attribute>
-        </widget>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QRadioButton" name="radioButton_oxygen">
+           <property name="text">
+            <string>Oxygen</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_glucose">
+           <property name="text">
+            <string>Glucose</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_drugA">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Drug A</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_drugA_metabolite">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Drug A metabolite</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_drugB">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Drug B</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="radioButton_drugB_metabolite">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
+           <property name="text">
+            <string>Drug B metabolite</string>
+           </property>
+           <attribute name="buttonGroup">
+            <string>buttonGroup_constituent</string>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
        </widget>
        <widget class="QGroupBox" name="groupBox_plane">
         <property name="geometry">
          <rect>
           <x>710</x>
-          <y>150</y>
+          <y>170</y>
           <width>91</width>
           <height>111</height>
          </rect>
@@ -2209,7 +2271,7 @@ padding: 8px
         <property name="geometry">
          <rect>
           <x>710</x>
-          <y>270</y>
+          <y>290</y>
           <width>41</width>
           <height>20</height>
          </rect>
@@ -2225,7 +2287,7 @@ padding: 8px
         <property name="geometry">
          <rect>
           <x>760</x>
-          <y>270</y>
+          <y>290</y>
           <width>41</width>
           <height>21</height>
          </rect>
@@ -2244,8 +2306,8 @@ padding: 8px
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1036</width>
-     <height>21</height>
+     <width>1294</width>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

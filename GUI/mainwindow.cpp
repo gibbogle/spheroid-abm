@@ -185,7 +185,7 @@ void MainWindow::createActions()
     connect((QCheckBox *)cbox_USE_SN30K,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugA_toggled(bool)));
 //    connect((QCheckBox *)cbox_SN30K_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_toggled(bool)));
 //    connect((QCheckBox *)cbox_USE_DRUG_B,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugB_toggled(bool)));
-    connect((QCheckBox *)cbox_DRUG_B_metabolite,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_toggled(bool)));
+    connect((QCheckBox *)cbox_DRUG_B_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_toggled(bool)));
 
 }
 
