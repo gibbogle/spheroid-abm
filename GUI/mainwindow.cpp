@@ -1547,10 +1547,10 @@ void MainWindow::preConnection()
     if (USE_GRAPHS)	initializeGraphs(newR);
     LOG_MSG("did initializeGraphs");
     posdata = false;
-	if (cbox_savepos->isChecked()) {
-		if (QFile::exists(vtkfile))
-			QFile::remove(vtkfile);
-	}
+//	if (cbox_savepos->isChecked()) {
+//		if (QFile::exists(vtkfile))
+//			QFile::remove(vtkfile);
+//	}
 	LOG_MSG("preconnection: done");
 }
 
@@ -1726,12 +1726,13 @@ void MainWindow::outputData(QString qdata)
 //	if (qdata.compare("VTK") == 0) {
 	if (qdata.startsWith("VTK")) {
 		qdata.replace(0,3,"");
-		bool savepos = cbox_savepos->isChecked();
-		if (savepos) {
-			if (step < savepos_start) {
-				savepos = false;
-			}
-		}
+        bool savepos = false;
+//		bool savepos = cbox_savepos->isChecked();
+//		if (savepos) {
+//			if (step < savepos_start) {
+//				savepos = false;
+//			}
+//		}
 		vtk->read_cell_positions(cellfile, vtkfile, savepos);
 		started = true;
 		if (showingVTK > 0 || firstVTK) {
