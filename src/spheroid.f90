@@ -101,6 +101,7 @@ Nradiation_tag = 0
 Ndrug_tag = 0
 Nradiation_dead = 0
 Ndrug_dead = 0
+Nanoxia_dead = 0
 t_simulation = 0
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
@@ -232,7 +233,7 @@ logical :: ok
 integer :: itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
 integer :: iuse(MAX_CHEMO), idecay(MAX_CHEMO), imetabolite(MAX_CHEMO)
 real(REAL_KIND) :: days
-real(REAL_KIND) :: sigma, DXmm, t_hyp_hours
+real(REAL_KIND) :: sigma, DXmm, t_anoxia_death
 
 ok = .true.
 idecay = 0
@@ -251,9 +252,9 @@ read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is
 read(nfcell,*) medium_volume				! volume of medium that the spheroid is growing in
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
-read(nfcell,*) CO2_DEATH_THRESHOLD			! O2 concentration threshold for hypoxia (mM)
-read(nfcell,*) THRESHOLD_FACTOR			    ! multiplying factor for O2 concentration threshold for hypoxia
-read(nfcell,*) t_hyp_hours					! hypoxic time causing death (h)
+read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (mM)
+read(nfcell,*) ANOXIA_FACTOR			    ! multiplying factor for MM threshold for anoxia
+read(nfcell,*) t_anoxia_death				! anoxic time causing death (h)
 read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
@@ -299,7 +300,7 @@ sigma = log(divide_time_shape)
 divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
 divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
-t_hypoxic_limit = 60*60*t_hyp_hours				! hours -> seconds
+t_anoxic_limit = 60*60*t_anoxia_death				! hours -> seconds
 
 chemo(SN30000)%diff_coef = SN30K%diff_coef
 chemo(SN30000_METAB)%diff_coef = chemo(SN30000)%diff_coef
@@ -1151,23 +1152,26 @@ end function
 ! Drug deaths = Ndrugdead
 ! Hypoxia deaths = Ndead - Ndrugdead
 ! Total tagged for drug death on division = Ndrug_tag
-! Current tagged = Ntodie - Ntagdead
+! Current tagged = Ntodie - Ntagdead 
 !-----------------------------------------------------------------------------------------
 subroutine get_summary(summaryData) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
-integer :: Ndead, Ntagged, Ntodie, Ntagdead, diam_um
+integer :: Ndead, Ntagged, Ntodie, Ntagdead, diam_um, vol_mm3_1000
+real(REAL_KIND) :: vol_cm3
 
 !call SetRadius(Nsites)
+vol_cm3 = Vsite*Nsites				! total volume in cm^3
+vol_mm3_1000 = vol_cm3*1000*1000	! 1000 * volume in mm^3
 diam_um = 2*DELTA_X*Radius*10000
 Ntodie = Nradiation_tag + Ndrug_tag
 Ntagdead = Nradiation_dead + Ndrug_dead
 Ndead = Nsites + Nreuse - Ncells
 Ntagged = Ntodie - Ntagdead
-write(logmsg,*) 'Ntagged: ',Ntagged
+write(logmsg,*) 'vol_mm3_1000: ',vol_mm3_1000
 call logger(logmsg)
-summaryData(1:8) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, 0, 0 /)
+summaryData(1:8) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, vol_mm3_1000, Nanoxia_dead /)
 
 end subroutine
 

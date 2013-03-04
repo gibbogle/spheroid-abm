@@ -29,7 +29,7 @@ public:
 	void addCurve(QString);
 	void removeCurve(QString);
 	void removeAllCurves();
-	void redraw(double *, double *, int, QString);
+    void redraw(double *, double *, int, QString, QString);
 //    void redraw2(double *, double *, double *, int);
 	void redraw2(double *, double *, double *, double *, int, int);
 	void draw2(double *, double *, double *, double *, int, int);

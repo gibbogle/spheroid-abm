@@ -1,6 +1,8 @@
 #ifndef GRAPHS_H
 #define GRAPHS_H
 
+#define maxGraphs 9
+
 struct graph_set {
 	QString tag;
 	QString title;
@@ -9,6 +11,7 @@ struct graph_set {
 	bool active;		// false for dummy graphs
 	double maxValue;
 	double scaling;		// multiplying factor for scaling of summary_data
+    bool ts;
 };
 
 typedef graph_set GRAPH_SET;
@@ -21,7 +24,9 @@ public:
 
 	Graphs();
 	~Graphs();
-	GRAPH_SET get_graph(int);
+    GRAPH_SET *tsGraphs;
+    GRAPH_SET get_graph(int);
+    int n_tsGraphs;
 	int nGraphs;
     int diam_number;
 	int get_dataIndex(int);
@@ -31,7 +36,9 @@ public:
 	double get_maxValue(int);
 	double get_scaling(int);
 	bool isActive(int);
+    bool isTimeseries(int);
 	void set_maxValue(int, double);
+    void makeGraphList(int);
 
 };
 

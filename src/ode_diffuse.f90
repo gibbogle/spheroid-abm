@@ -311,8 +311,8 @@ subroutine AdjustMM
 real(REAL_KIND) :: deltaC, C0, C1
 
 C0 = chemo(OXYGEN)%MM_C0
-!deltaC = 5*CO2_DEATH_THRESHOLD
-deltaC = 0.0005
+deltaC = MM_THRESHOLD
+!deltaC = 0.0005
 C1 = deltaC + (sqrt(C0*C0 + 8*C0*deltaC) - C0)/4
 ODEdiff%k = (C1-deltaC)/(C1*C1*(C0+C1-deltaC))
 ODEdiff%C1 = C1
@@ -518,8 +518,6 @@ endif
 
 dCreact = 0
 if (ichemo == OXYGEN) then
-!	metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-!	metab = max(CO2_DEATH_THRESHOLD,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
 	if (C(OXYGEN) > ODEdiff%C1) then
 		metab = (C(OXYGEN)-ODEdiff%deltaC)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN) - ODEdiff%deltaC)
 	elseif (C(OXYGEN) > 0) then
@@ -527,8 +525,6 @@ if (ichemo == OXYGEN) then
 	else
 		metab = 0
 	endif
-!	dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
-!	dCreact = dMdt*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
 	dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == GLUCOSE) then
 	dCreact = -chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)

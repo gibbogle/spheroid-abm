@@ -25,9 +25,9 @@ typedef field_data FIELD_DATA;
 #define OXYGEN 0
 #define GLUCOSE 1
 #define DRUG_A 2
-#define DRUG_METAB_A 3
+#define DRUG_A_METAB 3
 #define DRUG_B 4
-#define DRUG_METAB_B 5
+#define DRUG_B_METAB 5
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -52,19 +52,29 @@ public:
     void updateConcPlot();
     void makeVolPlot(QMdiArea *);
     void updateVolPlot();
+    bool isConcPlot();
+    void setConcPlot(bool);
+    bool isVolPlot();
+    void setVolPlot(bool);
+    void selectConstituent();
+    void setExecuting(bool);
 
     QWidget *field_page;
     int NX;
     int axis;
     double fraction;
 //    int MAX_CHEMO;
-    int nsites, nconst, cused[10];
+    int nsites, nconst, const_used[16];
+    QString const_name[16];
     QString constituentText;
     int constituent;
     bool slice_changed;
 	bool constituent_changed;
+    bool useConcPlot;
+    bool useVolPlot;
 	FIELD_DATA *data;
     Plot *pGconc, *pGvol;
+    bool executing;
     char msg[1024];
 
 //public slots:

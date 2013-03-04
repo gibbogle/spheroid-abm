@@ -32,7 +32,7 @@ integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
 !real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
-!real(REAL_KIND), parameter :: CO2_DEATH_THRESHOLD = 0.0001
+!real(REAL_KIND), parameter :: MM_THRESHOLD = 0.0001
 integer, parameter :: MAX_CHEMO = 6
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
@@ -145,12 +145,12 @@ integer :: jumpvec(3,27)
 
 integer :: max_nlist, nlist, Ncells, Ncells0, lastNcells, lastID
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
-integer :: Ndrug_tag, Nradiation_tag, Ndrug_dead, Nradiation_dead
+integer :: Ndrug_tag, Nradiation_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
 integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volume
-real(REAL_KIND) :: CO2_DEATH_THRESHOLD, THRESHOLD_FACTOR, t_hypoxic_limit, Vdivide0, dVdivide
+real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_FACTOR, t_anoxic_limit, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 real(REAL_KIND) :: t_simulation
 type(SN30K_type) :: SN30K
