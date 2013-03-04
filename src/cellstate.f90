@@ -140,14 +140,15 @@ do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 !	site = cell_list(kcell)%site
 !	i = ODEdiff%ivar(site(1),site(2),site(3))
-!	if (allstate(i,OXYGEN) < CO2_DEATH_THRESHOLD) then
+!	if (allstate(i,OXYGEN) < MM_THRESHOLD) then
     died = .false.
     C_O2 = cell_list(kcell)%conc(OXYGEN)
-	if (C_O2 < THRESHOLD_FACTOR*CO2_DEATH_THRESHOLD) then
+	if (C_O2 < ANOXIA_FACTOR*MM_THRESHOLD) then
 		cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
-		if (cell_list(kcell)%t_hypoxic > t_hypoxic_limit) then
+		if (cell_list(kcell)%t_hypoxic > t_anoxic_limit) then
 			call cell_dies(kcell)
 			died = .true.
+			Nanoxia_dead = Nanoxia_dead + 1
 		endif
 	endif
 	if (.not.died .and. use_SN30000) then

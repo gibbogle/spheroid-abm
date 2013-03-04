@@ -109,8 +109,9 @@ private slots:
     void setSavePosStart();
 
     void on_radioButton_oxygen_clicked();
-
     void on_radioButton_glucose_clicked(bool checked);
+
+    void onSelectConstituent();
 
 public slots:
 	void preConnection();
@@ -119,7 +120,7 @@ public slots:
 	void timer_update();
 	void errorPopup(QString);
 	void displayScene();
-    void displayFld();
+//    void displayFld();
     void showSummary();
     void startRecorder();
     void stopRecorder();
@@ -187,6 +188,8 @@ private:
 	void drawGraphs();
 	QString selectResultSet();
 	int selectGraphCase();
+    void setupGraphSelector();
+    void setGraphsActive();
 
 	double erf(double z);
     double pnorm(double x1, double x2, double mu, double sig);
@@ -299,6 +302,7 @@ private:
 	Plot *graph_dummy;	// placeholder
 
 	Plot *pGraph[16];
+    QCheckBox *cbox_ts;
 
 	QString graphCaseName[Plot::ncmax];
 	RESULT_SET *graphResultSet[Plot::ncmax];

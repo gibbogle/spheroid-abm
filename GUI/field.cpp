@@ -18,18 +18,86 @@ double vol_dv;
 Field::Field(QWidget *page2D)
 {
 	field_page = page2D;
-//    MAX_CHEMO = 6;
     axis = Z_AXIS;
     fraction = 0;
+    const_name[OXYGEN] = "Oxygen";
+    const_name[GLUCOSE] = "Glucose";
+    const_name[DRUG_A] = "Drug A";
+    const_name[DRUG_B] = "Drug B";
+    const_name[DRUG_A_METAB] = "Drug A metabolite";
+    const_name[DRUG_B_METAB] = "Drug B metabolite";
     constituent = OXYGEN;
-    constituentText = "Oxygen";
+//    constituentText = const_name[constituent];
     slice_changed = true;
+    setConcPlot(true);
+    setVolPlot(true);
+    pGconc = NULL;
+    pGvol = NULL;
 }
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 Field::~Field()
 {
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+bool Field::isConcPlot()
+{
+    return useConcPlot;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Field::setConcPlot(bool status)
+{
+    useConcPlot = status;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+bool Field::isVolPlot()
+{
+    return useVolPlot;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Field::setVolPlot(bool status)
+{
+    useVolPlot = status;
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void Field::selectConstituent()
+{
+    int iconst;
+    QStringList items;
+
+    LOG_MSG("selectConstituent");
+    get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
+    for (iconst=0; iconst<MAX_CONC; iconst++) {
+        if (iconst == constituent) continue;
+        if (const_used[iconst] == 1) {
+            items << const_name[iconst];
+        }
+    }
+
+    bool ok;
+    QString item = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+                                          tr("Constituent:"), items, 0, false, &ok);
+    if (ok && !item.isEmpty()) {
+        for (iconst=0; iconst<MAX_CONC; iconst++) {
+            if (item == const_name[iconst]) {
+                constituent = iconst;
+                if (useConcPlot)
+                    updateConcPlot();
+                break;
+            }
+        }
+    }
 }
 
 //------------------------------------------------------------------------------------------------
@@ -42,7 +110,7 @@ void Field::setConstituent(QAbstractButton *button)
     LOG_MSG("setConstituent");
 	int prev_constituent = constituent;
     QString text = button->text();
-    constituentText = text;
+//    constituentText = text;
     if (text.compare("Oxygen") == 0)
         constituent = OXYGEN;
     else if (text.compare("Glucose") == 0)
@@ -50,15 +118,16 @@ void Field::setConstituent(QAbstractButton *button)
     else if (text.compare("Drug A") == 0)
         constituent = DRUG_A;
     else if (text.compare("Drug A metabolite") == 0)
-        constituent = DRUG_METAB_A;
+        constituent = DRUG_A_METAB;
     else if (text.compare("Drug B") == 0)
         constituent = DRUG_B;
     else if (text.compare("Drug B metabolite") == 0)
-        constituent = DRUG_METAB_B;
+        constituent = DRUG_B_METAB;
     if (constituent != prev_constituent) {
 		constituent_changed = true;
 		displayField();
 	}
+//    constituentText = const_name[constituent];
 }
 
 //------------------------------------------------------------------------------------------------
@@ -190,7 +259,7 @@ void Field::displayField()
 
     LOG_MSG("displayField");
 	if (slice_changed) {
-        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, cused);
+        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
 		sprintf(msg,"nsites: %d",nsites);
 		LOG_MSG(msg);
         if (nconst != MAX_CONC) {
@@ -280,9 +349,11 @@ void Field::displayField()
     view->show();
 }
 
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 void Field::chooseColor(double f, int rgbcol[])
 {
-    if (cused[constituent] == 1) {
+    if (const_used[constituent] == 1) {
         rgbcol[2] = int((1-f)*255);
         rgbcol[1] = 0;
         rgbcol[0] = int(f*255);
@@ -291,15 +362,23 @@ void Field::chooseColor(double f, int rgbcol[])
     }
 }
 
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 void Field::getTitle(QString *title)
 {
-    *title = constituentText + " Concentration";
+    *title = const_name[constituent] + " Concentration";
 }
 
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 void Field::makeConcPlot(QMdiArea *mdiArea)
 {
     QString tag = "conc";
     QString title;
+    if (pGconc != NULL) {
+        LOG_MSG("pGconc not NULL");
+        delete pGconc;
+    }
     pGconc = new Plot(tag,tag);
     getTitle(&title);
     LOG_QMSG(title);
@@ -309,6 +388,8 @@ void Field::makeConcPlot(QMdiArea *mdiArea)
     pGconc->show();
 }
 
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 void Field::updateConcPlot()
 {
     int nc, nmu, i, ichemo;
@@ -336,8 +417,6 @@ void Field::updateConcPlot()
     for (i=0; i<nc; i++) {
         x[i] = i*dx*1.0e4;
         y[i] = conc[i*MAX_CHEMO+ichemo];
-        sprintf(msg,"%d %f %f",i,x[i],y[i]);
-        LOG_MSG(msg);
         cmax = MAX(cmax,y[i]);
     }
     pGconc->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);
@@ -346,11 +425,17 @@ void Field::updateConcPlot()
     delete pen;
 }
 
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 void Field::makeVolPlot(QMdiArea *mdiArea)
 {
     vol_nv = 20;
     QString tag = "vol";
     QString title = "Volume Distribution";
+    if (pGvol != NULL) {
+        LOG_MSG("pGvol not NULL");
+        delete pGvol;
+    }
     pGvol = new Plot(tag,tag);
     pGvol->setTitle(title);
 
@@ -358,6 +443,8 @@ void Field::makeVolPlot(QMdiArea *mdiArea)
     pGvol->show();
 }
 
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 void Field::updateVolPlot()
 {
     int i;

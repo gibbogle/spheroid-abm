@@ -84,6 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
     first = true;
 	started = false;
     firstVTK = true;
+    exthread = NULL;
 	showingVTK = 0;
 	nGraphCases = 0;
 	for (int i=0; i<Plot::ncmax; i++) {
@@ -101,9 +102,19 @@ MainWindow::MainWindow(QWidget *parent)
 
 	parm = new Params();
 	nParams = parm->nParams;
-	grph = new Graphs();
-	nGraphs = grph->nGraphs;
-    for(int i=0; i<nGraphs; i++)
+    field = new Field(page_2D);
+    grph = new Graphs();
+
+    setupGraphSelector();
+    setGraphsActive();
+    /*
+    int non_ts = 0;
+    if (field->isConcPlot()) non_ts++;
+    if (field->isVolPlot()) non_ts++;
+    grph->makeGraphList(non_ts);
+    nGraphs = grph->nGraphs;
+    */
+    for(int i=0; i<16; i++)
         pGraph[i] = NULL;
     LOG_QMSG("did Graphs");
 	createLists();
@@ -125,7 +136,6 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setWidth(600);
     mdiArea_VTK->setGeometry(rect);
     tabs->setCurrentIndex(1);
-    field = new Field(page_2D);
     widget_canvas->setFixedWidth(CANVAS_WIDTH/2);
     widget_canvas->setFixedHeight(CANVAS_WIDTH);
     goToInputs();
@@ -186,6 +196,7 @@ void MainWindow::createActions()
 //    connect((QCheckBox *)cbox_SN30K_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_toggled(bool)));
 //    connect((QCheckBox *)cbox_USE_DRUG_B,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugB_toggled(bool)));
     connect((QCheckBox *)cbox_DRUG_B_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_toggled(bool)));
+    connect(action_select_constituent, SIGNAL(triggered()), SLOT(onSelectConstituent()));
 
 }
 
@@ -1128,6 +1139,7 @@ void MainWindow::loadResultFile()
 
 	R->tnow = new double[R->nsteps];
     for (int i=0; i<nGraphs; i++) {
+        if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
         R->pData[i] = new double[R->nsteps];
     }
@@ -1149,7 +1161,8 @@ void MainWindow::loadResultFile()
 				R->tnow[step] = step;		//data[1];step
 
 				for (int i=0; i<nGraphs; i++) {
-					if (!grph->isActive(i)) continue;
+                    if (!grph->isTimeseries(i)) continue;
+                    if (!grph->isActive(i)) continue;
 					int k = grph->get_dataIndex(i);
 					R->pData[i][step] = data[k]*grph->get_scaling(i);
 				}
@@ -1162,6 +1175,7 @@ void MainWindow::loadResultFile()
 
 	// Compute the maxima
     for (int i=0; i<nGraphs; i++) {
+        if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
         double maxval = getMaximum(R,R->pData[i]);
         grph->set_maxValue(i,maxval);
@@ -1499,7 +1513,7 @@ void MainWindow::runServer()
 	started = true;
 	exthread = new ExecThread(inputFile);
 	connect(exthread, SIGNAL(display()), this, SLOT(displayScene()));
-    connect(exthread, SIGNAL(displayF()), this, SLOT(displayFld()));
+//    connect(exthread, SIGNAL(displayF()), this, SLOT(displayFld()));
     connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
     connect(exthread, SIGNAL(setupC(int,bool *)), this, SLOT(setupConc(int, bool *)));
     exthread->ncpu = ncpu;
@@ -1533,8 +1547,9 @@ void MainWindow::preConnection()
 	newR->nsteps = nsteps;
 	newR->tnow = new double[nsteps];
 
-	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
+    for (int i=0; i<grph->nGraphs; i++) {
+ //       if (!grph->isTimeseries(i)) continue;
+ //       if (!grph->isActive(i)) continue;
 		newR->pData[i] = new double[nsteps];
 		newR->pData[i][0] = 0;
 	}
@@ -1547,13 +1562,11 @@ void MainWindow::preConnection()
     if (USE_GRAPHS)	initializeGraphs(newR);
     LOG_MSG("did initializeGraphs");
     posdata = false;
-//	if (cbox_savepos->isChecked()) {
-//		if (QFile::exists(vtkfile))
-//			QFile::remove(vtkfile);
-//	}
 	LOG_MSG("preconnection: done");
 }
 
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 void MainWindow::errorPopup(QString errmsg)
 {
 	LOG_QMSG(errmsg);
@@ -1566,23 +1579,27 @@ void MainWindow::errorPopup(QString errmsg)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::initializeGraphs(RESULT_SET *R)
 {
-    LOG_MSG("initializeGraphs 1");
+    int ngtotal;
+    LOG_MSG("initializeGraphs");
 	mdiArea->closeAllSubWindows();
 	mdiArea->show();
-//    LOG_MSG("initializeGraphs 2");
+    setGraphsActive();
+    int non_ts = 0;
+    if (field->isConcPlot()) non_ts++;
+    if (field->isVolPlot()) non_ts++;
+    grph->makeGraphList(non_ts);
+    nGraphs = grph->nGraphs;
     if (nGraphCases > 0) {
-//        LOG_MSG("initializeGraphs 3a");
         clearAllGraphs();
-//        LOG_MSG("initializeGraphs 3b");
     }
-//    sprintf(msg,"nGraphs: %d",nGraphs);
-    LOG_MSG(msg);
-	for (int i=0; i<nGraphs; i++) {
-		QString tag = grph->get_tag(i);
-//        LOG_QMSG(tag);
-		QString title = grph->get_title(i);
-		QString yAxisTitle = grph->get_yAxisTitle(i);
-
+    QString tag;
+    QString title;
+    QString yAxisTitle;
+    for (int i=0; i<nGraphs; i++) {
+        if (!grph->isTimeseries(i)) continue;
+        tag = grph->get_tag(i);
+        title = grph->get_title(i);
+        yAxisTitle = grph->get_yAxisTitle(i);
         if (pGraph[i] != NULL) {
             pGraph[i]->deleteLater();
             pGraph[i] = NULL;
@@ -1593,7 +1610,6 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
             pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
         }
     }
-//    LOG_MSG("initializeGraphs 4");
 
 	nGraphCases = 1;
     graphResultSet[0] = R;
@@ -1604,26 +1620,27 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     mdiArea->setGeometry(rect);
 
     for (int i=0; i<nGraphs; i++) {
-		mdiArea->addSubWindow(pGraph[i]);
+        if (!grph->isTimeseries(i)) continue;
+        mdiArea->addSubWindow(pGraph[i]);
 		pGraph[i]->show();
     }
-//    LOG_MSG("initializeGraphs 5");
 
 	if (show_outputdata) {
 		mdiArea->addSubWindow(box_outputData);	// Need another way of creating this window - should be floating
 		box_outputData->show();
 	}
-//    LOG_MSG("initializeGraphs 6");
 
-    field->makeVolPlot(mdiArea);
-    field->makeConcPlot(mdiArea);
+    if (field->isConcPlot())
+        field->makeConcPlot(mdiArea);
+    if (field->isVolPlot())
+        field->makeVolPlot(mdiArea);
 
     mdiArea->tileSubWindows();
 
 	for (int i=0; i<nGraphs; i++) {
-		pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
+        if (!grph->isTimeseries(i)) continue;
+        pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
 	}
-//    LOG_MSG("initializeGraphs 7");
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1636,9 +1653,11 @@ void MainWindow::drawGraphs()
 		R = graphResultSet[kres];
 		if (R != 0) {
 			for (int i=0; i<nGraphs; i++) {
-				if (!grph->isActive(i)) continue;
+                if (!grph->isTimeseries(i)) continue;
+                if (!grph->isActive(i)) continue;
 				int k = grph->get_dataIndex(i);
-				pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename);
+                QString tag = grph->get_tag(i);
+                pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename, tag);
 //				if (!grph->isActive(i)) continue;
 				if (k == 0) {
 					grph->set_maxValue(i,R->maxValue[i]);
@@ -1650,13 +1669,12 @@ void MainWindow::drawGraphs()
 						grph->set_maxValue(i,newmax);
 					}
 				}
-//				sprintf(msg,"drawGraphs: Result set: %d graph: %d  max: %f",kres,i,grph->get_maxValue(i));
-//				LOG_MSG(msg);
 			}
 		}
 	}
 	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
+        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isActive(i)) continue;
 		double maxval = grph->get_maxValue(i);
 		pGraph[i]->setYScale(maxval);
 		pGraph[i]->replot();
@@ -1670,7 +1688,6 @@ void MainWindow::displayScene()
 	bool redo = false;	// need to understand this
 	started = true;
     exthread->mutex2.lock();
-//	bool fast = cbox_fastdisplay->isChecked();
 	bool fast = true;
 	vtk->get_cell_positions(fast);
 	vtk->renderCells(redo,false);
@@ -1704,19 +1721,25 @@ void MainWindow::showSummary()
     newR->tnow[step] = step;
 
 	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
+        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isActive(i)) continue;
 		int k = grph->get_dataIndex(i);
         val = summaryData[k];
         newR->pData[i][step] = val*grph->get_scaling(i);
 	}
 
 	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
-		pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename);
+        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isActive(i)) continue;
+        QString tag = grph->get_tag(i);
+        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
     }
 
-    field->updateConcPlot();
-    field->updateVolPlot();
+    if (field->isConcPlot())
+        field->updateConcPlot();
+    if (field->isVolPlot())
+        field->updateVolPlot();
+
     exthread->mutex1.unlock();
 }
 //--------------------------------------------------------------------------------------------------------
@@ -1767,14 +1790,16 @@ void MainWindow::outputData(QString qdata)
 	QString casename = newR->casename;
     newR->tnow[step] = step;		//data[1];
 	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
+        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isActive(i)) continue;
 		int k = grph->get_dataIndex(i);
 		newR->pData[i][step] = data[k]*grph->get_scaling(i);
 	}
 
 	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
-		pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename);
+        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isActive(i)) continue;
+        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, grph->get_tag(i));
 	}
 }
 
@@ -1813,7 +1838,8 @@ void MainWindow::postConnection()
 	}
 	// Compute the maxima
 	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
+        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isActive(i)) continue;
 		double maxval = getMaximum(newR,newR->pData[i]);
 		newR->maxValue[i] = maxval;
 	}
@@ -1889,9 +1915,11 @@ void MainWindow::stopServer()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::clearAllGraphs()
 {
+    LOG_MSG("clearAllGraphs");
     if (nGraphCases > 0) {
         if (nGraphs > 0) {
             for (int i=0; i<nGraphs; i++) {
+                if (!grph->isTimeseries(i)) continue;
                 if (!grph->isActive(i)) continue;
                 LOG_QMSG(grph->get_tag(i));
 //                pGraph[i]->clear();
@@ -1967,7 +1995,8 @@ void MainWindow::addGraph()
 	nGraphCases++;
 	// First add the curves
 	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
+        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isActive(i)) continue;
 		pGraph[i]->addCurve(R->casename);
 		pGraph[i]->setAxisAutoScale(QwtPlot::xBottom);
 	}
@@ -2013,7 +2042,8 @@ void MainWindow::removeGraph()
 	RESULT_SET *R = graphResultSet[i];
 	// First remove the curves
 	for (int i=0; i<nGraphs; i++) {
-		if (!grph->isActive(i)) continue;
+        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isActive(i)) continue;
 		pGraph[i]->removeCurve(R->casename);
 	}
 	// Then remove the graph case
@@ -2026,6 +2056,7 @@ void MainWindow::removeGraph()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::removeAllGraphs()
 {
+    LOG_MSG("removeAllGraphs");
     if (USE_GRAPHS) clearAllGraphs();
 }
 
@@ -2994,6 +3025,42 @@ void MainWindow::setupConc(int nc, bool *cused)
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
+void MainWindow::setupGraphSelector()
+{
+    checkBox_conc->setChecked(field->isConcPlot());
+    checkBox_vol->setChecked(field->isVolPlot());
+    cbox_ts = new QCheckBox[grph->n_tsGraphs];
+    for (int i=0; i<grph->n_tsGraphs; i++) {
+//        char str[16];
+//        sprintf(str,"Timeseries #%d",i);
+        QString text = grph->tsGraphs[i].title;
+        LOG_QMSG(text);
+        cbox_ts[i].setText(text);
+        cbox_ts[i].setObjectName("checkBox_"+grph->tsGraphs[i].tag);
+        cbox_ts[i].setMinimumHeight(20);
+        cbox_ts[i].setMaximumHeight(20);
+        cbox_ts[i].setChecked(grph->tsGraphs[i].active);
+        verticalLayout_graphs->addWidget(&cbox_ts[i]);
+//        layout->addWidget(&cbox[i]);
+    }
+//    verticalLayout_graphs->addStretch();
+//    verticalLayout_graphs->update();
+//    gridLayout_graphs->Set
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::setGraphsActive()
+{
+    field->setConcPlot(checkBox_conc->isChecked());
+    field->setVolPlot(checkBox_vol->isChecked());
+    for (int i=0; i<grph->n_tsGraphs; i++) {
+        grph->tsGraphs[i].active = cbox_ts[i].isChecked();
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_use_drugA_toggled(bool checked)
 {
 //    QRadioButton *rb = findChild<QRadioButton*>("radioButton_drugA");
@@ -3290,8 +3357,14 @@ void MainWindow::textEdited_fraction(QString text)
 	field->setFraction(text);
 }
 
-void MainWindow::displayFld(){
+//void MainWindow::displayFld(){
 //    exthread->mutex2.lock();
 //    field->displayField();
 //    exthread->mutex2.unlock();
+//}
+
+void MainWindow::onSelectConstituent()
+{
+    if (exthread != NULL)
+        field->selectConstituent();
 }

@@ -68,18 +68,18 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Divide volume variation",
 "Variation (+/-) about nominal divide volume multiple."},
 
-{"DEATH_THRESHOLD", 0.0001, 0, 0,
-"O2 death threshold",
-"Concentration of O2 at which a cell begins to experience anoxia leading to cell death.\n\
+{"MM_THRESHOLD", 0.0001, 0, 0,
+"Michaelis-Menten O2 threshold",
+"O2 concentration at which the 'soft-landing' adjustment to the Michaelis-Menten function kicks in.\n\
 [mM]"},
 
-{"THRESHOLD_FACTOR", 1.5, 0, 0,
-"O2 death threshold factor",
-"Multiplying factor for death threshold of O2 concentration."},
+{"ANOXIA_FACTOR", 1.5, 0, 0,
+"Anoxia threshold factor",
+"A cell begins to experience anoxia leading to cell death at the O2 concentration given by this multiplying factor times the Michaelis-Menten threshold value."},
 
-{"T_HYPOXIC_LIMIT", 3.0, 0, 0,
-"Hypoxic time limit",
-"Length of time under hypoxia (O2 < death threshold) after which a cell dies.\n\
+{"T_ANOXIC_LIMIT", 3.0, 0, 0,
+"Anoxic time limit",
+"Length of time under anoxia (O2 < anoxic threshold) after which a cell dies.\n\
 [h]"},
 
 {"TEST_CASE", 0, 0, 0,

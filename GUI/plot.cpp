@@ -128,7 +128,22 @@ void Plot::setYScale(double maxval)
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void Plot::redraw(double *x, double *y, int n, QString name)
+double Plot::calc_yscale(double yval)
+{
+    return 1.3*yval;
+    /*
+    int v = int(1.3*yval);
+    if (v >= 1) {
+        return double(v);
+    } else {
+        return 1.3*yval;
+    }
+    */
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Plot::redraw(double *x, double *y, int n, QString name, QString tag)
 {
     QwtLegend *legend;
 	if (n == 1) { // That is, this is the first plotting instance.
@@ -167,6 +182,8 @@ void Plot::redraw(double *x, double *y, int n, QString name)
 	}
 	delete pen;
 }
+
+/*
 
 //-----------------------------------------------------------------------------------------
 // This is to plot the total number of cognate cells (y2 = ytotal), and the number of 
@@ -228,10 +245,4 @@ void Plot::draw2(double *x1, double *y1, double *x2, double *y2, int n1, int n2)
     replot();
 }
 
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-double Plot::calc_yscale(double yval)
-{
-	int v = int(1.3*yval);
-    return double(v);
-}
+*/
