@@ -275,6 +275,7 @@ do kcell = 1,nlist0
 	C_O2 = allstate(iv,OXYGEN)
 	metab = max(0.0,C_O2)/(chemo(OXYGEN)%MM_C0 + C_O2)
 	dVdt = rmax*metab
+	cell_list(kcell)%dVdt = dVdt
 	cell_list(kcell)%volume = cell_list(kcell)%volume + dVdt*dt
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then
 		if (cell_list(kcell)%radiation_tag) then
@@ -452,7 +453,20 @@ do j = 1,6
 		endif
 	endif
 enddo
+call adjust_medium
 if (dbug) write(*,*) 'done!'
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Reduce medium volume and concentrations to account for the growth of the spheroid
+! by one site.
+!-----------------------------------------------------------------------------------------
+subroutine adjust_medium
+real(REAL_KIND) :: total(MAX_CHEMO)
+
+total(DRUG_A:MAX_CHEMO) = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume
+medium_volume = medium_volume - Vsite
+chemo(DRUG_A:MAX_CHEMO)%bdry_conc = total(DRUG_A:MAX_CHEMO)/medium_volume
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -831,6 +845,7 @@ cell_list(kcell1)%drug_tag = .false.
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%t_divide_last = tnow
 !cell_list(kcell1)%t_divide_next = tnow + DivideTime()
+cell_list(kcell1)%dVdt = 0
 cell_list(kcell1)%volume = cell_list(kcell0)%volume
 R = par_uni(kpar)
 cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)

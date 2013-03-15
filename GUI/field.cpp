@@ -7,7 +7,6 @@ double concData[4000];
 int conc_nc;
 double conc_dx;
 int MAX_CHEMO;
-
 double volProb[100];
 int vol_nv;
 double vol_v0;
@@ -26,6 +25,7 @@ Field::Field(QWidget *page2D)
     const_name[DRUG_B] = "Drug B";
     const_name[DRUG_A_METAB] = "Drug A metabolite";
     const_name[DRUG_B_METAB] = "Drug B metabolite";
+    const_name[GROWTH_RATE] = "Growth rate";
     constituent = OXYGEN;
 //    constituentText = const_name[constituent];
     slice_changed = true;
@@ -78,7 +78,7 @@ void Field::selectConstituent()
 
     LOG_MSG("selectConstituent");
     get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
-    for (iconst=0; iconst<MAX_CONC; iconst++) {
+    for (iconst=0; iconst<MAX_CONC+1; iconst++) {
         if (iconst == constituent) continue;
         if (const_used[iconst] == 1) {
             items << const_name[iconst];
@@ -89,7 +89,7 @@ void Field::selectConstituent()
     QString item = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
                                           tr("Constituent:"), items, 0, false, &ok);
     if (ok && !item.isEmpty()) {
-        for (iconst=0; iconst<MAX_CONC; iconst++) {
+        for (iconst=0; iconst<MAX_CONC+1; iconst++) {
             if (item == const_name[iconst]) {
                 constituent = iconst;
                 if (useConcPlot)
@@ -123,6 +123,8 @@ void Field::setConstituent(QAbstractButton *button)
         constituent = DRUG_B;
     else if (text.compare("Drug B metabolite") == 0)
         constituent = DRUG_B_METAB;
+    else if (text.compare("Growth rate") == 0)
+        constituent = GROWTH_RATE;
     if (constituent != prev_constituent) {
 		constituent_changed = true;
 		displayField();
@@ -246,6 +248,7 @@ void Field::chooseParameters()
 
 
 //-----------------------------------------------------------------------------------------
+//
 //-----------------------------------------------------------------------------------------
 void Field::displayField()
 {
@@ -256,6 +259,7 @@ void Field::displayField()
     int i, xindex, yindex, ix, iy, cp, dp, c, rmax, w, xp0, rgbcol[3];
     double xp, yp, d0, d, volume, scale;
     double a, b;
+    bool growthRate;
 
     LOG_MSG("displayField");
 	if (slice_changed) {
@@ -271,6 +275,11 @@ void Field::displayField()
         get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
 		slice_changed = false;
     }
+    if (constituent == GROWTH_RATE)
+        growthRate = true;
+    else
+        growthRate = false;
+
     // Get picture limits, set size of square
     // Paint squares
 
@@ -289,6 +298,8 @@ void Field::displayField()
     for (i=0; i<nsites; i++) {
         ix = this->data[i].site[xindex];
         iy = this->data[i].site[yindex];
+//        sprintf(msg,"%d %d %d %d %d %d %d",i,ix,iy,ix-c,c+1-ix,iy-c,c+1-iy);
+//        LOG_MSG(msg);
         rmax = MAX(rmax,ix - c);
         rmax = MAX(rmax,c+1 - ix);
         rmax = MAX(rmax,iy - c);
@@ -299,7 +310,7 @@ void Field::displayField()
     cp = CANVAS_WIDTH/2;
     dp = int(0.95*CANVAS_WIDTH);
     w = int(dp/(2*rmax));  // width of mapped site square on canvas in pixels
-    sprintf(msg,"NX,c,rmax,cp,dp,w: %d %d %d %d %d %d",NX,c,rmax,cp,dp,w);
+    sprintf(msg,"constituent, NX,c,rmax,cp,dp,w: %d %d %d %d %d %d %d",constituent,NX,c,rmax,cp,dp,w);
     LOG_MSG(msg);
     // Blob slice is assumed to extend from c-rmax to c+rmax in both directions.
     // Note that a site square has a width = 1, i.e. extends (-0.5, 0.5) about the nominal position.
@@ -313,7 +324,10 @@ void Field::displayField()
     d0 = w;
     double cmax = 0;
     for (i=0; i<nsites; i++) {
-        cmax = MAX(cmax,data[i].conc[constituent]);
+        if (growthRate)
+            cmax = MAX(cmax,data[i].dVdt);
+        else
+            cmax = MAX(cmax,data[i].conc[constituent]);
     }
 
     brush.setStyle(Qt::SolidPattern);
@@ -322,11 +336,15 @@ void Field::displayField()
         iy = this->data[i].site[yindex];
         xp = cp + (ix-c)*w;
         yp = cp + (iy-1-c)*w;
-        double f = data[i].conc[constituent]/cmax;
-        chooseColor(f,rgbcol);
-        brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-        sprintf(msg,"i,rgbcol,f: %d %d %d %d %f",i,rgbcol[0],rgbcol[1],rgbcol[2],f);
-        LOG_MSG(msg);
+        if (growthRate) {
+            brush.setColor(QColor(0,0,0));
+        } else {
+            double f = data[i].conc[constituent]/cmax;
+            chooseColor(f,rgbcol);
+            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
+            LOG_MSG(msg);
+        }
         scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
     }
     for (i=0; i<nsites; i++) {
@@ -334,11 +352,18 @@ void Field::displayField()
         iy = this->data[i].site[yindex];
         xp = cp + (ix-c)*w;
         yp = cp + (iy-1-c)*w;
-        volume = this->data[i].volume;
+        volume = this->data[i].volume;      // = 0 if there is no cell
         if (volume > 0) {
             scale = pow(volume,0.3333);
             d = scale*d0;
-            brush.setColor(QColor(0,255,0));
+            if (growthRate) {
+//                double f = data[i].conc[constituent]/cmax;
+                double f = data[i].dVdt/cmax;
+                chooseRateColor(f,rgbcol);
+                brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+            } else {
+                brush.setColor(QColor(0,255,0));
+            }
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
         }
     }
@@ -352,6 +377,19 @@ void Field::displayField()
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void Field::chooseColor(double f, int rgbcol[])
+{
+    if (const_used[constituent] == 1) {
+        rgbcol[2] = int((1-f)*255);
+        rgbcol[1] = 0;
+        rgbcol[0] = int(f*255);
+    } else {
+        rgbcol[0] = rgbcol[1] = rgbcol[2] = 255;
+    }
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Field::chooseRateColor(double f, int rgbcol[])
 {
     if (const_used[constituent] == 1) {
         rgbcol[2] = int((1-f)*255);
@@ -416,7 +454,7 @@ void Field::updateConcPlot()
     cmax = 0;
     for (i=0; i<nc; i++) {
         x[i] = i*dx*1.0e4;
-        y[i] = conc[i*MAX_CHEMO+ichemo];
+        y[i] = conc[i*(MAX_CHEMO)+ichemo];
         cmax = MAX(cmax,y[i]);
     }
     pGconc->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);

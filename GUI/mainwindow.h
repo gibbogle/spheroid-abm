@@ -156,27 +156,6 @@ private:
     void enableUseTreatmentFile();
     void disableUseTreatmentFile();
 
-/*
-	void enableUseS1P();
-	void disableUseS1P();
-	void enableUseCCL21();
-	void disableUseCCL21();
-	void enableUseOXY();
-	void disableUseOXY();
-	void enableUseCXCL13();
-	void disableUseCXCL13();
-
-	void enableInVitro();
-	void disableInVitro();
-	void enableDCInjection();
-	void disableDCInjection();
-	void enableUseTraffic();
-	void disableUseTraffic();
-	void enableUseExitChemotaxis();
-	void disableUseExitChemotaxis();
-	void enableUseDCChemotaxis();
-	void disableUseDCChemotaxis();
-*/
 	void writeout();
 	void execute_para();
 	void init_VTK();
@@ -215,23 +194,6 @@ private:
 
     QPlainTextEdit *textEdit;
     QString curFile;
-    /*
-    QMenu *fileMenu;
-    QMenu *editMenu;
-    QMenu *helpMenu;
-    QToolBar *fileToolBar;
-    QToolBar *editToolBar;
-    QAction *newAct;
-    QAction *openAct;
-    QAction *saveAct;
-    QAction *saveAsAct;
-    QAction *exitAct;
-    QAction *cutAct;
-    QAction *copyAct;
-    QAction *pasteAct;
-    QAction *aboutAct;
-    QAction *aboutQtAct;
-    */
 	QList<QLineEdit *> lineEdit_list;
 	QList<QSpinBox *> spin_list;
 	QList<QComboBox *> combo_list;

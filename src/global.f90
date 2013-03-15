@@ -70,6 +70,7 @@ type cell_type
 !	real(REAL_KIND) :: oxygen
 !	real(REAL_KIND) :: drug_A
 !	real(REAL_KIND) :: drug_B
+	real(REAL_KIND) :: dVdt
 	real(REAL_KIND) :: volume
 	real(REAL_KIND) :: divide_volume
 	real(REAL_KIND) :: t_divide_last
@@ -108,8 +109,9 @@ end type
 type, bind(C) :: field_data
 	integer(c_int) :: site(3)
 	integer(c_int) :: state
+	real(c_double) :: dVdt
 	real(c_double) :: volume
-	real(c_double) :: conc(MAX_CHEMO)	! This needs to agree with the definition in field.h
+	real(c_double) :: conc(MAX_CHEMO+1)	! This needs to agree with the definition in field.h
 end type
 
 type treatment_type

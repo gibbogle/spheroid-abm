@@ -249,7 +249,7 @@ read(nfcell,*) DELTA_T						! time step size (sec)
 read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
 read(nfcell,*) Nmm3							! number of cells/mm^3
 read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is fluid
-read(nfcell,*) medium_volume				! volume of medium that the spheroid is growing in
+read(nfcell,*) medium_volume				! volume of medium that the spheroid is growing in (cm^3)
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
 read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (mM)
@@ -1194,6 +1194,7 @@ do ichemo = 1,MAX_CHEMO
         cused(ichemo) = 0
     endif
 enddo
+cused(MAX_CHEMO+1) = 1		! Growth rate
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
 rng(axis,:) = Centre(axis) + fraction*Radius
@@ -1224,6 +1225,7 @@ real(c_double) :: fraction
 integer(c_int) :: axis, nc, nfdata
 type(FIELD_DATA) :: fdata(*)
 integer rng(3,2), kcell, x, y, z, i, ns
+real(REAL_KIND) :: growthrate
 
 write(logmsg,*) 'get_fielddata: nfdata, nc: ',nfdata, nc
 call logger(logmsg)
@@ -1247,10 +1249,14 @@ do z = rng(3,1),rng(3,2)
             fdata(ns)%state = 1
             if (kcell > 0) then
                 fdata(ns)%volume = cell_list(kcell)%volume
+                call get_growthrate(kcell,growthrate)
             else
                 fdata(ns)%volume = 0
+                growthrate = 0
             endif
-            fdata(ns)%conc(1:nc) = allstate(i,1:nc)
+            fdata(ns)%dVdt = growthrate
+            fdata(ns)%conc(1:MAX_CHEMO) = allstate(i,1:MAX_CHEMO)
+!            fdata(ns)%conc(MAX_CHEMO+1) = growthrate
         enddo
     enddo
 enddo
@@ -1262,6 +1268,15 @@ if (ns /= nfdata) then
     stop
 endif
 
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine get_growthrate(kcell,growthrate)
+integer :: kcell
+real(REAL_KIND) :: growthrate
+
+growthrate = cell_list(kcell)%dVdt
 end subroutine
 
 !--------------------------------------------------------------------------------

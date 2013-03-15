@@ -2203,7 +2203,7 @@ padding: 8px
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="radioButton_growthrate">
+          <widget class="QRadioButton" name="radioButton_growth_rate">
            <property name="text">
             <string>Growth rate</string>
            </property>
