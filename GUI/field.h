@@ -12,8 +12,9 @@
 struct field_data {
     int site[3];
     int state;
+    double dVdt;
     double volume;
-    double conc[MAX_CONC];
+    double conc[MAX_CONC+1];
 };
 
 typedef field_data FIELD_DATA;
@@ -28,6 +29,7 @@ typedef field_data FIELD_DATA;
 #define DRUG_A_METAB 3
 #define DRUG_B 4
 #define DRUG_B_METAB 5
+#define GROWTH_RATE 6       // we pretend that this is a concentration
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -47,6 +49,7 @@ public:
 	void displayField();
     void setSliceChanged();
     void chooseColor(double fr, int rgbcol[]);
+    void chooseRateColor(double fr, int rgbcol[]);
     void getTitle(QString *);
     void makeConcPlot(QMdiArea *);
     void updateConcPlot();
@@ -63,7 +66,6 @@ public:
     int NX;
     int axis;
     double fraction;
-//    int MAX_CHEMO;
     int nsites, nconst, const_used[16];
     QString const_name[16];
     QString constituentText;
