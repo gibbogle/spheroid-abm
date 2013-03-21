@@ -361,6 +361,8 @@ void Field::displayField()
                 double f = data[i].dVdt/cmax;
                 chooseRateColor(f,rgbcol);
                 brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+                sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].dVdt,cmax,f);
+                LOG_MSG(msg);
             } else {
                 brush.setColor(QColor(0,255,0));
             }
@@ -427,6 +429,7 @@ void Field::makeConcPlot(QMdiArea *mdiArea)
 }
 
 //-----------------------------------------------------------------------------------------
+// Note that growth_rate is constituent MAX_CHEMO
 //-----------------------------------------------------------------------------------------
 void Field::updateConcPlot()
 {
@@ -440,10 +443,13 @@ void Field::updateConcPlot()
     conc = concData;
     if (nc == 0) return;
     nmu = int(nc*dx*1.0e4);
-    sprintf(msg,"updateConcPlot: %d %f %d",nc,dx,nmu);
+    sprintf(msg,"updateConcPlot: %d %f %d %d",nc,dx,nmu,MAX_CHEMO);
     LOG_MSG(msg);
-    getTitle(&title);
-    LOG_QMSG(title);
+    if (constituent < MAX_CHEMO) {
+        getTitle(&title);
+    } else {
+        title = "Growth rate";
+    }
     pGconc->setTitle(title);
     pGconc->setAxisScale(QwtPlot::xBottom, 0, nmu, 0);
     QPen *pen = new QPen();
@@ -454,7 +460,7 @@ void Field::updateConcPlot()
     cmax = 0;
     for (i=0; i<nc; i++) {
         x[i] = i*dx*1.0e4;
-        y[i] = conc[i*(MAX_CHEMO)+ichemo];
+        y[i] = conc[i*(MAX_CHEMO+1)+ichemo];
         cmax = MAX(cmax,y[i]);
     }
     pGconc->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);

@@ -176,19 +176,17 @@ void ExecThread::run()
             sleep(100);
 		}
 		if (stopped) break;
-//        simulate_step(&res);
-//        if (res == 1) break;
-//        if (stopped) break;
+
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
             get_summary(summaryData);
             get_concdata(&conc_nc, &conc_dx, concData);
             get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
             int iframe = i/nsumm_interval;
-//            saveGradient2D(iframe);
             mutex1.unlock();
             emit summary();		// Emit signal to update summary plots, at hourly intervals
         }
+
         simulate_step(&res);
         if (res != 0) break;
         if (stopped) break;

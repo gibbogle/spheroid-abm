@@ -275,6 +275,9 @@ do kcell = 1,nlist0
 	C_O2 = allstate(iv,OXYGEN)
 	metab = max(0.0,C_O2)/(chemo(OXYGEN)%MM_C0 + C_O2)
 	dVdt = rmax*metab
+	if (istep > 1 .and. dVdt == 0) then
+		write(nflog,'(a,2i6,4e12.3)') 'dVdt: ',istep,kcell,rmax,C_O2,metab,dVdt
+	endif
 	cell_list(kcell)%dVdt = dVdt
 	cell_list(kcell)%volume = cell_list(kcell)%volume + dVdt*dt
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then
@@ -845,7 +848,7 @@ cell_list(kcell1)%drug_tag = .false.
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%t_divide_last = tnow
 !cell_list(kcell1)%t_divide_next = tnow + DivideTime()
-cell_list(kcell1)%dVdt = 0
+cell_list(kcell1)%dVdt = cell_list(kcell0)%dVdt
 cell_list(kcell1)%volume = cell_list(kcell0)%volume
 R = par_uni(kpar)
 cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
