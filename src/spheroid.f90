@@ -1277,10 +1277,15 @@ integer :: kcell
 real(REAL_KIND) :: growthrate
 
 growthrate = cell_list(kcell)%dVdt
+if (growthrate == 0) then
+	write(nflog,'(a,2i6,e12.3)') 'growthrate: ',istep,kcell,growthrate
+	stop
+endif
 end subroutine
 
 !--------------------------------------------------------------------------------
 ! Returns all the extracellular concentrations along a line through the blob centre.
+! Together with the growth rate dVdt
 !--------------------------------------------------------------------------------
 subroutine get_concdata(ns, dx, conc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
@@ -1303,20 +1308,30 @@ do x = rng(1,1),rng(1,2)
     kcell = occupancy(x,y,z)%indx(1)
     if (kcell == OUTSIDE_TAG) cycle
     ns = ns + 1
-    do ichemo = 1,MAX_CHEMO
+    do ichemo = 1,MAX_CHEMO+1
         i = ODEdiff%ivar(x,y,z)
-        k = (ns-1)*MAX_CHEMO + ichemo
-        if (chemo(ichemo)%used) then
-            if (i > 0) then
-                conc(k) = allstate(i,ichemo)
-            else
-                conc(k) = 0
-            endif
-        else
-            conc(k) = 0
-        endif
-!        write(logmsg,'(7i4,f8.4)') x,y,z,i,ns,k,ichemo,conc(k)
-!        call logger(logmsg)
+        k = (ns-1)*(MAX_CHEMO+1) + ichemo
+!        if (istep > 240) then
+!	        write(logmsg,'(7i6)') x,kcell,ichemo,i,k
+!		    call logger(logmsg)
+!		endif
+        if (ichemo <= MAX_CHEMO) then
+			if (chemo(ichemo)%used) then
+				if (i > 0) then
+					conc(k) = allstate(i,ichemo)
+				else
+					conc(k) = 0
+				endif
+			else
+				conc(k) = 0
+			endif
+        elseif (ichemo == MAX_CHEMO+1) then	! growth rate
+			if (kcell > 0) then
+				conc(k) = cell_list(kcell)%dVdt
+			else
+				conc(k) = 0
+			endif
+		endif
     enddo
 enddo
 ! Add concentrations at the two boundaries
@@ -1327,18 +1342,18 @@ do ichemo = 1,MAX_CHEMO
         cbnd = BdryConc(ichemo,t_simulation)
         k = ichemo
         conc(k) = cbnd
-        k = (ns-1)*MAX_CHEMO + ichemo
+        k = (ns-1)*(MAX_CHEMO+1) + ichemo
         conc(k) = cbnd
     else
         k = ichemo
         conc(k) = 0
-        k = (ns-1)*MAX_CHEMO + ichemo
+        k = (ns-1)*(MAX_CHEMO+1) + ichemo
         conc(k) = 0
     endif
 enddo
-do k = 1,MAX_CHEMO*ns
-    conc(k) = max(cmin,conc(k))
-enddo
+!do k = 1,(MAX_CHEMO+1)*ns
+!    conc(k) = max(cmin,conc(k))
+!enddo
 !call logger('did get_concdata')
 end subroutine
 

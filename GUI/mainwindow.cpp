@@ -1700,7 +1700,7 @@ void MainWindow::displayScene()
 void MainWindow::showSummary()
 {
     double val;
-//    LOG_MSG("showSummary");
+    LOG_MSG("showSummary");
 	step++;
     if (step >= newR->nsteps) {
 		LOG_MSG("ERROR: step >= nsteps");
