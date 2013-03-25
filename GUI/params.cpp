@@ -48,7 +48,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Number of ODE solver sub-steps.",
 "The number of subdivisions of the major time step, for the ODE diffusion-reaction solver."},
 
-{"NMM3", 120000, 0, 0,
+{"NMM3", 90000, 0, 0,
 "Cells/cubic mm",
 "Number of cells per cubic mm of non-necrotic tumour."},
 
