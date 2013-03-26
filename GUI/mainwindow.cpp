@@ -143,8 +143,8 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setX(10);
     rect.setY(0);
 #ifdef __DISPLAY768
-    rect.setHeight(600);
-    rect.setWidth(1000);
+    rect.setHeight(500);
+    rect.setWidth(1100);
 #else
     rect.setHeight(700);
     rect.setWidth(1500);
