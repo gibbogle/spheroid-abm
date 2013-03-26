@@ -144,7 +144,7 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setY(0);
 #ifdef __DISPLAY768
     rect.setHeight(600);
-    rect.setWidth(900);
+    rect.setWidth(1000);
 #else
     rect.setHeight(700);
     rect.setWidth(1500);
@@ -1630,8 +1630,8 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     graphResultSet[0] = R;
 
 //    QRect rect;
-//    rect.setHeight(400);
-//    rect.setWidth(1800);
+//    rect.setHeight(600);
+//    rect.setWidth(1000);
 //    mdiArea->setGeometry(rect);
 
     for (int i=0; i<nGraphs; i++) {
