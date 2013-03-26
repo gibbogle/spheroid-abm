@@ -15,27 +15,27 @@ Graphs::Graphs()
 GRAPH_SET tsGraphSet[] = {
 
     {"nlive",
-    "Number of Live Cells",
+    "Live Cells",
     "No. of cells",
     1, true, 0, 1, true},
 
     {"nradiationdead",
-    "Number of Radiation-killed Cells",
+    "Radiation-killed Cells",
     "No. of cells",
     2, true, 0, 1, true},
 
     {"ndrugdead",
-    "Number of Drug-killed Cells",
+    "Drug-killed Cells",
     "No. of cells",
     3, true, 0, 1, true},
 
     {"nanoxiadead",
-    "Number of Anoxia-killed Cells",
+    "Anoxia-killed Cells",
     "No. of cells",
     7, true, 0, 1, true},
 
     {"ntagged",
-    "Number of Tagged Cells",
+    "Tagged Cells",
     "No. of cells",
     4, false, 0, 1, true},
 
