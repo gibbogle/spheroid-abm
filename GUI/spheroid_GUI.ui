@@ -1959,7 +1959,7 @@ padding: 8px
           <property name="minimumSize">
            <size>
             <width>900</width>
-            <height>600</height>
+            <height>500</height>
            </size>
           </property>
           <property name="sizeIncrement">
