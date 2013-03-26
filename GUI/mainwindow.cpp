@@ -67,8 +67,8 @@ MainWindow::MainWindow(QWidget *parent)
    : QMainWindow(parent)
 {
 	LOG_MSG("Started MainWindow");
-
 	setupUi(this);
+    LOG_MSG("did setupUi");
     showMaximized();
 	// Some initializations
     sprintf(msg,"MAX_DC: %d",MAX_DC);
@@ -132,9 +132,24 @@ MainWindow::MainWindow(QWidget *parent)
     QRect rect;
     rect.setX(50);
     rect.setY(30);
+#ifdef __DISPLAY768
     rect.setHeight(600);
     rect.setWidth(600);
+#else
+    rect.setHeight(800);
+    rect.setWidth(800);
+#endif
     mdiArea_VTK->setGeometry(rect);
+    rect.setX(10);
+    rect.setY(0);
+#ifdef __DISPLAY768
+    rect.setHeight(600);
+    rect.setWidth(900);
+#else
+    rect.setHeight(700);
+    rect.setWidth(1500);
+#endif
+    mdiArea->setGeometry(rect);
     tabs->setCurrentIndex(1);
     widget_canvas->setFixedWidth(CANVAS_WIDTH/2);
     widget_canvas->setFixedHeight(CANVAS_WIDTH);
@@ -1614,10 +1629,10 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	nGraphCases = 1;
     graphResultSet[0] = R;
 
-    QRect rect;
-    rect.setHeight(400);
-    rect.setWidth(1800);
-    mdiArea->setGeometry(rect);
+//    QRect rect;
+//    rect.setHeight(400);
+//    rect.setWidth(1800);
+//    mdiArea->setGeometry(rect);
 
     for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
