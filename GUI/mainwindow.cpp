@@ -37,8 +37,6 @@ bool leftb;
 double DELTA_T;
 int ndistplots = 1;
 
-//bool concUsed[16];
-
 bool USE_GRAPHS = true;
 
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
@@ -70,9 +68,8 @@ MainWindow::MainWindow(QWidget *parent)
 	setupUi(this);
     LOG_MSG("did setupUi");
     showMaximized();
+
 	// Some initializations
-    sprintf(msg,"MAX_DC: %d",MAX_DC);
-    LOG_MSG(msg);
     nDistPts = 200;
 	nTicks = 1000;
 	tickVTK = 100;	// timer tick for VTK in milliseconds
@@ -107,17 +104,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     setupGraphSelector();
     setGraphsActive();
-    /*
-    int non_ts = 0;
-    if (field->isConcPlot()) non_ts++;
-    if (field->isVolPlot()) non_ts++;
-    grph->makeGraphList(non_ts);
-    nGraphs = grph->nGraphs;
-    */
+
     for(int i=0; i<16; i++)
         pGraph[i] = NULL;
     LOG_QMSG("did Graphs");
-	createLists();
+
+    createLists();
     LOG_QMSG("did createLists");
     createActions();
     LOG_QMSG("did createActions");
@@ -126,6 +118,7 @@ MainWindow::MainWindow(QWidget *parent)
     loadParams();
     LOG_QMSG("Did loadparams");
 	writeout();
+
     timer = new QTimer(this);
     vtk = new MyVTK(mdiArea_VTK, widget_key);
 	vtk->init();
@@ -205,11 +198,11 @@ void MainWindow::createActions()
     connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
     connect(buttonGroup_plane, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_plane(QAbstractButton*)));
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
-//	connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
+//	  connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
 	connect(lineEdit_fraction, SIGNAL(textEdited(QString)), this, SLOT(textEdited_fraction(QString)));
     connect((QCheckBox *)cbox_USE_SN30K,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugA_toggled(bool)));
-//    connect((QCheckBox *)cbox_SN30K_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_toggled(bool)));
-//    connect((QCheckBox *)cbox_USE_DRUG_B,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugB_toggled(bool)));
+    connect((QCheckBox *)cbox_SN30K_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_toggled(bool)));
+    connect((QCheckBox *)cbox_USE_DRUG_B,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugB_toggled(bool)));
     connect((QCheckBox *)cbox_DRUG_B_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_toggled(bool)));
     connect(action_select_constituent, SIGNAL(triggered()), SLOT(onSelectConstituent()));
 
@@ -1594,7 +1587,6 @@ void MainWindow::errorPopup(QString errmsg)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::initializeGraphs(RESULT_SET *R)
 {
-    int ngtotal;
     LOG_MSG("initializeGraphs");
 	mdiArea->closeAllSubWindows();
 	mdiArea->show();
@@ -1663,7 +1655,7 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 void MainWindow::drawGraphs()
 {
 	RESULT_SET *R;
-	double act_max = 0, ntot_max = 0, nDC_max = 0, teffgen_max = 0, ncog_LN_max = 0, ncog_PER_max = 0, nbnd_max = 0, ncogseed_max = 0;
+//	double act_max = 0, ntot_max = 0, nDC_max = 0, teffgen_max = 0, ncog_LN_max = 0, ncog_PER_max = 0, nbnd_max = 0, ncogseed_max = 0;
 	for (int kres=0; kres<Plot::ncmax; kres++) {
 		R = graphResultSet[kres];
 		if (R != 0) {
@@ -3042,25 +3034,24 @@ void MainWindow::setupConc(int nc, bool *cused)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setupGraphSelector()
 {
+    checkBox_conc = new QCheckBox("Concentration Profile");
+    checkBox_vol = new QCheckBox("Cell Volume Distribution");
     checkBox_conc->setChecked(field->isConcPlot());
     checkBox_vol->setChecked(field->isVolPlot());
-    cbox_ts = new QCheckBox[grph->n_tsGraphs];
+    QVBoxLayout *vbox = new QVBoxLayout;
+    vbox->addWidget(checkBox_conc);
+    vbox->addWidget(checkBox_vol);
+
+    cbox_ts = new QCheckBox*[grph->n_tsGraphs];
     for (int i=0; i<grph->n_tsGraphs; i++) {
-//        char str[16];
-//        sprintf(str,"Timeseries #%d",i);
         QString text = grph->tsGraphs[i].title;
-        LOG_QMSG(text);
-        cbox_ts[i].setText(text);
-        cbox_ts[i].setObjectName("checkBox_"+grph->tsGraphs[i].tag);
-        cbox_ts[i].setMinimumHeight(20);
-        cbox_ts[i].setMaximumHeight(20);
-        cbox_ts[i].setChecked(grph->tsGraphs[i].active);
-        verticalLayout_graphs->addWidget(&cbox_ts[i]);
-//        layout->addWidget(&cbox[i]);
+        cbox_ts[i] = new QCheckBox;
+        cbox_ts[i]->setText(text);
+        cbox_ts[i]->setObjectName("checkBox_"+grph->tsGraphs[i].tag);
+        cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
+        vbox->addWidget(cbox_ts[i]);
     }
-//    verticalLayout_graphs->addStretch();
-//    verticalLayout_graphs->update();
-//    gridLayout_graphs->Set
+    groupBox_graphselect->setLayout(vbox);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3070,7 +3061,7 @@ void MainWindow::setGraphsActive()
     field->setConcPlot(checkBox_conc->isChecked());
     field->setVolPlot(checkBox_vol->isChecked());
     for (int i=0; i<grph->n_tsGraphs; i++) {
-        grph->tsGraphs[i].active = cbox_ts[i].isChecked();
+        grph->tsGraphs[i].active = cbox_ts[i]->isChecked();
     }
 }
 
@@ -3078,6 +3069,7 @@ void MainWindow::setGraphsActive()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_use_drugA_toggled(bool checked)
 {
+    LOG_MSG("cbox_use_drugA toggled");
 //    QRadioButton *rb = findChild<QRadioButton*>("radioButton_drugA");
 //    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
     QCheckBox *cbm = findChild<QCheckBox *>("cbox_SN30K_METABOLITE");
@@ -3099,6 +3091,7 @@ void MainWindow::on_cbox_use_drugA_toggled(bool checked)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_drugA_metabolite_toggled(bool checked)
 {
+    LOG_MSG("cbox_use_drugA_metabolite toggled");
     QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
     if (checked) {
         rbm->setEnabled(true);
@@ -3111,19 +3104,20 @@ void MainWindow::on_cbox_drugA_metabolite_toggled(bool checked)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_use_drugB_toggled(bool checked)
 {
-    QRadioButton *rb = findChild<QRadioButton*>("radioButton_drugB");
-    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_metabolite");
+    LOG_MSG("cbox_use_drugB toggled");
+//    QRadioButton *rb = findChild<QRadioButton*>("radioButton_drugB");
+//    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_METABOLITE");
     if (checked) {
-        rb->setEnabled(true);
+//        rb->setEnabled(true);
         cbm->setEnabled(true);
-        if (cbm->isChecked()) {
-            LOG_MSG("cbm is checked");
-            rbm->setEnabled(true);
-        }
+//        if (cbm->isChecked()) {
+//            LOG_MSG("cbm is checked");
+//            rbm->setEnabled(true);
+//        }
     } else {
-        rb->setEnabled(false);
-        rbm->setEnabled(false);
+//        rb->setEnabled(false);
+//        rbm->setEnabled(false);
         cbm->setEnabled(false);
     }
 }
@@ -3132,6 +3126,7 @@ void MainWindow::on_cbox_use_drugB_toggled(bool checked)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_drugB_metabolite_toggled(bool checked)
 {
+    LOG_MSG("cbox_use_drugB_metabolite toggled");
     QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
     if (checked) {
         rbm->setEnabled(true);
@@ -3156,7 +3151,9 @@ void MainWindow::on_cbox_SHOW_NONCOGNATE_toggled(bool checked)
 */
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-//    event->accept();
+    LOG_MSG("Close event");
+    event->accept();
+
 //    if (maybeSave()) {
 //        writeSettings();
 //        event->accept();
