@@ -129,11 +129,12 @@ public slots:
     void buttonClick_plane(QAbstractButton* button);
 	void textChanged_fraction(QString text);
 	void textEdited_fraction(QString text);
+    void setupConc(int nc, bool *used);
+
     void on_cbox_use_drugA_toggled(bool checked);
     void on_cbox_drugA_metabolite_toggled(bool checked);
     void on_cbox_use_drugB_toggled(bool checked);
     void on_cbox_drugB_metabolite_toggled(bool checked);
-    void setupConc(int nc, bool *used);
 
 private:
     void createActions();
@@ -264,7 +265,9 @@ private:
 	Plot *graph_dummy;	// placeholder
 
 	Plot *pGraph[16];
-    QCheckBox *cbox_ts;
+    QCheckBox *checkBox_conc;
+    QCheckBox *checkBox_vol;
+    QCheckBox **cbox_ts;
 
 	QString graphCaseName[Plot::ncmax];
 	RESULT_SET *graphResultSet[Plot::ncmax];

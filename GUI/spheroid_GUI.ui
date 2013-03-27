@@ -50,30 +50,6 @@ padding: 8px
          <number>0</number>
         </property>
         <item>
-         <widget class="QLabel" name="label_input">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Segoe UI</family>
-            <pointsize>16</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Inputs</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QTabWidget" name="tabs">
           <property name="enabled">
            <bool>true</bool>
@@ -103,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>1</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -1848,69 +1824,44 @@ padding: 8px
              <string>Graphs</string>
             </property>
            </widget>
-           <widget class="QWidget" name="verticalLayoutWidget">
+           <widget class="QGroupBox" name="groupBox_graphselect">
             <property name="geometry">
              <rect>
-              <x>660</x>
+              <x>620</x>
               <y>30</y>
-              <width>160</width>
-              <height>451</height>
+              <width>171</width>
+              <height>481</height>
              </rect>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_graphs" stretch="0,0">
-             <property name="spacing">
-              <number>3</number>
-             </property>
-             <property name="sizeConstraint">
-              <enum>QLayout::SetNoConstraint</enum>
-             </property>
-             <item>
-              <widget class="QCheckBox" name="checkBox_vol">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Cell Volume Distribution</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="checkBox_conc">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>16777215</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="text">
-                <string>Concentration Profile</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
+            <property name="title">
+             <string>Select graphs</string>
+            </property>
            </widget>
           </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_input">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Segoe UI</family>
+            <pointsize>16</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Inputs</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
          </widget>
         </item>
         <item>
