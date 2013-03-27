@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -1830,7 +1830,7 @@ padding: 8px
               <x>620</x>
               <y>30</y>
               <width>171</width>
-              <height>481</height>
+              <height>341</height>
              </rect>
             </property>
             <property name="title">
