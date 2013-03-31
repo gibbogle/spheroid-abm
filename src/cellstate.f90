@@ -49,7 +49,7 @@ LQ%beta_H = 0.0017
 LQ%K_ms = 4.3e-3	! mM
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
-	if (cell_list(kcell)%radiation_tag) cycle	! we do not tag twicw (yet)
+	if (cell_list(kcell)%radiation_tag) cycle	! we do not tag twice (yet)
 	site = cell_list(kcell)%site
 	iv = ODEdiff%ivar(site(1),site(2),site(3))
 	if (iv < 1) then
@@ -120,14 +120,14 @@ site_value = C(OXYGEN)
 end function
 
 !-----------------------------------------------------------------------------------------
-! Cells can die of hypoxia, or they can be tagged for death at division time if the drug
-! takes effect.
+! Cells can be tagged to die, or finally die of anoxia, or they can be tagged for death 
+! at division time if the drug is effective.
 !-----------------------------------------------------------------------------------------
 subroutine cell_death(dt)
 real(REAL_KIND) :: dt
 integer :: kcell, nlist0, site(3), i, kpar=0 
-real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, pdeath
-logical :: died, use_SN30000
+real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, pdeath, tnow
+logical :: use_SN30000
 
 if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
     use_SN30000 = .true.
@@ -135,29 +135,36 @@ if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
 else
     use_SN30000 = .false.
 endif
+tnow = istep*DELTA_T	! seconds
 nlist0 = nlist
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
-!	site = cell_list(kcell)%site
-!	i = ODEdiff%ivar(site(1),site(2),site(3))
-!	if (allstate(i,OXYGEN) < MM_THRESHOLD) then
-    died = .false.
-    C_O2 = cell_list(kcell)%conc(OXYGEN)
-	if (C_O2 < ANOXIA_FACTOR*MM_THRESHOLD) then
-		cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
-		if (cell_list(kcell)%t_hypoxic > t_anoxic_limit) then
+	if (cell_list(kcell)%anoxia_tag) then
+!		write(logmsg,*) 'anoxia_tag: ',kcell,cell_list(kcell)%state,tnow,cell_list(kcell)%t_anoxia_die
+!		call logger(logmsg)
+		if (tnow >= cell_list(kcell)%t_anoxia_die) then
+!			call logger('cell dies')
 			call cell_dies(kcell)
-			died = .true.
 			Nanoxia_dead = Nanoxia_dead + 1
+			cycle
+		endif
+	else
+		C_O2 = cell_list(kcell)%conc(OXYGEN)
+		if (C_O2 < ANOXIA_FACTOR*MM_THRESHOLD) then
+			cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
+			if (cell_list(kcell)%t_hypoxic > t_anoxic_limit) then
+				cell_list(kcell)%anoxia_tag = .true.						! tagged to die later
+				cell_list(kcell)%t_anoxia_die = tnow + anoxia_death_delay	! time that the cell will die
+				Nanoxia_tag = Nanoxia_tag + 1
+			endif
 		endif
 	endif
-	if (.not.died .and. use_SN30000) then
+	if (use_SN30000) then
 	    kmet = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + C_O2))*SN30K%Kmet0
 	    dMdt = kmet*cell_list(kcell)%conc(DRUG_A)
 	    pdeath = Kd*dMdt*dt
 !	    write(*,'(4f10.5)') kmet,cell_list(kcell)%conc(DRUG_A),dMdt,pdeath
 	    if (par_uni(kpar) < pdeath) then
-!			call cell_dies(kcell)
             cell_list(kcell)%drug_tag = .true.
             Ndrug_tag = Ndrug_tag + 1
 		endif
@@ -845,6 +852,7 @@ cell_list(kcell1)%site = site1
 cell_list(kcell1)%ID = cell_list(kcell0)%ID
 cell_list(kcell1)%radiation_tag = .false.
 cell_list(kcell1)%drug_tag = .false.
+cell_list(kcell1)%anoxia_tag = .false.
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%t_divide_last = tnow
 !cell_list(kcell1)%t_divide_next = tnow + DivideTime()

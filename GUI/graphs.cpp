@@ -34,20 +34,25 @@ GRAPH_SET tsGraphSet[] = {
     "No. of cells",
     7, true, 0, 1, true},
 
+    {"nanoxiatagged",
+    "Anoxia-tagged Cells",
+    "No. of cells",
+    8, true, 0, 1, true},
+
     {"ntagged",
     "Tagged Cells",
     "No. of cells",
-    4, false, 0, 1, true},
+    4, true, 0, 1, true},
 
     {"diameter",
     "Spheroid Diameter",
     "Diameter (um)",
-    5, false, 0, 1, true},
+    5, true, 0, 1, true},
 
     {"volume",
     "Spheroid Volume",
     "Volume (mm3)",
-    6, true, 0, 0.001, true}
+    6, false, 0, 0.001, true}
 
 };
 

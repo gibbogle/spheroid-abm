@@ -77,9 +77,14 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Anoxia threshold factor",
 "A cell begins to experience anoxia leading to cell death at the O2 concentration given by this multiplying factor times the Michaelis-Menten threshold value."},
 
-{"T_ANOXIC_LIMIT", 3.0, 0, 0,
+{"ANOXIA_TAG_TIME", 3.0, 0, 0,
 "Anoxic time limit",
-"Length of time under anoxia (O2 < anoxic threshold) after which a cell dies.\n\
+"Length of time under hypoxia (O2 < anoxic threshold) after which a cell is tagged to die of anoxia.\n\
+[h]"},
+
+{"ANOXIA_DEATH_TIME", 3.0, 0, 0,
+"Anoxic death delay time",
+"Time taken for a cell to die after it is tagged to die of anoxia.\n\
 [h]"},
 
 {"TEST_CASE", 0, 0, 0,
