@@ -99,6 +99,7 @@ if (use_ODE_diffusion) then
 endif
 Nradiation_tag = 0
 Ndrug_tag = 0
+Nanoxia_tag = 0
 Nradiation_dead = 0
 Ndrug_dead = 0
 Nanoxia_dead = 0
@@ -233,7 +234,7 @@ logical :: ok
 integer :: itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
 integer :: iuse(MAX_CHEMO), idecay(MAX_CHEMO), imetabolite(MAX_CHEMO)
 real(REAL_KIND) :: days
-real(REAL_KIND) :: sigma, DXmm, t_anoxia_death
+real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 
 ok = .true.
 idecay = 0
@@ -254,7 +255,8 @@ read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
 read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (mM)
 read(nfcell,*) ANOXIA_FACTOR			    ! multiplying factor for MM threshold for anoxia
-read(nfcell,*) t_anoxia_death				! anoxic time causing death (h)
+read(nfcell,*) anoxia_tag_hours				! hypoxic time leading to tagging to die by anoxia (h)
+read(nfcell,*) anoxia_death_hours			! time after tagging to death by anoxia (h)
 read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
@@ -300,7 +302,8 @@ sigma = log(divide_time_shape)
 divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
 divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
-t_anoxic_limit = 60*60*t_anoxia_death				! hours -> seconds
+t_anoxic_limit = 60*60*anoxia_tag_hours				! hours -> seconds
+anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
 
 chemo(SN30000)%diff_coef = SN30K%diff_coef
 chemo(SN30000_METAB)%diff_coef = chemo(SN30000)%diff_coef
@@ -528,6 +531,7 @@ do x = 1,NX
 				cell_list(k)%state = 1
                 cell_list(k)%drug_tag = .false.
                 cell_list(k)%radiation_tag = .false.
+                cell_list(k)%anoxia_tag = .false.
 				cell_list(k)%exists = .true.
 				do
 					R = par_uni(kpar)
@@ -1158,21 +1162,24 @@ subroutine get_summary(summaryData) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*)
-integer :: Ndead, Ntagged, Ntodie, Ntagdead, diam_um, vol_mm3_1000
-real(REAL_KIND) :: vol_cm3
+integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, diam_um, vol_mm3_1000
+real(REAL_KIND) :: vol_cm3, vol_mm3, hour
 
 !call SetRadius(Nsites)
+hour = istep*DELTA_T/3600.
 vol_cm3 = Vsite*Nsites				! total volume in cm^3
-vol_mm3_1000 = vol_cm3*1000*1000	! 1000 * volume in mm^3
+vol_mm3 = vol_cm3*1000				! volume in mm^3
+vol_mm3_1000 = vol_mm3*1000			! 1000 * volume in mm^3
 diam_um = 2*DELTA_X*Radius*10000
-Ntodie = Nradiation_tag + Ndrug_tag
-Ntagdead = Nradiation_dead + Ndrug_dead
-Ndead = Nsites + Nreuse - Ncells
-Ntagged = Ntodie - Ntagdead
-write(logmsg,*) 'vol_mm3_1000: ',vol_mm3_1000
+Ntodie = Nradiation_tag + Ndrug_tag			! total that have been tagged by drug or radiation
+Ntagdead = Nradiation_dead + Ndrug_dead		! total that died from drug or radiation
+Ndead = Nsites + Nreuse - Ncells			! total that died from any cause
+Ntagged = Ntodie - Ntagdead					! number currently tagged by drug or radiation
+Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead	! number currently tagged by anoxia
+write(logmsg,'(a,f6.2)') 'vol_mm3: ',vol_mm3
 call logger(logmsg)
-summaryData(1:8) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, vol_mm3_1000, Nanoxia_dead /)
-
+summaryData(1:9) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia /)
+write(nfres,'(i8,2f8.2,7i6)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, Nanoxia_dead, Ntagged_anoxia
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1417,6 +1424,8 @@ do i = 1,outbuflen
 enddo
 
 open(nflog,file='spheroid.log',status='replace')
+open(nfres,file='spheroid_ts.out',status='replace')
+write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead'
 !awp_0%is_open = .false.
 !awp_1%is_open = .false.
 
@@ -1464,7 +1473,7 @@ istep = 0
 NX=100
 NY=100
 NZ=100
-DELTA_T=600
+DELTA_T = 600
 nsteps = 100
 res=0
 

@@ -1063,7 +1063,7 @@ padding: 8px
               <x>30</x>
               <y>40</y>
               <width>351</width>
-              <height>471</height>
+              <height>451</height>
              </rect>
             </property>
             <layout class="QGridLayout" name="gridLayout_4">
@@ -1151,7 +1151,7 @@ padding: 8px
                </property>
               </spacer>
              </item>
-             <item row="13" column="0">
+             <item row="14" column="0">
               <widget class="QMyLabel" name="label_SEED1">
                <property name="mouseTracking">
                 <bool>false</bool>
@@ -1167,7 +1167,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="13" column="1">
+             <item row="14" column="1">
               <spacer name="horizontalSpacer_30">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1180,7 +1180,7 @@ padding: 8px
                </property>
               </spacer>
              </item>
-             <item row="13" column="2">
+             <item row="14" column="2">
               <widget class="QSpinBox" name="spin_SEED1">
                <property name="maximumSize">
                 <size>
@@ -1196,7 +1196,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="14" column="0">
+             <item row="15" column="0">
               <widget class="QMyLabel" name="label_SEED2">
                <property name="mouseTracking">
                 <bool>false</bool>
@@ -1212,7 +1212,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="14" column="1">
+             <item row="15" column="1">
               <spacer name="horizontalSpacer_31">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1225,7 +1225,7 @@ padding: 8px
                </property>
               </spacer>
              </item>
-             <item row="14" column="2">
+             <item row="15" column="2">
               <widget class="QSpinBox" name="spin_SEED2">
                <property name="maximumSize">
                 <size>
@@ -1257,7 +1257,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="16" column="0">
+             <item row="17" column="0">
               <widget class="QMyLabel" name="label_NT_ANIMATION">
                <property name="toolTip">
                 <string>animation update interval</string>
@@ -1267,7 +1267,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="16" column="1">
+             <item row="17" column="1">
               <spacer name="horizontalSpacer_32">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1280,7 +1280,7 @@ padding: 8px
                </property>
               </spacer>
              </item>
-             <item row="16" column="2">
+             <item row="17" column="2">
               <widget class="QSpinBox" name="spin_NT_ANIMATION">
                <property name="maximumSize">
                 <size>
@@ -1303,7 +1303,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="15" column="0">
+             <item row="16" column="0">
               <widget class="QMyLabel" name="label_NCPU">
                <property name="toolTip">
                 <string>animation update interval</string>
@@ -1313,7 +1313,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="15" column="1">
+             <item row="16" column="1">
               <spacer name="horizontalSpacer_34">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1326,7 +1326,7 @@ padding: 8px
                </property>
               </spacer>
              </item>
-             <item row="15" column="2">
+             <item row="16" column="2">
               <widget class="QSpinBox" name="spin_NCPU">
                <property name="maximumSize">
                 <size>
@@ -1342,7 +1342,7 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="17" column="2">
+             <item row="18" column="2">
               <widget class="QLineEdit" name="line_TEST_CASE">
                <property name="maximumSize">
                 <size>
@@ -1358,14 +1358,14 @@ padding: 8px
                </property>
               </widget>
              </item>
-             <item row="17" column="0">
+             <item row="18" column="0">
               <widget class="QMyLabel" name="label_TEST_CASE">
                <property name="text">
                 <string>label_TEST_CASE</string>
                </property>
               </widget>
              </item>
-             <item row="17" column="1">
+             <item row="18" column="1">
               <spacer name="horizontalSpacer_33">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
@@ -1653,9 +1653,9 @@ padding: 8px
               </widget>
              </item>
              <item row="12" column="0">
-              <widget class="QMyLabel" name="label_T_ANOXIC_LIMIT">
+              <widget class="QMyLabel" name="label_ANOXIA_TAG_TIME">
                <property name="text">
-                <string>label_T_ANOXIC_LIMIT</string>
+                <string>label_ANOXIA_TAG_TIME</string>
                </property>
               </widget>
              </item>
@@ -1673,7 +1673,7 @@ padding: 8px
               </spacer>
              </item>
              <item row="12" column="2">
-              <widget class="QLineEdit" name="line_T_ANOXIC_LIMIT">
+              <widget class="QLineEdit" name="line_ANOXIA_TAG_TIME">
                <property name="maximumSize">
                 <size>
                  <width>120</width>
@@ -1686,7 +1686,7 @@ padding: 8px
               </widget>
              </item>
              <item row="12" column="3">
-              <widget class="QLabel" name="units_T_HYPOXIC_LIMIT">
+              <widget class="QLabel" name="units_T_ANOXIC_LIMIT">
                <property name="text">
                 <string>hrs</string>
                </property>
@@ -1762,6 +1762,46 @@ padding: 8px
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="13" column="0">
+              <widget class="QMyLabel" name="label_ANOXIA_DEATH_TIME">
+               <property name="text">
+                <string>label_ANOXIA_DEATH_TIME</string>
+               </property>
+              </widget>
+             </item>
+             <item row="13" column="2">
+              <widget class="QLineEdit" name="line_ANOXIA_DEATH_TIME">
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>16777215</height>
+                </size>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="13" column="1">
+              <spacer name="horizontalSpacer_44">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>13</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item row="13" column="3">
+              <widget class="QLabel" name="units_T_ANOXIA_DEATH">
+               <property name="text">
+                <string>hrs</string>
                </property>
               </widget>
              </item>
