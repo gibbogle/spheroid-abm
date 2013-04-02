@@ -139,28 +139,32 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "GLUCOSE consumption rate",
  "GLUCOSE consumption rate"},
 
-{"USE_SN30K", 0, 0, 1,
+{"USE_DRUG_A", 0, 0, 1,
 "Use SN30000?",
 "SN30000 is simulated"},
 
-{"SN30K_BDRY_CONC", 0.01, 0, 0,
- "SN30000 boundary concentration",
- "SN30000 concentration in the medium"},
+{"DRUG_A_NAME", 0, 0, 0,
+"SN30000",
+"Name of drug A"},
 
-{"SN30K_DECAY", 0, 0, 0,
- "SN30000 decay",
- "SN30000 boundary conc decays with the specified half-life"},
+{"DRUG_A_BDRY_CONC", 0.01, 0, 0,
+ "Drug A boundary concentration",
+ "Drug A concentration in the medium"},
 
-{"SN30K_HALFLIFE", 2.0, 0, 0,
- "SN30000 half-life",
- "SN30000 half-life"},
+{"DRUG_A_DECAY", 0, 0, 0,
+ "Drug A decay",
+ "Drug A conc decays with the specified half-life"},
 
-{"SN30K_METABOLITE", 0, 0, 0,
- "SN30000 metabolite",
- "SN30000 simulate metabolite"},
+{"DRUG_A_SIMULATE_METABOLITE", 0, 0, 0,
+ "Drug A metabolite",
+ "Drug A simulate metabolite"},
+
+{"DRUG_A_METABOLITE_DECAY", 0, 0, 0,
+ "Drug A metabolite decay",
+ "Drug A metabolite conc decays with the specified half-life"},
 
 {"SN30K_DIFF_COEF", 6.0e-7, 0, 0,
- "SN30000 diffusion coeff",
+ "Diffusion coeff",
  "SN30000 diffusion coefficient"},
 
 {"SN30K_KMET0", 1.54, 0, 0,
@@ -187,6 +191,14 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion",
  "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
 
+{"SN30K_HALFLIFE", 2.0, 0, 0,
+ "Half-life",
+ "SN30000 half-life (hours)"},
+
+{"SN30K_METABOLITE_HALFLIFE", 2.0, 0, 0,
+ "Metabolite half-life",
+ "SN30000 metabolite half-life (hours)"},
+
 {"SN30K_KILL_O2_CONC", 0.0, 0, 0,
  "O2 conc",
  "SN30000 constant O2 concentration in kill experiment"},
@@ -207,6 +219,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Use Drug B?",
 "Drug B is simulated"},
 
+{"DRUG_B_NAME", 0, 0, 0,
+"",
+"Name of drug B"},
+
 {"DRUG_B_BDRY_CONC", 9.0, 0, 0,
  "DRUG_B boundary concentration",
  "DRUG_B boundary concentration"},
@@ -215,13 +231,13 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "DRUG_B decay",
  "DRUG_B boundary conc decays with the specified half-life"},
 
-{"DRUG_B_HALFLIFE", 2.0, 0, 0,
- "DRUG_B half-life",
- "DRUG_B half-life"},
-
-{"DRUG_B_METABOLITE", 0, 0, 0,
+{"DRUG_B_SIMULATE_METABOLITE", 0, 0, 0,
  "DRUG_B metabolite",
  "DRUG_B simulate metabolite"},
+
+{"DRUG_B_METABOLITE_DECAY", 0, 0, 0,
+ "Drug B metabolite decay",
+ "Drug B metabolite conc decays with the specified half-life"},
 
 {"USE_TREATMENT_FILE", 0, 0, 1,
 "Use treatment file?",

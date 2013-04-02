@@ -132,9 +132,13 @@ public slots:
     void setupConc(int nc, bool *used);
 
     void on_cbox_use_drugA_toggled(bool checked);
+//    void on_cbox_drugA_decay_toggled(bool checked);
     void on_cbox_drugA_metabolite_toggled(bool checked);
+//    void on_cbox_drugA_metabolite_decay_toggled(bool checked);
     void on_cbox_use_drugB_toggled(bool checked);
+//    void on_cbox_drugB_decay_toggled(bool checked);
     void on_cbox_drugB_metabolite_toggled(bool checked);
+//    void on_cbox_drugB_metabolite_decay_toggled(bool checked);
 
 private:
     void createActions();
@@ -152,6 +156,8 @@ private:
     void disableUseGlucose();
     void enableUseSN30K();
     void disableUseSN30K();
+    void enableUseDrugA();
+    void disableUseDrugA();
     void enableUseDrugB();
     void disableUseDrugB();
     void enableUseTreatmentFile();
@@ -170,6 +176,8 @@ private:
 	int selectGraphCase();
     void setupGraphSelector();
     void setGraphsActive();
+
+    void showBool(QString, bool);
 
 	double erf(double z);
     double pnorm(double x1, double x2, double mu, double sig);

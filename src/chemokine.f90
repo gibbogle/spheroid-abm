@@ -26,11 +26,11 @@ type chemokine_type
 	real(REAL_KIND) :: bdry_conc
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: cell_diff
+	logical :: decay
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: decay_rate
-	logical :: bdry_decay
-	real(REAL_KIND) :: bdry_halflife
-	real(REAL_KIND) :: bdry_decay_rate
+!	real(REAL_KIND) :: bdry_halflife
+!	real(REAL_KIND) :: bdry_decay_rate
 	real(REAL_KIND) :: max_cell_rate		! Vmax
 	real(REAL_KIND) :: MM_C0			! Km
 	real(REAL_KIND), allocatable :: coef(:,:)
