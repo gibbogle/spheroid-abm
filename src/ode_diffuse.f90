@@ -50,15 +50,17 @@ contains
 ! t in seconds
 ! %bdry_decay = .true. for the case that a simple exponential decay of bdry conc
 ! is specified.
+! NEEDS WORK
 !----------------------------------------------------------------------------------
 real(REAL_KIND) function BdryConc(ichemo,t)
 integer :: ichemo
 real(REAL_KIND) :: t
 
-if ((use_medium_flux .and. medium_volume > 0) .or. .not.chemo(ichemo)%bdry_decay) then
+if ((use_medium_flux .and. medium_volume > 0) .or. .not.chemo(ichemo)%decay) then
     BdryConc = chemo(ichemo)%bdry_conc
 else
-    BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%bdry_decay_rate*t)
+!    BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%bdry_decay_rate*t)
+    BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%decay_rate*t)
 endif
 !write(*,*) ichemo, BdryConc, exp(-chemo(ichemo)%bdry_decay_rate*30*60)
 end function
@@ -855,6 +857,7 @@ area = 4*PI*Radius*Radius*DELTA_X*DELTA_X
 F(:) = area*chemo(:)%diff_coef*(Csurface(:) - chemo(:)%bdry_conc)/DELTA_X
 !write(*,*) 'Radius, C, F: ',area, Csurface(DRUG_A), chemo(DRUG_A)%bdry_conc, F(DRUG_A)
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
+chemo(DRUG_A:MAX_CHEMO)%bdry_conc = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*(1 - dt*chemo(DRUG_A:MAX_CHEMO)%decay_rate)
 end subroutine
 
 !----------------------------------------------------------------------------------

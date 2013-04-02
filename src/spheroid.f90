@@ -231,14 +231,15 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine read_cell_params(ok)
 logical :: ok
-integer :: itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
-integer :: iuse(MAX_CHEMO), idecay(MAX_CHEMO), imetabolite(MAX_CHEMO)
-real(REAL_KIND) :: days
+integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
+integer :: iuse_drug, iuse_metab, idrug_decay, imetab_decay
+real(REAL_KIND) :: days, bdry_conc
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
+character*(12) :: drug_name
 
 ok = .true.
-idecay = 0
-imetabolite = 0
+chemo(:)%used = .false.
+
 open(nfcell,file=inputfile,status='old')
 
 read(nfcell,*) NX							! rule of thumb: about 4*BLOB_RADIUS
@@ -262,61 +263,90 @@ read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
-read(nfcell,*) iuse(OXYGEN)
+read(nfcell,*) chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
-read(nfcell,*) iuse(GLUCOSE)
+read(nfcell,*) chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
-read(nfcell,*) iuse(SN30000)
-read(nfcell,*) chemo(SN30000)%bdry_conc
-read(nfcell,*) idecay(SN30000)
-read(nfcell,*) chemo(SN30000)%bdry_halflife  ! h
-read(nfcell,*) imetabolite(SN30000)
-read(nfcell,*) SN30K%diff_coef
-read(nfcell,*) SN30K%Kmet0
-read(nfcell,*) SN30K%C1
-read(nfcell,*) SN30K%C2
-read(nfcell,*) SN30K%KO2
-read(nfcell,*) SN30K%gamma
-read(nfcell,*) SN30K%Klesion
-read(nfcell,*) SN30K%kill_O2
-read(nfcell,*) SN30K%kill_drug
-read(nfcell,*) SN30K%kill_duration
-read(nfcell,*) SN30K%kill_fraction
-read(nfcell,*) iuse(DRUG_B)
-read(nfcell,*) chemo(DRUG_B)%bdry_conc
-read(nfcell,*) idecay(DRUG_B)
-read(nfcell,*) chemo(DRUG_B)%bdry_halflife
-read(nfcell,*) imetabolite(DRUG_B)
+
+do i = 1,2			! currently allowing for just two different drugs
+	read(nfcell,*) iuse_drug
+	read(nfcell,'(a12)') drug_name
+	read(nfcell,*) bdry_conc
+	read(nfcell,*) idrug_decay
+	read(nfcell,*) iuse_metab
+	read(nfcell,*) imetab_decay
+!	if (iuse_drug == 0) cycle
+	call get_indices(drug_name, idrug, imetab)
+	if (idrug < 0 .and. iuse_drug /= 0) then
+		write(logmsg,*) 'Unrecognized drug name: ',drug_name
+		call logger(logmsg)
+		ok = .false.
+		return
+	endif
+	if (idrug == 0) cycle
+	chemo(idrug)%used = (iuse_drug == 1)
+	chemo(idrug)%bdry_conc = bdry_conc
+	chemo(idrug)%decay = (idrug_decay == 1)
+	if (chemo(idrug)%used) then
+		chemo(imetab)%used = (iuse_metab == 1)
+	else
+		chemo(imetab)%used = .false.
+	endif
+	chemo(imetab)%decay = (imetab_decay == 1)
+	if (idrug == SN30000) then
+		read(nfcell,*) SN30K%diff_coef
+		read(nfcell,*) SN30K%Kmet0
+		read(nfcell,*) SN30K%C1
+		read(nfcell,*) SN30K%C2
+		read(nfcell,*) SN30K%KO2
+		read(nfcell,*) SN30K%gamma
+		read(nfcell,*) SN30K%Klesion
+		read(nfcell,*) SN30K%halflife
+		read(nfcell,*) SN30K%metabolite_halflife
+		read(nfcell,*) SN30K%kill_O2
+		read(nfcell,*) SN30K%kill_drug
+		read(nfcell,*) SN30K%kill_duration
+		read(nfcell,*) SN30K%kill_fraction
+		SN30K%KO2 = 1.0e-3*SN30K%KO2                    ! um -> mM
+		SN30K%kill_duration = 60*SN30K%kill_duration    ! minutes -> seconds
+		chemo(idrug)%halflife = SN30K%halflife
+		chemo(imetab)%halflife = SN30K%metabolite_halflife
+		chemo(idrug)%diff_coef = SN30K%diff_coef
+		chemo(imetab)%diff_coef = SN30K%diff_coef
+	endif
+	if (chemo(idrug)%used .and. chemo(idrug)%decay) then
+		chemo(idrug)%decay_rate = DecayRate(chemo(idrug)%halflife)
+	else
+		chemo(idrug)%decay_rate = 0
+	endif
+	if (chemo(imetab)%used .and. chemo(imetab)%decay) then
+		chemo(imetab)%decay_rate = DecayRate(chemo(imetab)%halflife)
+	else
+		chemo(imetab)%decay_rate = 0
+	endif
+enddo
 read(nfcell,*) itreatment
-read(nfcell,*) treatmentfile					! file with treatment programme
+read(nfcell,*) treatmentfile						! file with treatment programme
 close(nfcell)
 
 blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
-divide_time_median = 60*60*divide_time_median	! hours -> seconds
+divide_time_median = 60*60*divide_time_median		! hours -> seconds
 sigma = log(divide_time_shape)
 divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
 divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
 t_anoxic_limit = 60*60*anoxia_tag_hours				! hours -> seconds
 anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
-
-chemo(SN30000)%diff_coef = SN30K%diff_coef
-chemo(SN30000_METAB)%diff_coef = chemo(SN30000)%diff_coef
-SN30K%KO2 = 1.0e-3*SN30K%KO2                    ! um -> mM
-SN30K%kill_duration = 60*SN30K%kill_duration    ! minutes -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
-DELTA_X = DXmm/10                               ! cm
-Vsite = DELTA_X*DELTA_X*DELTA_X		! total site volume (cm^3)
-Vextra = fluid_fraction*Vsite		! extracellular volume in a site
+DELTA_X = DXmm/10									! mm -> cm
+Vsite = DELTA_X*DELTA_X*DELTA_X						! total site volume (cm^3)
+Vextra = fluid_fraction*Vsite						! extracellular volume in a site
 
-do ichemo = 1,DRUG_A-1
-    chemo(ichemo)%used = (iuse(ichemo) == 1)
-enddo
 if (itreatment == 1) then
 	use_treatment = .true.
 	call read_treatment(ok)
@@ -327,26 +357,29 @@ if (itreatment == 1) then
 	endif
 else	
 	use_treatment = .false.
-	do ichemo = DRUG_A,MAX_CHEMO
-		chemo(ichemo)%used = (iuse(ichemo) == 1)
-	enddo
-	do ichemo = DRUG_A,MAX_CHEMO
-		if (idecay(ichemo) == 1) then
-			chemo(ichemo)%bdry_decay = .true.
-			chemo(ichemo)%bdry_decay_rate = DecayRate(chemo(ichemo)%bdry_halflife)
-		else
-			chemo(ichemo)%bdry_decay = .false.
-			chemo(ichemo)%bdry_decay_rate = 0
-		endif
-	enddo
+!	do ichemo = DRUG_A,MAX_CHEMO
+!		chemo(ichemo)%used = (iuse(ichemo) == 1)
+!	enddo
+!	do ichemo = DRUG_A,MAX_CHEMO
+!		if (idecay(ichemo) == 1) then
+!			chemo(ichemo)%decay = .true.
+!!			chemo(ichemo)%bdry_decay_rate = DecayRate(chemo(ichemo)%bdry_halflife)
+!			chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
+!		else
+!			chemo(ichemo)%decay = .false.
+!			chemo(ichemo)%decay_rate = 0
+!		endif
+!	enddo
 endif
-if (use_metabolites) then
-	do ichemo = DRUG_A,MAX_CHEMO
-		if (chemo(ichemo)%used .and. imetabolite(ichemo) == 1) then
-			chemo(ichemo+1)%used = .true.	! the metabolite is also simulated
-		endif
-	enddo
-endif
+
+!if (use_metabolites) then
+!	do ichemo = DRUG_A,MAX_CHEMO
+!		if (chemo(ichemo)%used .and. imetabolite(ichemo) == 1) then
+!			chemo(ichemo+1)%used = .true.	! the metabolite is also simulated
+!		endif
+!	enddo
+!endif
+
 ! Setup test_case
 test_case = .false.
 if (itestcase /= 0) then
@@ -364,6 +397,24 @@ call logger(logmsg)
 
 call determine_Kd
 ok = .true.
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_indices(drug_name, idrug, imetab)
+character*(12) :: drug_name
+integer :: idrug, imetab
+
+if (drug_name == ' ') then
+	idrug = 0
+	imetab = 0
+elseif (drug_name == 'SN30000') then
+	idrug = SN30000
+	imetab = SN30000_METAB
+else
+	idrug = -1
+	imetab = 0
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1224,6 +1275,7 @@ call logger(logmsg)
 end subroutine
 
 !--------------------------------------------------------------------------------
+! Need to transmit medium concentration data.  This could be a separate subroutine.
 !--------------------------------------------------------------------------------
 subroutine get_fielddata(axis, fraction, nfdata, nc, fdata) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_fielddata

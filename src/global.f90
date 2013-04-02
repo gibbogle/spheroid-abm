@@ -90,6 +90,8 @@ type SN30K_type
 	real(REAL_KIND) :: KO2
 	real(REAL_KIND) :: gamma
 	real(REAL_KIND) :: Klesion
+	real(REAL_KIND) :: halflife
+	real(REAL_KIND) :: metabolite_halflife
 	real(REAL_KIND) :: kill_O2
 	real(REAL_KIND) :: kill_drug
 	real(REAL_KIND) :: kill_duration

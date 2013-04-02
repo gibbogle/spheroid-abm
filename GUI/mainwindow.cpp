@@ -146,6 +146,7 @@ MainWindow::MainWindow(QWidget *parent)
     tabs->setCurrentIndex(1);
     widget_canvas->setFixedWidth(CANVAS_WIDTH/2);
     widget_canvas->setFixedHeight(CANVAS_WIDTH);
+
     goToInputs();
 }
 
@@ -200,10 +201,14 @@ void MainWindow::createActions()
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
 //	  connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
 	connect(lineEdit_fraction, SIGNAL(textEdited(QString)), this, SLOT(textEdited_fraction(QString)));
-    connect((QCheckBox *)cbox_USE_SN30K,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugA_toggled(bool)));
-    connect((QCheckBox *)cbox_SN30K_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_toggled(bool)));
+    connect((QCheckBox *)cbox_USE_DRUG_A,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugA_toggled(bool)));
+//    connect((QCheckBox *)cbox_DRUG_A_DECAY,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_decay_toggled(bool)));
+    connect((QCheckBox *)cbox_DRUG_A_SIMULATE_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_toggled(bool)));
+//    connect((QCheckBox *)cbox_DRUG_A_METABOLITE_DECAY,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_decay_toggled(bool)));
     connect((QCheckBox *)cbox_USE_DRUG_B,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugB_toggled(bool)));
-    connect((QCheckBox *)cbox_DRUG_B_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_toggled(bool)));
+//    connect((QCheckBox *)cbox_DRUG_B_DECAY,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_decay_toggled(bool)));
+    connect((QCheckBox *)cbox_DRUG_B_SIMULATE_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_toggled(bool)));
+//    connect((QCheckBox *)cbox_DRUG_B_METABOLITE_DECAY,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_decay_toggled(bool)));
     connect(action_select_constituent, SIGNAL(triggered()), SLOT(onSelectConstituent()));
 
 }
@@ -464,15 +469,15 @@ void MainWindow::loadParams()
                             if (use_GLUCOSE)
                                 disableUseGlucose();
                         }
-                        bool use_SN30K = qsname.contains("USE_SN30K");
+                        bool use_DRUG_A = qsname.contains("USE_DRUG_A");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-                            if (use_SN30K)
-                                enableUseSN30K();
+                            if (use_DRUG_A)
+                                enableUseDrugA();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_SN30K)
-                                disableUseSN30K();
+                            if (use_DRUG_A)
+                                disableUseDrugA();
                         }
                         bool use_DRUG_B = qsname.contains("USE_DRUG_B");
                         if (p.value == 1) {
@@ -837,15 +842,15 @@ void MainWindow::reloadParams()
                             if (use_GLUCOSE)
                                 disableUseGlucose();
                         }
-                        bool use_SN30K = qsname.contains("USE_SN30K");
+                        bool use_DRUG_A = qsname.contains("USE_DRUG_A");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-                            if (use_SN30K)
-                                enableUseSN30K();
+                            if (use_DRUG_A)
+                                enableUseDrugA();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_SN30K)
-                                disableUseSN30K();
+                            if (use_DRUG_A)
+                                disableUseDrugA();
                         }
                         bool use_DRUG_B = qsname.contains("USE_DRUG_B");
                         if (p.value == 1) {
@@ -1046,7 +1051,11 @@ void MainWindow::writeout()
 		double val = p.value;
         if (p.tag.compare("TREATMENT_FILE") == 0)
 			line = p.label;
-		else if (val == int(val)) 	// whole number, write as integer
+        else if (p.tag.compare("DRUG_A_NAME") == 0)
+            line = p.label;
+        else if (p.tag.compare("DRUG_B_NAME") == 0)
+            line = p.label;
+        else if (val == int(val)) 	// whole number, write as integer
 			line = QString::number(int(val));
 		else
 			line = QString::number(val);
@@ -2179,15 +2188,15 @@ void MainWindow::changeParam()
                     disableUseGlucose();
             }
 
-            bool use_SN30K = wname.contains("USE_SN30K");
+            bool use_DRUG_A = wname.contains("USE_DRUG_A");
             if (checkBox->isChecked()) {
                 v = 1;
-                if (use_SN30K)
-                    enableUseSN30K();
+                if (use_DRUG_A)
+                    enableUseDrugA();
             } else {
                 v = 0;
-                if (use_SN30K)
-                    disableUseSN30K();
+                if (use_DRUG_A)
+                    disableUseDrugA();
             }
 
             bool use_DRUG_B = wname.contains("USE_DRUG_B");
@@ -2404,6 +2413,47 @@ void MainWindow::disableUseGlucose()
 }
 
 //--------------------------------------------------------------------------------------------------------
+// Use the name provided for drug A to enable the appropriate lineEdits
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseDrugA()
+{
+    QLineEdit *len = findChild<QLineEdit *>("text_DRUG_A_NAME");
+    if (len->text().compare("SN30000") == 0) {
+        enableUseSN30K();
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+// Use the name provided for drug B to enable the appropriate lineEdits
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseDrugB()
+{
+    QLineEdit *len = findChild<QLineEdit *>("text_DRUG_A_NAME");
+    if (len->text().compare("SN30000") == 0) {
+        enableUseSN30K();
+    }
+}
+//--------------------------------------------------------------------------------------------------------
+// Use the name provided for drug A to disable the appropriate lineEdits
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseDrugA()
+{
+    QLineEdit *len = findChild<QLineEdit *>("text_DRUG_B_NAME");
+    if (len->text().compare("SN30000") == 0)
+        disableUseSN30K();
+}
+
+//--------------------------------------------------------------------------------------------------------
+// Use the name provided for drug B to disable the appropriate lineEdits
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseDrugB()
+{
+    QLineEdit *len = findChild<QLineEdit *>("text_DRUG_B_NAME");
+    if (len->text().compare("SN30000") == 0)
+        disableUseSN30K();
+}
+
+//--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::enableUseSN30K()
 {
@@ -2429,6 +2479,7 @@ void MainWindow::disableUseSN30K()
     }
 }
 
+/*
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::enableUseDrugB()
@@ -2454,6 +2505,7 @@ void MainWindow::disableUseDrugB()
         }
     }
 }
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -3070,22 +3122,34 @@ void MainWindow::setGraphsActive()
 void MainWindow::on_cbox_use_drugA_toggled(bool checked)
 {
     LOG_MSG("cbox_use_drugA toggled");
-//    QRadioButton *rb = findChild<QRadioButton*>("radioButton_drugA");
-//    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_SN30K_METABOLITE");
+    QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_A_BDRY_CONC");
+    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_A_DECAY");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_SIMULATE_METABOLITE");
     if (checked) {
-//        rb->setEnabled(true);
         cbm->setEnabled(true);
-//        if (cbm->isChecked()) {
-//            LOG_MSG("cbm is checked");
-//            rbm->setEnabled(true);
-//        }
+        cbd->setEnabled(true);
+        leb->setEnabled(true);
     } else {
-//        rb->setEnabled(false);
-//        rbm->setEnabled(false);
         cbm->setEnabled(false);
+        cbd->setEnabled(false);
+        leb->setEnabled(false);
     }
 }
+
+/*
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_cbox_drugA_decay_toggled(bool checked)
+{
+    LOG_MSG("cbox_drugA_decay toggled");
+    QLineEdit *leh = findChild<QLineEdit *>("line_DRUG_A_HALFLIFE");
+    if (checked) {
+        leh->setEnabled(true);
+    } else {
+        leh->setEnabled(false);
+    }
+}
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -3093,34 +3157,64 @@ void MainWindow::on_cbox_drugA_metabolite_toggled(bool checked)
 {
     LOG_MSG("cbox_use_drugA_metabolite toggled");
     QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_METABOLITE_DECAY");
     if (checked) {
         rbm->setEnabled(true);
+        cbm->setEnabled(true);
     } else {
         rbm->setEnabled(false);
+        cbm->setEnabled(false);
     }
 }
+
+/*
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_cbox_drugA_metabolite_decay_toggled(bool checked)
+{
+    LOG_MSG("cbox_drugA_metabolite_decay toggled");
+    QLineEdit *leh = findChild<QLineEdit *>("line_DRUG_A_METABOLITE_HALFLIFE");
+    if (checked) {
+        leh->setEnabled(true);
+    } else {
+        leh->setEnabled(false);
+    }
+}
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_use_drugB_toggled(bool checked)
 {
     LOG_MSG("cbox_use_drugB toggled");
-//    QRadioButton *rb = findChild<QRadioButton*>("radioButton_drugB");
-//    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_METABOLITE");
+    QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_B_BDRY_CONC");
+    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_B_DECAY");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_SIMULATE_METABOLITE");
     if (checked) {
-//        rb->setEnabled(true);
         cbm->setEnabled(true);
-//        if (cbm->isChecked()) {
-//            LOG_MSG("cbm is checked");
-//            rbm->setEnabled(true);
-//        }
+        cbd->setEnabled(true);
+        leb->setEnabled(true);
     } else {
-//        rb->setEnabled(false);
-//        rbm->setEnabled(false);
         cbm->setEnabled(false);
+        cbd->setEnabled(false);
+        leb->setEnabled(false);
     }
 }
+
+/*
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_cbox_drugB_decay_toggled(bool checked)
+{
+    LOG_MSG("cbox_drugB_decay toggled");
+    QLineEdit *leh = findChild<QLineEdit *>("line_DRUG_B_HALFLIFE");
+    if (checked) {
+        leh->setEnabled(true);
+    } else {
+        leh->setEnabled(false);
+    }
+}
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -3128,10 +3222,40 @@ void MainWindow::on_cbox_drugB_metabolite_toggled(bool checked)
 {
     LOG_MSG("cbox_use_drugB_metabolite toggled");
     QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_METABOLITE_DECAY");
     if (checked) {
         rbm->setEnabled(true);
+        cbm->setEnabled(true);
     } else {
         rbm->setEnabled(false);
+        cbm->setEnabled(false);
+    }
+}
+
+/*
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_cbox_drugB_metabolite_decay_toggled(bool checked)
+{
+    LOG_MSG("cbox_drugB_metabolite_decay toggled");
+    QLineEdit *leh = findChild<QLineEdit *>("line_DRUG_B_METABOLITE_HALFLIFE");
+    if (checked) {
+        leh->setEnabled(true);
+    } else {
+        leh->setEnabled(false);
+    }
+}
+*/
+
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::showBool(QString qstr, bool result)
+{
+    if (result) {
+        LOG_QMSG(qstr + "= true");
+    } else {
+        LOG_QMSG(qstr + "= false");
     }
 }
 
@@ -3380,3 +3504,5 @@ void MainWindow::onSelectConstituent()
     if (exthread != NULL)
         field->selectConstituent();
 }
+
+
