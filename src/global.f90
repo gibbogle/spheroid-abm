@@ -172,6 +172,7 @@ logical :: use_CPORT1 = .false.
 logical :: stopped, clear_to_send
 logical :: simulation_start, par_zig_init, initialized
 logical :: use_radiation, use_treatment
+logical :: use_V_dependence
 logical :: dbug = .false.
 
 integer :: divide_option = DIVIDE_USE_CLEAR_SITE

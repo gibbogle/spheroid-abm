@@ -25,7 +25,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Initial number of tumour cells",
 "Initial number of tumour cells"},
 
-{"DIVIDE_TIME_MEDIAN", 18, 0, 0,
+{"DIVIDE_TIME_MEDIAN", 48, 0, 0,
 "Division time median parameter",
 "The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters. \n\
 [hours]"},
@@ -33,6 +33,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"DIVIDE_TIME_SHAPE", 1.2, 0, 0,
 "Division time shape parameter",
 "The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters."},
+
+{"V_DEPENDENT_GROWTH_RATE", 1, 0, 1,
+"V-dependent growth rate",
+"The growth rate of a cell is proportional to the volume."},
 
 {"NDAYS", 5.0, 0.0, 30.0,
 "Number of days",

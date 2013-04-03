@@ -1843,6 +1843,7 @@ void MainWindow::postConnection()
     action_field->setEnabled(true);
 //    tab_B->setEnabled(true);
 //    tab_DC->setEnabled(true);
+    tab_tumour->setEnabled(true);
     tab_chemo->setEnabled(true);
     tab_run->setEnabled(true);
 

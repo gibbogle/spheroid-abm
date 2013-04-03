@@ -264,12 +264,13 @@ subroutine cell_division(dt)
 real(REAL_KIND) :: dt
 integer :: kcell, nlist0, site(3), iv
 integer :: divide_list(1000), ndivide, i
-real(REAL_KIND) :: tnow, C_O2, metab, dVdt, rmax
+real(REAL_KIND) :: tnow, C_O2, metab, dVdt, r_mean, c_rate
 character*(20) :: msg
 
 nlist0 = nlist
 tnow = istep*DELTA_T
-rmax = Vdivide0/(2*divide_time_mean)
+c_rate = log(2.0)/divide_time_mean
+r_mean = Vdivide0/(2*divide_time_mean)
 ndivide = 0
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
@@ -281,9 +282,13 @@ do kcell = 1,nlist0
 	endif
 	C_O2 = allstate(iv,OXYGEN)
 	metab = max(0.0,C_O2)/(chemo(OXYGEN)%MM_C0 + C_O2)
-	dVdt = rmax*metab
+	if (use_V_dependence) then
+		dVdt = c_rate*cell_list(kcell)%volume*metab
+	else
+		dVdt = r_mean*metab
+	endif
 	if (istep > 1 .and. dVdt == 0) then
-		write(nflog,'(a,2i6,4e12.3)') 'dVdt: ',istep,kcell,rmax,C_O2,metab,dVdt
+		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
 	endif
 	cell_list(kcell)%dVdt = dVdt
 	cell_list(kcell)%volume = cell_list(kcell)%volume + dVdt*dt
