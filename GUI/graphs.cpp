@@ -42,7 +42,7 @@ GRAPH_SET tsGraphSet[] = {
     {"ntagged",
     "Tagged Cells",
     "No. of cells",
-    4, true, 0, 1, true},
+    4, false, 0, 1, true},
 
     {"diameter",
     "Spheroid Diameter",
@@ -52,7 +52,7 @@ GRAPH_SET tsGraphSet[] = {
     {"volume",
     "Spheroid Volume",
     "Volume (mm3)",
-    6, false, 0, 0.001, true}
+    6, true, 0, 0.001, true}
 
 };
 

@@ -232,7 +232,7 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
-integer :: iuse_drug, iuse_metab, idrug_decay, imetab_decay
+integer :: iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend
 real(REAL_KIND) :: days, bdry_conc
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
@@ -246,6 +246,7 @@ read(nfcell,*) NX							! rule of thumb: about 4*BLOB_RADIUS
 read(nfcell,*) initial_count				! initial number of tumour cells
 read(nfcell,*) divide_time_median
 read(nfcell,*) divide_time_shape
+read(nfcell,*) iV_depend
 read(nfcell,*) days							! number of days to simulate
 read(nfcell,*) DELTA_T						! time step size (sec)
 read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
@@ -340,6 +341,7 @@ sigma = log(divide_time_shape)
 divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
 divide_dist%p2 = sigma
 divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
+use_V_dependence = (iV_depend == 1)
 t_anoxic_limit = 60*60*anoxia_tag_hours				! hours -> seconds
 anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
@@ -1230,7 +1232,7 @@ Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead	! number currently tagged by anoxia
 write(logmsg,'(a,f6.2)') 'vol_mm3: ',vol_mm3
 call logger(logmsg)
 summaryData(1:9) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia /)
-write(nfres,'(i8,2f8.2,7i6)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, Nanoxia_dead, Ntagged_anoxia
+write(nfres,'(i8,f8.1,f8.3,7i6)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, Nanoxia_dead, Ntagged_anoxia
 end subroutine
 
 !--------------------------------------------------------------------------------
