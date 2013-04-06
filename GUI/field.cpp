@@ -514,7 +514,7 @@ void Field::updateVolPlot()
 //        LOG_MSG(msg);
         pmax = MAX(pmax,y[i]);
     }
-    pmax = 2.0/vol_nv;  // try this
+    pmax = 4.0/vol_nv;  // try this
     pGvol->setAxisScale(QwtPlot::yLeft, 0, pmax, 0);
     pGvol->curve[0]->setData(x, y, vol_nv);
 

@@ -50,9 +50,9 @@ type ODEdiff_type
 	integer, allocatable :: vartype(:)
 	integer, allocatable :: cell_index(:)
 !	integer, allocatable :: ncoef(:)
-	real(REAL_KIND) :: deltaC
-	real(REAL_KIND) :: k
-	real(REAL_KIND) :: C1
+	real(REAL_KIND) :: deltaC_soft
+	real(REAL_KIND) :: k_soft
+	real(REAL_KIND) :: C1_soft
 end type
 type(ODEdiff_type) :: ODEdiff
 

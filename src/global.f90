@@ -74,7 +74,7 @@ type cell_type
 	real(REAL_KIND) :: volume
 	real(REAL_KIND) :: divide_volume
 	real(REAL_KIND) :: t_divide_last
-	real(REAL_KIND) :: t_divide_next
+!	real(REAL_KIND) :: t_divide_next
 	real(REAL_KIND) :: t_hypoxic
 	real(REAL_KIND) :: t_anoxia_die
 	real(REAL_KIND) :: M
@@ -173,6 +173,7 @@ logical :: stopped, clear_to_send
 logical :: simulation_start, par_zig_init, initialized
 logical :: use_radiation, use_treatment
 logical :: use_V_dependence
+logical :: randomise_initial_volume
 logical :: dbug = .false.
 
 integer :: divide_option = DIVIDE_USE_CLEAR_SITE
