@@ -50,13 +50,14 @@ LQ%K_ms = 4.3e-3	! mM
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	if (cell_list(kcell)%radiation_tag) cycle	! we do not tag twice (yet)
-	site = cell_list(kcell)%site
-	iv = ODEdiff%ivar(site(1),site(2),site(3))
-	if (iv < 1) then
-	    write(*,*) 'irradiation: ',kcell,site,iv
-	    stop
-	endif
-	C_O2 = allstate(iv,OXYGEN)
+!	site = cell_list(kcell)%site
+!	iv = ODEdiff%ivar(site(1),site(2),site(3))
+!	if (iv < 1) then
+!	    write(*,*) 'irradiation: ',kcell,site,iv
+!	    stop
+!	endif
+!	C_O2 = allstate(iv,OXYGEN)
+	C_O2 = cell_list(kcell)%conc(OXYGEN)
 	OER_alpha_d = dose*(LQ%OER_am*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
 	OER_beta_d = dose*(LQ%OER_bm*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
 	expon = LQ%alpha_H*OER_alpha_d + LQ%beta_H*OER_alpha_d**2
@@ -269,7 +270,7 @@ character*(20) :: msg
 
 nlist0 = nlist
 tnow = istep*DELTA_T
-c_rate = log(2.0)/divide_time_mean
+c_rate = log(2.0)/divide_time_mean		! Note: to randomise divide time need to use random number, not mean!
 r_mean = Vdivide0/(2*divide_time_mean)
 ndivide = 0
 do kcell = 1,nlist0
@@ -335,6 +336,8 @@ cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
 R = par_uni(kpar)
 cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 cell_list(kcell0)%M = cell_list(kcell0)%M/2
+!write(logmsg,'(a,f6.1)') 'Divide time: ',tnow/3600
+!call logger(logmsg)
 
 site0 = cell_list(kcell0)%site
 is_clear = .false.

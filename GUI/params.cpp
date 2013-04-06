@@ -21,11 +21,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Lattice size",
 "Dimension of the lattice (number of sites in X,Y and Z directions).  Typically 5*BLOB_RADIUS is OK."},
 
-{"INITIAL_COUNT", 3000, 0, 0,
+{"INITIAL_COUNT", 15000, 0, 0,
 "Initial number of tumour cells",
 "Initial number of tumour cells"},
 
-{"DIVIDE_TIME_MEDIAN", 48, 0, 0,
+{"DIVIDE_TIME_MEDIAN", 55, 0, 0,
 "Division time median parameter",
 "The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters. \n\
 [hours]"},
@@ -38,7 +38,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "V-dependent growth rate",
 "The growth rate of a cell is proportional to the volume."},
 
-{"NDAYS", 5.0, 0.0, 30.0,
+{"RANDOMISE_INITIAL_V", 1, 0, 1,
+"Randomise initial cell volumes",
+"The volumes of the initial cell population are randomised."},
+
+{"NDAYS", 7.0, 0.0, 30.0,
 "Number of days",
 "Length of the simulation.\n\
 [days]"},
@@ -52,11 +56,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Number of ODE solver sub-steps.",
 "The number of subdivisions of the major time step, for the ODE diffusion-reaction solver."},
 
-{"NMM3", 90000, 0, 0,
+{"NMM3", 500000, 0, 0,
 "Cells/cubic mm",
 "Number of cells per cubic mm of non-necrotic tumour."},
 
-{"FLUID_FRACTION", 0.25, 0, 0,
+{"FLUID_FRACTION", 0.5, 0, 0,
 "Fluid fraction",
 "Fraction of non-necrotic tumour that is extracellular fluid."},
 

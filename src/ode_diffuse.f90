@@ -14,7 +14,7 @@ integer :: neqn
 double precision :: t, y(neqn)
 !spcrad = 4d0*((nx+1)**2 + (ny+1)**2 + (nz+1)**2)
 !spcrad = max(70.,4*BLOB_RADIUS)
-spcrad = 75     ! maybe need to be increased with INTRA added to EXTRA variables
+spcrad = 180	!75     ! maybe need to be increased with INTRA added to EXTRA variables
 end function
 
 !----------------------------------------------------------------------------------
@@ -316,10 +316,10 @@ C0 = chemo(OXYGEN)%MM_C0
 deltaC = MM_THRESHOLD
 !deltaC = 0.0005
 C1 = deltaC + (sqrt(C0*C0 + 8*C0*deltaC) - C0)/4
-ODEdiff%k = (C1-deltaC)/(C1*C1*(C0+C1-deltaC))
-ODEdiff%C1 = C1
-ODEdiff%deltaC = deltaC
-write(logmsg,*) 'AdjustMM: C0, deltaC, C1, k: ',C0, ODEdiff%deltaC, ODEdiff%C1, ODEdiff%k
+ODEdiff%k_soft = (C1-deltaC)/(C1*C1*(C0+C1-deltaC))
+ODEdiff%C1_soft = C1
+ODEdiff%deltaC_soft = deltaC
+write(logmsg,*) 'AdjustMM: C0, deltaC, C1, k: ',C0, ODEdiff%deltaC_soft, ODEdiff%C1_soft, ODEdiff%k_soft
 call logger(logmsg)
 end subroutine
 
@@ -489,49 +489,6 @@ enddo
 
 end subroutine
 
-!----------------------------------------------------------------------------------
-! The rate of change of mass of constituent ichemo as a result of reactions is computed,
-! with the assumption that the concentrations of the other constituents are fixed
-! at the values from the previous time step, stored in allstate(:,:)
-! isite = current site index
-! C = current vector of concentrations
-! dMdt = rate of change of mass of C(ichemo) at a site as a result of reactions (mol/sec)
-! Note: the rate of consumption (of O2 or G) is in general a function of both the
-! cell state and the concentration.  The consumption rate must in any case be less
-! than some fraction of the total mass in the site (to avoid negative concentrations).
-! We can use a Michaelis-Menten function to take the rate to zero as C -> 0.
-! Note that currently Vextra is fixed - no accounting for cell death, gaps etc.
-!----------------------------------------------------------------------------------
-subroutine extra_react(ichemo,iv,C,vol,dCreact)
-integer :: ichemo, iv
-integer :: site(3), kcell
-real(REAL_KIND) :: C(:), vol, dCreact
-real(REAL_KIND) :: metab, dMdt
-real(REAL_KIND) :: metab1, metab2, alpha
-
-! Check for necrotic site - for now, no reactions
-if (use_death) then
-	site = ODEdiff%varsite(iv,:)
-	if (occupancy(site(1),site(2),site(3))%indx(1) < 0) then
-		dCreact = 0
-		return
-	endif
-endif
-
-dCreact = 0
-if (ichemo == OXYGEN) then
-	if (C(OXYGEN) > ODEdiff%C1) then
-		metab = (C(OXYGEN)-ODEdiff%deltaC)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN) - ODEdiff%deltaC)
-	elseif (C(OXYGEN) > 0) then
-		metab = ODEdiff%k*C(OXYGEN)*C(OXYGEN)
-	else
-		metab = 0
-	endif
-	dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
-elseif (ichemo == GLUCOSE) then
-	dCreact = -chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
-endif
-end subroutine
 
 
 !----------------------------------------------------------------------------------
@@ -654,10 +611,10 @@ real(REAL_KIND) :: metab
 
 dCreact = 0
 if (ichemo == OXYGEN) then
-    if (Cin(OXYGEN) > ODEdiff%C1) then
-	    metab = (Cin(OXYGEN)-ODEdiff%deltaC)/(chemo(OXYGEN)%MM_C0 + Cin(OXYGEN) - ODEdiff%deltaC)
+    if (Cin(OXYGEN) > ODEdiff%C1_soft) then
+	    metab = (Cin(OXYGEN)-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + Cin(OXYGEN) - ODEdiff%deltaC_soft)
     elseif (Cin(OXYGEN) > 0) then
-	    metab = ODEdiff%k*Cin(OXYGEN)*Cin(OXYGEN)
+	    metab = ODEdiff%k_soft*Cin(OXYGEN)*Cin(OXYGEN)
     else
 	    metab = 0
 	    write(*,*) 'metab = 0'
@@ -990,7 +947,7 @@ do ichemo = 1,nchemo
 	call InitState(ichemo,allstate(1:nvars,ichemo))
 	allstatep(:,ichemo) = 0
 	if (SOLVER == RKF45_SOLVER) then
-		call deriv(tstart,allstate(1:nvars,ichemo),allstatep(1:nvars,ichemo),ichemo)
+!		call deriv(tstart,allstate(1:nvars,ichemo),allstatep(1:nvars,ichemo),ichemo)
 	elseif (SOLVER == RKSUITE_SOLVER) then
 		t_end = 10000
 		tolerance = 1.0e-4
@@ -1040,13 +997,13 @@ do k = 1,nt
 			if (REAL_KIND == SP) then
 !				call r4_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
 			else
-				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
+!				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
 			endif
 			if (flag /= 2) then
 				write(logmsg,*) 'Bad flag: ',flag
 				call logger(logmsg)
 				stop
-				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
+!				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
 				flag = 2
 			endif
 			flag_par(ichemo) = flag
@@ -1151,79 +1108,6 @@ do
 enddo
 end subroutine
 
-!----------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------
-subroutine SolveSteadystate_B
-integer flag, i, j, k, ichemo
-real(REAL_KIND) :: tstart, tend, relerr, abserr
-real(REAL_KIND), allocatable :: state(:), prev_state(:), statep(:)
-real(REAL_KIND), parameter :: dt = 100.0
-real(REAL_KIND) :: res(10)
-integer :: x, y, z, dx, dy, dz, xmid, ymid, zmid, ibnd
-real(REAL_KIND) :: grad(3)
-real(REAL_KIND) :: amp, r, ctemp(10)
-integer :: nt(2) = (/20,100/)	! Number of rkf45 iterations with bdry concentration (1) and bdry secretion (2)
-logical :: ok
-
-write(logmsg,*) 'SolveSteadystate_B: nextra: ',ODEdiff%nextra
-call logger(logmsg)
-allocate(state(ODEdiff%nextra))
-allocate(prev_state(ODEdiff%nextra))
-allocate(statep(ODEdiff%nextra))
-xmid = NX/2
-ymid = NY/2
-zmid = NZ/2
-do ichemo = 1,MAX_CHEMO
-	ODEdiff%ichemo = ichemo
-	if (.not.chemo(ichemo)%used) cycle
-	if (chemo(ichemo)%use_secretion) then
-		ibnd = 2
-	else
-		ibnd = 1
-	endif
-	call InitState(ichemo,state)
-	statep = 0
-	tstart = 0
-	call deriv(tstart,state,statep,ichemo)
-
-	abserr = sqrt ( epsilon ( abserr ) )
-	relerr = sqrt ( epsilon ( relerr ) )
-
-	prev_state = 0
-	flag = 1
-	do k = 1,nt(ibnd)
-		tstart = (k-1)*dt
-		tend = tstart + dt
-		if (REAL_KIND == SP) then
-!			call r4_rkf45 ( deriv, ODEdiff%nextra, state, statep, tstart, tend, relerr, abserr, flag )
-		else
-!			call r8_rkf45 ( deriv, ODEdiff%nextra, state, statep, tstart, tend, relerr, abserr, flag )
-		endif
-		if (flag /= 2) then
-			write(logmsg,*) 'Bad flag: ',flag
-			call logger(logmsg)
-		endif
-		flag = 2
-		call CheckConvergence(state,prev_state,ok)
-		if (ok) exit
-		prev_state = state
-	enddo
-	do x = 1,NX
-		do y = 1,NY
-			do z = 1,NZ
-				if (occupancy(x,y,z)%indx(1) /= OUTSIDE_TAG) cycle
-				i = ODEdiff%ivar(x,y,z)
-				chemo(ichemo)%conc(x,y,z) = state(i)
-				call compute_gradient(state,x,y,z,grad)
-				chemo(ichemo)%grad(:,x,y,z) = grad
-			enddo
-		enddo
-	enddo
-enddo
-deallocate(state)
-deallocate(prev_state)
-deallocate(statep)
-end subroutine
 
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
@@ -1355,334 +1239,6 @@ else
 	grad(3) = 0
 endif
 end subroutine
-
-!----------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------
-function f_deriv(t,v)
-!use rksuite_90_prec, only:wp
-real(REAL_KIND), intent(in) :: t
-real(REAL_KIND), dimension(:), intent(in) :: v
-real(REAL_KIND), dimension(size(v,1)) :: f_deriv
-
-integer :: icase
-integer :: i, k, kv, n, ichemo
-real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, dmax
-logical :: bnd, dbug
-
-!ichemo = icase
-ichemo = 1
-DX2 = DELTA_X*DELTA_X
-decay_rate = chemo(ichemo)%decay_rate
-dc1 = chemo(ichemo)%diff_coef/DX2
-dc6 = 6*dc1 + decay_rate
-vol = Vsite
-!cbnd = chemo(ichemo)%bdry_conc
-cbnd = BdryConc(ichemo,t_simulation)
-n = ODEdiff%nextra
-!if (t < 1.0) write(*,*) icase,t
-dmax = 0
-do i = 1,n
-	C = allstate(i,:)
-	C(ichemo) = v(i)
-	dCsum = 0
-	do k = 1,7
-		kv = ODEdiff%icoef(i,k)
-!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
-!			bnd = .false.
-!		else								! boundary
-!			bnd = .true.
-!		endif
-		if (k == 1) then
-			dCdiff = -dc6
-		else
-			dCdiff = dc1
-		endif
-		if (kv == 0) then
-			val = cbnd
-		else
-			val = v(kv)
-		endif
-		dCsum = dCsum + dCdiff*val
-	enddo
-	dCreact = 0
-	call extra_react(ichemo,i,C,vol,dCreact)
-	f_deriv(i) = dCsum + dCreact
-enddo
-end function
-
-!----------------------------------------------------------------------------------
-! Simple diffusion-decay for a single constituent (ODEdiff%ichemo)
-! Now all chemo constituents share the same FD template, and there are always
-! 6 neighbours (some may be boundary, with specified concentrations).
-! For now assume uniform diffusion coefficient for a constituent
-!----------------------------------------------------------------------------------
-subroutine deriv(t,v,dv,icase)
-real(REAL_KIND) :: t, v(*), dv(*)
-integer :: icase
-integer :: i, k, kv, n, ichemo
-real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO)
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
-logical :: bnd, dbug
-
-ichemo = icase
-DX2 = DELTA_X*DELTA_X
-decay_rate = chemo(ichemo)%decay_rate
-dc1 = chemo(ichemo)%diff_coef/DX2
-dc6 = 6*dc1 + decay_rate
-vol = Vsite
-!cbnd = chemo(ichemo)%bdry_conc
-cbnd = BdryConc(ichemo,t_simulation)
-n = ODEdiff%nextra
-!if (t < 1.0) write(*,*) icase,t
-do i = 1,n
-	C = allstate(i,:)
-	C(ichemo) = v(i)
-	dCsum = 0
-	do k = 1,7
-		kv = ODEdiff%icoef(i,k)
-!		if (ODEdiff%icoef(i,k) /= 0) then	! interior
-!			bnd = .false.
-!		else								! boundary
-!			bnd = .true.
-!		endif
-		if (k == 1) then
-			dCdiff = -dc6
-		else
-			dCdiff = dc1
-		endif
-		if (kv == 0) then
-			val = cbnd
-		else
-			val = v(kv)
-		endif
-		dCsum = dCsum + dCdiff*val
-	enddo
-	call extra_react(ichemo,i,C,vol,dCreact)
-!	if (i == 6822) then
-!		write(*,'(5f8.4)') C(ichemo), dCsum, dCreact
-!	endif
-	dv(i) = dCsum + dCreact
-enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
-! Now all chemo constituents share the same FD template, and there are always
-! 6 neighbours (some may be boundary, with specified concentrations).
-!----------------------------------------------------------------------------------
-subroutine deriv_all(t,v,dv)
-real(REAL_KIND) :: t, v(*), dv(*)
-integer :: i, k, kv, n, x, y, z, ichemo, idbug, ifdc, site(3), dx, dy, dz, ic, nf_FDC, nf_MRC
-real(REAL_KIND) :: csum(MAX_CHEMO), s, vtemp, ctemp, dc, DX2, val
-logical :: bnd, dbug
-
-DX2 = DELTA_X*DELTA_X
-n = ODEdiff%nextra
-do i = 1,n
-	csum = 0
-	do k = 1,7
-!		if (chemo(ODEdiff%ichemo)%coef(i,k) /= 0) then
-		if (ODEdiff%icoef(i,k) /= 0) then	! interior
-			bnd = .false.
-		else								! boundary
-			bnd = .true.
-		endif
-		do ichemo = 1,MAX_CHEMO
-			if (k == 1) then
-				dc = -chemo(ichemo)%decay_rate - 6*chemo(ichemo)%diff_coef/DX2	! ODEdiff%ncoef(i)
-			else
-				dc = chemo(ichemo)%diff_coef/DX2
-			endif
-			if (bnd) then
-!				val = chemo(ichemo)%bdry_conc
-                val = BdryConc(ichemo,t_simulation)
-			else
-				kv = (ODEdiff%icoef(i,k)-1)*MAX_CHEMO + ichemo
-				val = v(kv)
-			endif
-			csum(ichemo) = csum(ichemo) + dc*val
-		enddo
-	enddo
-	! Need to add in reactions here
-	do ichemo = 1,MAX_CHEMO
-		kv = (i-1)*MAX_CHEMO + ichemo
-		dv(kv) = csum(ichemo)
-	enddo
-enddo
-
-end subroutine
-
-!----------------------------------------------------------------------------------
-! In the original version, the neqn variables (for any constituent) are associated
-! with the lattice sites encompassed by the blob.  Not all of these sites contain
-! live cells.
-! This can be generalized by making the ODEdiff variables apply to the extracellular
-! concentration fields.
-! One approach is to extend the vector of extracellular variables, for a given
-! constituent, to include the corresponding vector of intracellular variables for
-! that constituent.  The approach would then be to treat all other constituents as
-! constant for the purposes of solving for one constituent.
-! Need a mapping between extra_index <-> intra_index
-!                        1,...,nextra    1,...,nintra
-! Say:
-! intra_index(ie) = ki, 0 if no cell at site for extracellular variable ie
-! extra_index(ki) = ie
-! ki = 0
-! do ie = 1, nextra
-!   site = ODEdiff%varsite(ie,:)
-!	kcell = occupancy(site(1),site(2),site(3))%indx(1)
-!   if (kcell > 0) then
-!       ki = ki + 1
-!       intra_index(ie) = ki
-!       extra_index(ki) = ie
-!       cell_index(ki) = kcell
-!       allstate(nextra+ki,:) = cell_list(kcell)%conc
-!   else
-!       intra_index(ie) = 0
-!   endif
-! enddo
-!
-! Then kcell is recovered from ki: ki -> ie -> site -> indx(1)
-! or from cell_index(ki)
-!----------------------------------------------------------------------------------
-subroutine f_rkc1(neqn,t,v,dvdt,icase)
-integer :: neqn, icase
-real(REAL_KIND) :: t, v(neqn), dvdt(neqn)
-integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell
-real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, C(MAX_CHEMO), Ce, Ci
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
-logical :: bnd, dbug
-real(REAL_KIND) :: metab, dMdt, vs
-logical :: use_compartments = .true.
-
-!write(*,*) 'neqn: ',neqn
-ichemo = icase
-DX2 = DELTA_X*DELTA_X
-decay_rate = chemo(ichemo)%decay_rate
-dc1 = chemo(ichemo)%diff_coef/DX2
-dc6 = 6*dc1 + decay_rate
-!cbnd = chemo(ichemo)%bdry_conc
-cbnd = BdryConc(ichemo,t_simulation)
-!if (t < 1.0) write(*,*) icase,t
-vs = 1.0e6/Vextra
-do i = 1,ODEdiff%nextra
-	C = allstate(i,:)
-	C(ichemo) = v(i)
-	dCsum = 0
-	do k = 1,7
-		kv = ODEdiff%icoef(i,k)
-		if (k == 1) then
-			dCdiff = -dc6
-		else
-			dCdiff = dc1
-		endif
-		if (kv == 0) then
-			val = cbnd
-		else
-			val = v(kv)
-		endif
-		dCsum = dCsum + dCdiff*val
-	enddo
-    dCreact=0
-!	if (use_react) then
-!		call extra_react(ichemo,i,C,dCreact)
-!	if (use_compartments) then
-!!    	site = ODEdiff%varsite(i,:)
-!!	    kcell = occupancy(site(1),site(2),site(3))%indx(1)  ! this can be stored directly as a link to i
-!        ki = intra_index(i)
-!	    if (ki > 0) then     ! there is an intracellular compartment
-!	        if (EXPLICIT_INTRA) then
-!	            Ce = allstate(ki+ODEdiff%nextra,ichemo)
-!	        else
-!	            Ce = v(ki+ODEdiff%nextra)
-!    	    endif
-!   	        dCreact = chemo(ichemo)%cell_diff*(Ce - C(ichemo))    !*vs
-!	        !dCreact = chemo(ichemo)%cell_diff*(cell_list(kcell)%conc(ichemo) - C(ichemo))*vs
-!	        ! Note: %cell_diff is the constant coef that determines the rate of diffusion across the cell membrane
-!	        !       the mass rate (mol/s) must be converted to concentration rate (mM/s)
-!	        !       the conversion factor is different for the extracellular and intracellular compartments
-!	        !       how to handle changing cell volume during growth?
-!	    endif
-!	else
-!        !GS - made some changes to reduce call to react timing
-!        if (ichemo==OXYGEN .or. ichemo==GLUCOSE) then
-!!GS            metab=allstate(i,ichemo)
-!!GS	        dMdt = -(metab/(chemo(ichemo)%MM_C0 + metab))*chemo(ichemo)%max_cell_rate	! mol/s
-!			metab = max(0.0,C(OXYGEN))/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-!!			metab = C(OXYGEN)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN))
-!!			dMdt = -metab*chemo(ichemo)%max_cell_rate	! mol/s
-!!           dCreact = dMdt*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
-!            dCreact =  -metab*chemo(ichemo)%max_cell_rate*vs ! convert mass rate (mol/s) to concentration rate (mM/s)
-!        endif
-!    endif
-	dvdt(i) = dCsum + dCreact
-!	write(*,*) i,dCsum,dCreact
-enddo
-!if (dCreact > 0) stop
-if (EXPLICIT_INTRA) return
-!do ki = 1,ODEdiff%nintra
-!    dCsum = 0
-!    i = ki + ODEdiff%nextra
-!    ie = extra_index(ki)
-!	C = allstate(i,:)   ! intracellular
-!	C(ichemo) = v(i)
-!	! reactions here + cross-membrane diffusion
-!!	call react(ichemo,i,C,dCreact)
-!	dCreact = chemo(ichemo)%cell_diff*(v(ki+ODEdiff%nextra) - C(ichemo))    !*vs
-!	dCsum = -1.0*C(ichemo)
-!	dvdt(i) = dCsum + dCreact
-!enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
-! Reactions here + cross-membrane diffusion
-!----------------------------------------------------------------------------------
-subroutine intra_react1(nchemo,C,Ce,dCreact)
-integer :: nchemo
-real(REAL_KIND) :: C(:), Ce(:), dCreact(:)
-integer :: ichemo
-real(REAL_KIND) :: metab
-
-if (C(OXYGEN) > ODEdiff%C1) then
-	metab = (C(OXYGEN)-ODEdiff%deltaC)/(chemo(OXYGEN)%MM_C0 + C(OXYGEN) - ODEdiff%deltaC)
-elseif (C(OXYGEN) > 0) then
-	metab = ODEdiff%k*C(OXYGEN)*C(OXYGEN)
-else
-	metab = 0
-endif
-
-dCreact = 0
-dCreact(1:2) = -metab*chemo(1:2)%max_cell_rate*1.0e6/Vextra	! convert mass rate (mol/s) to concentration rate (mM/s)
-
-do ichemo = 1,nchemo
-    dCreact(ichemo) = dCreact(ichemo) + chemo(ichemo)%cell_diff*(Ce(ichemo) - C(ichemo))
-enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
-! For all living cells, update the total amount of SN30000 metabolized.
-! The rate depends on the oxygen concentration C_ox and the SN30000 level, C_drug
-! NOT USED
-!----------------------------------------------------------------------------------
-subroutine update_M(dt,state)
-real(REAL_KIND) :: dt
-real(REAL_KIND) :: state(:,:)
-real(REAL_KIND) :: C_ox, C_drug, dCdt
-integer :: i, kcell
-real(REAL_KIND) :: Vcell = 1.0
-
-do i = 1,ODEdiff%nvars
-    if (ODEdiff%vartype(i) == INTRA) then
-        kcell = ODEdiff%cell_index(i)
-        C_ox = state(i,OXYGEN)
-        C_drug = state(i,DRUG_A)
-        dCdt = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + C_ox))*SN30K%Kmet0*C_drug
-        cell_list(kcell)%M = cell_list(kcell)%M + Vcell*dCdt*dt
-!        write(*,'(2i6,4e12.4)') i,kcell,C_ox,C_drug,Vcell*dCdt*dt,cell_list(kcell)%M
-    endif
-enddo
-end subroutine
-
 
 
 end module

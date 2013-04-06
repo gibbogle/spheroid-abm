@@ -232,7 +232,7 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
-integer :: iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend
+integer :: iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
 real(REAL_KIND) :: days, bdry_conc
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
@@ -247,6 +247,7 @@ read(nfcell,*) initial_count				! initial number of tumour cells
 read(nfcell,*) divide_time_median
 read(nfcell,*) divide_time_shape
 read(nfcell,*) iV_depend
+read(nfcell,*) iV_random
 read(nfcell,*) days							! number of days to simulate
 read(nfcell,*) DELTA_T						! time step size (sec)
 read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
@@ -338,16 +339,27 @@ blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
 divide_time_median = 60*60*divide_time_median		! hours -> seconds
 sigma = log(divide_time_shape)
-divide_dist%p1 = log(divide_time_median/exp(sigma*sigma/2))	
+!divide_dist%p1 = log(divide_time_mean/exp(sigma*sigma/2))	
+divide_dist%p1 = log(divide_time_median)	
 divide_dist%p2 = sigma
-divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean
+divide_time_mean = exp(divide_dist%p1 + 0.5*divide_dist%p2**2)	! mean = median.exp(sigma^2/2)
+write(logmsg,'(a,2e12.4)') 'shape, sigma: ',divide_time_shape,sigma
+call logger(logmsg)
+write(logmsg,'(a,2e12.4)') 'Median, mean divide time: ',divide_time_median/3600,divide_time_mean/3600
+call logger(logmsg)
 use_V_dependence = (iV_depend == 1)
+randomise_initial_volume = (iV_random == 1)
 t_anoxic_limit = 60*60*anoxia_tag_hours				! hours -> seconds
 anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
 DELTA_X = DXmm/10									! mm -> cm
 Vsite = DELTA_X*DELTA_X*DELTA_X						! total site volume (cm^3)
 Vextra = fluid_fraction*Vsite						! extracellular volume in a site
+
+write(logmsg,'(a,e12.4)') 'DELTA_X: ',DELTA_X
+call logger(logmsg)
+write(logmsg,'(a,3e12.4)') 'Volumes: site, extra, cell (average): ',Vsite, Vextra, Vsite-Vextra
+call logger(logmsg)
 
 if (itreatment == 1) then
 	use_treatment = .true.
@@ -586,27 +598,30 @@ do x = 1,NX
                 cell_list(k)%radiation_tag = .false.
                 cell_list(k)%anoxia_tag = .false.
 				cell_list(k)%exists = .true.
-				do
-					R = par_uni(kpar)
-					tpast = -R*divide_time_median
-					tdiv = DivideTime()
-					if (tdiv + tpast > 0) exit
-				enddo
-!				write(*,'(3f8.2)') tpast/3600,tdiv/3600,(tdiv+tpast)/3600
-				cell_list(k)%divide_volume = Vdivide0
+!				do
+!					R = par_uni(kpar)
+!					tpast = -R*divide_time_median
+!					tdiv = DivideTime()
+!					if (tdiv + tpast > 0) exit
+!				enddo
+!				cell_list(k)%divide_volume = Vdivide0
 				R = par_uni(kpar)
-				cell_list(k)%volume = Vdivide0*0.5*(1 + R)
-				cell_list(k)%t_divide_last = tpast
-				cell_list(k)%t_divide_next = tdiv + tpast
+				cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+				R = par_uni(kpar)
+				if (randomise_initial_volume) then
+					cell_list(k)%volume = Vdivide0*0.5*(1 + R)
+				else
+					cell_list(k)%volume = 1.0
+				endif
+!				write(nflog,'(i6,2f8.4)') k,R,cell_list(k)%volume
+				cell_list(k)%t_divide_last = 0		! not used
+!				cell_list(k)%t_divide_next = tdiv + tpast
 				cell_list(k)%t_hypoxic = 0
 				cell_list(k)%conc = 0
 				cell_list(k)%conc(OXYGEN) = chemo(OXYGEN)%bdry_conc
 				cell_list(k)%conc(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
 				cell_list(k)%M = 0
 				occupancy(x,y,z)%indx(1) = k
-!				if (idbug == 0 .and. r2 > r2lim/4 .and. r2 < 1.2*r2lim/4) then
-!					idbug = lastID
-!				endif
 			else
 				occupancy(x,y,z)%indx(1) = OUTSIDE_TAG
 			endif
@@ -904,7 +919,10 @@ endif
 call grow_cells(radiation_dose,DELTA_T)
 call SetupODEdiff
 call SiteCellToState
+call logger('solving')
 do it = 1,NT_CONC
+	write(logmsg,*) 'it: ',it
+	call logger(logmsg)
 	tstart = (it-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
 	call Solver(it,tstart,dt,Ncells)
@@ -1229,8 +1247,6 @@ Ntagdead = Nradiation_dead + Ndrug_dead		! total that died from drug or radiatio
 Ndead = Nsites + Nreuse - Ncells			! total that died from any cause
 Ntagged = Ntodie - Ntagdead					! number currently tagged by drug or radiation
 Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead	! number currently tagged by anoxia
-write(logmsg,'(a,f6.2)') 'vol_mm3: ',vol_mm3
-call logger(logmsg)
 summaryData(1:9) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia /)
 write(nfres,'(i8,f8.1,f8.3,7i6)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, Nanoxia_dead, Ntagged_anoxia
 end subroutine
@@ -1450,8 +1466,6 @@ do kcell = 1,nlist
 	n = n+1
 enddo
 prob(1:nv) = prob(1:nv)/n
-write(logmsg,'(a,i3,2f8.2)') 'get_volprob: ',nv,dv,v0
-call logger(logmsg)
 end subroutine
 
 !-----------------------------------------------------------------------------------------

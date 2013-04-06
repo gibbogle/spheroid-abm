@@ -103,7 +103,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -198,8 +198,8 @@ padding: 8px
            <widget class="QWidget" name="widget_key" native="true">
             <property name="geometry">
              <rect>
-              <x>710</x>
-              <y>30</y>
+              <x>1030</x>
+              <y>10</y>
               <width>200</width>
               <height>330</height>
              </rect>
@@ -216,6 +216,22 @@ padding: 8px
             </property>
             <property name="text">
              <string>Volume-dependent growth rate?</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+           <widget class="QCheckBox" name="cbox_RANDOMISE_INITIAL_V">
+            <property name="geometry">
+             <rect>
+              <x>450</x>
+              <y>200</y>
+              <width>171</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Randomise initial cell volumes?</string>
             </property>
             <property name="checked">
              <bool>true</bool>
