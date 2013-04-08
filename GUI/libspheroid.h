@@ -11,7 +11,7 @@ void simulate_step(int *);
 void terminate_run(int *);
 void get_dimensions(int *,int *,int *, int *, double *, int *, bool *);
 void get_scene(int *, int *);
-void get_summary(int *);
+void get_summary(int *, int *);
 void get_concdata(int *, double *, double *);
 void get_volprob(int *, double *, double *, double*);
 //

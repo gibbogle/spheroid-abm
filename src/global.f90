@@ -158,6 +158,7 @@ real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volum
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_FACTOR, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 real(REAL_KIND) :: t_simulation
+real(REAL_KIND) :: O2cutoff(3)
 type(SN30K_type) :: SN30K
 type(LQ_type) :: LQ
 character*(128) :: inputfile

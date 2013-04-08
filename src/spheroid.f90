@@ -331,10 +331,14 @@ do i = 1,2			! currently allowing for just two different drugs
 		chemo(imetab)%decay_rate = 0
 	endif
 enddo
+read(nfcell,*) O2cutoff(1)
+read(nfcell,*) O2cutoff(2)
+read(nfcell,*) O2cutoff(3)
 read(nfcell,*) itreatment
 read(nfcell,*) treatmentfile						! file with treatment programme
 close(nfcell)
 
+O2cutoff = O2cutoff/1000							! uM -> mM
 blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
 divide_time_median = 60*60*divide_time_median		! hours -> seconds
@@ -919,10 +923,10 @@ endif
 call grow_cells(radiation_dose,DELTA_T)
 call SetupODEdiff
 call SiteCellToState
-call logger('solving')
+!call logger('solving')
 do it = 1,NT_CONC
-	write(logmsg,*) 'it: ',it
-	call logger(logmsg)
+!	write(logmsg,*) 'it: ',it
+!	call logger(logmsg)
 	tstart = (it-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
 	call Solver(it,tstart,dt,Ncells)
@@ -1223,17 +1227,19 @@ end function
 
 
 !-----------------------------------------------------------------------------------------
+! Live cells = Ncells
 ! Total deaths = Ndead
 ! Drug deaths = Ndrugdead
 ! Hypoxia deaths = Ndead - Ndrugdead
 ! Total tagged for drug death on division = Ndrug_tag
 ! Current tagged = Ntodie - Ntagdead 
 !-----------------------------------------------------------------------------------------
-subroutine get_summary(summaryData) BIND(C)
+subroutine get_summary(summaryData,icutoff) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
-integer(c_int) :: summaryData(*)
-integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, diam_um, vol_mm3_1000
+integer(c_int) :: summaryData(*), icutoff
+integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, diam_um, vol_mm3_1000, &
+	nhypoxic(3), hypoxic_percent_10, necrotic_percent_10
 real(REAL_KIND) :: vol_cm3, vol_mm3, hour
 
 !call SetRadius(Nsites)
@@ -1247,8 +1253,28 @@ Ntagdead = Nradiation_dead + Ndrug_dead		! total that died from drug or radiatio
 Ndead = Nsites + Nreuse - Ncells			! total that died from any cause
 Ntagged = Ntodie - Ntagdead					! number currently tagged by drug or radiation
 Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead	! number currently tagged by anoxia
-summaryData(1:9) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia /)
-write(nfres,'(i8,f8.1,f8.3,7i6)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, diam_um, Nanoxia_dead, Ntagged_anoxia
+call get_hypoxic_count(nhypoxic)
+hypoxic_percent_10 = (1000*nhypoxic(icutoff))/Ncells
+necrotic_percent_10 = (1000*(Nsites-Ncells))/Nsites
+summaryData(1:11) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
+	diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia, hypoxic_percent_10, necrotic_percent_10 /)
+write(nfres,'(i8,f8.1,f8.3,7i6,4f7.3)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
+	diam_um, Nanoxia_dead, Ntagged_anoxia, nhypoxic(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine get_hypoxic_count(nhypoxic)
+integer :: nhypoxic(3)
+integer :: kcell, i
+
+nhypoxic = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	do i = 1,3
+		if (cell_list(kcell)%conc(OXYGEN) < O2cutoff(i)) nhypoxic(i) = nhypoxic(i) + 1
+	enddo
+enddo
 end subroutine
 
 !--------------------------------------------------------------------------------

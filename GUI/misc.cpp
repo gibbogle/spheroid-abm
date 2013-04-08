@@ -142,6 +142,12 @@ void ExecThread::run()
 	int len_infile, len_outfile;
     bool cused[16];
 
+    // temporary, until the GUI interface is ready
+//    O2cutoff[0] = 0.1/1000;     // uM -> mM
+//    O2cutoff[1] = 1.0/1000;
+//    O2cutoff[2] = 4.0/1000;
+//    icutoff = 3;
+
 	infile_path = inputFile;
 	QString casename = QFileInfo(inputFile).baseName();
 	len_infile = infile_path.length();
@@ -160,7 +166,7 @@ void ExecThread::run()
 //	sprintf(msg,"exthread: nsteps: %d",nsteps);
 //	LOG_MSG(msg);
     mutex1.lock();
-    get_summary(summaryData);
+    get_summary(summaryData, &icutoff);
     conc_nc = 0;
     mutex1.unlock();
     emit summary();		// Emit signal to initialise summary plots
@@ -179,7 +185,7 @@ void ExecThread::run()
 
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
-            get_summary(summaryData);
+            get_summary(summaryData, &icutoff);
             get_concdata(&conc_nc, &conc_dx, concData);
             get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
             int iframe = i/nsumm_interval;
