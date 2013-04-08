@@ -27,7 +27,7 @@ GRAPH_SET tsGraphSet[] = {
     {"ndrugdead",
     "Drug-killed Cells",
     "No. of cells",
-    3, true, 0, 1, true},
+    3, false, 0, 1, true},
 
     {"nanoxiadead",
     "Anoxia-killed Cells",
@@ -52,7 +52,17 @@ GRAPH_SET tsGraphSet[] = {
     {"volume",
     "Spheroid Volume",
     "Volume (mm3)",
-    6, true, 0, 0.001, true}
+    6, true, 0, 0.001, true},
+
+    {"hypoxicfraction",
+    "Hypoxic Fraction",
+    "%",
+    9, true, 0, 0.1, true},
+
+    {"necroticfraction",
+    "Necrotic Fraction",
+    "%",
+    10, false, 0, 0.1, true}
 
 };
 

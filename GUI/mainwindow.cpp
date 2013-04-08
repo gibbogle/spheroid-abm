@@ -35,6 +35,8 @@ int summaryData[100];
 int nt_vtk;
 bool leftb;
 double DELTA_T;
+double O2cutoff[3];
+int icutoff;
 int ndistplots = 1;
 
 bool USE_GRAPHS = true;
@@ -1445,7 +1447,14 @@ void MainWindow::runServer()
         action_field->setEnabled(false);
         paused = false;
         return;
-	}
+    } else {
+        if (radioButton_hypoxia_1->isChecked())
+            icutoff = 1;
+        else if (radioButton_hypoxia_2->isChecked())
+            icutoff = 2;
+        else if (radioButton_hypoxia_3->isChecked())
+            icutoff = 3;
+    }
 	
 	if (!paramSaved) {
 		int response = QMessageBox::critical(this, tr("ABM Model GUI"), \
@@ -1736,6 +1745,13 @@ void MainWindow::showSummary()
 	QString casename = newR->casename;
     newR->tnow[step] = step;
 
+    if (field->isConcPlot()) {
+        field->updateConcPlot();
+    }
+    if (field->isVolPlot()) {
+        field->updateVolPlot();
+    }
+
 	for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
@@ -1744,17 +1760,12 @@ void MainWindow::showSummary()
         newR->pData[i][step] = val*grph->get_scaling(i);
 	}
 
-	for (int i=0; i<nGraphs; i++) {
+    for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
         QString tag = grph->get_tag(i);
         pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
     }
-
-    if (field->isConcPlot())
-        field->updateConcPlot();
-    if (field->isVolPlot())
-        field->updateVolPlot();
 
     exthread->mutex1.unlock();
 }
@@ -3087,12 +3098,12 @@ void MainWindow::setupConc(int nc, bool *cused)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setupGraphSelector()
 {
-    checkBox_conc = new QCheckBox("Concentration Profile");
-    checkBox_vol = new QCheckBox("Cell Volume Distribution");
-    checkBox_conc->setChecked(field->isConcPlot());
-    checkBox_vol->setChecked(field->isVolPlot());
     QVBoxLayout *vbox = new QVBoxLayout;
+    checkBox_conc = new QCheckBox("Concentration Profile");
+    checkBox_conc->setChecked(field->isConcPlot());
     vbox->addWidget(checkBox_conc);
+    checkBox_vol = new QCheckBox("Cell Volume Distribution");
+    checkBox_vol->setChecked(field->isVolPlot());
     vbox->addWidget(checkBox_vol);
 
     cbox_ts = new QCheckBox*[grph->n_tsGraphs];

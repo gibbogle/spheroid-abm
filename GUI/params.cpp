@@ -247,6 +247,18 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Drug B metabolite decay",
  "Drug B metabolite conc decays with the specified half-life"},
 
+{"HYPOXIA_1", 0.1, 0, 0,
+"Hypoxia threshold 1",
+"Hypoxia threshold 1"},
+
+{"HYPOXIA_2", 1.0, 0, 0,
+"Hypoxia threshold 2",
+"Hypoxia threshold 2"},
+
+{"HYPOXIA_3", 4.0, 0, 0,
+"Hypoxia threshold 3",
+"Hypoxia threshold 3"},
+
 {"USE_TREATMENT_FILE", 0, 0, 1,
 "Use treatment file?",
 "Treatment programme is specified in the treatment file"},
