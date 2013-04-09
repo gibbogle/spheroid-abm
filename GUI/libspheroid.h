@@ -14,6 +14,7 @@ void get_scene(int *, int *);
 void get_summary(int *, int *);
 void get_concdata(int *, double *, double *);
 void get_volprob(int *, double *, double *, double*);
+void get_oxyprob(int *, double *, double*);
 //
 //
 #ifdef __cplusplus

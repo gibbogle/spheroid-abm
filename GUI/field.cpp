@@ -11,6 +11,9 @@ double volProb[100];
 int vol_nv;
 double vol_v0;
 double vol_dv;
+double oxyProb[100];
+int oxy_nv;
+double oxy_dv;
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
@@ -31,8 +34,10 @@ Field::Field(QWidget *page2D)
     slice_changed = true;
     setConcPlot(true);
     setVolPlot(true);
+    setOxyPlot(true);
     pGconc = NULL;
     pGvol = NULL;
+    pGoxy = NULL;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -67,6 +72,20 @@ bool Field::isVolPlot()
 void Field::setVolPlot(bool status)
 {
     useVolPlot = status;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+bool Field::isOxyPlot()
+{
+    return useOxyPlot;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Field::setOxyPlot(bool status)
+{
+    useOxyPlot = status;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -192,7 +211,7 @@ void Field::chooseParameters()
 //    chemo_displayed[2] = false;
 //    chemo_displayed[3] = false;
 
-    bool ok;
+//    bool ok;
     QString text;
     QStringList items;
 //    items << tr("X-Y plane") << tr("X-Z plane") << tr("Y-Z plane");
@@ -201,7 +220,7 @@ void Field::chooseParameters()
 //    QString item = QInputDialog::getItem(this,tr("QInputDialog::getItem()"),
 //                                         tr("Slice plane:"), items, 0, false, &ok);
     QString item = "";
-    if (ok && !item.isEmpty()) {
+    if (!item.isEmpty()) {
         if (item.contains("X-Y")) {
             axis = 3;
             text = "X-Y plane";
@@ -255,10 +274,10 @@ void Field::displayField()
 //    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
     QBrush brush;
-    QGraphicsTextItem *text;
+//    QGraphicsTextItem *text;
     int i, xindex, yindex, ix, iy, cp, dp, c, rmax, w, xp0, rgbcol[3];
     double xp, yp, d0, d, volume, scale;
-    double a, b;
+//    double a, b;
     bool growthRate;
 
     LOG_MSG("displayField");
@@ -519,6 +538,62 @@ void Field::updateVolPlot()
     pGvol->curve[0]->setData(x, y, vol_nv);
 
     pGvol->replot();
+    delete pen;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Field::makeOxyPlot(QMdiArea *mdiArea)
+{
+    LOG_MSG("makeOxyPlot");
+    oxy_nv = 20;
+    QString tag = "oxy";
+    QString title = "Cell O2 Distribution";
+    if (pGoxy != NULL) {
+        LOG_MSG("pGoxy not NULL");
+        delete pGoxy;
+    }
+    pGoxy = new Plot(tag,tag);
+    pGoxy->setTitle(title);
+
+    mdiArea->addSubWindow(pGoxy);
+    pGoxy->show();
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Field::updateOxyPlot()
+{
+    int i;
+    double x[100], y[100], *prob, pmax, v1, v2;
+
+//    LOG_MSG("UpdateOxyPlot");
+    prob = oxyProb;
+    v1 = 0;
+    v2 = oxy_nv*oxy_dv;
+//    sprintf(msg,"updateOxyPlot: %d %f %f %f", oxy_nv, oxy_dv, v1, v2);
+//    LOG_MSG(msg);
+    pGoxy->setAxisScale(QwtPlot::xBottom, v1, v2, 0);
+    QPen *pen = new QPen();
+    QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
+    pen->setColor(pencolor[0]);
+    pGoxy->curve[0]->setPen(*pen);
+
+    pmax = 0;
+    for (i=0; i<oxy_nv; i++) {
+        x[i] = (i+0.5)*oxy_dv;
+        y[i] = prob[i];
+//        sprintf(msg,"%d %f %f",i,x[i],y[i]);
+//        LOG_MSG(msg);
+        pmax = MAX(pmax,y[i]);
+    }
+//    pmax = 6.0/oxy_nv;  // try this
+    i = pmax/0.1;
+    pmax = (i+1)*0.1;
+    pGoxy->setAxisScale(QwtPlot::yLeft, 0, pmax, 0);
+    pGoxy->curve[0]->setData(x, y, oxy_nv);
+
+    pGoxy->replot();
     delete pen;
 }
 

@@ -126,7 +126,7 @@ void Graphs::set_maxValue(int k, double v)
 
 void Graphs::makeGraphList(int non_ts)
 {
-    char msg[128];
+//    char msg[128];
     int k = maxGraphs;
     int nts = 0;
     for (int i=0; i<n_tsGraphs; i++) {

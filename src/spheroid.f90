@@ -188,17 +188,14 @@ Centre = (/x0,y0,z0/)   ! now, actually the global centre (units = grids)
 Radius = blob_radius    ! starting value
 
 nc0 = (4./3.)*PI*Radius**3
-max_nlist = 200*nc0
-write(logmsg,*) 'Initial radius: ',Radius, nc0
+!max_nlist = 200*nc0
+max_nlist = 200000
+write(logmsg,*) 'Initial radius, nc0, max_nlist: ',Radius, nc0, max_nlist
 call logger(logmsg)
 
 allocate(cell_list(max_nlist))
 allocate(occupancy(NX,NY,NZ))
 !allocate(gaplist(max_ngaps))
-
-!do k = 1,max_nlist
-!	nullify(cell_list(k)%cptr)
-!enddo
 
 call make_jumpvec
 
@@ -931,6 +928,7 @@ do it = 1,NT_CONC
 	t_simulation = (istep-1)*DELTA_T + tstart
 	call Solver(it,tstart,dt,Ncells)
 enddo
+!call logger('solved')
 call StateToSiteCell
 res = 0
 if (mod(istep,60) == -1) then
@@ -1242,7 +1240,6 @@ integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, diam_um, vol_mm3_10
 	nhypoxic(3), hypoxic_percent_10, necrotic_percent_10
 real(REAL_KIND) :: vol_cm3, vol_mm3, hour
 
-!call SetRadius(Nsites)
 hour = istep*DELTA_T/3600.
 vol_cm3 = Vsite*Nsites				! total volume in cm^3
 vol_mm3 = vol_cm3*1000				! volume in mm^3
@@ -1258,7 +1255,7 @@ hypoxic_percent_10 = (1000*nhypoxic(icutoff))/Ncells
 necrotic_percent_10 = (1000*(Nsites-Ncells))/Nsites
 summaryData(1:11) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
 	diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia, hypoxic_percent_10, necrotic_percent_10 /)
-write(nfres,'(i8,f8.1,f8.3,7i6,4f7.3)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
+write(nfres,'(i8,f8.2,f8.4,7i6,4f7.3)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
 	diam_um, Nanoxia_dead, Ntagged_anoxia, nhypoxic(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)
 end subroutine
 
@@ -1486,6 +1483,37 @@ n = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	v = cell_list(kcell)%volume
+	k = (v - Vmin)/dv + 1
+	k = min(k,nv)
+	prob(k) = prob(k) + 1
+	n = n+1
+enddo
+prob(1:nv) = prob(1:nv)/n
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Returns the distribution of intracellular O2 level
+! nv is passed from the GUI
+
+!--------------------------------------------------------------------------------
+subroutine get_oxyprob(nv, dv, prob) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_oxyprob
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nv
+real(c_double) :: v0, dv, prob(*)
+integer :: n, kcell, k
+real(REAL_KIND) :: v, Vmin, Vmax, O2max
+
+Vmin = 0
+Vmax = chemo(OXYGEN)%bdry_conc
+dv = (Vmax - Vmin)/nv
+prob(1:nv) = 0
+n = 0
+O2max = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	v = cell_list(kcell)%conc(OXYGEN)
+	O2max = max(O2max,v)
 	k = (v - Vmin)/dv + 1
 	k = min(k,nv)
 	prob(k) = prob(k) + 1

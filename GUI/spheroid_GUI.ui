@@ -2059,7 +2059,7 @@ padding: 8px
              </font>
             </property>
             <property name="text">
-             <string>Hypoxia Threshold (mM)</string>
+             <string>Hypoxia Threshold (uM)</string>
             </property>
            </widget>
            <widget class="QLineEdit" name="line_HYPOXIA_1">

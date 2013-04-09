@@ -607,7 +607,7 @@ end subroutine
 subroutine intra_react(ichemo,Cin,Cex,vol,dCreact)
 integer :: ichemo
 real(REAL_KIND) :: Cin(:), Cex, vol, dCreact
-real(REAL_KIND) :: metab
+real(REAL_KIND) :: metab, dCexchange, kexch
 
 dCreact = 0
 if (ichemo == OXYGEN) then
@@ -627,7 +627,12 @@ elseif (ichemo == SN30000) then
 elseif (ichemo == SN30000_METAB) then
     dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
 endif
-dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
+kexch = chemo(ichemo)%cell_diff
+dCexchange = kexch*(Cex - Cin(ichemo))
+if (ichemo == OXYGEN .and. Cex > 0.00195 .and. Cex < 0.002) then
+	write(nflog,'(4e12.4)') Cex, Cin(ichemo), dCreact, dCexchange
+endif
+dCreact = dCreact + dCexchange
 end subroutine
 
 !----------------------------------------------------------------------------------
