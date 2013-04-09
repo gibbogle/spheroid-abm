@@ -261,20 +261,21 @@ private:
 
 	RESULT_SET *newR;
 
-	Plot *graph_act;
-	Plot *graph_ntot_LN;
-	Plot *graph_ncog_PER;
-	Plot *graph_ncog_LN;
+//	Plot *graph_act;
+//	Plot *graph_ntot_LN;
+//	Plot *graph_ncog_PER;
+//	Plot *graph_ncog_LN;
 //	Plot *graph_ncog;
-	Plot *graph_ncogseed;
-	Plot *graph_nDC;
-	Plot *graph_teffgen;
-	Plot *graph_nbnd;
+//	Plot *graph_ncogseed;
+//	Plot *graph_nDC;
+//	Plot *graph_teffgen;
+//	Plot *graph_nbnd;
 	Plot *graph_dummy;	// placeholder
 
-	Plot *pGraph[16];
+    Plot *pGraph[32];
     QCheckBox *checkBox_conc;
     QCheckBox *checkBox_vol;
+    QCheckBox *checkBox_oxy;
     QCheckBox **cbox_ts;
 
 	QString graphCaseName[Plot::ncmax];

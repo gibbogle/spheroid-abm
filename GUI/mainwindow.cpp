@@ -1612,6 +1612,7 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     int non_ts = 0;
     if (field->isConcPlot()) non_ts++;
     if (field->isVolPlot()) non_ts++;
+    if (field->isOxyPlot()) non_ts++;
     grph->makeGraphList(non_ts);
     nGraphs = grph->nGraphs;
     if (nGraphCases > 0) {
@@ -1659,6 +1660,8 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
         field->makeConcPlot(mdiArea);
     if (field->isVolPlot())
         field->makeVolPlot(mdiArea);
+    if (field->isOxyPlot())
+        field->makeOxyPlot(mdiArea);
 
     mdiArea->tileSubWindows();
 
@@ -1750,6 +1753,9 @@ void MainWindow::showSummary()
     }
     if (field->isVolPlot()) {
         field->updateVolPlot();
+    }
+    if (field->isOxyPlot()) {
+        field->updateOxyPlot();
     }
 
 	for (int i=0; i<nGraphs; i++) {
@@ -3105,6 +3111,9 @@ void MainWindow::setupGraphSelector()
     checkBox_vol = new QCheckBox("Cell Volume Distribution");
     checkBox_vol->setChecked(field->isVolPlot());
     vbox->addWidget(checkBox_vol);
+    checkBox_oxy = new QCheckBox("Cell Oxygen Distribution");
+    checkBox_oxy->setChecked(field->isOxyPlot());
+    vbox->addWidget(checkBox_oxy);
 
     cbox_ts = new QCheckBox*[grph->n_tsGraphs];
     for (int i=0; i<grph->n_tsGraphs; i++) {
@@ -3124,6 +3133,7 @@ void MainWindow::setGraphsActive()
 {
     field->setConcPlot(checkBox_conc->isChecked());
     field->setVolPlot(checkBox_vol->isChecked());
+    field->setOxyPlot(checkBox_oxy->isChecked());
     for (int i=0; i<grph->n_tsGraphs; i++) {
         grph->tsGraphs[i].active = cbox_ts[i]->isChecked();
     }

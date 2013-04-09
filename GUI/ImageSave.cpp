@@ -69,7 +69,7 @@ void ImageSave::save(QString fname)
         bmpwriter->Write();
     }
     if (checkDone) {
-        int ret = QMessageBox::question(this, tr("Completion"),
+        QMessageBox::question(this, tr("Completion"),
                                         tr("Done?"),
                                         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     }

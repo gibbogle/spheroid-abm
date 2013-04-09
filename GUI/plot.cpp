@@ -30,6 +30,8 @@ Plot::Plot(QString aname, QString acasename, QWidget *parent)
         setAxisTitle(QwtPlot::xBottom, "Distance (um)");
     } else if (acasename.compare("vol")==0) {
         setAxisTitle(QwtPlot::xBottom, "Volume fraction");
+    } else if (acasename.compare("oxy")==0) {
+        setAxisTitle(QwtPlot::xBottom, "O2 level");
     } else {
         setAxisTitle(QwtPlot::xBottom, "Time (hours)");
     }

@@ -61,7 +61,7 @@ chemo(GLUCOSE)%name = 'Glucose'
 !chemo(GLUCOSE)%max_cell_rate = 3.8e-17	! mol.cell^-1.s^-1
 
 chemo(:)%halflife = 0
-chemo(:)%cell_diff = 5.0	    ! no units, just testing
+chemo(:)%cell_diff = 10.0	    ! no units, just testing
 
 chemo(DRUG_A)%name = 'Drug_A'
 !chemo(DRUG_A)%used = .false.

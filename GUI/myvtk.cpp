@@ -335,7 +335,7 @@ void MyVTK::get_cell_positions(bool fast)
 {
 //    LOG_QMSG("get_cell_positions");
 	double BC_diam = 0.9;
-	double DC_diam = 1.8;
+//	double DC_diam = 1.8;
     TCpos_list.clear();
 //	DCpos_list.clear();
 //	bondpos_list.clear();
@@ -464,7 +464,7 @@ void MyVTK::init()
 void MyVTK::cleanup()
 {
 	int i;
-	vtkActor *actor;
+//	vtkActor *actor;
     ACTOR_TYPE a;
 
 	LOG_MSG("VTK cleanup");
@@ -544,11 +544,11 @@ void MyVTK::process_Tcells()
     int i, tag, maxtag;
     double r, g, b;
 	CELL_POS cp;
-	vtkActor *actor;
+//	vtkActor *actor;
 	int axis_centre = -2;	// identifies the ellipsoid centre
 	int axis_end    = -3;	// identifies the ellipsoid extent in 5 directions
 	int axis_bottom = -4;	// identifies the ellipsoid extent in the -Y direction, i.e. bottom surface
-    double TCColor[] = {0.0, 0.0, 1.0};
+//    double TCColor[] = {0.0, 0.0, 1.0};
     bool dbug = false;
     ACTOR_TYPE a;
     ACTOR_TYPE *ap;

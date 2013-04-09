@@ -51,7 +51,7 @@ BOOL CtrlHandler( DWORD fdwCtrlType )
       return FALSE;
 
     default:
-      LOG_MSG("CtrlHandler got an event: %d",fdwCtrlType)
+      LOG_MSG("CtrlHandler got an event:"); // %d",fdwCtrlType)
       return FALSE;
   }
 }

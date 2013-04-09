@@ -136,7 +136,7 @@ void ExecThread::run()
 	LOG_MSG("Invoking DLL...");
 	int res=0;
     int NX, NY, NZ, nsumm_interval;
-    double deltat;
+//    double deltat;
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
@@ -170,7 +170,7 @@ void ExecThread::run()
     conc_nc = 0;
     mutex1.unlock();
     emit summary();		// Emit signal to initialise summary plots
-    for (int i=1; i<= nsteps; i++) {
+    for (int i=1; i <= nsteps; i++) {
 		bool updated = false;
 		if (paused && !updated) {
 			snapshot();
@@ -183,18 +183,20 @@ void ExecThread::run()
 		}
 		if (stopped) break;
 
+        simulate_step(&res);
+        if (res != 0) break;
+
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
             get_summary(summaryData, &icutoff);
             get_concdata(&conc_nc, &conc_dx, concData);
             get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
-            int iframe = i/nsumm_interval;
+            get_oxyprob(&oxy_nv, &oxy_dv, oxyProb);
+//            int iframe = i/nsumm_interval;
             mutex1.unlock();
             emit summary();		// Emit signal to update summary plots, at hourly intervals
         }
 
-        simulate_step(&res);
-        if (res != 0) break;
         if (stopped) break;
 		if (i%nt_vtk == 0) {
 			if (showingVTK != 0) {

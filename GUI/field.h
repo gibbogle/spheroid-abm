@@ -51,14 +51,18 @@ public:
     void chooseColor(double fr, int rgbcol[]);
     void chooseRateColor(double fr, int rgbcol[]);
     void getTitle(QString *);
-    void makeConcPlot(QMdiArea *);
-    void updateConcPlot();
-    void makeVolPlot(QMdiArea *);
-    void updateVolPlot();
     bool isConcPlot();
     void setConcPlot(bool);
+    void makeConcPlot(QMdiArea *);
+    void updateConcPlot();
     bool isVolPlot();
     void setVolPlot(bool);
+    void makeVolPlot(QMdiArea *);
+    void updateVolPlot();
+    bool isOxyPlot();
+    void setOxyPlot(bool);
+    void makeOxyPlot(QMdiArea *);
+    void updateOxyPlot();
     void selectConstituent();
     void setExecuting(bool);
 
@@ -74,8 +78,9 @@ public:
 	bool constituent_changed;
     bool useConcPlot;
     bool useVolPlot;
-	FIELD_DATA *data;
-    Plot *pGconc, *pGvol;
+    bool useOxyPlot;
+    FIELD_DATA *data;
+    Plot *pGconc, *pGvol, *pGoxy;
     bool executing;
     char msg[1024];
 
