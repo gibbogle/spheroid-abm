@@ -456,6 +456,7 @@ void Field::updateConcPlot()
     double dx, x[1000], y[1000], *conc, cmax;
     QString title = "Concentration";
 
+    LOG_MSG("UpdateConcPlot");
 //    get_concdata(&nc, &dx, conc);
     dx = conc_dx;
     nc = conc_nc;
@@ -513,7 +514,7 @@ void Field::updateVolPlot()
     int i;
     double x[100], y[100], *prob, pmax, v1, v2;
 
-//    LOG_MSG("UpdateVolPlot");
+    LOG_MSG("UpdateVolPlot");
     prob = volProb;
     v1 = vol_v0 - vol_dv/2;
     v2 = vol_v0 + (vol_nv-0.5)*vol_dv;

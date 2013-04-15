@@ -4,6 +4,7 @@ module rkc_90
 
 implicit none
 
+integer, parameter :: nflogg=12
 double precision :: rkc_sprad
 
 public :: rkc_comm, rkc_sprad
@@ -822,7 +823,7 @@ contains
 !  spectral radius, so is more likely to be an upper bound.
 !----------------------------------------------------------
         sprad = onep2*sigma
-!        write(*,*) 'sprad: ',sprad
+        write(nflogg,*) 'sprad: ',sprad
         if(iter >= 2 .and. abs(sigma - sigmal) <= max(sigma,small)*p01) then
           do i = 1,neqn          
             work(ptr5+i-1) = v(i) - yn(i)

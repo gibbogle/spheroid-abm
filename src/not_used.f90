@@ -1617,3 +1617,101 @@ elseif (ichemo == GLUCOSE) then
 endif
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+! Note: updating of concentrations is now done in extendODEdiff()
+!-----------------------------------------------------------------------------------------
+subroutine cell_divider1(kcell0)
+integer :: kcell0
+integer :: kpar=0
+integer :: j, k, kcell1, site0(3), site1(3), site2(3), site(3), npath, path(3,200)
+real(REAL_KIND) :: tnow, R
+type (boundary_type), pointer :: bdry
+
+tnow = istep*DELTA_T
+site0 = cell_list(kcell0)%site
+if (dbug) write(*,*) 'cell_divider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
+if (bdrylist_present(site0,bdrylist)) then	! site0 is on the boundary
+	npath = 1
+	site1 = site0
+	path(:,1) = site0
+else
+	call choose_bdrysite(site0,site1)
+	call get_path(site0,site1,path,npath)
+endif
+if (dbug) write(*,*) 'path: ',npath
+do k = 1,npath
+	if (dbug) write(*,'(i3,2x,3i4)') path(:,k)
+enddo
+
+!call get_nearbdrypath(site0,path,npath)
+! Need to choose an outside site near site1
+call get_outsidesite(site1,site2)
+npath = npath+1
+path(:,npath) = site2
+if (dbug) write(*,*) 'outside site: ',site2,occupancy(site2(1),site2(2),site2(3))%indx
+
+call push_path(path,npath)
+Nsites = Nsites + 1
+call SetRadius(Nsites)
+call extendODEdiff(site2)
+
+if (dbug) write(*,*) 'did push_path'
+cell_list(kcell0)%t_divide_last = tnow
+!cell_list(kcell0)%t_divide_next = tnow + DivideTime()
+cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
+R = par_uni(kpar)
+cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+call add_cell(kcell0,kcell1,site0)	! daughter cell is placed at site0
+
+! Now need to fix the bdrylist.  
+! site1 was on the boundary, but may no longer be.
+! site2 is now on the boundary
+! First add site2
+if (dbug) write(*,*) 'add site2 to bdrylist: ',site2
+if (isbdry(site2)) then   ! add it to the bdrylist
+    nbdry = nbdry + 1
+    allocate(bdry)
+    bdry%site = site2
+!    bdry%chemo_influx = .false.
+    nullify(bdry%next)
+    call bdrylist_insert(bdry,bdrylist)
+!    call AssignBdryRole(site,bdry)
+    occupancy(site2(1),site2(2),site2(3))%bdry => bdry
+    call SetBdryConcs(site2)
+else
+    write(logmsg,'(a,3i4,i6)') 'Added site is not bdry: ',site2,occupancy(site2(1),site2(2),site2(3))%indx(1)
+	call logger(logmsg)
+    stop
+endif
+if (dbug) write(*,*) 'Check for changed boundary status'
+! Now check sites near site2 that may have changed their boundary status (including site1)
+do j = 1,6
+	site = site2 + neumann(:,j)
+	if (dbug) write(*,*) j,site
+	if (isbdry(site)) then
+		if (dbug) write(*,*) 'isbdry'
+		if (.not.bdrylist_present(site,bdrylist)) then	! add it
+			if (dbug) write(*,*) 'not present, add it'
+			nbdry = nbdry + 1
+			allocate(bdry)
+			bdry%site = site
+		!    bdry%chemo_influx = .false.
+			nullify(bdry%next)
+			call bdrylist_insert(bdry,bdrylist)
+		!    call AssignBdryRole(site,bdry)
+			occupancy(site(1),site(2),site(3))%bdry => bdry
+!		    call SetBdryConcs(site)
+		endif
+	else
+		if (dbug) write(*,*) 'not isbdry'
+		if (bdrylist_present(site,bdrylist)) then	! remove it
+			if (dbug) write(*,*) 'present, remove it'
+			call bdrylist_delete(site,bdrylist)
+			nullify(occupancy(site(1),site(2),site(3))%bdry)
+			nbdry = nbdry - 1
+!			call ResetConcs(site)
+		endif
+	endif
+enddo
+if (dbug) write(*,*) 'done!'
+end subroutine

@@ -97,6 +97,7 @@ if (use_ODE_diffusion) then
 !	call TestODEDiffusion
 !	call TestSolver
 endif
+call SetupODEdiff
 Nradiation_tag = 0
 Ndrug_tag = 0
 Nanoxia_tag = 0
@@ -107,6 +108,8 @@ t_simulation = 0
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
+
+!call check_Coxygen
 
 end subroutine
 
@@ -228,7 +231,7 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine read_cell_params(ok)
 logical :: ok
-integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment
+integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra
 integer :: iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
 real(REAL_KIND) :: days, bdry_conc
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
@@ -253,7 +256,7 @@ read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is
 read(nfcell,*) medium_volume				! volume of medium that the spheroid is growing in (cm^3)
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
-read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (mM)
+read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (uM)
 read(nfcell,*) ANOXIA_FACTOR			    ! multiplying factor for MM threshold for anoxia
 read(nfcell,*) anoxia_tag_hours				! hypoxic time leading to tagging to die by anoxia (h)
 read(nfcell,*) anoxia_death_hours			! time after tagging to death by anoxia (h)
@@ -264,10 +267,12 @@ read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
 read(nfcell,*) chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
+read(nfcell,*) chemo(OXYGEN)%cell_diff
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
 read(nfcell,*) chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
+read(nfcell,*) chemo(GLUCOSE)%cell_diff
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
 
@@ -298,6 +303,7 @@ do i = 1,2			! currently allowing for just two different drugs
 	chemo(imetab)%decay = (imetab_decay == 1)
 	if (idrug == SN30000) then
 		read(nfcell,*) SN30K%diff_coef
+		read(nfcell,*) SN30K%cell_diff
 		read(nfcell,*) SN30K%Kmet0
 		read(nfcell,*) SN30K%C1
 		read(nfcell,*) SN30K%C2
@@ -314,8 +320,10 @@ do i = 1,2			! currently allowing for just two different drugs
 		SN30K%kill_duration = 60*SN30K%kill_duration    ! minutes -> seconds
 		chemo(idrug)%halflife = SN30K%halflife
 		chemo(imetab)%halflife = SN30K%metabolite_halflife
-		chemo(idrug)%diff_coef = SN30K%diff_coef
-		chemo(imetab)%diff_coef = SN30K%diff_coef
+		chemo(idrug)%diff_coef = SN30K%diff_coef		! Note that metabolite is given the same diff_coef
+		chemo(imetab)%diff_coef = SN30K%diff_coef		! and cell_diff as the drug.
+		chemo(idrug)%cell_diff = SN30K%cell_diff
+		chemo(imetab)%cell_diff = SN30K%cell_diff
 	endif
 	if (chemo(idrug)%used .and. chemo(idrug)%decay) then
 		chemo(idrug)%decay_rate = DecayRate(chemo(idrug)%halflife)
@@ -331,10 +339,13 @@ enddo
 read(nfcell,*) O2cutoff(1)
 read(nfcell,*) O2cutoff(2)
 read(nfcell,*) O2cutoff(3)
+read(nfcell,*) spcrad_value
+read(nfcell,*) iuse_extra
 read(nfcell,*) itreatment
 read(nfcell,*) treatmentfile						! file with treatment programme
 close(nfcell)
 
+MM_THRESHOLD = MM_THRESHOLD/1000					! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
 blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
@@ -350,6 +361,7 @@ write(logmsg,'(a,2e12.4)') 'Median, mean divide time: ',divide_time_median/3600,
 call logger(logmsg)
 use_V_dependence = (iV_depend == 1)
 randomise_initial_volume = (iV_random == 1)
+use_extracellular_O2 = (iuse_extra == 1)
 t_anoxic_limit = 60*60*anoxia_tag_hours				! hours -> seconds
 anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
@@ -895,6 +907,7 @@ real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo
 
+!call logger('simulate_step')
 if (Ncells == 0) then
     res = 2
     return
@@ -1395,8 +1408,7 @@ real(c_double) :: dx, conc(*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer rng(3,2), i, k, ichemo, kcell, x, y, z
 
-!write(logmsg,*) 'get_concdata'
-!call logger(logmsg)
+!call logger('get_concdata')
 dx = DELTA_X
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
@@ -1474,6 +1486,7 @@ real(c_double) :: v0, dv, prob(*)
 integer :: n, kcell, k
 real(REAL_KIND) :: v, Vmin, Vmax
 
+!call logger('get_volprob')
 Vmin = (Vdivide0 - dVdivide)/2
 Vmax = Vdivide0 + dVdivide
 dv = (Vmax - Vmin)/nv
@@ -1504,6 +1517,7 @@ real(c_double) :: v0, dv, prob(*)
 integer :: n, kcell, k
 real(REAL_KIND) :: v, Vmin, Vmax, O2max
 
+!call logger('get_oxyprob')
 Vmin = 0
 Vmax = chemo(OXYGEN)%bdry_conc
 dv = (Vmax - Vmin)/nv

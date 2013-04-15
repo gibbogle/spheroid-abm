@@ -14,7 +14,8 @@ integer :: neqn
 double precision :: t, y(neqn)
 !spcrad = 4d0*((nx+1)**2 + (ny+1)**2 + (nz+1)**2)
 !spcrad = max(70.,4*BLOB_RADIUS)
-spcrad = 180	!75     ! maybe need to be increased with INTRA added to EXTRA variables
+!spcrad = 600	!180	!75     ! maybe need to be increased with INTRA added to EXTRA variables
+spcrad = spcrad_value
 end function
 
 !----------------------------------------------------------------------------------
@@ -143,20 +144,18 @@ do x = 1,NX
 			if (kcell /= OUTSIDE_TAG) then
 				i = i+1
 				nex = nex + 1
-				ODEdiff%ivar(x,y,z) = i
+				ODEdiff%ivar(x,y,z) = i			! extracellular variable index
 				ODEdiff%varsite(i,:) = (/x,y,z/)
 				ODEdiff%vartype(i) = EXTRA
 				ODEdiff%cell_index(i) = kcell
-!				if (y == 51 .and. z == 51) then
-!				    write(logmsg,*) x,i,kcell
-!				    call logger(logmsg)
-!				endif
+!				write(nflog,*)kcell,'E ',ODEdiff%varsite(i,:),i
 				if (kcell > 0) then ! with this numbering system the EXTRA variable corresponding to
 				    i = i+1         ! an INTRA variable i is i-1
 				    nin = nin + 1
     				ODEdiff%varsite(i,:) = (/x,y,z/)
 	    			ODEdiff%vartype(i) = INTRA
     				ODEdiff%cell_index(i) = kcell
+!					write(nflog,*)kcell,'I ',ODEdiff%varsite(i,:),i
 	    		endif
 			endif
 		enddo
@@ -629,9 +628,9 @@ elseif (ichemo == SN30000_METAB) then
 endif
 kexch = chemo(ichemo)%cell_diff
 dCexchange = kexch*(Cex - Cin(ichemo))
-if (ichemo == OXYGEN .and. Cex > 0.00195 .and. Cex < 0.002) then
-	write(nflog,'(4e12.4)') Cex, Cin(ichemo), dCreact, dCexchange
-endif
+!if (ichemo == OXYGEN .and. Cex > 0.00195 .and. Cex < 0.002) then
+!	write(nflog,'(4e12.4)') Cex, Cin(ichemo), dCreact, dCexchange
+!endif
 dCreact = dCreact + dCexchange
 end subroutine
 
@@ -1245,6 +1244,58 @@ else
 endif
 end subroutine
 
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine check_Coxygen
+real(REAL_KIND) :: MM0, dC, Cs, Ks, rmax, r, Kd, M, V, Ci, Ce
+real(REAL_KIND) :: a, b, c, d, C1, C2
+logical :: from_Ce = .false.
+
+Cs = ODEdiff%C1_soft
+dC = ODEdiff%deltaC_soft
+MM0 = chemo(OXYGEN)%MM_C0
+rmax = chemo(OXYGEN)%max_cell_rate
+V = Vsite - Vextra
+r = rmax*1.0e6/V
+Ks = ODEdiff%k_soft
+Kd = chemo(OXYGEN)%cell_diff
+
+write(*,'(a,3e12.4)') 'Cs, dC, MM0: ',Cs,dC,MM0
+write(*,'(a,3e12.4)') 'rmax,V,r: ',rmax,V,r
+write(*,'(a,3e12.4)') 'Kd, Ks: ',Kd,Ks
+write(*,*)
+
+if (from_Ce) then
+	! Specifying Ce -> Ci
+	! If Ci > Cs
+	Ce = 0.01
+
+	a = 1
+	b = r/Kd + MM0 - dC - Ce
+	c = Ce*(dC - MM0) - (r/Kd)*dC
+
+	d = sqrt(b*b - 4*a*c)
+	C1 = (-b + d)/(2*a)
+	C2 = (-b - d)/(2*a)
+	write(*,'(3f8.4)') Ce,C1,C2
+else
+	! Specifying Ci -> Ce
+
+	Ci = 0.00005
+	do
+		if (Ci > Cs) then
+			M = (Ci - dC)/(MM0 + Ci - dC)
+		else
+			M = Ks*Ci*Ci
+		endif
+		Ce = Ci + M*r/Kd
+		write(*,'(a,2e12.4,f6.1)') 'Ci, Ce: ',Ci,Ce, 100*(Ce-Ci)/Ci
+		Ci = 2*Ci
+		if (Ci > 0.15) exit
+	enddo
+endif
+stop
+end subroutine
 
 end module
 
