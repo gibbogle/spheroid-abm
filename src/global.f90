@@ -84,6 +84,7 @@ end type
 
 type SN30K_type
 	real(REAL_KIND) :: diff_coef
+	real(REAL_KIND) :: cell_diff
 	real(REAL_KIND) :: C1
 	real(REAL_KIND) :: C2
 	real(REAL_KIND) :: Kmet0
@@ -159,6 +160,7 @@ real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_FACTOR, t_anoxic_limit, anoxia_death_del
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 real(REAL_KIND) :: t_simulation
 real(REAL_KIND) :: O2cutoff(3)
+real(REAL_KIND) :: spcrad_value
 type(SN30K_type) :: SN30K
 type(LQ_type) :: LQ
 character*(128) :: inputfile
@@ -173,6 +175,7 @@ logical :: use_CPORT1 = .false.
 logical :: stopped, clear_to_send
 logical :: simulation_start, par_zig_init, initialized
 logical :: use_radiation, use_treatment
+logical :: use_extracellular_O2
 logical :: use_V_dependence
 logical :: randomise_initial_volume
 logical :: dbug = .false.

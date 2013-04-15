@@ -9,7 +9,7 @@ integer :: ncpu, res, summarydata(100)
 character*(128) :: infile, outfile, runfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
-integer :: jstep, hour, ntot, ncog, inflow, irun
+integer :: jstep, hour, ntot, ncog, inflow, irun, icutoff
 character*(128) :: b, c, progname
 real :: vasc
 real(8) :: t1, t2
@@ -59,6 +59,7 @@ do i = 1, cnt
     endif
 end do
 
+icutoff = 3
 do irun = 1,1
 	write(*,*) 'irun: ',irun
 	inbuflen = len(infile)
@@ -78,7 +79,7 @@ do irun = 1,1
 			stop
 		endif
 		if (mod(jstep,240) == 0) then
-			call get_summary(summarydata)
+			call get_summary(summarydata,icutoff)
 	!		hour = summaryData(1)
 	!		ntot = summaryData(3)
 	!		ncog = summaryData(5)

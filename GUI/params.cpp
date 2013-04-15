@@ -76,10 +76,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Divide volume variation",
 "Variation (+/-) about nominal divide volume multiple."},
 
-{"MM_THRESHOLD", 0.0001, 0, 0,
+{"MM_THRESHOLD", 0.1, 0, 0,
 "Michaelis-Menten O2 threshold",
 "O2 concentration at which the 'soft-landing' adjustment to the Michaelis-Menten function kicks in.\n\
-[mM]"},
+[uM]"},
 
 {"ANOXIA_FACTOR", 1.5, 0, 0,
 "Anoxia threshold factor",
@@ -123,6 +123,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Diffusion coeff",
  "Constituent diffusion coefficient"},
 
+{"OXYGEN_CELL_DIFF", 200, 0, 0,
+ "Membrane diff coef",
+ "Cell membrane diffusion coefficient Kd"},
+
 {"OXYGEN_BDRY_CONC", 0.18, 0, 0,
  "Boundary concentration",
  "Constituent concentration in the medium"},
@@ -138,6 +142,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"GLUCOSE_DIFF_COEF", 6.0e-7, 0, 0,
  "GLUCOSE diffusion coeff",
  "GLUCOSE diffusion coefficient"},
+
+{"GLUCOSE_CELL_DIFF", 20, 0, 0,
+ "Membrane diff coef",
+ "Cell membrane diffusion coefficient Kd"},
 
 {"GLUCOSE_BDRY_CONC", 9.0, 0, 0,
  "GLUCOSE boundary concentration",
@@ -173,7 +181,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
 
 {"SN30K_DIFF_COEF", 6.0e-7, 0, 0,
  "Diffusion coeff",
- "SN30000 diffusion coefficient"},
+ "SN30000 diffusion coefficient (also used for metabolite)"},
+
+{"SN30K_CELL_DIFF", 5, 0, 0,
+ "Membrane diff coef",
+ "Cell membrane diffusion coefficient Kd (also used for metabolite)"},
 
 {"SN30K_KMET0", 1.54, 0, 0,
  "Kmet0",
@@ -258,6 +270,14 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"HYPOXIA_3", 4.0, 0, 0,
 "Hypoxia threshold 3",
 "Hypoxia threshold 3"},
+
+{"SPCRAD", 500.0, 0, 0,
+"Spectral radius",
+"Spectral radius value used by RKC solver"},
+
+{"USE_EXTRA", 0, 0, 1,
+"Use extra conc",
+"Use extracellular O2 concentration to determine cell death"},
 
 {"USE_TREATMENT_FILE", 0, 0, 1,
 "Use treatment file?",

@@ -20,6 +20,7 @@ contains
 subroutine grow_cells(dose,dt)
 real(REAL_KIND) :: dose, dt
 
+!call logger('grow_cells')
 if (use_radiation .and. dose > 0) then
 	call irradiation(dose)
 endif
@@ -31,6 +32,32 @@ if (use_death) then
 endif
 if (use_migration) then
 	call cell_migration
+endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! The O2 concentration to use with cell kcell is either the intracellular concentration,
+! or is use_extracellular_O2, the corresponding extracellular concentration
+!-----------------------------------------------------------------------------------------
+subroutine get_O2conc(kcell, C_O2)
+integer :: kcell
+real(REAL_KIND) :: C_O2
+integer :: iv, site(3)
+real(REAL_KIND) :: tnow
+
+if (use_extracellular_O2) then
+	site = cell_list(kcell)%site
+	iv = ODEdiff%ivar(site(1),site(2),site(3))
+	if (iv < 1) then
+!		write(logmsg,*) 'get_O2conc: ',kcell,site,iv
+!		call logger(logmsg)
+		tnow = istep*DELTA_T
+		C_O2 = BdryConc(OXYGEN,tnow)	! assume that this is a site at the boundary
+	else
+		C_O2 = allstate(iv-1,OXYGEN)
+	endif
+else
+	C_O2 = cell_list(kcell)%conc(OXYGEN)
 endif
 end subroutine
 
@@ -50,14 +77,7 @@ LQ%K_ms = 4.3e-3	! mM
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	if (cell_list(kcell)%radiation_tag) cycle	! we do not tag twice (yet)
-!	site = cell_list(kcell)%site
-!	iv = ODEdiff%ivar(site(1),site(2),site(3))
-!	if (iv < 1) then
-!	    write(*,*) 'irradiation: ',kcell,site,iv
-!	    stop
-!	endif
-!	C_O2 = allstate(iv,OXYGEN)
-	C_O2 = cell_list(kcell)%conc(OXYGEN)
+	call get_O2conc(kcell,C_O2)
 	OER_alpha_d = dose*(LQ%OER_am*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
 	OER_beta_d = dose*(LQ%OER_bm*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
 	expon = LQ%alpha_H*OER_alpha_d + LQ%beta_H*OER_alpha_d**2
@@ -130,6 +150,7 @@ integer :: kcell, nlist0, site(3), i, kpar=0
 real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, pdeath, tnow
 logical :: use_SN30000
 
+!call logger('cell_death')
 if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
     use_SN30000 = .true.
     Kd = SN30K%Kd
@@ -150,7 +171,8 @@ do kcell = 1,nlist
 			cycle
 		endif
 	else
-		C_O2 = cell_list(kcell)%conc(OXYGEN)
+!		C_O2 = cell_list(kcell)%conc(OXYGEN)
+		call get_O2conc(kcell,C_O2)
 		if (C_O2 < ANOXIA_FACTOR*MM_THRESHOLD) then
 			cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
 			if (cell_list(kcell)%t_hypoxic > t_anoxic_limit) then
@@ -212,7 +234,8 @@ integer :: site0(3)
 integer :: site1(3), site2(3), site(3), j, jmin, kcell, tmp_indx
 real(REAL_KIND) :: d1, d2, dmin
 
-!write(*,*) 'necrotic_migration: site0: ',site0
+!write(logmsg,*) 'necrotic_migration: site0: ',site0
+!call logger(logmsg)
 site1 = site0
 do
 	d1 = cdistance(site1)
@@ -268,6 +291,7 @@ integer :: divide_list(1000), ndivide, i
 real(REAL_KIND) :: tnow, C_O2, metab, dVdt, r_mean, c_rate
 character*(20) :: msg
 
+!call logger('cell_division')
 nlist0 = nlist
 tnow = istep*DELTA_T
 c_rate = log(2.0)/divide_time_mean		! Note: to randomise divide time need to use random number, not mean!
@@ -275,13 +299,14 @@ r_mean = Vdivide0/(2*divide_time_mean)
 ndivide = 0
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
-	site = cell_list(kcell)%site
-	iv = ODEdiff%ivar(site(1),site(2),site(3))
-	if (iv < 1) then
-	    write(*,*) 'cell_division: ',kcell,site,iv
-	    stop
-	endif
-	C_O2 = allstate(iv,OXYGEN)
+!	site = cell_list(kcell)%site
+!	iv = ODEdiff%ivar(site(1),site(2),site(3))
+!	if (iv < 1) then
+!	    write(*,*) 'cell_division: ',kcell,site,iv
+!	    stop
+!	endif
+!	C_O2 = allstate(iv,OXYGEN)
+	call get_O2conc(kcell,C_O2)
 	metab = max(0.0,C_O2)/(chemo(OXYGEN)%MM_C0 + C_O2)
 	if (use_V_dependence) then
 		dVdt = c_rate*cell_list(kcell)%volume*metab
@@ -330,6 +355,8 @@ real(REAL_KIND) :: tnow, R, v, vmax
 logical :: ok, is_clear
 type (boundary_type), pointer :: bdry
 
+!write(logmsg,*) 'cell_divider: ',kcell0
+!call logger(logmsg)
 tnow = istep*DELTA_T
 cell_list(kcell0)%t_divide_last = tnow
 cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
@@ -485,105 +512,6 @@ real(REAL_KIND) :: total(MAX_CHEMO)
 total(DRUG_A:MAX_CHEMO) = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume
 medium_volume = medium_volume - Vsite
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = total(DRUG_A:MAX_CHEMO)/medium_volume
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! Note: updating of concentrations is now done in extendODEdiff()
-!-----------------------------------------------------------------------------------------
-subroutine cell_divider1(kcell0)
-integer :: kcell0
-integer :: kpar=0
-integer :: j, k, kcell1, site0(3), site1(3), site2(3), site(3), npath, path(3,200)
-real(REAL_KIND) :: tnow, R
-type (boundary_type), pointer :: bdry
-
-tnow = istep*DELTA_T
-site0 = cell_list(kcell0)%site
-if (dbug) write(*,*) 'cell_divider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
-if (bdrylist_present(site0,bdrylist)) then	! site0 is on the boundary
-	npath = 1
-	site1 = site0
-	path(:,1) = site0
-else
-	call choose_bdrysite(site0,site1)
-	call get_path(site0,site1,path,npath)
-endif
-if (dbug) write(*,*) 'path: ',npath
-do k = 1,npath
-	if (dbug) write(*,'(i3,2x,3i4)') path(:,k)
-enddo
-
-!call get_nearbdrypath(site0,path,npath)
-! Need to choose an outside site near site1
-call get_outsidesite(site1,site2)
-npath = npath+1
-path(:,npath) = site2
-if (dbug) write(*,*) 'outside site: ',site2,occupancy(site2(1),site2(2),site2(3))%indx
-
-call push_path(path,npath)
-Nsites = Nsites + 1
-call SetRadius(Nsites)
-call extendODEdiff(site2)
-
-if (dbug) write(*,*) 'did push_path'
-cell_list(kcell0)%t_divide_last = tnow
-!cell_list(kcell0)%t_divide_next = tnow + DivideTime()
-cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
-R = par_uni(kpar)
-cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
-call add_cell(kcell0,kcell1,site0)	! daughter cell is placed at site0
-
-! Now need to fix the bdrylist.  
-! site1 was on the boundary, but may no longer be.
-! site2 is now on the boundary
-! First add site2
-if (dbug) write(*,*) 'add site2 to bdrylist: ',site2
-if (isbdry(site2)) then   ! add it to the bdrylist
-    nbdry = nbdry + 1
-    allocate(bdry)
-    bdry%site = site2
-!    bdry%chemo_influx = .false.
-    nullify(bdry%next)
-    call bdrylist_insert(bdry,bdrylist)
-!    call AssignBdryRole(site,bdry)
-    occupancy(site2(1),site2(2),site2(3))%bdry => bdry
-    call SetBdryConcs(site2)
-else
-    write(logmsg,'(a,3i4,i6)') 'Added site is not bdry: ',site2,occupancy(site2(1),site2(2),site2(3))%indx(1)
-	call logger(logmsg)
-    stop
-endif
-if (dbug) write(*,*) 'Check for changed boundary status'
-! Now check sites near site2 that may have changed their boundary status (including site1)
-do j = 1,6
-	site = site2 + neumann(:,j)
-	if (dbug) write(*,*) j,site
-	if (isbdry(site)) then
-		if (dbug) write(*,*) 'isbdry'
-		if (.not.bdrylist_present(site,bdrylist)) then	! add it
-			if (dbug) write(*,*) 'not present, add it'
-			nbdry = nbdry + 1
-			allocate(bdry)
-			bdry%site = site
-		!    bdry%chemo_influx = .false.
-			nullify(bdry%next)
-			call bdrylist_insert(bdry,bdrylist)
-		!    call AssignBdryRole(site,bdry)
-			occupancy(site(1),site(2),site(3))%bdry => bdry
-!		    call SetBdryConcs(site)
-		endif
-	else
-		if (dbug) write(*,*) 'not isbdry'
-		if (bdrylist_present(site,bdrylist)) then	! remove it
-			if (dbug) write(*,*) 'present, remove it'
-			call bdrylist_delete(site,bdrylist)
-			nullify(occupancy(site(1),site(2),site(3))%bdry)
-			nbdry = nbdry - 1
-!			call ResetConcs(site)
-		endif
-	endif
-enddo
-if (dbug) write(*,*) 'done!'
 end subroutine
 
 !-----------------------------------------------------------------------------------------
