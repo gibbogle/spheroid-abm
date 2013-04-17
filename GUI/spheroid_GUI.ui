@@ -103,7 +103,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>1</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -540,6 +540,9 @@ padding: 8px
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
               <item row="5" column="4">
@@ -549,6 +552,9 @@ padding: 8px
                   <width>50</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -944,6 +950,9 @@ padding: 8px
                   <height>0</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
               <item row="3" column="1">
@@ -960,6 +969,9 @@ padding: 8px
                   <width>50</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -978,6 +990,9 @@ padding: 8px
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
               <item row="5" column="1">
@@ -995,6 +1010,9 @@ padding: 8px
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
               <item row="6" column="1">
@@ -1011,6 +1029,9 @@ padding: 8px
                   <width>50</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -1064,6 +1085,9 @@ padding: 8px
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
               <item row="0" column="2">
@@ -1079,6 +1103,9 @@ padding: 8px
                   <width>0</width>
                   <height>0</height>
                  </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -1183,6 +1210,9 @@ padding: 8px
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
              </layout>
@@ -1231,6 +1261,9 @@ padding: 8px
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
               <item row="0" column="2">
@@ -1254,6 +1287,9 @@ padding: 8px
                   <width>50</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -1279,6 +1315,9 @@ padding: 8px
                   <height>16777215</height>
                  </size>
                 </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
                </widget>
               </item>
               <item row="2" column="2">
@@ -1302,6 +1341,9 @@ padding: 8px
                   <width>50</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -1435,6 +1477,9 @@ padding: 8px
               <height>20</height>
              </rect>
             </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
            </widget>
            <widget class="QLineEdit" name="line_HYPOXIA_2">
             <property name="geometry">
@@ -1445,6 +1490,9 @@ padding: 8px
               <height>20</height>
              </rect>
             </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
            </widget>
            <widget class="QLineEdit" name="line_HYPOXIA_3">
             <property name="geometry">
@@ -1454,6 +1502,9 @@ padding: 8px
               <width>40</width>
               <height>20</height>
              </rect>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
             </property>
            </widget>
            <widget class="QGroupBox" name="groupBox_hypoxia">
@@ -1703,6 +1754,9 @@ padding: 8px
                   <width>50</width>
                   <height>16777215</height>
                  </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
