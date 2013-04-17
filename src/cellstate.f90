@@ -288,7 +288,7 @@ subroutine cell_division(dt)
 real(REAL_KIND) :: dt
 integer :: kcell, nlist0, site(3), iv
 integer :: divide_list(1000), ndivide, i
-real(REAL_KIND) :: tnow, C_O2, metab, dVdt, r_mean, c_rate
+real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean, c_rate
 character*(20) :: msg
 
 !call logger('cell_division')
@@ -318,7 +318,9 @@ do kcell = 1,nlist0
 		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
 	endif
 	cell_list(kcell)%dVdt = dVdt
-	cell_list(kcell)%volume = cell_list(kcell)%volume + dVdt*dt
+	vol0 = cell_list(kcell)%volume
+	cell_list(kcell)%volume = vol0 + dVdt*dt
+	cell_list(kcell)%conc = vol0*cell_list(kcell)%conc/cell_list(kcell)%volume
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then
 		if (cell_list(kcell)%radiation_tag) then
 			call cell_dies(kcell)

@@ -1561,7 +1561,7 @@ enddo
 
 open(nflog,file='spheroid.log',status='replace')
 open(nfres,file='spheroid_ts.out',status='replace')
-write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead'
+write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead f_hypox f_necrot'
 !awp_0%is_open = .false.
 !awp_1%is_open = .false.
 

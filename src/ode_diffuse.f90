@@ -529,9 +529,9 @@ end subroutine
 ! fixed extra- and intracellular volumes, Vextra + Vcell = Vsite
 ! When there is no cell the extracellular volume is Vsite.
 !----------------------------------------------------------------------------------
-subroutine f_rkc(neqn,t,v,dvdt,icase)
+subroutine f_rkc(neqn,t,y,dydt,icase)
 integer :: neqn, icase
-real(REAL_KIND) :: t, v(neqn), dvdt(neqn)
+real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, Cin(MAX_CHEMO), Cex
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
@@ -553,22 +553,22 @@ do i = 1,neqn
     if (ODEdiff%vartype(i) == EXTRA) then
         intracellular = .false.
 		vol = Vextra
-        Cex = v(i)
+        Cex = y(i)
         cell_exists = .false.
         if (i < neqn) then
             if (ODEdiff%vartype(i+1) == INTRA) then
                 cell_exists = .true.
                 vol = Vsite
 	            Cin = allstate(i+1,:)
-	            Cin(ichemo) = v(i+1)
+	            Cin(ichemo) = y(i+1)
 	        endif
 	    endif
 	else
         intracellular = .true.
 		vol = Vsite - Vextra	! for now, ignoring cell volume change!!!!!
-        Cex = v(i-1)
+        Cex = y(i-1)
 	    Cin = allstate(i,:)
-	    Cin(ichemo) = v(i)
+	    Cin(ichemo) = y(i)
 	endif
 	if (.not.intracellular) then
 	    dCsum = 0
@@ -582,7 +582,7 @@ do i = 1,neqn
 		    if (kv == 0) then
 			    val = cbnd
 		    else
-			    val = v(kv)
+			    val = y(kv)
 		    endif
 		    dCsum = dCsum + dCdiff*val
 	    enddo
@@ -591,10 +591,10 @@ do i = 1,neqn
 		else
             dCreact=0
 		endif
-    	dvdt(i) = dCsum + dCreact
+    	dydt(i) = dCsum + dCreact
 	else
 	    call intra_react(ichemo,Cin,Cex,vol,dCreact)
-	    dvdt(i) = dCreact
+	    dydt(i) = dCreact - y(i)*decay_rate
 	endif
 enddo
 end subroutine
