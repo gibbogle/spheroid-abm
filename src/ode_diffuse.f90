@@ -155,6 +155,7 @@ do x = 1,NX
     				ODEdiff%varsite(i,:) = (/x,y,z/)
 	    			ODEdiff%vartype(i) = INTRA
     				ODEdiff%cell_index(i) = kcell
+    				cell_list(kcell)%iv = i
 !					write(nflog,*)kcell,'I ',ODEdiff%varsite(i,:),i
 	    		endif
 			endif

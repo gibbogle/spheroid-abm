@@ -46,8 +46,7 @@ integer :: iv, site(3)
 real(REAL_KIND) :: tnow
 
 if (use_extracellular_O2) then
-	site = cell_list(kcell)%site
-	iv = ODEdiff%ivar(site(1),site(2),site(3))
+	iv = cell_list(kcell)%iv
 	if (iv < 1) then
 !		write(logmsg,*) 'get_O2conc: ',kcell,site,iv
 !		call logger(logmsg)
