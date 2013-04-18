@@ -65,6 +65,7 @@ end type
 type cell_type
 	integer :: ID
 	integer :: site(3)
+	integer :: iv
 	integer :: state
 	real(REAL_KIND) :: conc(MAX_CHEMO)
 !	real(REAL_KIND) :: oxygen
