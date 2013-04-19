@@ -192,7 +192,6 @@ Radius = blob_radius    ! starting value
 
 nc0 = (4./3.)*PI*Radius**3
 !max_nlist = 200*nc0
-max_nlist = 200000
 write(logmsg,*) 'Initial radius, nc0, max_nlist: ',Radius, nc0, max_nlist
 call logger(logmsg)
 
@@ -270,11 +269,13 @@ read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%cell_diff
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
+read(nfcell,*) chemo(OXYGEN)%MM_C0
 read(nfcell,*) chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%cell_diff
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
+read(nfcell,*) chemo(GLUCOSE)%MM_C0
 
 do i = 1,2			! currently allowing for just two different drugs
 	read(nfcell,*) iuse_drug
@@ -347,6 +348,8 @@ close(nfcell)
 
 MM_THRESHOLD = MM_THRESHOLD/1000					! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
+chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%MM_C0/1000		! uM -> mM
+chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%MM_C0/1000		! uM -> mM
 blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
 divide_time_median = 60*60*divide_time_median		! hours -> seconds
@@ -611,6 +614,7 @@ do x = 1,NX
                 cell_list(k)%radiation_tag = .false.
                 cell_list(k)%anoxia_tag = .false.
 				cell_list(k)%exists = .true.
+				cell_list(k)%active = .true.
 !				do
 !					R = par_uni(kpar)
 !					tpast = -R*divide_time_median
@@ -906,6 +910,7 @@ integer :: kcell, site(3), hour, it, nthour, kpar=0
 real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo
+logical :: ok
 
 !call logger('simulate_step')
 if (Ncells == 0) then
@@ -930,7 +935,11 @@ if (use_treatment) then
 		call logger(logmsg)
 	endif
 endif
-call grow_cells(radiation_dose,DELTA_T)
+call grow_cells(radiation_dose,DELTA_T,ok)
+if (.not.ok) then
+	res = 3
+	return
+endif
 call SetupODEdiff
 call SiteCellToState
 !call logger('solving')
@@ -1561,7 +1570,7 @@ enddo
 
 open(nflog,file='spheroid.log',status='replace')
 open(nfres,file='spheroid_ts.out',status='replace')
-write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead f_hypox f_necrot'
+write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead Ntagged_anoxia f_hypox(3) f_necrot'
 !awp_0%is_open = .false.
 !awp_1%is_open = .false.
 

@@ -30,7 +30,7 @@ use rkc_90
 
 implicit none
 
-integer, parameter :: MAX_VARS = 200000
+integer, parameter :: MAX_VARS = 2*max_nlist
 
 integer, parameter :: RKF45_SOLVER = 1
 integer, parameter :: RKSUITE_SOLVER = 2
@@ -150,13 +150,15 @@ do x = 1,NX
 				ODEdiff%cell_index(i) = kcell
 !				write(nflog,*)kcell,'E ',ODEdiff%varsite(i,:),i
 				if (kcell > 0) then ! with this numbering system the EXTRA variable corresponding to
-				    i = i+1         ! an INTRA variable i is i-1
-				    nin = nin + 1
-    				ODEdiff%varsite(i,:) = (/x,y,z/)
-	    			ODEdiff%vartype(i) = INTRA
-    				ODEdiff%cell_index(i) = kcell
-    				cell_list(kcell)%iv = i
-!					write(nflog,*)kcell,'I ',ODEdiff%varsite(i,:),i
+					if (cell_list(kcell)%active) then
+						i = i+1         ! an INTRA variable i is i-1
+						nin = nin + 1
+    					ODEdiff%varsite(i,:) = (/x,y,z/)
+	    				ODEdiff%vartype(i) = INTRA
+    					ODEdiff%cell_index(i) = kcell
+    					cell_list(kcell)%iv = i
+	!					write(nflog,*)kcell,'I ',ODEdiff%varsite(i,:),i
+	    			endif
 	    		endif
 			endif
 		enddo
@@ -621,7 +623,8 @@ if (ichemo == OXYGEN) then
     endif
     dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == GLUCOSE) then
-    dCreact = -chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+	metab = Cin(GLUCOSE)/(chemo(GLUCOSE)%MM_C0 + Cin(GLUCOSE))
+    dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == SN30000) then
     dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(ichemo)
 elseif (ichemo == SN30000_METAB) then

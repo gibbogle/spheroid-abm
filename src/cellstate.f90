@@ -17,15 +17,17 @@ contains
 ! Need to initialize site and cell concentrations when a cell divides and when there is
 ! cell death.
 !-----------------------------------------------------------------------------------------
-subroutine grow_cells(dose,dt)
+subroutine grow_cells(dose,dt,ok)
 real(REAL_KIND) :: dose, dt
+logical :: ok
 
 !call logger('grow_cells')
 if (use_radiation .and. dose > 0) then
 	call irradiation(dose)
 endif
 if (use_division) then
-	call cell_division(dt)
+	call cell_division(dt,ok)
+	if (.not.ok) return
 endif
 if (use_death) then
 	call cell_death(dt)
@@ -275,18 +277,20 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine test_cell_division
+subroutine test_cell_division(ok)
+logical :: ok
 integer :: kcell, kpar=0
 kcell = random_int(1,nlist,kpar)
-call cell_divider(kcell)
+call cell_divider(kcell,ok)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine cell_division(dt)
+subroutine cell_division(dt,ok)
 real(REAL_KIND) :: dt
+logical :: ok
 integer :: kcell, nlist0, site(3), iv
-integer :: divide_list(1000), ndivide, i
+integer :: divide_list(10000), ndivide, i
 real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean, c_rate
 character*(20) :: msg
 
@@ -339,7 +343,8 @@ enddo
 do i = 1,ndivide
     kcell = divide_list(i)
 	kcell_dividing = kcell
-	call cell_divider(kcell)
+	call cell_divider(kcell, ok)
+	if (.not.ok) return
 enddo
 end subroutine
 
@@ -348,13 +353,14 @@ end subroutine
 ! The dividing cell, kcell0, is at site0.
 ! A neighbour site site01 is chosen randomly.  This becomes the site for the daughter cell.
 !-----------------------------------------------------------------------------------------
-subroutine cell_divider(kcell0)
+subroutine cell_divider(kcell0, ok)
 integer :: kcell0
+logical :: ok
 integer :: kpar=0
 integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, jmax
 integer :: npath, path(3,200)
 real(REAL_KIND) :: tnow, R, v, vmax
-logical :: ok, is_clear
+logical :: is_clear
 type (boundary_type), pointer :: bdry
 
 !write(logmsg,*) 'cell_divider: ',kcell0
@@ -388,7 +394,7 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE) then	! look for the best nearby clea
 	if (jmax > 0) then	! use this site for the progeny cell
 		is_clear = .true.
 		site01 = site0 + jumpvec(:,jmax)
-		call add_cell(kcell0,kcell1,site01)
+		call add_cell(kcell0,kcell1,site01,ok)
 		Nreuse = Nreuse + 1
 		return
 	endif
@@ -447,7 +453,8 @@ call SetRadius(Nsites)
 !do ichemo = 1,MAX_CHEMO
 !    occupancy(site2(1),site2(2),site2(3))%C(ichemo) = chemo(ichemo)%bdry_conc
 !enddo
-call add_cell(kcell0,kcell1,site01)
+call add_cell(kcell0,kcell1,site01,ok)
+if (.not.ok) return
 
 ! Now need to fix the bdrylist.  
 ! site1 was on the boundary, but may no longer be.
@@ -756,12 +763,12 @@ do k = npath-1,1,-1
 	if (dbug) write(*,*) k,' site1: ',site1,kcell
 	site2 = path(:,k+1)
 	if (dbug) write(*,*) 'site2: ',site2
-	if (kcell < 0) then
-		write(*,'(a,i6,5i4)') 'push_path: kcell<0: k,npath,site1: ',kcell,k,npath,site1
-		write(*,'(a,3i4)') 'moved to: ',site2
+!	if (kcell < 0) then
+!		write(*,'(a,i6,5i4)') 'push_path: kcell<0: k,npath,site1: ',kcell,k,npath,site1
+!		write(*,'(a,3i4)') 'moved to: ',site2
 !		write(*,'(a,4i6)') '                  dividing cell: ',kcell_dividing,cell_list(kcell_dividing)%site
 !		stop
-	endif
+!	endif
 	if (kcell > 0) then
     	cell_list(kcell)%site = site2
     endif
@@ -774,14 +781,20 @@ end subroutine
 ! The daughter cell kcell1 is given the same characteristics as kcell0 and placed at site1.
 ! Random variation is introduced into %divide_volume.
 !-----------------------------------------------------------------------------------------
-subroutine add_cell(kcell0,kcell1,site1)
+subroutine add_cell(kcell0,kcell1,site1,ok)
 integer :: kcell0, kcell1, site1(3)
+logical :: ok
 integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
 
 tnow = istep*DELTA_T
 !lastID = lastID + 1
 nlist = nlist + 1
+if (nlist > max_nlist) then
+	call logger('Dimension of cell_list() has been exceeded: increase max_nlist and rebuild')
+	ok = .false.
+	return
+endif
 Ncells = Ncells + 1
 kcell1 = nlist
 cell_list(kcell1)%state = cell_list(kcell0)%state
@@ -792,6 +805,7 @@ cell_list(kcell1)%radiation_tag = .false.
 cell_list(kcell1)%drug_tag = .false.
 cell_list(kcell1)%anoxia_tag = .false.
 cell_list(kcell1)%exists = .true.
+cell_list(kcell1)%active = .true.
 cell_list(kcell1)%t_divide_last = tnow
 !cell_list(kcell1)%t_divide_next = tnow + DivideTime()
 cell_list(kcell1)%dVdt = cell_list(kcell0)%dVdt

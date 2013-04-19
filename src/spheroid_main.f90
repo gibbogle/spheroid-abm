@@ -9,7 +9,7 @@ integer :: ncpu, res, summarydata(100)
 character*(128) :: infile, outfile, runfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
-integer :: jstep, hour, ntot, ncog, inflow, irun, icutoff
+integer :: jstep, hour, ntot, ncog, inflow, irun, icutoff, nsumm_interval
 character*(128) :: b, c, progname
 real :: vasc
 real(8) :: t1, t2
@@ -59,6 +59,7 @@ do i = 1, cnt
     endif
 end do
 
+!call get_dimensions(NX,NY,NZ,nsteps,DELTA_T, MAX_CHEMO, cused);
 icutoff = 3
 do irun = 1,1
 	write(*,*) 'irun: ',irun
@@ -70,23 +71,17 @@ do irun = 1,1
 	call execute(ncpu,infile,inbuflen,outfile,outbuflen)
 	!call cpu_time(t1)
 	t1 = wtime()
-	write(*,*) 'did execute: nsteps: ',nsteps
+	write(*,*) 'did execute: nsteps, DELTA_T: ',nsteps, DELTA_T
+	nsumm_interval = (60*60)/DELTA_T   ! number of time steps per hour
 	do jstep = 1,Nsteps
 	!	write(*,*) 'jstep: ',jstep
+		if (mod(jstep,nsumm_interval) == 0) then
+			call get_summary(summarydata,icutoff)
+		endif
 		call simulate_step(res)
 		if (res /= 0) then
 			write(*,*) 'Error exit'
 			stop
-		endif
-		if (mod(jstep,240) == 0) then
-			call get_summary(summarydata,icutoff)
-	!		hour = summaryData(1)
-	!		ntot = summaryData(3)
-	!		ncog = summaryData(5)
-	!		inflow = summaryData(7)
-	!		vasc = summaryData(8)/100.
-	!		write(*,'(4(a,i6),a,f6.2)') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog,' inflow/hr: ',inflow,' vasc: ',vasc	
-	!		write(nfrun,'(4(a,i6),a,f6.2)') 'Hour: ',hour,' ncells: ',ntot,' ncog: ',ncog,' inflow/hr: ',inflow,' vasc: ',vasc	
 		endif
 	enddo
 	call terminate_run(res)

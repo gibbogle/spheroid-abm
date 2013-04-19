@@ -103,7 +103,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -251,7 +251,7 @@ padding: 8px
               <x>30</x>
               <y>30</y>
               <width>341</width>
-              <height>171</height>
+              <height>191</height>
              </rect>
             </property>
             <property name="title">
@@ -263,7 +263,7 @@ padding: 8px
                <x>10</x>
                <y>17</y>
                <width>320</width>
-               <height>141</height>
+               <height>164</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_3">
@@ -519,7 +519,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
+              <item row="6" column="0">
                <widget class="QLabel" name="label_CELL_DIFF">
                 <property name="font">
                  <font>
@@ -532,7 +532,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="5" column="3">
+              <item row="6" column="3">
                <widget class="QLineEdit" name="line_OXYGEN_CELL_DIFF">
                 <property name="maximumSize">
                  <size>
@@ -545,8 +545,54 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="5" column="4">
+              <item row="6" column="4">
                <widget class="QLineEdit" name="line_GLUCOSE_CELL_DIFF">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_MM_KM">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Michaelis-Menten Km</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QLabel" name="units_MM_Km">
+                <property name="text">
+                 <string>uM</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="3">
+               <widget class="QLineEdit" name="line_OXYGEN_MM_KM">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="4">
+               <widget class="QLineEdit" name="line_GLUCOSE_MM_KM">
                 <property name="maximumSize">
                  <size>
                   <width>50</width>
@@ -565,7 +611,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>30</x>
-              <y>210</y>
+              <y>240</y>
               <width>341</width>
               <height>211</height>
              </rect>
@@ -1789,6 +1835,9 @@ padding: 8px
              </property>
              <property name="text">
               <string>Use extracellular O2</string>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
              </property>
             </widget>
            </widget>
