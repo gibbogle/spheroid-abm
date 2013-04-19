@@ -44,6 +44,8 @@ integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
 integer, parameter :: SN30000 = DRUG_A
 integer, parameter :: SN30000_METAB = DRUG_A_METAB
+integer, parameter :: max_nlist = 500000
+
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
 logical, parameter :: use_division = .true.
@@ -66,6 +68,7 @@ type cell_type
 	integer :: ID
 	integer :: site(3)
 	integer :: iv
+	logical :: active
 	integer :: state
 	real(REAL_KIND) :: conc(MAX_CHEMO)
 !	real(REAL_KIND) :: oxygen
@@ -150,7 +153,7 @@ real(REAL_KIND) :: x0,y0,z0   ! centre in global coordinates (units = grids)
 real(REAL_KIND) :: blob_radius, Radius, Centre(3)
 integer :: jumpvec(3,27)
 
-integer :: max_nlist, nlist, Ncells, Ncells0, lastNcells, lastID
+integer :: nlist, Ncells, Ncells0, lastNcells, lastID
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
 integer :: nbdry
@@ -186,7 +189,7 @@ integer :: divide_option = DIVIDE_USE_CLEAR_SITE
 integer :: idbug = 0
 integer :: seed(2)
 
-!DEC$ ATTRIBUTES DLLEXPORT :: nsteps
+!DEC$ ATTRIBUTES DLLEXPORT :: nsteps, DELTA_T
 
 contains
 

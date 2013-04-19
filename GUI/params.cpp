@@ -25,7 +25,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Initial number of tumour cells",
 "Initial number of tumour cells"},
 
-{"DIVIDE_TIME_MEDIAN", 55, 0, 0,
+{"DIVIDE_TIME_MEDIAN", 24, 0, 0,
 "Division time median parameter",
 "The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters. \n\
 [hours]"},
@@ -135,6 +135,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Max consumption rate",
  "Maximum rate of consumption of the constituent"},
 
+{"OXYGEN_MM_KM", 1.33, 0, 0,
+ "Michaelis-Menten Km",
+ "Michaelis-Menten Km (uM)"},
+
 {"USE_GLUCOSE", 1, 0, 1,
 "Use Glucose?",
 "Glucose is simulated"},
@@ -154,6 +158,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"GLUCOSE_CONSUMPTION", 3.8e-17, 0, 0,
  "GLUCOSE consumption rate",
  "GLUCOSE consumption rate"},
+
+{"GLUCOSE_MM_KM", 1.33, 0, 0,
+ "Michaelis-Menten Km",
+ "Michaelis-Menten Km (uM)"},
 
 {"USE_DRUG_A", 0, 0, 1,
 "Use SN30000?",
