@@ -184,7 +184,10 @@ void ExecThread::run()
 		if (stopped) break;
 
         simulate_step(&res);
-        if (res != 0) break;
+        if (res != 0) {
+            LOG_MSG("res != 0");
+            break;
+        }
 
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
@@ -209,8 +212,7 @@ void ExecThread::run()
 	}
     LOG_MSG("ExecThread::run: stopped or completed");
     snapshot();
-    sprintf(msg,"got snapshot:");
-    LOG_MSG(msg);
+    LOG_MSG("got snapshot:");
     sleep(100);
 	LOG_MSG("ExecThread::run: call terminate_run");
 	terminate_run(&res);

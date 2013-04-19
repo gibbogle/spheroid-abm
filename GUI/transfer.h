@@ -5,7 +5,7 @@
 
 extern int showingVTK;
 
-#define MAX_CELLS 100000
+#define MAX_CELLS 200000
 #define MAX_BC 100000
 #define MAX_DC 500
 #define MAX_BOND 1
