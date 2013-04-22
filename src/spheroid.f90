@@ -113,14 +113,14 @@ call logger(logmsg)
 
 end subroutine
 
-!-----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------- 
 !-----------------------------------------------------------------------------------------
 subroutine omp_initialisation(ok)
 logical :: ok
 integer :: npr, nth
 
 ok = .true.
-if (Mnodes == 1) return
+!if (Mnodes == 1) return
 #if defined(OPENMP) || defined(_OPENMP)
 write(logmsg,'(a,i2)') 'Requested Mnodes: ',Mnodes
 call logger(logmsg)
@@ -146,6 +146,100 @@ call logger(logmsg)
 #endif
 
 call logger('did omp_initialisation')
+!call test_omp1
+
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine test_omp
+integer, parameter :: n = 10
+integer :: i
+
+integer :: sum1, sum2
+integer, allocatable :: y1(:)
+integer :: y2(n)
+
+allocate(y1(n))
+y1 = 1
+y2 = 1
+
+sum1 = 0
+sum2 = 0
+!$omp parallel do
+do i = 1,n
+	sum1 = sum1 + y1(i)
+	sum2 = sum2 + y2(i)
+enddo
+!$omp end parallel do
+write(*,*) 'sum1: ',sum1
+write(*,*) 'sum2: ',sum2
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine test_omp1
+integer :: n = 1000000
+!integer :: ncpu = 2
+integer :: i, k, ith
+
+real(REAL_KIND) :: x, y, z
+
+real(REAL_KIND) :: sum1, sum2
+real(REAL_KIND), allocatable :: y1(:), ysum(:)
+!integer :: y2(100)
+
+allocate(omp_x(n))
+allocate(omp_y(n))
+allocate(omp_z(n))
+omp_x = 1.23456
+omp_y = 9.87654
+
+!call omp_set_num_threads(ncpu)
+
+allocate(y1(n))
+allocate(ysum(0:n-1))
+y1 = 1
+!y2 = 1
+ysum = 0
+
+sum1 = 0
+sum2 = 0
+!$omp parallel do private(x, y, z, k)
+do i = 1,n
+	z = 0
+	omp_x(i) = omp_x(i)/i
+	omp_y(i) = omp_y(i)/i + 1.0
+	if (i < 4) then
+		x = omp_x(i)**i
+	elseif (i < 8) then
+		x = 1.0/omp_x(i)**i
+	else 
+		x = 1./(1 + omp_x(i))
+	endif
+	omp_x(i) = x
+	y = sqrt(i*omp_y(i))
+	y = omp_y(i)
+	do k = 1,1000
+		y = 0.5*y
+		call omp_sub(i,x,y)
+		z = z + 1/omp_z(i)
+	enddo
+!	sum1 = sum1 + z
+	ith = omp_get_thread_num()
+	ysum(ith) = ysum(ith) + z
+enddo
+!$omp end parallel do
+!write(*,*) 'sum1: ',sum1
+write(*,*) 'ysum: ',sum(ysum)
+stop
+end subroutine
+
+subroutine omp_sub(i,x,y)
+integer :: i
+real(REAL_KIND) :: x, y
+omp_z(i) = x/y + omp_x(i)/omp_y(i)
+omp_y(i) = y
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1571,7 +1665,7 @@ enddo
 
 open(nflog,file='spheroid.log',status='replace')
 open(nfres,file='spheroid_ts.out',status='replace')
-write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead Ntagged_anoxia f_hypox(3) f_necrot'
+write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead Ntagged_anoxia f_hypox_1 f_hypox_2 f_hypox_3 f_necrot'
 !awp_0%is_open = .false.
 !awp_1%is_open = .false.
 
@@ -1755,8 +1849,6 @@ if (use_TCP) then
 		endif
 	endif
 endif
-write(logmsg,*) 'awp_0%is_open: ',awp_0%is_open
-call logger(logmsg)
 end subroutine
 
 !-----------------------------------------------------------------------------------------

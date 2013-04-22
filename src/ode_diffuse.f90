@@ -321,8 +321,8 @@ C1 = deltaC + (sqrt(C0*C0 + 8*C0*deltaC) - C0)/4
 ODEdiff%k_soft = (C1-deltaC)/(C1*C1*(C0+C1-deltaC))
 ODEdiff%C1_soft = C1
 ODEdiff%deltaC_soft = deltaC
-write(logmsg,*) 'AdjustMM: C0, deltaC, C1, k: ',C0, ODEdiff%deltaC_soft, ODEdiff%C1_soft, ODEdiff%k_soft
-call logger(logmsg)
+!write(logmsg,'(a,4e12.4)') 'AdjustMM: C0, deltaC, C1, k: ',C0, ODEdiff%deltaC_soft, ODEdiff%C1_soft, ODEdiff%k_soft
+!call logger(logmsg)
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -537,7 +537,7 @@ integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, Cin(MAX_CHEMO), Cex
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C
 logical :: bnd, dbug
 real(REAL_KIND) :: metab, dMdt
 logical :: use_compartments = .true.
@@ -552,11 +552,13 @@ dc6 = 6*dc1 + decay_rate
 !cbnd = chemo(ichemo)%bdry_conc
 cbnd = BdryConc(ichemo,t_simulation)
 !if (t < 1.0) write(*,*) icase,t
+!$omp parallel do private(intracellular, vol, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab) default(shared)
 do i = 1,neqn
+	yy = y(i)
     if (ODEdiff%vartype(i) == EXTRA) then
         intracellular = .false.
 		vol = Vextra
-        Cex = y(i)
+        Cex = yy
         cell_exists = .false.
         if (i < neqn) then
             if (ODEdiff%vartype(i+1) == INTRA) then
@@ -571,7 +573,7 @@ do i = 1,neqn
 		vol = Vsite - Vextra	! for now, ignoring cell volume change!!!!!
         Cex = y(i-1)
 	    Cin = allstate(i,:)
-	    Cin(ichemo) = y(i)
+	    Cin(ichemo) = yy
 	endif
 	if (.not.intracellular) then
 	    dCsum = 0
@@ -596,10 +598,35 @@ do i = 1,neqn
 		endif
     	dydt(i) = dCsum + dCreact
 	else
-	    call intra_react(ichemo,Cin,Cex,vol,dCreact)
-	    dydt(i) = dCreact - y(i)*decay_rate
+		C = Cin(ichemo)
+		dCreact = 0
+		if (ichemo == OXYGEN) then
+			if (C > ODEdiff%C1_soft) then
+				metab = (C-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C - ODEdiff%deltaC_soft)
+			elseif (C > 0) then
+				metab = ODEdiff%k_soft*C*C
+			else
+				metab = 0
+				write(*,*) 'metab = 0'
+			endif
+			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+		elseif (ichemo == GLUCOSE) then
+			metab = C/(chemo(GLUCOSE)%MM_C0 + C)
+			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+		elseif (ichemo == SN30000) then
+			dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*C
+		elseif (ichemo == SN30000_METAB) then
+			dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
+		endif
+		!Kex = chemo(ichemo)%cell_diff
+		!dCex = Kex*(Cex - C)
+		!dCreact = dCreact + dCex
+		dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)	
+!	    call intra_react(ichemo,Cin,Cex,vol,dCreact)
+	    dydt(i) = dCreact - yy*decay_rate
 	endif
 enddo
+!$omp end parallel do
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -609,33 +636,32 @@ end subroutine
 subroutine intra_react(ichemo,Cin,Cex,vol,dCreact)
 integer :: ichemo
 real(REAL_KIND) :: Cin(:), Cex, vol, dCreact
-real(REAL_KIND) :: metab, dCexchange, kexch
+real(REAL_KIND) :: metab, C, Kex, dCex
 
+C = Cin(ichemo)
 dCreact = 0
 if (ichemo == OXYGEN) then
-    if (Cin(OXYGEN) > ODEdiff%C1_soft) then
-	    metab = (Cin(OXYGEN)-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + Cin(OXYGEN) - ODEdiff%deltaC_soft)
-    elseif (Cin(OXYGEN) > 0) then
-	    metab = ODEdiff%k_soft*Cin(OXYGEN)*Cin(OXYGEN)
+    if (C > ODEdiff%C1_soft) then
+	    metab = (C-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C - ODEdiff%deltaC_soft)
+    elseif (C > 0) then
+	    metab = ODEdiff%k_soft*C*C
     else
 	    metab = 0
 	    write(*,*) 'metab = 0'
     endif
     dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == GLUCOSE) then
-	metab = Cin(GLUCOSE)/(chemo(GLUCOSE)%MM_C0 + Cin(GLUCOSE))
+	metab = C/(chemo(GLUCOSE)%MM_C0 + C)
     dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == SN30000) then
-    dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(ichemo)
+    dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*C
 elseif (ichemo == SN30000_METAB) then
     dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
 endif
-kexch = chemo(ichemo)%cell_diff
-dCexchange = kexch*(Cex - Cin(ichemo))
-!if (ichemo == OXYGEN .and. Cex > 0.00195 .and. Cex < 0.002) then
-!	write(nflog,'(4e12.4)') Cex, Cin(ichemo), dCreact, dCexchange
-!endif
-dCreact = dCreact + dCexchange
+!Kex = chemo(ichemo)%cell_diff
+!dCex = Kex*(Cex - C)
+!dCreact = dCreact + dCex
+dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -694,10 +720,12 @@ end subroutine
 subroutine Solver(it,tstart,dt,ncells)
 integer :: it, ncells
 real(REAL_KIND) :: tstart, dt
-integer :: ichemo, nvars, ntvars, ic, kcell, site(3), iv
+integer :: ichemo, nvars, ntvars, ic, kcell, site(3), iv, nth
 integer :: ie, ki, i
 real(REAL_KIND) :: t, tend
 real(REAL_KIND), allocatable :: state(:,:)
+!real(REAL_KIND), allocatable :: state(:)
+!real(REAL_KIND), allocatable :: small_work_rkc(:)
 real(REAL_KIND) :: C(MAX_CHEMO), Ce(MAX_CHEMO), dCreact(MAX_CHEMO)
 real(REAL_KIND) :: dCsum, dC
 real(REAL_KIND) :: timer1, timer2
@@ -715,8 +743,8 @@ else
     nvars = ntvars
 endif
 allocate(state(ntvars,MAX_CHEMO))
-
 state(:,:) = allstate(1:ntvars,1:MAX_CHEMO)
+
 !if (it == 1) then
 !	call showresults(state(:,DRUG_A))
 !	call showresults(state(:,DRUG_METAB_A))
@@ -729,14 +757,23 @@ info(4) = 0
 rtol = 1d-2
 atol = rtol
 
-!$omp parallel do private(t, tend, idid, ichemo)
+!write(*,*) 'nchemo: ',nchemo
+!!$omp parallel do private(t, tend, idid, ichemo, state, small_work_rkc)
+
+!!$omp parallel do private(t, tend, idid, ichemo)
 do ic = 1,nchemo
+!	nth = omp_get_num_threads()
+!	write(*,*) 'nth: ',nth
 	ichemo = chemomap(ic)
 !	if (.not.chemo(ichemo)%used) cycle
+!	allocate(state(ntvars))
+!	state(:) = allstate(1:ntvars,ichemo)
+!	allocate(small_work_rkc(8+4*MAX_VARS))
 	idid = 0
 	t = tstart
 	tend = t + dt
 	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:,ichemo),t,tend,rtol,atol,info,work_rkc(:,ichemo),idid,ichemo)
+!	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:),t,tend,rtol,atol,info,small_work_rkc(:),idid,ichemo)
 	if (idid /= 1) then
 		write(logmsg,*) ' Failed at t = ',t,' with idid = ',idid
 		call logger(logmsg)
@@ -747,29 +784,11 @@ do ic = 1,nchemo
 		write(logmsg,'(a,2f8.4)') 'sprad_ratio: ',blob_radius,sprad_ratio
 		call logger(logmsg)
 	endif
+!	allstate(1:nvars,ichemo) = state(:)
+!	deallocate(state)
+!	deallocate(small_work_rkc)
 enddo
-!$omp end parallel do
-
-! This doesn't work.  Because the O2 level goes very low in hypoxic cells, the explicit step easily
-! generates negative O2 concentrations.  It seems that the intracellular computation needs to be treated
-! implicitly together with the extracellular.
-!if (EXPLICIT_INTRA) then
-!    do ki = 1,ODEdiff%nintra
-!        i = ki + ODEdiff%nextra
-!        ie = extra_index(ki)
-!	    C = state(i,:)     ! intracellular
-!	    Ce = state(ie,:)   ! extracellular
-!!        call intra_react(nchemo,C,Ce,dCreact)
-!	    do ichemo = 1,nchemo
-!	        state(i,ichemo) = C(ichemo) + dCreact(ichemo)*dt
-!!	        if (ichemo == 1) write(*,*) ki,ichemo,dC
-!	    enddo
-!	    if (state(i,OXYGEN) > 0.2) then
-!	        write(*,*) 'C(OXYGEN) too big: ',ki,ie,Ce(OXYGEN),C(OXYGEN),state(i,OXYGEN)
-!	        stop
-!	    endif
-!    enddo
-!endif
+!!$omp end parallel do
 
 if (use_medium_flux .and. medium_volume > 0) then
 	call update_medium(ntvars,state,dt)
