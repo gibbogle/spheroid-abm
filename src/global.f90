@@ -189,6 +189,8 @@ integer :: divide_option = DIVIDE_USE_CLEAR_SITE
 integer :: idbug = 0
 integer :: seed(2)
 
+real(REAL_KIND), allocatable :: omp_x(:), omp_y(:), omp_z(:)
+
 !DEC$ ATTRIBUTES DLLEXPORT :: nsteps, DELTA_T
 
 contains
