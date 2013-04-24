@@ -75,10 +75,10 @@ do irun = 1,1
 	nsumm_interval = (60*60)/DELTA_T   ! number of time steps per hour
 	do jstep = 1,Nsteps
 	!	write(*,*) 'jstep: ',jstep
+		call simulate_step(res)
 		if (mod(jstep,nsumm_interval) == 0) then
 			call get_summary(summarydata,icutoff)
 		endif
-		call simulate_step(res)
 		if (res /= 0) then
 			write(*,*) 'Error exit'
 			stop

@@ -409,6 +409,7 @@ contains
         newspc = .true.
         jacatt = .false.
         nstsig = 0
+!$omp parallel do default(shared)
         do i = 1, neqn
           yn(i) = y(i)
         enddo
@@ -437,7 +438,9 @@ contains
           sprad = spcrad(neqn,t,yn)
         else
           call rkcrho(comm,neqn,t,f,yn,fn,vtemp1,vtemp2,work,sprad,idid,icase)
+          
           rkc_sprad = max(sprad,rkc_sprad)
+    
           if(idid .eq. 6) return
         endif
         jacatt = .true.
@@ -449,6 +452,7 @@ contains
         absh = hmax
         if(sprad*absh .gt. one) absh = one/sprad
         absh = max(absh,hmin)
+!$omp parallel do default(shared)
         do i = 1,neqn
           vtemp1(i) = yn(i) + absh*fn(i)
         enddo 
@@ -551,6 +555,7 @@ contains
 !------------------------------------------------------      
       work(1) = h
       work(2) = t
+!$omp parallel do default(shared) private(ylast, yplast)
       do i = 1, neqn
          ylast = yn(i)
          yplast = fn(i)
@@ -727,9 +732,11 @@ contains
       b1 = hlast*s*(s - one)**2
       b2 = hlast*(s - one)*s**2
 
+!$omp parallel do default(shared)
       do i = 1, neqn
         yarg(i) = a1*work(ptr3+i-1) + a2*work(ptr1+i-1) + b1*work(ptr4+i-1) + b2*work(ptr2+i-1)
       enddo
+!$omp end parallel do
       end subroutine
 
       subroutine rkcrho(comm,neqn,t,f,yn,fn,v,fv,work,sprad,idid,icase)
@@ -737,6 +744,7 @@ contains
 !  RKCRHO attempts to compute a close upper bound, SPRAD, on
 !  the spectral radius of the Jacobian matrix using a nonlinear
 !  power method.  A convergence failure is reported by IDID = 6.
+! Gib added sprad_factor
 !---------------------------------------------------------------
       type(rkc_comm) :: comm
       integer          neqn,idid,icase
@@ -750,6 +758,7 @@ contains
       integer          i,iter,index,ptr5
       double precision uround,sqrtu,ynrm,sigma,sigmal,dynrm,dfnrm,vnrm,small
       integer          nfe,nsteps,naccpt,nrejct,nfesig,maxm
+	  real(8), parameter :: sprad_factor = 1
       common /rkcdid/  nfe,nsteps,naccpt,nrejct,nfesig,maxm
 
       uround = work(4)
@@ -825,7 +834,7 @@ contains
 !  spectral radius, so is more likely to be an upper bound.
 !----------------------------------------------------------
         sprad = onep2*sigma
-        write(nflogg,*) 'sprad: ',sprad
+        sprad = sprad * sprad_factor	! Gib
         if(iter >= 2 .and. abs(sigma - sigmal) <= max(sigma,small)*p01) then
           do i = 1,neqn          
             work(ptr5+i-1) = v(i) - yn(i)

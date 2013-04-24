@@ -5,7 +5,8 @@
 ! changes.
 
 !----------------------------------------------------------------------------------
-! Note: The value of spcrad was determined by writing out the value computed in rkc
+! Note: The value of spcrad was first determined by writing out the value computed in rkc.
+! Later it was just determined by trial, then made into a run parameter.
 !----------------------------------------------------------------------------------
 double precision function spcrad(neqn,t,y)
 !DEC$ ATTRIBUTES DLLEXPORT :: spcrad
@@ -535,7 +536,7 @@ end subroutine
 subroutine f_rkc(neqn,t,y,dydt,icase)
 integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
-integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell
+integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ith
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, Cin(MAX_CHEMO), Cex
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C
 logical :: bnd, dbug
@@ -543,17 +544,16 @@ real(REAL_KIND) :: metab, dMdt
 logical :: use_compartments = .true.
 logical :: intracellular, cell_exists
 
-!write(*,*) 'neqn: ',neqn
 ichemo = icase
 DX2 = DELTA_X*DELTA_X
 decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
-!cbnd = chemo(ichemo)%bdry_conc
 cbnd = BdryConc(ichemo,t_simulation)
-!if (t < 1.0) write(*,*) icase,t
 !$omp parallel do private(intracellular, vol, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab) default(shared)
 do i = 1,neqn
+!	ith = omp_get_thread_num()
+!	write(*,*) i,ith
 	yy = y(i)
     if (ODEdiff%vartype(i) == EXTRA) then
         intracellular = .false.
@@ -751,16 +751,13 @@ state(:,:) = allstate(1:ntvars,1:MAX_CHEMO)
 !endif
 
 info(1) = 1
-info(2) = 1		! 1 = use spcrad() to estimate spectral radius, 2 = let rkc do it
+info(2) = 1		! = 1 => use spcrad() to estimate spectral radius, != 1 => let rkc do it
 info(3) = 1
 info(4) = 0
 rtol = 1d-2
 atol = rtol
 
 !write(*,*) 'nchemo: ',nchemo
-!!$omp parallel do private(t, tend, idid, ichemo, state, small_work_rkc)
-
-!!$omp parallel do private(t, tend, idid, ichemo)
 do ic = 1,nchemo
 !	nth = omp_get_num_threads()
 !	write(*,*) 'nth: ',nth
@@ -768,7 +765,7 @@ do ic = 1,nchemo
 !	if (.not.chemo(ichemo)%used) cycle
 !	allocate(state(ntvars))
 !	state(:) = allstate(1:ntvars,ichemo)
-!	allocate(small_work_rkc(8+4*MAX_VARS))
+!	allocate(small_work_rkc(8+5*MAX_VARS))
 	idid = 0
 	t = tstart
 	tend = t + dt
@@ -779,16 +776,15 @@ do ic = 1,nchemo
 		call logger(logmsg)
 		stop
 	endif
-	if (info(2) == 2 .and. ichemo == OXYGEN) then
-		sprad_ratio = rkc_sprad/blob_radius
-		write(logmsg,'(a,2f8.4)') 'sprad_ratio: ',blob_radius,sprad_ratio
-		call logger(logmsg)
-	endif
+!	if (info(2) == 2 .and. ichemo == OXYGEN) then
+!		sprad_ratio = rkc_sprad/blob_radius
+!		write(logmsg,'(a,2f8.4)') 'sprad_ratio: ',blob_radius,sprad_ratio
+!		call logger(logmsg)
+!	endif
 !	allstate(1:nvars,ichemo) = state(:)
 !	deallocate(state)
 !	deallocate(small_work_rkc)
 enddo
-!!$omp end parallel do
 
 if (use_medium_flux .and. medium_volume > 0) then
 	call update_medium(ntvars,state,dt)
@@ -963,7 +959,7 @@ nvars = ODEdiff%nextra
 !allocate(allstatep(MAX_VARS,MAX_CHEMO))
 allocate(allstate(nvars,MAX_CHEMO))
 allocate(allstatep(nvars,MAX_CHEMO))
-allocate(work(8+4*nvars,MAX_CHEMO))
+allocate(work(8+5*nvars,MAX_CHEMO))
 xmid = NX/2
 ymid = NY/2
 zmid = NZ/2
