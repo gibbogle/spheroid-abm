@@ -550,7 +550,7 @@ decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
 cbnd = BdryConc(ichemo,t_simulation)
-!$omp parallel do private(intracellular, vol, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab) default(shared)
+!$omp parallel do private(intracellular, vol, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab) default(shared) schedule(static)
 do i = 1,neqn
 !	ith = omp_get_thread_num()
 !	write(*,*) i,ith
