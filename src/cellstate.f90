@@ -357,10 +357,10 @@ subroutine cell_divider(kcell0, ok)
 integer :: kcell0
 logical :: ok
 integer :: kpar=0
-integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, jmax
+integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, nfree, bestsite(3)
 integer :: npath, path(3,200)
 real(REAL_KIND) :: tnow, R, v, vmax
-logical :: is_clear
+logical :: freesite(27,3)
 type (boundary_type), pointer :: bdry
 
 !write(logmsg,*) 'cell_divider: ',kcell0
@@ -375,25 +375,30 @@ cell_list(kcell0)%M = cell_list(kcell0)%M/2
 !call logger(logmsg)
 
 site0 = cell_list(kcell0)%site
-is_clear = .false.
-if (divide_option == DIVIDE_USE_CLEAR_SITE) then	! look for the best nearby clear site, if it exists use it
-	jmax = 0
+if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby clear site, if it exists use it
+	divide_option == DIVIDE_USE_CLEAR_SITE_RANDOM) then		! make random choice from nearby clear sites
 	vmax = -1.0e10
+	nfree = 0
 	do j = 1,27
 		if (j == 14) cycle
 		site01 = site0 + jumpvec(:,j)
 		if (occupancy(site01(1),site01(2),site01(3))%indx(1) < -100) then
-			site01 = site0 + jumpvec(:,j)
+			nfree = nfree + 1
+			freesite(nfree,:) = site01
 			v = site_value(occupancy(site01(1),site01(2),site01(3))%C(:))
 			if (v > vmax) then
 				vmax = v
-				jmax = j
+				bestsite = site01
 			endif
 		endif
 	enddo
-	if (jmax > 0) then	! use this site for the progeny cell
-		is_clear = .true.
-		site01 = site0 + jumpvec(:,jmax)
+	if (nfree > 0) then
+		if (DIVIDE_USE_CLEAR_SITE) then	! use this site for the progeny cell
+			site01 = bestsite
+		else	! random choice
+			j = random_int(1,nfree,0)
+			site01 = freesite(j,:)
+		endif
 		call add_cell(kcell0,kcell1,site01,ok)
 		Nreuse = Nreuse + 1
 		return

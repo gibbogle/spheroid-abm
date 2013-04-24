@@ -27,6 +27,7 @@ integer, parameter :: OUTSIDE_TAG  = -1
 
 integer, parameter :: DIVIDE_ALWAYS_PUSH  = 1
 integer, parameter :: DIVIDE_USE_CLEAR_SITE  = 2
+integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))

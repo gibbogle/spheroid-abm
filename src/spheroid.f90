@@ -325,7 +325,7 @@ end subroutine
 subroutine read_cell_params(ok)
 logical :: ok
 integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra
-integer :: iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
+integer :: iuse_oxygen, iuse_glucose, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
 real(REAL_KIND) :: days, bdry_conc
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
@@ -358,13 +358,13 @@ read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
-read(nfcell,*) chemo(OXYGEN)%used
+read(nfcell,*) iuse_oxygen		!chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%cell_diff
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
 read(nfcell,*) chemo(OXYGEN)%MM_C0
-read(nfcell,*) chemo(GLUCOSE)%used
+read(nfcell,*) iuse_glucose		!chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%cell_diff
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
@@ -442,6 +442,8 @@ close(nfcell)
 
 MM_THRESHOLD = MM_THRESHOLD/1000					! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
+chemo(OXYGEN)%used = (iuse_oxygen == 1)
+chemo(GLUCOSE)%used = (iuse_glucose == 1)
 chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%MM_C0/1000		! uM -> mM
 chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%MM_C0/1000		! uM -> mM
 blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
@@ -556,13 +558,14 @@ logical :: ok
 character*(64) :: line
 integer :: ichemo, idrug, nmax, i
 real(REAL_KIND) :: tstart,tend,conc,dose
-
+logical :: use_it(0:2)
 allocate(protocol(0:2))
 
-use_treatment = .true.
+!use_treatment = .true.
 chemo(GLUCOSE+1:)%used = .false.
-use_radiation = .false.
+!use_radiation = .false.
 open(nftreatment,file=treatmentfile,status='old')
+use_it = .false.
 nmax = 0
 do
 	read(nftreatment,'(a)',end=99) line
@@ -582,6 +585,7 @@ do
 		read(nftreatment,*) protocol(idrug)%n
 		nmax = max(nmax,protocol(idrug)%n)
 		if (protocol(idrug)%n > 0) then
+			use_it(idrug) = .true.
 			do i = 1,protocol(idrug)%n
 				read(nftreatment,*) tstart
 				read(nftreatment,*) tend
@@ -589,13 +593,16 @@ do
 			enddo
 		endif
 	else
-		use_radiation = .true.
+!		use_radiation = .true.
 		read(nftreatment,*) protocol(idrug)%n
 		nmax = max(nmax,protocol(idrug)%n)
-		do i = 1,protocol(idrug)%n
-			read(nftreatment,*) tstart
-			read(nftreatment,*) dose
-		enddo
+		if (protocol(idrug)%n > 0) then
+			use_it(idrug) = .true.
+			do i = 1,protocol(idrug)%n
+				read(nftreatment,*) tstart
+				read(nftreatment,*) dose
+			enddo
+		endif
 	endif
 	cycle
 99	exit
@@ -637,13 +644,14 @@ do
 			enddo
 		endif
 	else
-		use_radiation = .true.
 		read(nftreatment,*) protocol(idrug)%n
-		do i = 1,protocol(idrug)%n
-			read(nftreatment,*) tstart
-			protocol(idrug)%tstart(i) = 3600*tstart
-			read(nftreatment,*) protocol(idrug)%dose(i)
-		enddo
+		if (protocol(idrug)%n > 0) then
+			do i = 1,protocol(idrug)%n
+				read(nftreatment,*) tstart
+				protocol(idrug)%tstart(i) = 3600*tstart
+				read(nftreatment,*) protocol(idrug)%dose(i)
+			enddo
+		endif
 	endif
 	cycle
 199	exit
@@ -653,6 +661,12 @@ do i = 0,2
 	protocol(i)%started = .false.
 	protocol(i)%ended = .false.
 enddo	
+if (use_it(0)) then
+	use_radiation = .true.
+endif
+if (use_it(0) .or. use_it(1) .or. use_it(2)) then
+	use_treatment = .true.
+endif
 ok = .true.
 end subroutine
 
@@ -1016,11 +1030,11 @@ dt = DELTA_T/NT_CONC
 if (istep == 0) then
     call SetupODEdiff
 endif
-istep = istep + 1
 if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
 	call logger(logmsg)
 endif
+istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds
 if (use_treatment) then
 	call treatment(radiation_dose)
