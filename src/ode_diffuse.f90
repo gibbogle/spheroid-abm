@@ -614,9 +614,17 @@ do i = 1,neqn
 			metab = C/(chemo(GLUCOSE)%MM_C0 + C)
 			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 		elseif (ichemo == SN30000) then
-			dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*C
+		    if (C > 0) then
+				dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*C
+			else
+				dCreact = 0
+			endif
 		elseif (ichemo == SN30000_METAB) then
-			dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
+			if (Cin(SN30000) > 0) then
+				dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
+			else
+				dCreact = 0
+			endif
 		endif
 		!Kex = chemo(ichemo)%cell_diff
 		!dCex = Kex*(Cex - C)
@@ -809,7 +817,7 @@ subroutine update_medium(ntvars,state,dt)
 integer :: ntvars
 real(REAL_KIND) :: dt, state(:,:)
 integer :: nb, i, k
-real(REAL_KIND) :: Csurface(MAX_CHEMO), F(MAX_CHEMO), area
+real(REAL_KIND) :: Csurface(MAX_CHEMO), F(MAX_CHEMO), area, C_A
 logical :: bnd
 
 if (.not.chemo(DRUG_A)%used .and. .not.chemo(DRUG_B)%used) return
@@ -835,9 +843,11 @@ enddo
 Csurface = Csurface/nb
 area = 4*PI*Radius*Radius*DELTA_X*DELTA_X
 F(:) = area*chemo(:)%diff_coef*(Csurface(:) - chemo(:)%bdry_conc)/DELTA_X
-!write(*,*) 'Radius, C, F: ',area, Csurface(DRUG_A), chemo(DRUG_A)%bdry_conc, F(DRUG_A)
+C_A = chemo(DRUG_A)%bdry_conc
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*(1 - dt*chemo(DRUG_A:MAX_CHEMO)%decay_rate)
+!write(*,'(a,5e12.4)') 'medium: ',area, Csurface(DRUG_A), F(DRUG_A), C_A, chemo(DRUG_A)%bdry_conc
+!write(nflog,'(a,5e12.4)') 'medium: ',area, Csurface(DRUG_A), F(DRUG_A), C_A, chemo(DRUG_A)%bdry_conc
 end subroutine
 
 !----------------------------------------------------------------------------------

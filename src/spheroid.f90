@@ -635,6 +635,7 @@ do
 		read(nftreatment,*) protocol(idrug)%n
 		if (protocol(idrug)%n > 0) then
 			chemo(ichemo)%used = .true.
+			chemo(ichemo)%bdry_conc = 0
 			do i = 1,protocol(idrug)%n
 				read(nftreatment,*) tstart
 				protocol(idrug)%tstart(i) = 3600*tstart		! hours -> seconds
