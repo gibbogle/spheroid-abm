@@ -171,7 +171,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "SN30000",
 "Name of drug A"},
 
-{"DRUG_A_BDRY_CONC", 0.01, 0, 0,
+{"DRUG_A_BDRY_CONC", 0.0, 0, 0,
  "Drug A boundary concentration",
  "Drug A concentration in the medium"},
 
@@ -251,7 +251,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "",
 "Name of drug B"},
 
-{"DRUG_B_BDRY_CONC", 9.0, 0, 0,
+{"DRUG_B_BDRY_CONC", 0.0, 0, 0,
  "DRUG_B boundary concentration",
  "DRUG_B boundary concentration"},
 
