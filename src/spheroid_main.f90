@@ -80,7 +80,7 @@ do irun = 1,1
 			call get_summary(summarydata,icutoff)
 		endif
 		if (res /= 0) then
-			write(*,*) 'Error exit'
+			write(*,*) 'Error exit: ',res
 			stop
 		endif
 	enddo

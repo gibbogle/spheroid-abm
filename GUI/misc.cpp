@@ -135,7 +135,8 @@ void ExecThread::run()
 {
 	LOG_MSG("Invoking DLL...");
 	int res=0;
-    int NX, NY, NZ, nsumm_interval;
+//    int NX, NY, NZ;
+    int nsumm_interval;
 //    double deltat;
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
@@ -232,7 +233,7 @@ void ExecThread::snapshot()
         LOG_MSG("Error: MAX_CELLS exceeded");
         exit(1);
     }
-    emit displayF(); // Emit signal to update Field display
+//    emit displayF(); // Emit signal to update Field display
     emit display(); // Emit signal to update VTK display
 }
 

@@ -84,7 +84,7 @@ MainWindow::MainWindow(QWidget *parent)
 	started = false;
     firstVTK = true;
     exthread = NULL;
-	showingVTK = 0;
+    showingVTK = 0;
 	nGraphCases = 0;
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
@@ -101,7 +101,8 @@ MainWindow::MainWindow(QWidget *parent)
 
 	parm = new Params();
 	nParams = parm->nParams;
-    field = new Field(page_2D);
+//    field = new Field(page_2D);
+    field = new Field(page_2D, checkBox_record2D->isChecked());
     grph = new Graphs();
 
     setupGraphSelector();
@@ -146,7 +147,7 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
     mdiArea->setGeometry(rect);
     tabs->setCurrentIndex(1);
-    widget_canvas->setFixedWidth(CANVAS_WIDTH/2);
+    widget_canvas->setFixedWidth(CANVAS_WIDTH);
     widget_canvas->setFixedHeight(CANVAS_WIDTH);
 
     goToInputs();
@@ -421,7 +422,7 @@ void MainWindow::loadParams()
                     // Update the widget (line_, spin_ or comb_) with data from the parameter list
                     // ---LineEdits
 					if (qsname.startsWith("line_")) {
-                        double val = p.value;
+                       double val = p.value;
 						QString val_str = QString::number(val);
 						QLineEdit *w_l = (QLineEdit *)w;
                         w_l->setText(val_str);
@@ -1429,7 +1430,6 @@ void MainWindow::showGradient3D()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::runServer()
 {
-    field->setSliceChanged();
 	if (paused) {
 		if (vtk->playing) {
 			vtk->playon();
@@ -1448,6 +1448,8 @@ void MainWindow::runServer()
         paused = false;
         return;
     } else {
+ //       field = new Field(page_2D, checkBox_record2D->isChecked());
+        field->setSaveImages(checkBox_record2D->isChecked());
         if (radioButton_hypoxia_1->isChecked())
             icutoff = 1;
         else if (radioButton_hypoxia_2->isChecked())
@@ -1455,7 +1457,8 @@ void MainWindow::runServer()
         else if (radioButton_hypoxia_3->isChecked())
             icutoff = 3;
     }
-	
+    field->setSliceChanged();
+
 	if (!paramSaved) {
 		int response = QMessageBox::critical(this, tr("ABM Model GUI"), \
 					tr("The document has been modified.\nPlease save changes before continuing."), \
@@ -1772,6 +1775,8 @@ void MainWindow::showSummary()
         QString tag = grph->get_tag(i);
         pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
     }
+    field->setSliceChanged();
+    field->displayField();
 
     exthread->mutex1.unlock();
 }

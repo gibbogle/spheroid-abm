@@ -17,11 +17,11 @@ Params::Params()
 The shape value must be greater than 1, and values close to 1 give distributions that are close to normal."},
 */
 
-{"NX", 100, 100, 300,
+{"NX", 100, 0, 0,
 "Lattice size",
 "Dimension of the lattice (number of sites in X,Y and Z directions).  Typically 5*BLOB_RADIUS is OK."},
 
-{"INITIAL_COUNT", 15000, 0, 0,
+{"INITIAL_COUNT", 1000, 0, 0,
 "Initial number of tumour cells",
 "Initial number of tumour cells"},
 
