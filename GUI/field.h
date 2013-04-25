@@ -6,7 +6,7 @@
 #include <QtGui>
 #include "plot.h"
 
-#define CANVAS_WIDTH 620
+#define CANVAS_WIDTH 696
 #define MAX_CONC 6
 
 struct field_data {
@@ -43,10 +43,11 @@ extern "C" {
 class Field : public QMainWindow
 {
 public:
-    Field(QWidget *);
+    Field(QWidget *, bool);
     ~Field();
     void chooseParameters();
 	void displayField();
+    void displayField1();
     void setSliceChanged();
     void chooseColor(double fr, int rgbcol[]);
     void chooseRateColor(double fr, int rgbcol[]);
@@ -65,11 +66,14 @@ public:
     void updateOxyPlot();
     void selectConstituent();
     void setExecuting(bool);
+    void setSaveImages(bool);
 
     QWidget *field_page;
+    bool save_images;
     int NX;
     int axis;
     double fraction;
+    int ifield;
     int nsites, nconst, const_used[16];
     QString const_name[16];
     QString constituentText;

@@ -20,6 +20,7 @@ extern double concData[4000];
 //extern bool concUsed[16];
 extern int conc_nc;
 extern double conc_dx;
+extern int NX, NY, NZ;
 extern int MAX_CHEMO;
 extern double volProb[100];
 extern int vol_nv;

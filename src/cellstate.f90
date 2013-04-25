@@ -22,6 +22,7 @@ real(REAL_KIND) :: dose, dt
 logical :: ok
 
 !call logger('grow_cells')
+ok = .true.
 if (use_radiation .and. dose > 0) then
 	call irradiation(dose)
 endif
@@ -295,6 +296,7 @@ real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean, c_rate
 character*(20) :: msg
 
 !call logger('cell_division')
+ok = .true.
 nlist0 = nlist
 tnow = istep*DELTA_T
 c_rate = log(2.0)/divide_time_mean		! Note: to randomise divide time need to use random number, not mean!
@@ -365,6 +367,7 @@ type (boundary_type), pointer :: bdry
 
 !write(logmsg,*) 'cell_divider: ',kcell0
 !call logger(logmsg)
+ok = .true.
 tnow = istep*DELTA_T
 cell_list(kcell0)%t_divide_last = tnow
 cell_list(kcell0)%volume = cell_list(kcell0)%volume/2
@@ -400,6 +403,9 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 			site01 = freesite(j,:)
 		endif
 		call add_cell(kcell0,kcell1,site01,ok)
+		if (.not.ok) then
+			call logger('Error: add_cell: vacant site')
+		endif
 		Nreuse = Nreuse + 1
 		return
 	endif
@@ -459,7 +465,10 @@ call SetRadius(Nsites)
 !    occupancy(site2(1),site2(2),site2(3))%C(ichemo) = chemo(ichemo)%bdry_conc
 !enddo
 call add_cell(kcell0,kcell1,site01,ok)
-if (.not.ok) return
+if (.not.ok) then
+	call logger('Error: add_cell: pushed site')
+	return
+endif
 
 ! Now need to fix the bdrylist.  
 ! site1 was on the boundary, but may no longer be.
@@ -792,6 +801,7 @@ logical :: ok
 integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
 
+ok = .true.
 tnow = istep*DELTA_T
 !lastID = lastID + 1
 nlist = nlist + 1

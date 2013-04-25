@@ -7,6 +7,7 @@ double concData[4000];
 int conc_nc;
 double conc_dx;
 int MAX_CHEMO;
+int NX, NY, NZ;
 double volProb[100];
 int vol_nv;
 double vol_v0;
@@ -17,9 +18,10 @@ double oxy_dv;
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-Field::Field(QWidget *page2D)
+Field::Field(QWidget *page2D, bool save)
 {
 	field_page = page2D;
+    save_images = save;
     axis = Z_AXIS;
     fraction = 0;
     const_name[OXYGEN] = "Oxygen";
@@ -30,7 +32,6 @@ Field::Field(QWidget *page2D)
     const_name[DRUG_B_METAB] = "Drug B metabolite";
     const_name[GROWTH_RATE] = "Growth rate";
     constituent = OXYGEN;
-//    constituentText = const_name[constituent];
     slice_changed = true;
     setConcPlot(true);
     setVolPlot(true);
@@ -38,6 +39,7 @@ Field::Field(QWidget *page2D)
     pGconc = NULL;
     pGvol = NULL;
     pGoxy = NULL;
+    ifield = 0;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -200,6 +202,13 @@ void Field::setSliceChanged()
 
 //------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------
+void Field::setSaveImages(bool save)
+{
+    save_images = save;
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 void Field::chooseParameters()
 {
 //    chemo_select[0] = 1;
@@ -267,17 +276,19 @@ void Field::chooseParameters()
 
 
 //-----------------------------------------------------------------------------------------
-//
+// New version, site/cell size is fixed, the blob grows
 //-----------------------------------------------------------------------------------------
 void Field::displayField()
 {
 //    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
-    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
+//    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
+    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, CANVAS_WIDTH, CANVAS_WIDTH));
     QBrush brush;
 //    QGraphicsTextItem *text;
-    int i, xindex, yindex, ix, iy, cp, dp, c, rmax, w, xp0, rgbcol[3];
+    int i, xindex, yindex, ix, iy, w, rgbcol[3];
     double xp, yp, d0, d, volume, scale;
-//    double a, b;
+    double a, b, Wc;
+    int Nc = 50;
     bool growthRate;
 
     LOG_MSG("displayField");
@@ -294,6 +305,159 @@ void Field::displayField()
         get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
 		slice_changed = false;
     }
+    LOG_MSG("got field data");
+    if (constituent == GROWTH_RATE)
+        growthRate = true;
+    else
+        growthRate = false;
+
+    // Get picture limits, set size of square
+    // Paint squares
+
+    if (axis == X_AXIS) {           // Y-Z plane
+        xindex = 1;
+        yindex = 2;
+    } else if (axis == Y_AXIS) {   // X-Z plane
+        xindex = 0;
+        yindex = 2;
+    } else if (axis == Z_AXIS) {   // X-Y plane
+        xindex = 0;
+        yindex = 1;
+    }
+
+/*
+ Nc = # of sites to fill the canvas from side to side (or top to bottom)
+ Wc = canvas width (pixels)
+ w = site width = Wc/Nc
+ xp = a.ix + b
+ yp = a.iy + b
+ blob centre at (Nx/2,Nx/2) maps to canvas centre at (Wc/2,Wc/2)
+ => Wc/2 = a.Nx/2 + b
+ The width of Nc sites maps to the canvas width
+ => Wc = a.Nc
+ => a = Wc/Nc, b = Wc/2 - a.Nx/2
+*/
+    Wc = CANVAS_WIDTH;
+    w = Wc/Nc;
+    a = w;
+    b = Wc/2 - a*NX/2;
+    d0 = w;
+    double cmax = 0;
+    for (i=0; i<nsites; i++) {
+        if (growthRate)
+            cmax = MAX(cmax,data[i].dVdt);
+        else
+            cmax = MAX(cmax,data[i].conc[constituent]);
+    }
+
+    /*
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+        xp = int(a*ix + b);
+        yp = int(a*iy + b);
+        if (growthRate) {
+            brush.setColor(QColor(0,0,0));
+        } else {
+            double f = data[i].conc[constituent]/cmax;
+            chooseColor(f,rgbcol);
+            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
+            LOG_MSG(msg);
+        }
+        scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+    }
+    */
+    brush.setStyle(Qt::SolidPattern);
+    brush.setColor(QColor(0,0,0));
+    scene->addRect(0,0,CANVAS_WIDTH,CANVAS_WIDTH,Qt::NoPen, brush);
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+        xp = int(a*ix + b);
+        yp = int(a*iy + b);
+        if (growthRate) {
+            brush.setColor(QColor(0,0,0));
+        } else {
+            double f = data[i].conc[constituent]/cmax;
+            chooseColor(f,rgbcol);
+            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
+            LOG_MSG(msg);
+        }
+        scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+        volume = this->data[i].volume;      // = 0 if there is no cell
+        if (volume > 0) {
+            scale = pow(volume,0.3333);
+            d = scale*d0;   // fix this - need to change d0
+            if (growthRate) {
+//                double f = data[i].conc[constituent]/cmax;
+                double f = data[i].dVdt/cmax;
+                chooseRateColor(f,rgbcol);
+                brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+                sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].dVdt,cmax,f);
+                LOG_MSG(msg);
+            } else {
+                brush.setColor(QColor(0,255,0));
+            }
+            scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
+        }
+    }
+    LOG_MSG("make view");
+    QGraphicsView* view = new QGraphicsView(field_page);
+    view->setScene(scene);
+    view->setGeometry(QRect(0, 0, 700, 700));
+    view->show();
+    LOG_MSG("showed view");
+    if (save_images) {
+        scene->clearSelection();                                                  // Selections would also render to the file
+        scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
+        QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
+        image.fill(Qt::transparent);                                              // Start all pixels transparent
+
+        LOG_MSG("painter");
+        QPainter painter(&image);
+        LOG_MSG("render scene");
+        scene->render(&painter);
+        ifield++;
+        char filename[] = "image/field0000.png";
+        char numstr[5];
+        sprintf(numstr,"%04d",ifield);
+        for (int i=0; i<4; i++)
+            filename[11+i] = numstr[i];
+        image.save(filename);
+    }
+}
+
+//-----------------------------------------------------------------------------------------
+// Old version, blob scaled to fit the window
+//-----------------------------------------------------------------------------------------
+void Field::displayField1()
+{
+//    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
+    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
+    QBrush brush;
+//    QGraphicsTextItem *text;
+    int i, xindex, yindex, ix, iy, cp, dp, c, rmax, w, xp0, rgbcol[3];
+    double xp, yp, d0, d, volume, scale;
+//    double a, b;
+    bool growthRate;
+
+    LOG_MSG("displayField");
+    if (slice_changed) {
+        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
+        sprintf(msg,"nsites: %d",nsites);
+        LOG_MSG(msg);
+        if (nconst != MAX_CONC) {
+            sprintf(msg,"Error: MAX_CONC != MAX_CHEMO in field.h");
+            LOG_MSG(msg);
+            exit(1);
+        }
+        this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
+        get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
+        slice_changed = false;
+    }
+    LOG_MSG("got field data");
     if (constituent == GROWTH_RATE)
         growthRate = true;
     else
@@ -388,13 +552,31 @@ void Field::displayField()
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
         }
     }
-
+    LOG_MSG("make view");
     QGraphicsView* view = new QGraphicsView(field_page);
     view->setScene(scene);
     view->setGeometry(QRect(0, 0, 700, 700));
     view->show();
-}
+    LOG_MSG("showed view");
 
+    scene->clearSelection();                                                  // Selections would also render to the file
+    scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
+    QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
+    image.fill(Qt::transparent);                                              // Start all pixels transparent
+
+    LOG_MSG("painter");
+    QPainter painter(&image);
+    LOG_MSG("render scene");
+    scene->render(&painter);
+    ifield++;
+    char filename[] = "field0000.png";
+    char numstr[5];
+    sprintf(numstr,"%04d",ifield);
+    for (int i=0; i<4; i++)
+        filename[5+i] = numstr[i];
+    image.save(filename);
+
+}
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void Field::chooseColor(double f, int rgbcol[])

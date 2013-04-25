@@ -1429,10 +1429,10 @@ cused(MAX_CHEMO+1) = 1		! Growth rate
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
 rng(axis,:) = Centre(axis) + fraction*Radius
-write(logmsg,*) 'Centre, Radius, axis, fraction: ',Centre, Radius, axis, fraction
-call logger(logmsg)
-write(logmsg,*) 'rng: ',rng
-call logger(logmsg)
+!write(logmsg,*) 'Centre, Radius, axis, fraction: ',Centre, Radius, axis, fraction
+!call logger(logmsg)
+!write(logmsg,*) 'rng: ',rng
+!call logger(logmsg)
 ns = 0
 do z = rng(3,1),rng(3,2)
     do y = rng(2,1),rng(2,2)
@@ -1443,8 +1443,8 @@ do z = rng(3,1),rng(3,2)
         enddo
     enddo
 enddo
-write(logmsg,*) 'get_fieldinfo: ns: ',ns
-call logger(logmsg)
+!write(logmsg,*) 'get_fieldinfo: ns: ',ns
+!call logger(logmsg)
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1459,8 +1459,8 @@ type(FIELD_DATA) :: fdata(*)
 integer rng(3,2), kcell, x, y, z, i, ns
 real(REAL_KIND) :: growthrate
 
-write(logmsg,*) 'get_fielddata: nfdata, nc: ',nfdata, nc
-call logger(logmsg)
+!write(logmsg,*) 'get_fielddata: nfdata, nc: ',nfdata, nc, MAX_CHEMO
+!call logger(logmsg)
 if (nc > MAX_CHEMO) then
 	write(logmsg,*) 'Error: get_fielddata: dimension of conc(MAX_CHEMO) not big enough!'
 	call logger(logmsg)
@@ -1475,6 +1475,7 @@ do z = rng(3,1),rng(3,2)
         do x = rng(1,1),rng(1,2)
             kcell = occupancy(x,y,z)%indx(1)
             if (kcell == OUTSIDE_TAG) cycle
+            write(nflog,*) x,y,z,kcell
             ns = ns + 1
 	        i = ODEdiff%ivar(x,y,z)
             fdata(ns)%site = (/x,y,z/)
@@ -1487,13 +1488,13 @@ do z = rng(3,1),rng(3,2)
                 growthrate = 0
             endif
             fdata(ns)%dVdt = growthrate
-            fdata(ns)%conc(1:MAX_CHEMO) = allstate(i,1:MAX_CHEMO)
+            fdata(ns)%conc(1:MAX_CHEMO) = cell_list(kcell)%conc(1:MAX_CHEMO)		!allstate(i,1:MAX_CHEMO)
 !            fdata(ns)%conc(MAX_CHEMO+1) = growthrate
         enddo
     enddo
 enddo
-write(logmsg,*) 'get_fielddata: ns: ',ns
-call logger(logmsg)
+!write(logmsg,*) 'get_fielddata: ns: ',ns
+!call logger(logmsg)
 if (ns /= nfdata) then
     write(logmsg,*) 'Error: inconsistent nsites: ',nfdata, ns
     call logger(logmsg)
