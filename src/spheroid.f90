@@ -467,8 +467,9 @@ DXmm = 1.0/(Nmm3**(1./3))
 DELTA_X = DXmm/10									! mm -> cm
 Vsite = DELTA_X*DELTA_X*DELTA_X						! total site volume (cm^3)
 Vextra = fluid_fraction*Vsite						! extracellular volume in a site
+cell_radius = (3*(1-fluid_fraction)*Vsite/(4*PI))**(1./3.)
 
-write(logmsg,'(a,e12.4)') 'DELTA_X: ',DELTA_X
+write(logmsg,'(a,2e12.4)') 'DELTA_X, cell_radius: ',DELTA_X,cell_radius
 call logger(logmsg)
 write(logmsg,'(a,3e12.4)') 'Volumes: site, extra, cell (average): ',Vsite, Vextra, Vsite-Vextra
 call logger(logmsg)
@@ -912,11 +913,11 @@ end function
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat, maxchemo, cused) BIND(C)
+subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat, maxchemo, cused, dfraction) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
 use, intrinsic :: iso_c_binding
 integer(c_int) :: NX_dim,NY_dim,NZ_dim,nsteps_dim, maxchemo
-real(c_double) :: deltat
+real(c_double) :: deltat, dfraction
 logical(c_bool) :: cused(*)
 integer :: ichemo
 
@@ -929,6 +930,7 @@ maxchemo = MAX_CHEMO
 do ichemo = 1,MAX_CHEMO
 	cused(ichemo) = chemo(ichemo)%used
 enddo
+dfraction = 2*cell_radius/DELTA_X
 end subroutine
 
 !----------------------------------------------------------------------------------

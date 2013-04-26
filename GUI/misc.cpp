@@ -135,19 +135,11 @@ void ExecThread::run()
 {
 	LOG_MSG("Invoking DLL...");
 	int res=0;
-//    int NX, NY, NZ;
-    int nsumm_interval;
-//    double deltat;
+    int nsumm_interval, hour;
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
     bool cused[16];
-
-    // temporary, until the GUI interface is ready
-//    O2cutoff[0] = 0.1/1000;     // uM -> mM
-//    O2cutoff[1] = 1.0/1000;
-//    O2cutoff[2] = 4.0/1000;
-//    icutoff = 3;
 
 	infile_path = inputFile;
 	QString casename = QFileInfo(inputFile).baseName();
@@ -161,7 +153,7 @@ void ExecThread::run()
 
 	paused = false;
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
-    get_dimensions(&NX,&NY,&NZ,&nsteps,&DELTA_T, &MAX_CHEMO, cused);
+    get_dimensions(&NX,&NY,&NZ,&nsteps,&DELTA_T, &MAX_CHEMO, cused, &dfraction);
     emit setupC(MAX_CHEMO, cused);
     nsumm_interval = (60*60)/DELTA_T;   // number of time steps per hour
 //	sprintf(msg,"exthread: nsteps: %d",nsteps);
@@ -169,8 +161,9 @@ void ExecThread::run()
     mutex1.lock();
     get_summary(summaryData, &icutoff);
     conc_nc = 0;
+    hour = 0;
     mutex1.unlock();
-    emit summary();		// Emit signal to initialise summary plots
+    emit summary(hour);		// Emit signal to initialise summary plots
     for (int i=1; i <= nsteps; i++) {
 		bool updated = false;
 		if (paused && !updated) {
@@ -198,7 +191,8 @@ void ExecThread::run()
             get_oxyprob(&oxy_nv, &oxy_dv, oxyProb);
 //            int iframe = i/nsumm_interval;
             mutex1.unlock();
-            emit summary();		// Emit signal to update summary plots, at hourly intervals
+            hour++;
+            emit summary(hour);		// Emit signal to update summary plots, at hourly intervals
         }
 
         if (stopped) break;

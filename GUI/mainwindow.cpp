@@ -1257,7 +1257,7 @@ void MainWindow::goToInputs()
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(true);
     action_VTK->setEnabled(true);
-//    action_field->setEnabled(true);
+    action_field->setEnabled(true); // was commented
 }
 
 //-------------------------------------------------------------
@@ -1298,7 +1298,7 @@ void MainWindow::goToField()
     action_VTK->setEnabled(true);
     action_field->setEnabled(false);
     showingVTK = 0;
-	field->displayField();
+    field->displayField(hour);
 }
 
 //-------------------------------------------------------------
@@ -1442,9 +1442,9 @@ void MainWindow::runServer()
 		action_save_snapshot->setEnabled(false);
         action_show_gradient3D->setEnabled(false);
         action_show_gradient2D->setEnabled(false);
-        if (!action_field->isEnabled())
-            goToOutputs();
-        action_field->setEnabled(false);
+//        if (!action_field->isEnabled())
+//            goToOutputs();
+//        action_field->setEnabled(false);    // was commented
         paused = false;
         return;
     } else {
@@ -1496,7 +1496,8 @@ void MainWindow::runServer()
 	action_save_snapshot->setEnabled(false);
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
-    action_field->setEnabled(false);
+//    action_field->setEnabled(false);
+    action_field->setEnabled(true);
     tab_tumour->setEnabled(false);
 //    tab_DC->setEnabled(false);
     tab_chemo->setEnabled(false);
@@ -1543,7 +1544,7 @@ void MainWindow::runServer()
 	exthread = new ExecThread(inputFile);
 	connect(exthread, SIGNAL(display()), this, SLOT(displayScene()));
 //    connect(exthread, SIGNAL(displayF()), this, SLOT(displayFld()));
-    connect(exthread, SIGNAL(summary()), this, SLOT(showSummary()));
+    connect(exthread, SIGNAL(summary(int)), this, SLOT(showSummary(int)));
     connect(exthread, SIGNAL(setupC(int,bool *)), this, SLOT(setupConc(int, bool *)));
     exthread->ncpu = ncpu;
 	exthread->nsteps = int(hours*60/DELTA_T);
@@ -1728,7 +1729,7 @@ void MainWindow::displayScene()
 //--------------------------------------------------------------------------------------------------------
 // Currently summaryData[] holds istep,ntot,nborn.  Hourly intervals, i.e. every 240 timesteps
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::showSummary()
+void MainWindow::showSummary(int hr)
 {
     double val;
     LOG_MSG("showSummary");
@@ -1737,10 +1738,10 @@ void MainWindow::showSummary()
 		LOG_MSG("ERROR: step >= nsteps");
 		return;
 	}
-
+    hour = hr;
     exthread->mutex1.lock();
 
-    hour = summaryData[0]*DELTA_T/(60*60);
+//    hour = summaryData[0]*DELTA_T/(60*60);
 //    hour = summaryData[1]*DELTA_T/60;
 
     progress = int(100.*hour/hours);
@@ -1776,7 +1777,7 @@ void MainWindow::showSummary()
         pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
     }
     field->setSliceChanged();
-    field->displayField();
+    field->displayField(hour);
 
     exthread->mutex1.unlock();
 }

@@ -8,6 +8,7 @@ int conc_nc;
 double conc_dx;
 int MAX_CHEMO;
 int NX, NY, NZ;
+double dfraction;
 double volProb[100];
 int vol_nv;
 double vol_v0;
@@ -40,6 +41,7 @@ Field::Field(QWidget *page2D, bool save)
     pGvol = NULL;
     pGoxy = NULL;
     ifield = 0;
+    view = new QGraphicsView(field_page);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -148,7 +150,7 @@ void Field::setConstituent(QAbstractButton *button)
         constituent = GROWTH_RATE;
     if (constituent != prev_constituent) {
 		constituent_changed = true;
-		displayField();
+        displayField(hour);
 	}
 //    constituentText = const_name[constituent];
 }
@@ -176,7 +178,7 @@ void Field::setPlane(QAbstractButton *button)
         axis = Y_AXIS;
 	if (axis != prev_axis) {
 		slice_changed = true;
-		displayField();
+        displayField(hour);
 	}
 }
 
@@ -189,7 +191,7 @@ void Field::setFraction(QString text)
 	fraction = text.toDouble();
 	if (fraction != prev_fraction) {
 		slice_changed = true;
-		displayField();
+        displayField(hour);
 	}
 }
 
@@ -278,13 +280,10 @@ void Field::chooseParameters()
 //-----------------------------------------------------------------------------------------
 // New version, site/cell size is fixed, the blob grows
 //-----------------------------------------------------------------------------------------
-void Field::displayField()
+void Field::displayField(int hr)
 {
-//    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
-//    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, CANVAS_WIDTH, CANVAS_WIDTH));
     QBrush brush;
-//    QGraphicsTextItem *text;
     int i, xindex, yindex, ix, iy, w, rgbcol[3];
     double xp, yp, d0, d, volume, scale;
     double a, b, Wc;
@@ -292,10 +291,9 @@ void Field::displayField()
     bool growthRate;
 
     LOG_MSG("displayField");
+    hour = hr;
 	if (slice_changed) {
         get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
-		sprintf(msg,"nsites: %d",nsites);
-		LOG_MSG(msg);
         if (nconst != MAX_CONC) {
             sprintf(msg,"Error: MAX_CONC != MAX_CHEMO in field.h");
             LOG_MSG(msg);
@@ -305,14 +303,10 @@ void Field::displayField()
         get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
 		slice_changed = false;
     }
-    LOG_MSG("got field data");
     if (constituent == GROWTH_RATE)
         growthRate = true;
     else
         growthRate = false;
-
-    // Get picture limits, set size of square
-    // Paint squares
 
     if (axis == X_AXIS) {           // Y-Z plane
         xindex = 1;
@@ -341,7 +335,7 @@ void Field::displayField()
     w = Wc/Nc;
     a = w;
     b = Wc/2 - a*NX/2;
-    d0 = w;
+    d0 = w*dfraction;
     double cmax = 0;
     for (i=0; i<nsites; i++) {
         if (growthRate)
@@ -350,40 +344,22 @@ void Field::displayField()
             cmax = MAX(cmax,data[i].conc[constituent]);
     }
 
-    /*
-    for (i=0; i<nsites; i++) {
-        ix = this->data[i].site[xindex];
-        iy = this->data[i].site[yindex];
-        xp = int(a*ix + b);
-        yp = int(a*iy + b);
-        if (growthRate) {
-            brush.setColor(QColor(0,0,0));
-        } else {
-            double f = data[i].conc[constituent]/cmax;
-            chooseColor(f,rgbcol);
-            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
-            LOG_MSG(msg);
-        }
-        scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
-    }
-    */
     brush.setStyle(Qt::SolidPattern);
     brush.setColor(QColor(0,0,0));
     scene->addRect(0,0,CANVAS_WIDTH,CANVAS_WIDTH,Qt::NoPen, brush);
     for (i=0; i<nsites; i++) {
         ix = this->data[i].site[xindex];
         iy = this->data[i].site[yindex];
-        xp = int(a*ix + b);
-        yp = int(a*iy + b);
+        xp = int(a*ix + b - w/2);
+        yp = int(a*iy + b - w/2);
         if (growthRate) {
             brush.setColor(QColor(0,0,0));
         } else {
             double f = data[i].conc[constituent]/cmax;
             chooseColor(f,rgbcol);
             brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
-            LOG_MSG(msg);
+//            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
+//            LOG_MSG(msg);
         }
         scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
         volume = this->data[i].volume;      // = 0 if there is no cell
@@ -395,34 +371,30 @@ void Field::displayField()
                 double f = data[i].dVdt/cmax;
                 chooseRateColor(f,rgbcol);
                 brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-                sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].dVdt,cmax,f);
-                LOG_MSG(msg);
+//                sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].dVdt,cmax,f);
+//                LOG_MSG(msg);
             } else {
                 brush.setColor(QColor(0,255,0));
             }
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
         }
     }
-    LOG_MSG("make view");
-    QGraphicsView* view = new QGraphicsView(field_page);
     view->setScene(scene);
     view->setGeometry(QRect(0, 0, 700, 700));
+//    view->setGeometry(QRect(0, 0, CANVAS_WIDTH+4, CANVAS_WIDTH+4));
     view->show();
-    LOG_MSG("showed view");
     if (save_images) {
         scene->clearSelection();                                                  // Selections would also render to the file
         scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
         QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
         image.fill(Qt::transparent);                                              // Start all pixels transparent
 
-        LOG_MSG("painter");
         QPainter painter(&image);
-        LOG_MSG("render scene");
         scene->render(&painter);
         ifield++;
         char filename[] = "image/field0000.png";
         char numstr[5];
-        sprintf(numstr,"%04d",ifield);
+        sprintf(numstr,"%04d",hour);
         for (int i=0; i<4; i++)
             filename[11+i] = numstr[i];
         image.save(filename);

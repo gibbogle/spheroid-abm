@@ -46,7 +46,7 @@ public:
     Field(QWidget *, bool);
     ~Field();
     void chooseParameters();
-	void displayField();
+    void displayField(int);
     void displayField1();
     void setSliceChanged();
     void chooseColor(double fr, int rgbcol[]);
@@ -70,9 +70,11 @@ public:
 
     QWidget *field_page;
     bool save_images;
+    QGraphicsView* view;
     int NX;
     int axis;
     double fraction;
+    int hour;
     int ifield;
     int nsites, nconst, const_used[16];
     QString const_name[16];

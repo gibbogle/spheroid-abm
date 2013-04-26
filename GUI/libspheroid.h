@@ -9,7 +9,7 @@ extern "C" {
 void execute(int *,char *, int *,char *, int *);
 void simulate_step(int *);
 void terminate_run(int *);
-void get_dimensions(int *,int *,int *, int *, double *, int *, bool *);
+void get_dimensions(int *,int *,int *, int *, double *, int *, bool *, double *);
 void get_scene(int *, int *);
 void get_summary(int *, int *);
 void get_concdata(int *, double *, double *);
