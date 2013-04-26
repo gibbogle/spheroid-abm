@@ -52,6 +52,7 @@ public:
 	void pause();
 	void unpause();
 	void stop();
+    void wait_to_go();
     int ncpu;
 	int nsteps;
 	bool paused;

@@ -1291,6 +1291,7 @@ void MainWindow::goToVTK()
 //-------------------------------------------------------------
 void MainWindow::goToField()
 {
+    int res;
     stackedWidget->setCurrentIndex(3);
     action_outputs->setEnabled(true);
     action_inputs->setEnabled(true);
@@ -1299,7 +1300,10 @@ void MainWindow::goToField()
     action_field->setEnabled(false);
     showingVTK = 0;
     LOG_MSG("goToField");
-    field->displayField(hour);
+//    field->displayField(hour,&res);
+//    if (res != 0) {
+//        stopServer();
+//    }
 }
 
 //-------------------------------------------------------------
@@ -1733,10 +1737,12 @@ void MainWindow::displayScene()
 void MainWindow::showSummary(int hr)
 {
     double val;
-    LOG_MSG("showSummary");
+    int res;
+//    LOG_MSG("showSummary");
 	step++;
     if (step >= newR->nsteps) {
 		LOG_MSG("ERROR: step >= nsteps");
+        stopServer();
 		return;
 	}
     hour = hr;
@@ -1778,9 +1784,12 @@ void MainWindow::showSummary(int hr)
         pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
     }
     field->setSliceChanged();
-    LOG_MSG("showSummary");
-    field->displayField(hour);
-
+    field->displayField(hour,&res);
+    if (res != 0) {
+        sprintf(msg,"displayField returned res: %d",res);
+        LOG_MSG(msg);
+        stopServer();
+    }
     exthread->mutex1.unlock();
 }
 //--------------------------------------------------------------------------------------------------------

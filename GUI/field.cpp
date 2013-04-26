@@ -97,11 +97,11 @@ void Field::setOxyPlot(bool status)
 //------------------------------------------------------------------------------------------------
 void Field::selectConstituent()
 {
-    int iconst;
+    int iconst, res;
     QStringList items;
 
     LOG_MSG("selectConstituent");
-    get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
+    get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, &res);
     for (iconst=0; iconst<MAX_CONC+1; iconst++) {
         if (iconst == constituent) continue;
         if (const_used[iconst] == 1) {
@@ -128,6 +128,7 @@ void Field::selectConstituent()
 //------------------------------------------------------------------------------------------------
 void Field::setConstituent(QAbstractButton *button)
 {
+    int res;
 //    QMessageBox msgBox;
 //    msgBox.setText("setConstituent");
 //    msgBox.exec();
@@ -152,7 +153,7 @@ void Field::setConstituent(QAbstractButton *button)
     if (constituent != prev_constituent) {
 		constituent_changed = true;
         LOG_MSG("setConstituent");
-        displayField(hour);
+        displayField(hour,&res);
 	}
 //    constituentText = const_name[constituent];
 }
@@ -161,6 +162,7 @@ void Field::setConstituent(QAbstractButton *button)
 //------------------------------------------------------------------------------------------------
 void Field::setPlane(QAbstractButton *button)
 {
+    int res;
 //    QMessageBox msgBox;
 //    msgBox.setText("setPlane");
 //    msgBox.exec();
@@ -181,7 +183,7 @@ void Field::setPlane(QAbstractButton *button)
 	if (axis != prev_axis) {
         slice_changed = true;
         LOG_MSG("setPlane");
-        displayField(hour);
+        displayField(hour,&res);
 	}
 }
 
@@ -189,13 +191,14 @@ void Field::setPlane(QAbstractButton *button)
 //------------------------------------------------------------------------------------------------
 void Field::setFraction(QString text)
 {
+    int res;
 	double prev_fraction = fraction;
     LOG_MSG("setFraction");
 	fraction = text.toDouble();
 	if (fraction != prev_fraction) {
 //		slice_changed = true;
         LOG_MSG("setFraction");
-        displayField(hour);
+        displayField(hour,&res);
 	}
 }
 
@@ -284,7 +287,7 @@ void Field::chooseParameters()
 //-----------------------------------------------------------------------------------------
 // New version, site/cell size is fixed, the blob grows
 //-----------------------------------------------------------------------------------------
-void Field::displayField(int hr)
+void Field::displayField(int hr, int *res)
 {
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, CANVAS_WIDTH, CANVAS_WIDTH));
     QBrush brush;
@@ -294,20 +297,22 @@ void Field::displayField(int hr)
     int Nc = 50;
     bool growthRate;
 
-    LOG_MSG("displayField");
+//    LOG_MSG("displayField");
+    *res = 0;
     hour = hr;
 	if (slice_changed) {
 //        LOG_MSG("get_fieldinfo");
-        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
-        if (nconst != MAX_CONC) {
-            sprintf(msg,"Error: MAX_CONC != MAX_CHEMO in field.h");
-            LOG_MSG(msg);
-            exit(1);
-        }
+        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, res);
+//        sprintf(msg,"get_fieldinfo returned res: %d",*res);
+//        LOG_MSG(msg);
+        if (*res != 0) return;
         this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
 //        LOG_MSG("get_fielddata");
-        get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
-		slice_changed = false;
+        get_fielddata(&axis, &fraction, &nsites, &nconst, this->data, res);
+//        sprintf(msg,"get_fielddata returned res: %d",*res);
+//        LOG_MSG(msg);
+        if (*res != 0) return;
+        slice_changed = false;
 //        LOG_MSG("got_fielddata");
     }
     goflag = true;
@@ -414,6 +419,7 @@ void Field::displayField(int hr)
 //-----------------------------------------------------------------------------------------
 void Field::displayField1()
 {
+    int res;
 //    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
     QBrush brush;
@@ -425,7 +431,7 @@ void Field::displayField1()
 
     LOG_MSG("displayField");
     if (slice_changed) {
-        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
+        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, &res);
         sprintf(msg,"nsites: %d",nsites);
         LOG_MSG(msg);
         if (nconst != MAX_CONC) {
@@ -434,7 +440,7 @@ void Field::displayField1()
             exit(1);
         }
         this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
-        get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
+        get_fielddata(&axis, &fraction, &nsites, &nconst, this->data, &res);
         slice_changed = false;
     }
     LOG_MSG("got field data");
@@ -618,15 +624,15 @@ void Field::updateConcPlot()
     double dx, x[1000], y[1000], *conc, cmax;
     QString title = "Concentration";
 
-    LOG_MSG("UpdateConcPlot");
+//    LOG_MSG("UpdateConcPlot");
 //    get_concdata(&nc, &dx, conc);
     dx = conc_dx;
     nc = conc_nc;
     conc = concData;
     if (nc == 0) return;
     nmu = int(nc*dx*1.0e4);
-    sprintf(msg,"updateConcPlot: %d %f %d %d",nc,dx,nmu,MAX_CHEMO);
-    LOG_MSG(msg);
+//    sprintf(msg,"updateConcPlot: %d %f %d %d",nc,dx,nmu,MAX_CHEMO);
+//    LOG_MSG(msg);
     if (constituent < MAX_CHEMO) {
         getTitle(&title);
     } else {
@@ -676,12 +682,12 @@ void Field::updateVolPlot()
     int i;
     double x[100], y[100], *prob, pmax, v1, v2;
 
-    LOG_MSG("UpdateVolPlot");
+//    LOG_MSG("UpdateVolPlot");
     prob = volProb;
     v1 = vol_v0 - vol_dv/2;
     v2 = vol_v0 + (vol_nv-0.5)*vol_dv;
-    sprintf(msg,"updateVolPlot: %d %f %f %f %f",vol_nv,vol_dv,vol_v0, v1, v2);
-    LOG_MSG(msg);
+//    sprintf(msg,"updateVolPlot: %d %f %f %f %f",vol_nv,vol_dv,vol_v0, v1, v2);
+//    LOG_MSG(msg);
     pGvol->setAxisScale(QwtPlot::xBottom, v1, v2, 0);
     QPen *pen = new QPen();
     QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };

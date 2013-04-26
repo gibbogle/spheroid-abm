@@ -164,6 +164,7 @@ void ExecThread::run()
     hour = 0;
     mutex1.unlock();
     emit summary(hour);		// Emit signal to initialise summary plots
+    wait_to_go();
     for (int i=1; i <= nsteps; i++) {
 		bool updated = false;
 		if (paused && !updated) {
@@ -193,11 +194,7 @@ void ExecThread::run()
             goflag = false;
             hour++;
             emit summary(hour);		// Emit signal to update summary plots, at hourly intervals
-
-            for (;;) {
-                sprintf(msg,"waiting");
-                if (goflag || stopped) break;
-            }
+            wait_to_go();
         }
 
         if (stopped) break;
@@ -218,6 +215,16 @@ void ExecThread::run()
 	terminate_run(&res);
 
 	return;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::wait_to_go()
+{
+    for (;;) {
+        sprintf(msg,"waiting");
+        if (goflag || stopped) break;
+    }
 }
 
 //-----------------------------------------------------------------------------------------

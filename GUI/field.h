@@ -35,8 +35,8 @@ typedef field_data FIELD_DATA;
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 extern "C" {
-    void get_fieldinfo(int *, int *, double *, int *, int *, int *);
-    void get_fielddata(int *, double *, int *, int *, FIELD_DATA *);
+    void get_fieldinfo(int *, int *, double *, int *, int *, int *, int *);
+    void get_fielddata(int *, double *, int *, int *, FIELD_DATA *, int *);
 //    void get_concdata(int *, double *, double *);
 }
 
@@ -46,7 +46,7 @@ public:
     Field(QWidget *, bool);
     ~Field();
     void chooseParameters();
-    void displayField(int);
+    void displayField(int, int *);
     void displayField1();
     void setSliceChanged();
     void chooseColor(double fr, int rgbcol[]);
