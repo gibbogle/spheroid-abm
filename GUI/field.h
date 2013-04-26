@@ -49,7 +49,7 @@ public:
     void displayField(int, int *);
     void displayField1();
     void setSliceChanged();
-    void chooseColor(double fr, int rgbcol[]);
+    void chooseFieldColor(double c, double cmax, bool use_log, int rgbcol[]);
     void chooseRateColor(double fr, int rgbcol[]);
     void getTitle(QString *);
     bool isConcPlot();
