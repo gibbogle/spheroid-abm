@@ -35,5 +35,6 @@ extern bool leftb;
 extern double DELTA_T;
 extern double dfraction;
 extern int icutoff;
+extern bool goflag;
 
 #endif // TRANSFER_H

@@ -189,10 +189,15 @@ void ExecThread::run()
             get_concdata(&conc_nc, &conc_dx, concData);
             get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
             get_oxyprob(&oxy_nv, &oxy_dv, oxyProb);
-//            int iframe = i/nsumm_interval;
             mutex1.unlock();
+            goflag = false;
             hour++;
             emit summary(hour);		// Emit signal to update summary plots, at hourly intervals
+
+            for (;;) {
+                sprintf(msg,"waiting");
+                if (goflag || stopped) break;
+            }
         }
 
         if (stopped) break;
