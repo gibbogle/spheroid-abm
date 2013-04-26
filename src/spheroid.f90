@@ -1411,13 +1411,15 @@ end subroutine
 !--------------------------------------------------------------------------------
 ! Note: axis = 0,1,2
 !--------------------------------------------------------------------------------
-subroutine get_fieldinfo(nxx, axis, fraction, ns, nc, cused) BIND(C)
+subroutine get_fieldinfo(nxx, axis, fraction, ns, nc, cused, res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_fieldinfo
 use, intrinsic :: iso_c_binding
-integer(c_int) :: nxx, axis, ns, nc, cused(*)
+integer(c_int) :: nxx, axis, ns, nc, cused(*), res
 real(c_double) :: fraction
 integer rng(3,2), ichemo, kcell, x, y, z
 
+!call logger('get_fieldinfo')
+res = 0
 nxx = NX
 nc = MAX_CHEMO
 do ichemo = 1,MAX_CHEMO
@@ -1452,21 +1454,23 @@ end subroutine
 !--------------------------------------------------------------------------------
 ! Need to transmit medium concentration data.  This could be a separate subroutine.
 !--------------------------------------------------------------------------------
-subroutine get_fielddata(axis, fraction, nfdata, nc, fdata) BIND(C)
+subroutine get_fielddata(axis, fraction, nfdata, nc, fdata, res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_fielddata
 use, intrinsic :: iso_c_binding
 real(c_double) :: fraction
-integer(c_int) :: axis, nc, nfdata
+integer(c_int) :: axis, nc, nfdata, res
 type(FIELD_DATA) :: fdata(*)
 integer rng(3,2), kcell, x, y, z, i, ns
 real(REAL_KIND) :: growthrate
 
 !write(logmsg,*) 'get_fielddata: nfdata, nc: ',nfdata, nc, MAX_CHEMO
 !call logger(logmsg)
+res = 0
 if (nc > MAX_CHEMO) then
 	write(logmsg,*) 'Error: get_fielddata: dimension of conc(MAX_CHEMO) not big enough!'
 	call logger(logmsg)
-	stop
+	res = 1
+	return
 endif
 rng(:,1) = Centre(:) - (Radius + 2)
 rng(:,2) = Centre(:) + (Radius + 2)
@@ -1490,7 +1494,7 @@ do z = rng(3,1),rng(3,2)
                 growthrate = 0
             endif
             fdata(ns)%dVdt = growthrate
-            fdata(ns)%conc(1:MAX_CHEMO) = cell_list(kcell)%conc(1:MAX_CHEMO)		!allstate(i,1:MAX_CHEMO)
+            fdata(ns)%conc(1:MAX_CHEMO) = allstate(i,1:MAX_CHEMO)	! cell_list(kcell)%conc(1:MAX_CHEMO)
 !            fdata(ns)%conc(MAX_CHEMO+1) = growthrate
         enddo
     enddo
@@ -1500,7 +1504,8 @@ enddo
 if (ns /= nfdata) then
     write(logmsg,*) 'Error: inconsistent nsites: ',nfdata, ns
     call logger(logmsg)
-    stop
+    res = 2
+    return
 endif
 
 end subroutine
