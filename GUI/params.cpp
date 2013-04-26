@@ -34,7 +34,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Division time shape parameter",
 "The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters."},
 
-{"V_DEPENDENT_GROWTH_RATE", 1, 0, 1,
+{"V_DEPENDENT_GROWTH_RATE", 0, 0, 1,
 "V-dependent growth rate",
 "The growth rate of a cell is proportional to the volume."},
 
@@ -123,7 +123,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Diffusion coeff",
  "Constituent diffusion coefficient"},
 
-{"OXYGEN_CELL_DIFF", 200, 0, 0,
+{"OXYGEN_CELL_DIFF", 20, 0, 0,
  "Membrane diff coef",
  "Cell membrane diffusion coefficient Kd"},
 
@@ -279,7 +279,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Hypoxia threshold 3",
 "Hypoxia threshold 3"},
 
-{"SPCRAD", 500.0, 0, 0,
+{"SPCRAD", 200.0, 0, 0,
 "Spectral radius",
 "Spectral radius value used by RKC solver"},
 

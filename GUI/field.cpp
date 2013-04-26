@@ -292,10 +292,11 @@ void Field::displayField(int hr, int *res)
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, CANVAS_WIDTH, CANVAS_WIDTH));
     QBrush brush;
     int i, xindex, yindex, ix, iy, w, rgbcol[3];
-    double xp, yp, d0, d, volume, scale;
+    double xp, yp, d0, d, volume, scale, cmax, rmax;
     double a, b, Wc;
     int Nc = 50;
     bool growthRate;
+    bool use_log;
 
 //    LOG_MSG("displayField");
     *res = 0;
@@ -333,30 +334,31 @@ void Field::displayField(int hr, int *res)
     }
 
 /*
+ NX = size of lattice
  Nc = # of sites to fill the canvas from side to side (or top to bottom)
  Wc = canvas width (pixels)
  w = site width = Wc/Nc
  xp = a.ix + b
  yp = a.iy + b
- blob centre at (Nx/2,Nx/2) maps to canvas centre at (Wc/2,Wc/2)
- => Wc/2 = a.Nx/2 + b
+ blob centre at (NX/2,NX/2) maps to canvas centre at (Wc/2,Wc/2)
+ => Wc/2 = a.NX/2 + b
  The width of Nc sites maps to the canvas width
  => Wc = a.Nc
- => a = Wc/Nc, b = Wc/2 - a.Nx/2
+ => a = Wc/Nc, b = Wc/2 - a.NX/2
 */
     Wc = CANVAS_WIDTH;
     w = Wc/Nc;
     a = w;
     b = Wc/2 - a*NX/2;
     d0 = w*dfraction;
-    double cmax = 0;
+    cmax = 0;
+    rmax = 0;
     for (i=0; i<nsites; i++) {
-        if (growthRate)
-            cmax = MAX(cmax,data[i].dVdt);
-        else
-            cmax = MAX(cmax,data[i].conc[constituent]);
+        rmax = MAX(rmax,data[i].dVdt);
+        cmax = MAX(cmax,data[i].conc[constituent]);
     }
 //    LOG_MSG("got cmax");
+    use_log = false;
     brush.setStyle(Qt::SolidPattern);
     brush.setColor(QColor(0,0,0));
     scene->addRect(0,0,CANVAS_WIDTH,CANVAS_WIDTH,Qt::NoPen, brush);
@@ -365,30 +367,33 @@ void Field::displayField(int hr, int *res)
         iy = this->data[i].site[yindex];
         xp = int(a*ix + b - w/2);
         yp = int(a*iy + b - w/2);
-        if (growthRate) {
-            brush.setColor(QColor(0,0,0));
-        } else {
-            double f = data[i].conc[constituent]/cmax;
-            chooseColor(f,rgbcol);
-            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-//            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
-//            LOG_MSG(msg);
-        }
+//        double f = data[i].conc[constituent]/cmax;
+//        chooseFieldColor(f,rgbcol);
+        chooseFieldColor(data[i].conc[constituent],cmax,use_log,rgbcol);
+        brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+//        sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
+//        LOG_MSG(msg);
         scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+    }
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+        xp = int(a*ix + b - w/2);
+        yp = int(a*iy + b - w/2);
         volume = this->data[i].volume;      // = 0 if there is no cell
         if (volume > 0) {
             scale = pow(volume,0.3333);
             d = scale*d0;   // fix this - need to change d0
-            if (growthRate) {
+//            if (growthRate) {
 //                double f = data[i].conc[constituent]/cmax;
-                double f = data[i].dVdt/cmax;
+                double f = data[i].dVdt/rmax;
                 chooseRateColor(f,rgbcol);
                 brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
 //                sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].dVdt,cmax,f);
 //                LOG_MSG(msg);
-            } else {
-                brush.setColor(QColor(0,255,0));
-            }
+//            } else {
+//                brush.setColor(QColor(0,255,0));
+//            }
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
         }
     }
@@ -414,165 +419,20 @@ void Field::displayField(int hr, int *res)
     }
 }
 
+
 //-----------------------------------------------------------------------------------------
-// Old version, blob scaled to fit the window
 //-----------------------------------------------------------------------------------------
-void Field::displayField1()
+void Field::chooseFieldColor(double c, double cmax, bool use_log, int rgbcol[])
 {
-    int res;
-//    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
-    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
-    QBrush brush;
-//    QGraphicsTextItem *text;
-    int i, xindex, yindex, ix, iy, cp, dp, c, rmax, w, xp0, rgbcol[3];
-    double xp, yp, d0, d, volume, scale;
-//    double a, b;
-    bool growthRate;
+    double f;
+    int rgb_lo[3], rgb_hi[3], i;
 
-    LOG_MSG("displayField");
-    if (slice_changed) {
-        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, &res);
-        sprintf(msg,"nsites: %d",nsites);
-        LOG_MSG(msg);
-        if (nconst != MAX_CONC) {
-            sprintf(msg,"Error: MAX_CONC != MAX_CHEMO in field.h");
-            LOG_MSG(msg);
-            exit(1);
-        }
-        this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
-        get_fielddata(&axis, &fraction, &nsites, &nconst, this->data, &res);
-        slice_changed = false;
-    }
-    LOG_MSG("got field data");
-    if (constituent == GROWTH_RATE)
-        growthRate = true;
-    else
-        growthRate = false;
-
-    // Get picture limits, set size of square
-    // Paint squares
-
-    if (axis == X_AXIS) {           // Y-Z plane
-        xindex = 1;
-        yindex = 2;
-    } else if (axis == Y_AXIS) {   // X-Z plane
-        xindex = 0;
-        yindex = 2;
-    } else if (axis == Z_AXIS) {   // X-Y plane
-        xindex = 0;
-        yindex = 1;
-    }
-    c = NX/2;     // Centre is at (c,c)
-    rmax = 0;
-    for (i=0; i<nsites; i++) {
-        ix = this->data[i].site[xindex];
-        iy = this->data[i].site[yindex];
-//        sprintf(msg,"%d %d %d %d %d %d %d",i,ix,iy,ix-c,c+1-ix,iy-c,c+1-iy);
-//        LOG_MSG(msg);
-        rmax = MAX(rmax,ix - c);
-        rmax = MAX(rmax,c+1 - ix);
-        rmax = MAX(rmax,iy - c);
-        rmax = MAX(rmax,c+1 - iy);
-    }
-    // rmax is the max number of site squares on any side of the centre (c,c) where c = NX/2
-    // and each site square has width=1, and the site with ix extends from ix-1 to ix (etc.)
-    cp = CANVAS_WIDTH/2;
-    dp = int(0.95*CANVAS_WIDTH);
-    w = int(dp/(2*rmax));  // width of mapped site square on canvas in pixels
-    sprintf(msg,"constituent, NX,c,rmax,cp,dp,w: %d %d %d %d %d %d %d",constituent,NX,c,rmax,cp,dp,w);
-    LOG_MSG(msg);
-    // Blob slice is assumed to extend from c-rmax to c+rmax in both directions.
-    // Note that a site square has a width = 1, i.e. extends (-0.5, 0.5) about the nominal position.
-    // This must fit into a canvas of width and height = CANVAS_WIDTH
-//    a = (dp - cp)/(2*rmax - c);
-//    b = cp - a*c;
-    // A site square at (ix,iy) maps to a canvas square of size (w,w) with:
-    // (xp,yp)at (xp0 + (ix-1)*w, xp0 + (iy-1)*w) (presumably this is flipped in the y, i.e. about x axis)
-    // where xp0 = cp - rmax*w
-    xp0 = cp - rmax*w;
-    d0 = w;
-    double cmax = 0;
-    for (i=0; i<nsites; i++) {
-        if (growthRate)
-            cmax = MAX(cmax,data[i].dVdt);
-        else
-            cmax = MAX(cmax,data[i].conc[constituent]);
-    }
-
-    brush.setStyle(Qt::SolidPattern);
-    for (i=0; i<nsites; i++) {
-        ix = this->data[i].site[xindex];
-        iy = this->data[i].site[yindex];
-        xp = cp + (ix-c)*w;
-        yp = cp + (iy-1-c)*w;
-        if (growthRate) {
-            brush.setColor(QColor(0,0,0));
-        } else {
-            double f = data[i].conc[constituent]/cmax;
-            chooseColor(f,rgbcol);
-            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
-            LOG_MSG(msg);
-        }
-        scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
-    }
-    for (i=0; i<nsites; i++) {
-        ix = this->data[i].site[xindex];
-        iy = this->data[i].site[yindex];
-        xp = cp + (ix-c)*w;
-        yp = cp + (iy-1-c)*w;
-        volume = this->data[i].volume;      // = 0 if there is no cell
-        if (volume > 0) {
-            scale = pow(volume,0.3333);
-            d = scale*d0;
-            if (growthRate) {
-//                double f = data[i].conc[constituent]/cmax;
-                double f = data[i].dVdt/cmax;
-                chooseRateColor(f,rgbcol);
-                brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-                sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].dVdt,cmax,f);
-                LOG_MSG(msg);
-            } else {
-                brush.setColor(QColor(0,255,0));
-            }
-            scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
-        }
-    }
-    LOG_MSG("make view");
-    QGraphicsView* view = new QGraphicsView(field_page);
-    view->setScene(scene);
-    view->setGeometry(QRect(0, 0, 700, 700));
-    view->show();
-    LOG_MSG("showed view");
-
-    scene->clearSelection();                                                  // Selections would also render to the file
-    scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
-    QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
-    image.fill(Qt::transparent);                                              // Start all pixels transparent
-
-    LOG_MSG("painter");
-    QPainter painter(&image);
-    LOG_MSG("render scene");
-    scene->render(&painter);
-    ifield++;
-    char filename[] = "field0000.png";
-    char numstr[5];
-    sprintf(numstr,"%04d",ifield);
-    for (int i=0; i<4; i++)
-        filename[5+i] = numstr[i];
-    image.save(filename);
-
-}
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void Field::chooseColor(double f, int rgbcol[])
-{
-    if (const_used[constituent] == 1) {
-        rgbcol[2] = int((1-f)*255);
-        rgbcol[1] = 0;
-        rgbcol[0] = int(f*255);
-    } else {
-        rgbcol[0] = rgbcol[1] = rgbcol[2] = 255;
+    f = c/cmax;
+    if (constituent == OXYGEN) {
+        rgb_hi[0] =   0; rgb_hi[1] =   0; rgb_hi[2] = 0;
+        rgb_lo[0] = 255; rgb_lo[1] = 128; rgb_lo[2] = 0;
+        for (i=0; i<3; i++)
+            rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
     }
 }
 
@@ -580,13 +440,12 @@ void Field::chooseColor(double f, int rgbcol[])
 //-----------------------------------------------------------------------------------------
 void Field::chooseRateColor(double f, int rgbcol[])
 {
-    if (const_used[constituent] == 1) {
-        rgbcol[2] = int((1-f)*255);
-        rgbcol[1] = 0;
-        rgbcol[0] = int(f*255);
-    } else {
-        rgbcol[0] = rgbcol[1] = rgbcol[2] = 255;
-    }
+    int rgb_lo[3], rgb_hi[3], i;
+
+    rgb_hi[0] = 0; rgb_hi[1] = 255; rgb_hi[2] = 0;
+    rgb_lo[0] = 0; rgb_lo[1] =  64; rgb_lo[2] = 0;
+    for (i=0; i<3; i++)
+        rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -766,3 +625,152 @@ void Field::updateOxyPlot()
     delete pen;
 }
 
+//-----------------------------------------------------------------------------------------
+// Old version, blob scaled to fit the window
+//-----------------------------------------------------------------------------------------
+void Field::displayField1()
+{
+    int res;
+//    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
+    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 690, 690));
+    QBrush brush;
+//    QGraphicsTextItem *text;
+    int i, xindex, yindex, ix, iy, cp, dp, c, rmax, w, xp0, rgbcol[3];
+    double xp, yp, d0, d, volume, scale;
+//    double a, b;
+    bool growthRate;
+
+    LOG_MSG("displayField");
+    if (slice_changed) {
+        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, &res);
+        sprintf(msg,"nsites: %d",nsites);
+        LOG_MSG(msg);
+        if (nconst != MAX_CONC) {
+            sprintf(msg,"Error: MAX_CONC != MAX_CHEMO in field.h");
+            LOG_MSG(msg);
+            exit(1);
+        }
+        this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
+        get_fielddata(&axis, &fraction, &nsites, &nconst, this->data, &res);
+        slice_changed = false;
+    }
+    LOG_MSG("got field data");
+    if (constituent == GROWTH_RATE)
+        growthRate = true;
+    else
+        growthRate = false;
+
+    // Get picture limits, set size of square
+    // Paint squares
+
+    if (axis == X_AXIS) {           // Y-Z plane
+        xindex = 1;
+        yindex = 2;
+    } else if (axis == Y_AXIS) {   // X-Z plane
+        xindex = 0;
+        yindex = 2;
+    } else if (axis == Z_AXIS) {   // X-Y plane
+        xindex = 0;
+        yindex = 1;
+    }
+    c = NX/2;     // Centre is at (c,c)
+    rmax = 0;
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+//        sprintf(msg,"%d %d %d %d %d %d %d",i,ix,iy,ix-c,c+1-ix,iy-c,c+1-iy);
+//        LOG_MSG(msg);
+        rmax = MAX(rmax,ix - c);
+        rmax = MAX(rmax,c+1 - ix);
+        rmax = MAX(rmax,iy - c);
+        rmax = MAX(rmax,c+1 - iy);
+    }
+    // rmax is the max number of site squares on any side of the centre (c,c) where c = NX/2
+    // and each site square has width=1, and the site with ix extends from ix-1 to ix (etc.)
+    cp = CANVAS_WIDTH/2;
+    dp = int(0.95*CANVAS_WIDTH);
+    w = int(dp/(2*rmax));  // width of mapped site square on canvas in pixels
+    sprintf(msg,"constituent, NX,c,rmax,cp,dp,w: %d %d %d %d %d %d %d",constituent,NX,c,rmax,cp,dp,w);
+    LOG_MSG(msg);
+    // Blob slice is assumed to extend from c-rmax to c+rmax in both directions.
+    // Note that a site square has a width = 1, i.e. extends (-0.5, 0.5) about the nominal position.
+    // This must fit into a canvas of width and height = CANVAS_WIDTH
+//    a = (dp - cp)/(2*rmax - c);
+//    b = cp - a*c;
+    // A site square at (ix,iy) maps to a canvas square of size (w,w) with:
+    // (xp,yp)at (xp0 + (ix-1)*w, xp0 + (iy-1)*w) (presumably this is flipped in the y, i.e. about x axis)
+    // where xp0 = cp - rmax*w
+    xp0 = cp - rmax*w;
+    d0 = w;
+    double cmax = 0;
+    for (i=0; i<nsites; i++) {
+        if (growthRate)
+            cmax = MAX(cmax,data[i].dVdt);
+        else
+            cmax = MAX(cmax,data[i].conc[constituent]);
+    }
+
+    brush.setStyle(Qt::SolidPattern);
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+        xp = cp + (ix-c)*w;
+        yp = cp + (iy-1-c)*w;
+        if (growthRate) {
+            brush.setColor(QColor(0,0,0));
+        } else {
+            double f = data[i].conc[constituent]/cmax;
+//            chooseColor(f,rgbcol);
+            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+            sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
+            LOG_MSG(msg);
+        }
+        scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+    }
+    for (i=0; i<nsites; i++) {
+        ix = this->data[i].site[xindex];
+        iy = this->data[i].site[yindex];
+        xp = cp + (ix-c)*w;
+        yp = cp + (iy-1-c)*w;
+        volume = this->data[i].volume;      // = 0 if there is no cell
+        if (volume > 0) {
+            scale = pow(volume,0.3333);
+            d = scale*d0;
+            if (growthRate) {
+//                double f = data[i].conc[constituent]/cmax;
+                double f = data[i].dVdt/cmax;
+                chooseRateColor(f,rgbcol);
+                brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+                sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].dVdt,cmax,f);
+                LOG_MSG(msg);
+            } else {
+                brush.setColor(QColor(0,255,0));
+            }
+            scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
+        }
+    }
+    LOG_MSG("make view");
+    QGraphicsView* view = new QGraphicsView(field_page);
+    view->setScene(scene);
+    view->setGeometry(QRect(0, 0, 700, 700));
+    view->show();
+    LOG_MSG("showed view");
+
+    scene->clearSelection();                                                  // Selections would also render to the file
+    scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
+    QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
+    image.fill(Qt::transparent);                                              // Start all pixels transparent
+
+    LOG_MSG("painter");
+    QPainter painter(&image);
+    LOG_MSG("render scene");
+    scene->render(&painter);
+    ifield++;
+    char filename[] = "field0000.png";
+    char numstr[5];
+    sprintf(numstr,"%04d",ifield);
+    for (int i=0; i<4; i++)
+        filename[5+i] = numstr[i];
+    image.save(filename);
+
+}

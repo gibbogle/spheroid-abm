@@ -323,6 +323,7 @@ do kcell = 1,nlist0
 		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
 	endif
 	cell_list(kcell)%dVdt = dVdt
+	write(nflog,'(i6,2e12.4)') kcell,metab,dVdt
 	vol0 = cell_list(kcell)%volume
 	cell_list(kcell)%volume = vol0 + dVdt*dt
 	cell_list(kcell)%conc = vol0*cell_list(kcell)%conc/cell_list(kcell)%volume
