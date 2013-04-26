@@ -60,7 +60,7 @@ public:
 signals:
     void display();
     void displayF();
-    void summary();
+    void summary(int);
     void setupC(int, bool *);
 };
 

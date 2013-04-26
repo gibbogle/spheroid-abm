@@ -33,6 +33,7 @@ extern int nt_vtk;
 extern int istep;
 extern bool leftb;
 extern double DELTA_T;
+extern double dfraction;
 extern int icutoff;
 
 #endif // TRANSFER_H

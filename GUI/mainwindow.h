@@ -121,7 +121,7 @@ public slots:
 	void errorPopup(QString);
 	void displayScene();
 //    void displayFld();
-    void showSummary();
+    void showSummary(int);
     void startRecorder();
     void stopRecorder();
  //   void on_buttonButton_constituent_clicked();
