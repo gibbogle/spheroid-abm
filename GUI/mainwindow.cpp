@@ -1298,6 +1298,7 @@ void MainWindow::goToField()
     action_VTK->setEnabled(true);
     action_field->setEnabled(false);
     showingVTK = 0;
+    LOG_MSG("goToField");
     field->displayField(hour);
 }
 
@@ -1777,6 +1778,7 @@ void MainWindow::showSummary(int hr)
         pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
     }
     field->setSliceChanged();
+    LOG_MSG("showSummary");
     field->displayField(hour);
 
     exthread->mutex1.unlock();

@@ -1477,7 +1477,7 @@ do z = rng(3,1),rng(3,2)
         do x = rng(1,1),rng(1,2)
             kcell = occupancy(x,y,z)%indx(1)
             if (kcell == OUTSIDE_TAG) cycle
-            write(nflog,*) x,y,z,kcell
+!            write(nflog,*) x,y,z,kcell
             ns = ns + 1
 	        i = ODEdiff%ivar(x,y,z)
             fdata(ns)%site = (/x,y,z/)
@@ -1512,10 +1512,10 @@ integer :: kcell
 real(REAL_KIND) :: growthrate
 
 growthrate = cell_list(kcell)%dVdt
-if (growthrate == 0) then
-	write(nflog,'(a,2i6,e12.3)') 'growthrate: ',istep,kcell,growthrate
-	stop
-endif
+!if (growthrate == 0) then
+!	write(nflog,'(a,2i6,e12.3)') 'growthrate: ',istep,kcell,growthrate
+!	stop
+!endif
 end subroutine
 
 !--------------------------------------------------------------------------------

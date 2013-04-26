@@ -16,6 +16,7 @@ double vol_dv;
 double oxyProb[100];
 int oxy_nv;
 double oxy_dv;
+bool goflag;
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
@@ -150,6 +151,7 @@ void Field::setConstituent(QAbstractButton *button)
         constituent = GROWTH_RATE;
     if (constituent != prev_constituent) {
 		constituent_changed = true;
+        LOG_MSG("setConstituent");
         displayField(hour);
 	}
 //    constituentText = const_name[constituent];
@@ -177,7 +179,8 @@ void Field::setPlane(QAbstractButton *button)
     else if (text.compare("X-Z") == 0)
         axis = Y_AXIS;
 	if (axis != prev_axis) {
-		slice_changed = true;
+        slice_changed = true;
+        LOG_MSG("setPlane");
         displayField(hour);
 	}
 }
@@ -190,7 +193,8 @@ void Field::setFraction(QString text)
     LOG_MSG("setFraction");
 	fraction = text.toDouble();
 	if (fraction != prev_fraction) {
-		slice_changed = true;
+//		slice_changed = true;
+        LOG_MSG("setFraction");
         displayField(hour);
 	}
 }
@@ -293,6 +297,7 @@ void Field::displayField(int hr)
     LOG_MSG("displayField");
     hour = hr;
 	if (slice_changed) {
+//        LOG_MSG("get_fieldinfo");
         get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used);
         if (nconst != MAX_CONC) {
             sprintf(msg,"Error: MAX_CONC != MAX_CHEMO in field.h");
@@ -300,9 +305,12 @@ void Field::displayField(int hr)
             exit(1);
         }
         this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
+//        LOG_MSG("get_fielddata");
         get_fielddata(&axis, &fraction, &nsites, &nconst, this->data);
 		slice_changed = false;
+//        LOG_MSG("got_fielddata");
     }
+    goflag = true;
     if (constituent == GROWTH_RATE)
         growthRate = true;
     else
@@ -343,7 +351,7 @@ void Field::displayField(int hr)
         else
             cmax = MAX(cmax,data[i].conc[constituent]);
     }
-
+//    LOG_MSG("got cmax");
     brush.setStyle(Qt::SolidPattern);
     brush.setColor(QColor(0,0,0));
     scene->addRect(0,0,CANVAS_WIDTH,CANVAS_WIDTH,Qt::NoPen, brush);
