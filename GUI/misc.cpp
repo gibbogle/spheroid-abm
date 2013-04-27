@@ -158,13 +158,16 @@ void ExecThread::run()
     nsumm_interval = (60*60)/DELTA_T;   // number of time steps per hour
 //	sprintf(msg,"exthread: nsteps: %d",nsteps);
 //	LOG_MSG(msg);
-    mutex1.lock();
-    get_summary(summaryData, &icutoff);
+
     conc_nc = 0;
     hour = 0;
+
+    mutex1.lock();
+    get_summary(summaryData, &icutoff);
     mutex1.unlock();
     emit summary(hour);		// Emit signal to initialise summary plots
     wait_to_go();
+
     for (int i=1; i <= nsteps; i++) {
 		bool updated = false;
 		if (paused && !updated) {

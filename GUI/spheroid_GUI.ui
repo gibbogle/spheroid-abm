@@ -103,7 +103,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -2462,6 +2462,22 @@ padding: 8px
             </property>
             <property name="text">
              <string>Save 2D slice images?</string>
+            </property>
+           </widget>
+           <widget class="QCheckBox" name="checkBox_O2logscale">
+            <property name="geometry">
+             <rect>
+              <x>750</x>
+              <y>210</y>
+              <width>131</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Use log scale for O2?</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </widget>

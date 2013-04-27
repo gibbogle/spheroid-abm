@@ -20,10 +20,9 @@ bool goflag;
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-Field::Field(QWidget *page2D, bool save)
+Field::Field(QWidget *page2D)
 {
 	field_page = page2D;
-    save_images = save;
     axis = Z_AXIS;
     fraction = 0;
     const_name[OXYGEN] = "Oxygen";
@@ -218,6 +217,13 @@ void Field::setSaveImages(bool save)
 
 //------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------
+void Field::setUseLogScale(bool use_logscale)
+{
+    use_log = use_logscale;
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
 void Field::chooseParameters()
 {
 //    chemo_select[0] = 1;
@@ -292,11 +298,10 @@ void Field::displayField(int hr, int *res)
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, CANVAS_WIDTH, CANVAS_WIDTH));
     QBrush brush;
     int i, xindex, yindex, ix, iy, w, rgbcol[3];
-    double xp, yp, d0, d, volume, scale, cmax, rmax;
+    double xp, yp, d0, d, volume, scale, cmin, cmax, rmax;
     double a, b, Wc;
-    int Nc = 50;
+    int Nc;
     bool growthRate;
-    bool use_log;
 
 //    LOG_MSG("displayField");
     *res = 0;
@@ -317,6 +322,7 @@ void Field::displayField(int hr, int *res)
 //        LOG_MSG("got_fielddata");
     }
     goflag = true;
+
     if (constituent == GROWTH_RATE)
         growthRate = true;
     else
@@ -335,7 +341,7 @@ void Field::displayField(int hr, int *res)
 
 /*
  NX = size of lattice
- Nc = # of sites to fill the canvas from side to side (or top to bottom)
+ Nc = # of sites to fill the canvas from side to side (or top to bottom) = (2/3)NX
  Wc = canvas width (pixels)
  w = site width = Wc/Nc
  xp = a.ix + b
@@ -346,60 +352,50 @@ void Field::displayField(int hr, int *res)
  => Wc = a.Nc
  => a = Wc/Nc, b = Wc/2 - a.NX/2
 */
+    Nc = (2*NX)/3;
     Wc = CANVAS_WIDTH;
     w = Wc/Nc;
     a = w;
     b = Wc/2 - a*NX/2;
     d0 = w*dfraction;
+    cmin = 1.0e10;
     cmax = 0;
     rmax = 0;
     for (i=0; i<nsites; i++) {
         rmax = MAX(rmax,data[i].dVdt);
+        cmin = MIN(MAX(cmin,0),data[i].conc[constituent]);
         cmax = MAX(cmax,data[i].conc[constituent]);
     }
 //    LOG_MSG("got cmax");
-    use_log = false;
     brush.setStyle(Qt::SolidPattern);
     brush.setColor(QColor(0,0,0));
     scene->addRect(0,0,CANVAS_WIDTH,CANVAS_WIDTH,Qt::NoPen, brush);
+    view->setScene(scene);
+    view->setGeometry(QRect(0, 0, 700, 700));
     for (i=0; i<nsites; i++) {
         ix = this->data[i].site[xindex];
         iy = this->data[i].site[yindex];
-        xp = int(a*ix + b - w/2);
-        yp = int(a*iy + b - w/2);
-//        double f = data[i].conc[constituent]/cmax;
-//        chooseFieldColor(f,rgbcol);
-        chooseFieldColor(data[i].conc[constituent],cmax,use_log,rgbcol);
+        xp = int(a*ix + b - w);
+        yp = int(a*iy + b - w);
+        chooseFieldColor(data[i].conc[constituent],cmin,cmax,use_log,rgbcol);
         brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-//        sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].conc[constituent],cmax,f);
-//        LOG_MSG(msg);
         scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
     }
     for (i=0; i<nsites; i++) {
         ix = this->data[i].site[xindex];
         iy = this->data[i].site[yindex];
-        xp = int(a*ix + b - w/2);
-        yp = int(a*iy + b - w/2);
+        xp = int(a*ix + b - w);
+        yp = int(a*iy + b - w);
         volume = this->data[i].volume;      // = 0 if there is no cell
         if (volume > 0) {
             scale = pow(volume,0.3333);
             d = scale*d0;   // fix this - need to change d0
-//            if (growthRate) {
-//                double f = data[i].conc[constituent]/cmax;
-                double f = data[i].dVdt/rmax;
-                chooseRateColor(f,rgbcol);
-                brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-//                sprintf(msg,"i,rgbcol,f: %d %d %d %d %f %f %f",i,rgbcol[0],rgbcol[1],rgbcol[2],data[i].dVdt,cmax,f);
-//                LOG_MSG(msg);
-//            } else {
-//                brush.setColor(QColor(0,255,0));
-//            }
+            double f = data[i].dVdt/rmax;
+            chooseRateColor(f,rgbcol);
+            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
         }
     }
-    view->setScene(scene);
-    view->setGeometry(QRect(0, 0, 700, 700));
-//    view->setGeometry(QRect(0, 0, CANVAS_WIDTH+4, CANVAS_WIDTH+4));
     view->show();
     if (save_images) {
         scene->clearSelection();                                                  // Selections would also render to the file
@@ -422,17 +418,27 @@ void Field::displayField(int hr, int *res)
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void Field::chooseFieldColor(double c, double cmax, bool use_log, int rgbcol[])
+void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logscale, int rgbcol[])
 {
     double f;
     int rgb_lo[3], rgb_hi[3], i;
 
-    f = c/cmax;
+    if (use_logscale) {
+        f = (log(c) - log(cmin))/(log(cmax) - log(cmin));
+    } else {
+        f = c/cmax;
+    }
     if (constituent == OXYGEN) {
         rgb_hi[0] =   0; rgb_hi[1] =   0; rgb_hi[2] = 0;
-        rgb_lo[0] = 255; rgb_lo[1] = 128; rgb_lo[2] = 0;
-        for (i=0; i<3; i++)
+        rgb_lo[0] = 255; rgb_lo[1] =   0; rgb_lo[2] = 0;
+        for (i=0; i<3; i++) {
             rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
+//            if (rgbcol[i] < 0 || rgbcol[i] > 255) {
+//                sprintf(msg,"chooseFieldColor: %f %f %f %f %d %d",c,cmin,cmax,f,i,rgbcol[i]);
+//                LOG_MSG(msg);
+//                exit(1);
+//            }
+        }
     }
 }
 
@@ -444,8 +450,13 @@ void Field::chooseRateColor(double f, int rgbcol[])
 
     rgb_hi[0] = 0; rgb_hi[1] = 255; rgb_hi[2] = 0;
     rgb_lo[0] = 0; rgb_lo[1] =  64; rgb_lo[2] = 0;
-    for (i=0; i<3; i++)
+    for (i=0; i<3; i++) {
         rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
+//        if (rgbcol[i] < 0 || rgbcol[i] > 255) {
+//            LOG_MSG("chooseRateColor");
+//            exit(1);
+//        }
+    }
 }
 
 //-----------------------------------------------------------------------------------------

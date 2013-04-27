@@ -102,7 +102,7 @@ MainWindow::MainWindow(QWidget *parent)
 	parm = new Params();
 	nParams = parm->nParams;
 //    field = new Field(page_2D);
-    field = new Field(page_2D, checkBox_record2D->isChecked());
+    field = new Field(page_2D);
     grph = new Graphs();
 
     setupGraphSelector();
@@ -1455,6 +1455,7 @@ void MainWindow::runServer()
     } else {
  //       field = new Field(page_2D, checkBox_record2D->isChecked());
         field->setSaveImages(checkBox_record2D->isChecked());
+        field->setUseLogScale(checkBox_O2logscale->isChecked());
         if (radioButton_hypoxia_1->isChecked())
             icutoff = 1;
         else if (radioButton_hypoxia_2->isChecked())
@@ -1462,7 +1463,7 @@ void MainWindow::runServer()
         else if (radioButton_hypoxia_3->isChecked())
             icutoff = 3;
     }
-    field->setSliceChanged();
+//    field->setSliceChanged();
 
 	if (!paramSaved) {
 		int response = QMessageBox::critical(this, tr("ABM Model GUI"), \
@@ -1738,6 +1739,7 @@ void MainWindow::showSummary(int hr)
 {
     double val;
     int res;
+
 //    LOG_MSG("showSummary");
 	step++;
     if (step >= newR->nsteps) {
@@ -1934,6 +1936,7 @@ void MainWindow::pauseServer()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::stopServer()
 {
+    goflag = true;
 	if (vtk->playing) {
 		vtk->stop();
 		LOG_MSG("Stopped the player");

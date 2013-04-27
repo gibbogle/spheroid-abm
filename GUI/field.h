@@ -43,13 +43,13 @@ extern "C" {
 class Field : public QMainWindow
 {
 public:
-    Field(QWidget *, bool);
+    Field(QWidget *);
     ~Field();
     void chooseParameters();
     void displayField(int, int *);
     void displayField1();
     void setSliceChanged();
-    void chooseFieldColor(double c, double cmax, bool use_log, int rgbcol[]);
+    void chooseFieldColor(double c, double cmin, double cmax, bool use_log, int rgbcol[]);
     void chooseRateColor(double fr, int rgbcol[]);
     void getTitle(QString *);
     bool isConcPlot();
@@ -67,9 +67,11 @@ public:
     void selectConstituent();
     void setExecuting(bool);
     void setSaveImages(bool);
+    void setUseLogScale(bool);
 
     QWidget *field_page;
     bool save_images;
+    bool use_log;
     QGraphicsView* view;
     int NX;
     int axis;
