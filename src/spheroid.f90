@@ -1030,9 +1030,9 @@ if (Ncells == 0) then
 endif
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
-if (istep == 0) then
-    call SetupODEdiff
-endif
+!if (istep == 0) then
+!    call SetupODEdiff
+!endif
 if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
 	call logger(logmsg)
@@ -1747,6 +1747,7 @@ if (ok) then
 else
 	call logger('=== Setup failed ===')
 endif
+call SetupODEdiff
 if (ok) then
 	res = 0
 else

@@ -42,7 +42,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Randomise initial cell volumes",
 "The volumes of the initial cell population are randomised."},
 
-{"NDAYS", 7.0, 0.0, 30.0,
+{"NDAYS", 10.0, 0.0, 30.0,
 "Number of days",
 "Length of the simulation.\n\
 [days]"},
@@ -283,7 +283,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Spectral radius",
 "Spectral radius value used by RKC solver"},
 
-{"USE_EXTRA", 0, 0, 1,
+{"USE_EXTRA", 1, 0, 1,
 "Use extra conc",
 "Use extracellular O2 concentration to determine cell death"},
 
