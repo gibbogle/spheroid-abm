@@ -16,7 +16,7 @@ double vol_dv;
 double oxyProb[100];
 int oxy_nv;
 double oxy_dv;
-bool goflag;
+//bool goflag;
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
@@ -321,7 +321,7 @@ void Field::displayField(int hr, int *res)
         slice_changed = false;
 //        LOG_MSG("got_fielddata");
     }
-    goflag = true;
+//    goflag = true;
 
     if (constituent == GROWTH_RATE)
         growthRate = true;
@@ -372,6 +372,10 @@ void Field::displayField(int hr, int *res)
     scene->addRect(0,0,CANVAS_WIDTH,CANVAS_WIDTH,Qt::NoPen, brush);
     view->setScene(scene);
     view->setGeometry(QRect(0, 0, 700, 700));
+    if (cmax == 0) {
+        view->show();
+        return;
+    }
     for (i=0; i<nsites; i++) {
         ix = this->data[i].site[xindex];
         iy = this->data[i].site[yindex];
@@ -424,7 +428,11 @@ void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logsca
     int rgb_lo[3], rgb_hi[3], i;
 
     if (use_logscale) {
-        f = (log(c) - log(cmin))/(log(cmax) - log(cmin));
+        if (cmin == cmax) {
+            f = 1;
+        } else {
+            f = (log(c) - log(cmin))/(log(cmax) - log(cmin));
+        }
     } else {
         f = c/cmax;
     }
@@ -433,11 +441,11 @@ void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logsca
         rgb_lo[0] = 255; rgb_lo[1] =   0; rgb_lo[2] = 0;
         for (i=0; i<3; i++) {
             rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
-//            if (rgbcol[i] < 0 || rgbcol[i] > 255) {
-//                sprintf(msg,"chooseFieldColor: %f %f %f %f %d %d",c,cmin,cmax,f,i,rgbcol[i]);
-//                LOG_MSG(msg);
-//                exit(1);
-//            }
+            if (rgbcol[i] < 0 || rgbcol[i] > 255) {
+                sprintf(msg,"chooseFieldColor: %f %f %f %f %d %d",c,cmin,cmax,f,i,rgbcol[i]);
+                LOG_MSG(msg);
+                exit(1);
+            }
         }
     }
 }

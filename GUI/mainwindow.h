@@ -9,6 +9,7 @@
 #include <fstream>
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QWaitCondition>
 
 using namespace std;
 

@@ -1747,7 +1747,6 @@ if (ok) then
 else
 	call logger('=== Setup failed ===')
 endif
-call SetupODEdiff
 if (ok) then
 	res = 0
 else
@@ -1852,8 +1851,8 @@ call wrapup
 
 if (res == 0) then
 	call logger(' Execution successful!')
-elseif (res == 2) then
-	call logger(' Execution successful, no live cells')
+elseif (res == -1) then
+	call logger(' Execution stopped')
 else
 	call logger('  === Execution failed ===')
 !	call sleeper(1)

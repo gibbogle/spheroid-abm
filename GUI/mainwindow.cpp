@@ -1793,6 +1793,7 @@ void MainWindow::showSummary(int hr)
         stopServer();
     }
     exthread->mutex1.unlock();
+    exthread->summary_done.wakeOne();
 }
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -1936,8 +1937,9 @@ void MainWindow::pauseServer()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::stopServer()
 {
-    goflag = true;
-	if (vtk->playing) {
+//    goflag = true;
+    exthread->summary_done.wakeOne();
+    if (vtk->playing) {
 		vtk->stop();
 		LOG_MSG("Stopped the player");
 	} else {

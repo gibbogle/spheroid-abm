@@ -5,6 +5,7 @@
 
 #include <QThread>
 #include <QTcpServer>
+#include <QWaitCondition>
 
 #include "libspheroid.h"
 #include "SimpleView2DUI.h"
@@ -52,12 +53,13 @@ public:
 	void pause();
 	void unpause();
 	void stop();
-    void wait_to_go();
+//    void wait_to_go();
     int ncpu;
 	int nsteps;
 	bool paused;
 	bool stopped;
-    QMutex mutex1, mutex2;
+    QMutex mutex1, mutex2, mutex3;
+    QWaitCondition summary_done;
 signals:
     void display();
     void displayF();

@@ -149,7 +149,7 @@ void ExecThread::run()
 	outfile_path = casename.append(".res");
 	len_outfile = outfile_path.length();
 	std::string std_outfile = outfile_path.toStdString();
-	outfile = std_outfile.c_str();
+    outfile = std_outfile.c_str();
 
 	paused = false;
 	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
@@ -166,7 +166,8 @@ void ExecThread::run()
     get_summary(summaryData, &icutoff);
     mutex1.unlock();
     emit summary(hour);		// Emit signal to initialise summary plots
-    wait_to_go();
+    summary_done.wait(&mutex3);
+//    wait_to_go();
 
     for (int i=1; i <= nsteps; i++) {
 		bool updated = false;
@@ -179,11 +180,14 @@ void ExecThread::run()
 		while(paused || leftb) {
             sleep(100);
 		}
-		if (stopped) break;
+        if (stopped) {
+            res = -1;
+            break;
+        }
 
         simulate_step(&res);
         if (res != 0) {
-            LOG_MSG("res != 0");
+            LOG_MSG("simulate_step: error: res != 0");
             break;
         }
 
@@ -194,22 +198,29 @@ void ExecThread::run()
             get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
             get_oxyprob(&oxy_nv, &oxy_dv, oxyProb);
             mutex1.unlock();
-            goflag = false;
+//            goflag = false;
             hour++;
             emit summary(hour);		// Emit signal to update summary plots, at hourly intervals
-            wait_to_go();
+            summary_done.wait(&mutex3);
+//            wait_to_go();
         }
 
-        if (stopped) break;
-		if (i%nt_vtk == 0) {
+        if (stopped) {
+            res = -1;
+            break;
+        }
+        if (i%nt_vtk == 0) {
 			if (showingVTK != 0) {
 				snapshot();
                 istep = i;
                 sleep(10);
 			}
 		}
-		if (stopped) break;
-	}
+        if (stopped) {
+            res = -1;
+            break;
+        }
+    }
     LOG_MSG("ExecThread::run: stopped or completed");
     snapshot();
     LOG_MSG("got snapshot:");
@@ -220,6 +231,7 @@ void ExecThread::run()
 	return;
 }
 
+/*
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void ExecThread::wait_to_go()
@@ -229,6 +241,7 @@ void ExecThread::wait_to_go()
         if (goflag || stopped) break;
     }
 }
+*/
 
 //-----------------------------------------------------------------------------------------
 // Note that storage for BC_list, DC_list, bond_list is provided in the GUI code
