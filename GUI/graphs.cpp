@@ -4,12 +4,6 @@
 
 LOG_USE();
 
-
-// summaryData(1:9) = (/ int(tnow/60),istep,ntot,ncogseed,ncog,Ndead,int(InflowTotal*60/DELTA_T), int(100*vascularity), teffgen/)
-
-// summaryData(1:4) = (/ istep, nlive, ndead, int(radius in um) /)
-// summaryData(1:6) = (/ istep, Ncells, Nradiationdead, Ndrugdead, Ntagged, diam_um, vol_mm3, Nanoxiadead /)
-
 Graphs::Graphs()
 {
 GRAPH_SET tsGraphSet[] = {
