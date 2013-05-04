@@ -39,7 +39,7 @@ double O2cutoff[3];
 int icutoff;
 int ndistplots = 1;
 
-bool USE_GRAPHS = true;
+//bool USE_GRAPHS = true;
 
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
 {}
@@ -1565,7 +1565,7 @@ void MainWindow::preConnection()
 {
 	LOG_MSG("preConnection");
 
-        double hours = 0;
+    double hours = 0;
 	for (int k=0; k<parm->nParams; k++) {
 		PARAM_SET p = parm->get_param(k);
 		if (p.tag.compare("NDAYS") == 0) {
@@ -1584,7 +1584,6 @@ void MainWindow::preConnection()
 	newR->tnow = new double[nsteps];
 
     for (int i=0; i<grph->nGraphs; i++) {
- //       if (!grph->isTimeseries(i)) continue;
  //       if (!grph->isActive(i)) continue;
 		newR->pData[i] = new double[nsteps];
 		newR->pData[i][0] = 0;
@@ -1595,7 +1594,7 @@ void MainWindow::preConnection()
     step = -1;
 
 	// Initialize graphs
-    if (USE_GRAPHS)	initializeGraphs(newR);
+    initializeGraphs(newR);
     LOG_MSG("did initializeGraphs");
     posdata = false;
 	LOG_MSG("preconnection: done");
@@ -1644,16 +1643,13 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
             pGraph[i] = new Plot(tag,R->casename);
             pGraph[i]->setTitle(title);
             pGraph[i]->setAxisTitle(QwtPlot::yLeft, yAxisTitle);
+            LOG_QMSG(title);
+            LOG_QMSG(tag);
         }
     }
 
 	nGraphCases = 1;
     graphResultSet[0] = R;
-
-//    QRect rect;
-//    rect.setHeight(600);
-//    rect.setWidth(1000);
-//    mdiArea->setGeometry(rect);
 
     for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
@@ -1686,7 +1682,6 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 void MainWindow::drawGraphs()
 {
 	RESULT_SET *R;
-//	double act_max = 0, ntot_max = 0, nDC_max = 0, teffgen_max = 0, ncog_LN_max = 0, ncog_PER_max = 0, nbnd_max = 0, ncogseed_max = 0;
 	for (int kres=0; kres<Plot::ncmax; kres++) {
 		R = graphResultSet[kres];
 		if (R != 0) {
@@ -1696,14 +1691,12 @@ void MainWindow::drawGraphs()
 				int k = grph->get_dataIndex(i);
                 QString tag = grph->get_tag(i);
                 pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename, tag);
-//				if (!grph->isActive(i)) continue;
 				if (k == 0) {
 					grph->set_maxValue(i,R->maxValue[i]);
 				} else {
 					double maxval = grph->get_maxValue(i);
 					double newmax = R->maxValue[i];
 					if (newmax > maxval) {
-//						grph->set_maxValue(i,maxval);
 						grph->set_maxValue(i,newmax);
 					}
 				}
@@ -1971,7 +1964,6 @@ void MainWindow::stopServer()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::clearAllGraphs()
 {
-    LOG_MSG("clearAllGraphs");
     if (nGraphCases > 0) {
         if (nGraphs > 0) {
             for (int i=0; i<nGraphs; i++) {
@@ -2113,7 +2105,7 @@ void MainWindow::removeGraph()
 void MainWindow::removeAllGraphs()
 {
     LOG_MSG("removeAllGraphs");
-    if (USE_GRAPHS) clearAllGraphs();
+    clearAllGraphs();
 }
 
 //---------------------------------------------------------------------
