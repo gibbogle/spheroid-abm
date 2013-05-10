@@ -34,7 +34,8 @@ extern int istep;
 extern bool leftb;
 extern double DELTA_T;
 extern double dfraction;
-extern int icutoff;
+extern int i_hypoxia_cutoff;
+extern int i_growth_cutoff;
 extern bool goflag;
 
 #endif // TRANSFER_H

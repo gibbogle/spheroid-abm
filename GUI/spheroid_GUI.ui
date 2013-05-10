@@ -50,30 +50,6 @@ padding: 8px
          <number>0</number>
         </property>
         <item>
-         <widget class="QLabel" name="label_input">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <family>Segoe UI</family>
-            <pointsize>16</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Inputs</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item>
          <widget class="QTabWidget" name="tabs">
           <property name="enabled">
            <bool>true</bool>
@@ -1496,121 +1472,6 @@ padding: 8px
              <string/>
             </property>
            </widget>
-           <widget class="QLabel" name="label_hypoxia">
-            <property name="geometry">
-             <rect>
-              <x>740</x>
-              <y>40</y>
-              <width>151</width>
-              <height>16</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>10</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Hypoxia Threshold (uM)</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_HYPOXIA_1">
-            <property name="geometry">
-             <rect>
-              <x>750</x>
-              <y>70</y>
-              <width>40</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_HYPOXIA_2">
-            <property name="geometry">
-             <rect>
-              <x>750</x>
-              <y>100</y>
-              <width>40</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_HYPOXIA_3">
-            <property name="geometry">
-             <rect>
-              <x>750</x>
-              <y>130</y>
-              <width>40</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-            </property>
-           </widget>
-           <widget class="QGroupBox" name="groupBox_hypoxia">
-            <property name="geometry">
-             <rect>
-              <x>800</x>
-              <y>60</y>
-              <width>31</width>
-              <height>101</height>
-             </rect>
-            </property>
-            <property name="title">
-             <string/>
-            </property>
-            <property name="flat">
-             <bool>true</bool>
-            </property>
-            <widget class="QRadioButton" name="radioButton_hypoxia_1">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>10</y>
-               <width>82</width>
-               <height>18</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-            <widget class="QRadioButton" name="radioButton_hypoxia_2">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>40</y>
-               <width>82</width>
-               <height>18</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
-            <widget class="QRadioButton" name="radioButton_hypoxia_3">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>70</y>
-               <width>82</width>
-               <height>18</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checked">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </widget>
            <widget class="QGroupBox" name="groupBox_run2">
             <property name="geometry">
              <rect>
@@ -2455,7 +2316,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>750</x>
-              <y>180</y>
+              <y>400</y>
               <width>131</width>
               <height>18</height>
              </rect>
@@ -2468,7 +2329,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>750</x>
-              <y>210</y>
+              <y>430</y>
               <width>131</width>
               <height>18</height>
              </rect>
@@ -2480,7 +2341,278 @@ padding: 8px
              <bool>true</bool>
             </property>
            </widget>
+           <widget class="QGroupBox" name="groupBox_ht">
+            <property name="geometry">
+             <rect>
+              <x>740</x>
+              <y>50</y>
+              <width>171</width>
+              <height>131</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QLineEdit" name="line_HYPOXIA_3">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>100</y>
+               <width>40</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QGroupBox" name="groupBox_hypoxia">
+             <property name="geometry">
+              <rect>
+               <x>70</x>
+               <y>30</y>
+               <width>31</width>
+               <height>91</height>
+              </rect>
+             </property>
+             <property name="title">
+              <string/>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+             <widget class="QRadioButton" name="radioButton_hypoxia_1">
+              <property name="geometry">
+               <rect>
+                <x>10</x>
+                <y>10</y>
+                <width>21</width>
+                <height>18</height>
+               </rect>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+             <widget class="QRadioButton" name="radioButton_hypoxia_2">
+              <property name="geometry">
+               <rect>
+                <x>10</x>
+                <y>40</y>
+                <width>21</width>
+                <height>18</height>
+               </rect>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+             <widget class="QRadioButton" name="radioButton_hypoxia_3">
+              <property name="geometry">
+               <rect>
+                <x>10</x>
+                <y>70</y>
+                <width>21</width>
+                <height>18</height>
+               </rect>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </widget>
+            <widget class="QLineEdit" name="line_HYPOXIA_1">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>40</y>
+               <width>40</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_HYPOXIA_2">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>70</y>
+               <width>40</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_hypoxia">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>141</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Hypoxia Threshold (uM)</string>
+             </property>
+            </widget>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_2">
+            <property name="geometry">
+             <rect>
+              <x>740</x>
+              <y>200</y>
+              <width>171</width>
+              <height>131</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QLineEdit" name="line_GROWTH_FRACTION_3">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>100</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_GROWTH_FRACTION_1">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>40</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+            </widget>
+            <widget class="QLabel" name="label_growthfraction">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>161</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Growth Fraction Threshold</string>
+             </property>
+            </widget>
+            <widget class="QGroupBox" name="groupBox_growthfraction">
+             <property name="geometry">
+              <rect>
+               <x>70</x>
+               <y>30</y>
+               <width>31</width>
+               <height>91</height>
+              </rect>
+             </property>
+             <property name="title">
+              <string/>
+             </property>
+             <property name="flat">
+              <bool>true</bool>
+             </property>
+             <widget class="QRadioButton" name="radioButton_growthfraction_1">
+              <property name="geometry">
+               <rect>
+                <x>10</x>
+                <y>10</y>
+                <width>21</width>
+                <height>18</height>
+               </rect>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+             <widget class="QRadioButton" name="radioButton_growthfraction_2">
+              <property name="geometry">
+               <rect>
+                <x>10</x>
+                <y>40</y>
+                <width>21</width>
+                <height>18</height>
+               </rect>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+             <widget class="QRadioButton" name="radioButton_growthfraction_3">
+              <property name="geometry">
+               <rect>
+                <x>10</x>
+                <y>70</y>
+                <width>21</width>
+                <height>18</height>
+               </rect>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </widget>
+            <widget class="QLineEdit" name="line_GROWTH_FRACTION_2">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>70</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+            </widget>
+           </widget>
           </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="label_input">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <family>Segoe UI</family>
+            <pointsize>16</pointsize>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="text">
+           <string>Inputs</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
          </widget>
         </item>
         <item>

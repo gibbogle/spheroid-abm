@@ -279,6 +279,18 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Hypoxia threshold 3",
 "Hypoxia threshold 3"},
 
+{"GROWTH_FRACTION_1", 0.25, 0, 0,
+"Growth fraction threshold 1",
+"Growth fraction threshold 1"},
+
+{"GROWTH_FRACTION_2", 0.1, 0, 0,
+"Growth fraction threshold 2",
+"Growth fraction threshold 2"},
+
+{"GROWTH_FRACTION_3", 0.01, 0, 0,
+"Growth fraction threshold 3",
+"Growth fraction threshold 3"},
+
 {"SPCRAD", 200.0, 0, 0,
 "Spectral radius",
 "Spectral radius value used by RKC solver"},

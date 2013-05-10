@@ -53,10 +53,15 @@ GRAPH_SET tsGraphSet[] = {
     "%",
     9, true, 0, 0.1, true},
 
+    {"growthfraction",
+    "Growth Fraction",
+    "%",
+    10, true, 0, 0.1, true},
+
     {"necroticfraction",
     "Necrotic Fraction",
     "%",
-    10, false, 0, 0.1, true}
+    11, false, 0, 0.1, true}
 
 };
 
