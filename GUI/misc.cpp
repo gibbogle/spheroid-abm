@@ -163,7 +163,7 @@ void ExecThread::run()
     hour = 0;
 
     mutex1.lock();
-    get_summary(summaryData, &icutoff);
+    get_summary(summaryData, &i_hypoxia_cutoff, &i_growth_cutoff);
     mutex1.unlock();
     emit summary(hour);		// Emit signal to initialise summary plots
     summary_done.wait(&mutex3);
@@ -193,7 +193,7 @@ void ExecThread::run()
 
         if (i%nsumm_interval == 0) {
 			mutex1.lock();
-            get_summary(summaryData, &icutoff);
+            get_summary(summaryData, &i_hypoxia_cutoff, &i_growth_cutoff);
             get_concdata(&conc_nc, &conc_dx, concData);
             get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
             get_oxyprob(&oxy_nv, &oxy_dv, oxyProb);

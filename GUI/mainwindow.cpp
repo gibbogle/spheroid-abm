@@ -35,8 +35,8 @@ int summaryData[100];
 int nt_vtk;
 bool leftb;
 double DELTA_T;
-double O2cutoff[3];
-int icutoff;
+int i_hypoxia_cutoff;
+int i_growth_cutoff;
 int ndistplots = 1;
 
 //bool USE_GRAPHS = true;
@@ -1457,11 +1457,17 @@ void MainWindow::runServer()
         field->setSaveImages(checkBox_record2D->isChecked());
         field->setUseLogScale(checkBox_O2logscale->isChecked());
         if (radioButton_hypoxia_1->isChecked())
-            icutoff = 1;
+            i_hypoxia_cutoff = 1;
         else if (radioButton_hypoxia_2->isChecked())
-            icutoff = 2;
+            i_hypoxia_cutoff = 2;
         else if (radioButton_hypoxia_3->isChecked())
-            icutoff = 3;
+            i_hypoxia_cutoff = 3;
+        if (radioButton_growthfraction_1->isChecked())
+            i_growth_cutoff = 1;
+        else if (radioButton_growthfraction_2->isChecked())
+            i_growth_cutoff = 2;
+        else if (radioButton_growthfraction_3->isChecked())
+            i_growth_cutoff = 3;
     }
 //    field->setSliceChanged();
 

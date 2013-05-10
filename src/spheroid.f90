@@ -434,6 +434,9 @@ enddo
 read(nfcell,*) O2cutoff(1)
 read(nfcell,*) O2cutoff(2)
 read(nfcell,*) O2cutoff(3)
+read(nfcell,*) growthcutoff(1)
+read(nfcell,*) growthcutoff(2)
+read(nfcell,*) growthcutoff(3)
 read(nfcell,*) spcrad_value
 read(nfcell,*) iuse_extra
 read(nfcell,*) itreatment
@@ -1366,12 +1369,12 @@ end function
 ! Total tagged for drug death on division = Ndrug_tag
 ! Current tagged = Ntodie - Ntagdead 
 !-----------------------------------------------------------------------------------------
-subroutine get_summary(summaryData,icutoff) BIND(C)
+subroutine get_summary(summaryData,i_hypoxia_cutoff,i_growth_cutoff) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
-integer(c_int) :: summaryData(*), icutoff
+integer(c_int) :: summaryData(*), i_hypoxia_cutoff,i_growth_cutoff
 integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, diam_um, vol_mm3_1000, &
-	nhypoxic(3), hypoxic_percent_10, necrotic_percent_10
+	nhypoxic(3), ngrowth(3), hypoxic_percent_10, growth_percent_10, necrotic_percent_10
 real(REAL_KIND) :: vol_cm3, vol_mm3, hour
 
 hour = istep*DELTA_T/3600.
@@ -1385,12 +1388,14 @@ Ndead = Nsites + Nreuse - Ncells			! total that died from any cause
 Ntagged = Ntodie - Ntagdead					! number currently tagged by drug or radiation
 Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead	! number currently tagged by anoxia
 call get_hypoxic_count(nhypoxic)
-hypoxic_percent_10 = (1000*nhypoxic(icutoff))/Ncells
+hypoxic_percent_10 = (1000*nhypoxic(i_hypoxia_cutoff))/Ncells
+call get_growth_count(ngrowth)
+growth_percent_10 = (1000*ngrowth(i_growth_cutoff))/Ncells
 necrotic_percent_10 = (1000*(Nsites-Ncells))/Nsites
-summaryData(1:11) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
-	diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia, hypoxic_percent_10, necrotic_percent_10 /)
-write(nfres,'(i8,f8.2,f8.4,7i6,4f7.3)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
-	diam_um, Nanoxia_dead, Ntagged_anoxia, nhypoxic(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)
+summaryData(1:12) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
+	diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia, hypoxic_percent_10, growth_percent_10, necrotic_percent_10 /)
+write(nfres,'(i8,f8.2,f8.4,7i6,7f7.3)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
+	diam_um, Nanoxia_dead, Ntagged_anoxia, nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1404,6 +1409,24 @@ do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	do i = 1,3
 		if (cell_list(kcell)%conc(OXYGEN) < O2cutoff(i)) nhypoxic(i) = nhypoxic(i) + 1
+	enddo
+enddo
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Need to compare growth rate with a fraction of average growth rate
+!--------------------------------------------------------------------------------
+subroutine get_growth_count(ngrowth)
+integer :: ngrowth(3)
+integer :: kcell, i
+real(REAL_KIND) :: r_mean
+
+r_mean = Vdivide0/(2*divide_time_mean)
+ngrowth = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	do i = 1,3
+		if (cell_list(kcell)%dVdt < growthcutoff(i)*r_mean) ngrowth(i) = ngrowth(i) + 1
 	enddo
 enddo
 end subroutine
@@ -1676,7 +1699,6 @@ character*(128) :: infile, outfile
 logical :: ok, success
 integer :: i, res
 
-!use_CPORT1 = .false.	! DIRECT CALLING FROM C++
 infile = ''
 do i = 1,inbuflen
 	infile(i:i) = infile_array(i)
@@ -1688,9 +1710,8 @@ enddo
 
 open(nflog,file='spheroid.log',status='replace')
 open(nfres,file='spheroid_ts.out',status='replace')
-write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead Ntagged_anoxia f_hypox_1 f_hypox_2 f_hypox_3 f_necrot'
-!awp_0%is_open = .false.
-!awp_1%is_open = .false.
+write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead Ntagged_anoxia &
+f_hypox_1 f_hypox_2 f_hypox_3 f_growth_1 f_growth_2 f_growth_3 f_necrot'
 
 #ifdef GFORTRAN
     write(logmsg,'(a)') 'Built with GFORTRAN'
@@ -1723,9 +1744,7 @@ call logger(logmsg)
 write(logmsg,*) 'outputfile: ', outfile 
 call logger(logmsg)
 if (use_TCP) then
-!	call logger('call connector')
 	call connecter(ok)
-!	call logger('did connector')
 	if (.not.ok) then
 		call logger('Failed to make TCP connections')
 		return
