@@ -63,18 +63,57 @@ do x = 1,NX
         do z = 1,NZ
             site = (/x,y,z/)
             if (isbdry(site)) then
-                nbdry = nbdry + 1
                 allocate(bdry)
                 bdry%site = site
 !                bdry%chemo_influx = .false.
                 nullify(bdry%next)
                 call bdrylist_insert(bdry,bdrylist)
-!                call AssignBdryRole(site,bdry)
                 occupancy(x,y,z)%bdry => bdry
             endif
         enddo
     enddo
 enddo
+bdry_changed = .false.
+end subroutine
+
+!----------------------------------------------------------------------------------------
+! As well as marking bdry sites, the code checks for vacated sites that have become
+! OUTSIDE.  A brute-force iteration of the procedure is used because whenever a
+! vacated site is converted to OUTSIDE there is a possibility of a change to the bdry.
+! Such occurrences are expected to be rare, so the computational cost is not high.
+! It is important to prevent a vacated site from persisting outside the blob.
+!----------------------------------------------------------------------------------------
+subroutine UpdateBdrylist
+integer :: x, y, z
+integer :: k, site(3)
+type (boundary_type), pointer :: bdry
+logical :: done
+
+done = .false.
+do while (.not.done)
+	done = .true.
+	do x = 1,NX
+		do y = 1,NY
+			do z = 1,NZ
+				site = (/x,y,z/)
+				if (associated(occupancy(site(1),site(2),site(3))%bdry)) cycle
+				if (isbdry(site)) then
+					if (occupancy(site(1),site(2),site(3))%indx(1) == 0) then
+						occupancy(site(1),site(2),site(3))%indx(1) = OUTSIDE_TAG
+						done = .false.
+						cycle
+					endif
+					allocate(bdry)
+					bdry%site = site
+					nullify(bdry%next)
+					call bdrylist_insert(bdry,bdrylist)
+					occupancy(x,y,z)%bdry => bdry
+				endif
+			enddo
+		enddo
+	enddo
+enddo
+bdry_changed = .false.
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -99,7 +138,6 @@ do x = 1,NX
 !                bdry%chemo_influx = .false.
                 nullify(bdry%next)
                 call bdrylist_insert(bdry,checklist)
-!                call AssignBdryRole(site,bdry)
             endif
         enddo
     enddo
@@ -197,13 +235,11 @@ occupancy(site(1),site(2),site(3))%indx = 0
 Nsites = Nsites + 1
 call SetRadius(Nsites)
 if (isbdry(site)) then   ! add it to the bdrylist
-    nbdry = nbdry + 1
     allocate(bdry)
     bdry%site = site
 !    bdry%chemo_influx = .false.
     nullify(bdry%next)
     call bdrylist_insert(bdry,bdrylist)
-!    call AssignBdryRole(site,bdry)
     occupancy(site(1),site(2),site(3))%bdry => bdry
 !    call SetBdryConcs(site)
 else
@@ -239,7 +275,6 @@ do k = 1,n
     site = sitelist(k,:)
     call bdrylist_delete(site,bdrylist)
     nullify(occupancy(site(1),site(2),site(3))%bdry)
-    nbdry = nbdry - 1
     if (bdrylist_present(site, bdrylist)) then
         write(logmsg,*) 'Error: FixBdrylist: still in bdrylist: ',site
 		call logger(logmsg)
@@ -254,6 +289,7 @@ end subroutine
 ! the ellipsoid, i.e. to minimise OQ-OP, where Q is the point at
 ! which the line through OP intersects the ellipsoid surface.  We then choose the 'inside'
 ! neighbour of P that is furthest from O.
+! NOT USED
 !----------------------------------------------------------------------------------------
 subroutine RemoveSite(ok)
 logical :: ok
@@ -324,7 +360,6 @@ call SetRadius(Nsites)
 if (associated(occupancy(site(1),site(2),site(3))%bdry)) then   ! remove it from the bdrylist
     call bdrylist_delete(site, bdrylist)
     nullify(occupancy(site(1),site(2),site(3))%bdry)
-    nbdry = nbdry - 1
 ! Need to check for a new bdry site to replace the one removed
 ! Look at all the neighbours
     psite = site
@@ -333,13 +368,11 @@ if (associated(occupancy(site(1),site(2),site(3))%bdry)) then   ! remove it from
         if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) cycle   ! outside
         if (associated(occupancy(site(1),site(2),site(3))%bdry)) cycle   ! bdry
         if (isbdry(site)) then
-            nbdry = nbdry + 1
             allocate(bdry)
             bdry%site = site
 !            bdry%chemo_influx = .false.
             nullify(bdry%next)
             call bdrylist_insert(bdry,bdrylist)
-!            call AssignBdryRole(site,bdry)
             occupancy(site(1),site(2),site(3))%bdry => bdry
 !            call SetBdryConcs(site)
         endif
@@ -364,6 +397,7 @@ ok = .true.
 end subroutine
 
 !--------------------------------------------------------------------------------
+! NOT USED
 !--------------------------------------------------------------------------------
 subroutine RemoveSites(n,ok)
 integer :: n

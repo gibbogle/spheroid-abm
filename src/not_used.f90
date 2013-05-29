@@ -1715,3 +1715,51 @@ do j = 1,6
 enddo
 if (dbug) write(*,*) 'done!'
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+! For a given cell site site0(:), find a suitable free site on the boundary of
+! the blob, and the path of sites leading from site0 to site1
+! NOT USED
+!-----------------------------------------------------------------------------------------
+subroutine get_nearbdrypath(site0,path,npath)
+integer :: site0(3), path(3,200),npath
+integer :: site1(3), jump(3), site(3), k, j, jmax, kpar=0
+real(REAL_KIND) :: v(3), r, d, dmax, v_aim(3), v_try(3)
+real(REAL_KIND) :: cosa, sina, d_try, del
+
+v = site0 - Centre
+do j = 1,3
+	v(j) = v(j) + (par_uni(kpar) - 0.5)
+enddo
+r = norm(v)
+v_aim = v/r
+k = 1
+site1 = site0
+path(:,k) = site1
+do 
+	dmax = 0
+	do j = 1,27
+		if (j == 14) cycle
+		jump = jumpvec(:,j)
+		site = site1 + jump
+		if (occupancy(site(1),site(2),site(3))%indx(1) < -100) cycle
+		v_try = site - Centre
+!		call get_vnorm(v,v_try)
+		d_try = norm(v_try)
+		d = dot_product(v_try,v_aim)
+		cosa = d/d_try
+		sina = sqrt(1 - cosa*cosa)
+		del = d_try*sina
+		if (d-del > dmax) then
+			dmax = d-del
+			jmax = j
+		endif
+	enddo
+	site1 = site1 + jumpvec(:,jmax)
+	k = k+1
+	path(:,k) = site1
+	if (occupancy(site1(1),site1(2),site1(3))%indx(1) == OUTSIDE_TAG) exit
+enddo
+npath = k
+
+end subroutine

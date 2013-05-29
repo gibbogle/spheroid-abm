@@ -157,7 +157,6 @@ integer :: jumpvec(3,27)
 integer :: nlist, Ncells, Ncells0, lastNcells, lastID
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
-integer :: nbdry
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volume, cell_radius
@@ -168,6 +167,7 @@ real(REAL_KIND) :: O2cutoff(3)
 real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
 type(SN30K_type) :: SN30K
+logical :: bdry_changed
 type(LQ_type) :: LQ
 character*(128) :: inputfile
 character*(128) :: treatmentfile

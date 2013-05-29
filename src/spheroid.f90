@@ -1039,6 +1039,9 @@ dt = DELTA_T/NT_CONC
 if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
 	call logger(logmsg)
+	if (bdry_changed) then
+		call UpdateBdrylist
+	endif
 endif
 istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds
@@ -1067,6 +1070,7 @@ enddo
 !call logger('solved')
 call StateToSiteCell
 res = 0
+
 if (mod(istep,60) == -1) then
 	rmax = 0
 	do kcell = 1,nlist

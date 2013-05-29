@@ -4,6 +4,7 @@ implicit none
 
 type (boundary_type), pointer :: bdrylist
 type (boundary_type), pointer :: checklist
+integer :: nbdry
 
 contains
 
@@ -20,6 +21,7 @@ type ( boundary_type ), pointer :: item
 !
 !  In the case of an empty list.  
 !
+nbdry = nbdry + 1
 if ( .not. associated ( head ) ) then
     head => item
     nullify ( item%next )
@@ -78,6 +80,7 @@ type ( boundary_type ), pointer :: item_next
 if ( .not. associated ( head ) ) then
     return
 endif
+nbdry = nbdry - 1
 item => head
 if (item%site(1) == site(1) .and. item%site(2) == site(2) .and. item%site(3) == site(3)) then
     ! removing head
