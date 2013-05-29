@@ -112,7 +112,8 @@ do kcell = 1,nlist
 		if (j == 14) cycle
 		site = site0 + jumpvec(:,j)
 		indx = occupancy(site(1),site(2),site(3))%indx(1)
-		if (indx < -100) then	! necrotic site
+!		if (indx < -100) then	! necrotic site
+		if (indx == 0) then	!	necrotic site
 			C = occupancy(site(1),site(2),site(3))%C(:)
 			v = site_value(C)
 			d = cdistance(site)
@@ -210,8 +211,10 @@ stop
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! When a cell dies the site takes occupancy()%indx = -kcell.  This is a necrotic volume.
-! Such necrotic sites migrate towards the blob centre.
+! If the dying cell site is less than a specified fraction f_migrate of the blob radius,
+! the site migrates towards the blob centre.
+! %indx -> 0
+! If the site is on the boundary, it is removed from the boundary list, and %indx -> OUTSIDE_TAG
 ! The cell contents should be released into the site.
 !-----------------------------------------------------------------------------------------
 subroutine cell_dies(kcell)
@@ -222,9 +225,57 @@ cell_list(kcell)%state = DEAD
 Ncells = Ncells - 1
 !write(*,*) 'cell_dies: ',kcell,Ncells
 site = cell_list(kcell)%site
-occupancy(site(1),site(2),site(3))%indx(1) = -(100 + kcell)
+!occupancy(site(1),site(2),site(3))%indx(1) = -(100 + kcell)
+occupancy(site(1),site(2),site(3))%indx(1) = 0
+!if (bdrylist_present(site,bdrylist)) then
+if (associated(occupancy(site(1),site(2),site(3))%bdry)) then
+	call bdrylist_delete(site,bdrylist)
+    nullify(occupancy(site(1),site(2),site(3))%bdry)
+	occupancy(site(1),site(2),site(3))%indx(1) = OUTSIDE_TAG
+	bdry_changed = .true.
+	call outside_neighbours(site)
+endif
 ! Adjust site concentrations?
-call necrotic_migration(site)
+!call necrotic_migration(site)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! When a bdry cell dies, need to check the neighbours to see if a site is now made outside.
+! To be made outside a site must have %indx(1) = 0 and at least one Neumann neighbour outside.
+!-----------------------------------------------------------------------------------------
+subroutine outside_neighbours(site0)
+integer :: site0(3)
+integer :: k, j, x, y, z, xx, yy, zz
+logical :: isout, done
+
+done = .false.
+do while(.not.done)
+	done = .true.
+	do k = 1,27
+		if (k == 14) cycle
+		x = site0(1) + jumpvec(1,k)
+		y = site0(2) + jumpvec(2,k)
+		z = site0(3) + jumpvec(3,k)
+		if (outside_xyz(x,y,z)) cycle
+		if (occupancy(x,y,z)%indx(1) == 0) then
+			isout = .false.
+			do j = 1,6
+				xx = x + neumann(1,j)
+				yy = y + neumann(2,j)
+				zz = z + neumann(3,j)
+				if (outside_xyz(xx,yy,zz)) cycle
+				if (occupancy(xx,yy,zz)%indx(1) == OUTSIDE_TAG) then
+					isout = .true.
+					exit
+				endif
+			enddo
+			if (isout) then
+				done = .false.
+				occupancy(x,y,z)%indx(1) = OUTSIDE_TAG
+			endif
+		endif
+	enddo
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -246,7 +297,8 @@ do
 	do j = 1,27
 		if (j == 14) cycle
 		site = site1 + jumpvec(:,j)
-		if (occupancy(site(1),site(2),site(3))%indx(1) < 0) cycle	! do not swap with another necrotic site
+!		if (occupancy(site(1),site(2),site(3))%indx(1) < 0) cycle	! do not swap with another necrotic site
+		if (occupancy(site(1),site(2),site(3))%indx(1) == 0) cycle	! do not swap with another necrotic site
 		d2 = cdistance(site)
 		if (d2 < dmin) then
 			dmin = d2
@@ -385,7 +437,8 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 	do j = 1,27
 		if (j == 14) cycle
 		site01 = site0 + jumpvec(:,j)
-		if (occupancy(site01(1),site01(2),site01(3))%indx(1) < -100) then
+!		if (occupancy(site01(1),site01(2),site01(3))%indx(1) < -100) then
+		if (occupancy(site01(1),site01(2),site01(3))%indx(1) == 0) then
 			nfree = nfree + 1
 			freesite(nfree,:) = site01
 			v = site_value(occupancy(site01(1),site01(2),site01(3))%C(:))
@@ -411,17 +464,19 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 	endif
 endif
 
-ok = .false.
-k = 0
-do while (.not.ok)
-    k = k + 1
-!	j = random_int(1,26,kpar)       ! This generates disconnected cells at the boundary
-!	if (j >= 14) j = j+1
-!	site01 = site0 + jumpvec(:,j)
-	j = random_int(1,6,kpar)
-	site01 = site0 + neumann(:,j)
-	if (k > 50 .or. occupancy(site01(1),site01(2),site01(3))%indx(1) >= -100) ok = .true.	! site01 is not necrotic
-enddo
+!ok = .false.
+!k = 0
+!do while (.not.ok)
+!    k = k + 1
+!!	j = random_int(1,26,kpar)       ! This generates disconnected cells at the boundary
+!!	if (j >= 14) j = j+1
+!!	site01 = site0 + jumpvec(:,j)
+!	j = random_int(1,6,kpar)
+!	site01 = site0 + neumann(:,j)
+!	if (k > 50 .or. occupancy(site01(1),site01(2),site01(3))%indx(1) >= -100) ok = .true.	! site01 is not necrotic
+!enddo
+j = random_int(1,6,kpar)
+site01 = site0 + neumann(:,j)
 !if (dbug) write(*,*) 'cell_divider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
 if (occupancy(site01(1),site01(2),site01(3))%indx(1) == OUTSIDE_TAG) then	! site01 is outside, use it directly
 	npath = 0
@@ -476,13 +531,11 @@ endif
 ! First add site2
 if (dbug) write(*,*) 'add site2 to bdrylist: ',site2
 if (isbdry(site2)) then   ! add it to the bdrylist
-    nbdry = nbdry + 1
     allocate(bdry)
     bdry%site = site2
 !    bdry%chemo_influx = .false.
     nullify(bdry%next)
     call bdrylist_insert(bdry,bdrylist)
-!    call AssignBdryRole(site,bdry)
     occupancy(site2(1),site2(2),site2(3))%bdry => bdry
     call SetBdryConcs(site2)
 else
@@ -500,13 +553,11 @@ do j = 1,6
 		if (dbug) write(*,*) 'isbdry'
 		if (.not.bdrylist_present(site,bdrylist)) then	! add it
 			if (dbug) write(*,*) 'not present, add it'
-			nbdry = nbdry + 1
 			allocate(bdry)
 			bdry%site = site
 		!    bdry%chemo_influx = .false.
 			nullify(bdry%next)
 			call bdrylist_insert(bdry,bdrylist)
-		!    call AssignBdryRole(site,bdry)
 			occupancy(site(1),site(2),site(3))%bdry => bdry
 !		    call SetBdryConcs(site)
 		endif
@@ -516,7 +567,6 @@ do j = 1,6
 			if (dbug) write(*,*) 'present, remove it'
 			call bdrylist_delete(site,bdrylist)
 			nullify(occupancy(site(1),site(2),site(3))%bdry)
-			nbdry = nbdry - 1
 !			call ResetConcs(site)
 		endif
 	endif
@@ -560,10 +610,6 @@ hit = .false.
 bdry => bdrylist
 do while ( associated ( bdry )) 
     site = bdry%site
-!    if (occupancy(site(1),site(2),site(3))%indx(1) < -100) then    ! necrotic
-!        write(*,*) 'bdry site is necrotic'
-!        stop
-!    endif
     v = site - Centre
     d = norm(v)
     cosa = dot_product(v,vc)/d
@@ -602,53 +648,6 @@ else
 endif
 end function
 
-!-----------------------------------------------------------------------------------------
-! For a given cell site site0(:), find a suitable free site on the boundary of
-! the blob, and the path of sites leading from site0 to site1
-! NOT USED
-!-----------------------------------------------------------------------------------------
-subroutine get_nearbdrypath(site0,path,npath)
-integer :: site0(3), path(3,200),npath
-integer :: site1(3), jump(3), site(3), k, j, jmax, kpar=0
-real(REAL_KIND) :: v(3), r, d, dmax, v_aim(3), v_try(3)
-real(REAL_KIND) :: cosa, sina, d_try, del
-
-v = site0 - Centre
-do j = 1,3
-	v(j) = v(j) + (par_uni(kpar) - 0.5)
-enddo
-r = norm(v)
-v_aim = v/r
-k = 1
-site1 = site0
-path(:,k) = site1
-do 
-	dmax = 0
-	do j = 1,27
-		if (j == 14) cycle
-		jump = jumpvec(:,j)
-		site = site1 + jump
-		if (occupancy(site(1),site(2),site(3))%indx(1) < -100) cycle
-		v_try = site - Centre
-!		call get_vnorm(v,v_try)
-		d_try = norm(v_try)
-		d = dot_product(v_try,v_aim)
-		cosa = d/d_try
-		sina = sqrt(1 - cosa*cosa)
-		del = d_try*sina
-		if (d-del > dmax) then
-			dmax = d-del
-			jmax = j
-		endif
-	enddo
-	site1 = site1 + jumpvec(:,jmax)
-	k = k+1
-	path(:,k) = site1
-	if (occupancy(site1(1),site1(2),site1(3))%indx(1) == OUTSIDE_TAG) exit
-enddo
-npath = k
-
-end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -692,7 +691,8 @@ if (occupancy(site2(1),site2(2),site2(3))%indx(1) == OUTSIDE_TAG) then
     write(*,*) 'site2 is OUTSIDE'
     stop
 endif
-if (occupancy(site2(1),site2(2),site2(3))%indx(1) < -100) then
+!if (occupancy(site2(1),site2(2),site2(3))%indx(1) < -100) then
+if (occupancy(site2(1),site2(2),site2(3))%indx(1) == 0) then
     write(*,*) 'site2 is NECROTIC'
 !    stop
 endif
