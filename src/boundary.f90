@@ -32,7 +32,8 @@ integer :: k, xx, yy, zz
 x = site(1)
 y = site(2)
 z = site(3)
-if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) then	! outside
+!if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) then	! outside
+if (occupancy(x,y,z)%indx(1) <= 0) then	! outside or vacant
     isbdry = .false.
     return
 endif
@@ -413,7 +414,7 @@ ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Choose an outside site adjacent to site1
+! Choose an outside site or vacant site adjacent to site1
 !-----------------------------------------------------------------------------------------
 subroutine get_outsidesite(site1,site2)
 integer :: site1(3), site2(3)
@@ -421,9 +422,12 @@ integer :: j, jmin, site(3)
 real(REAL_KIND) :: r, rmin
 
 rmin = 1.0e10
-do j = 1,6
-	site = site1 + neumann(:,j)
-	if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) then
+do j = 1,27
+	if (j == 14) cycle
+!	site = site1 + neumann(:,j)
+	site = site1 + jumpvec(:,j)
+!	if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) then
+	if (occupancy(site(1),site(2),site(3))%indx(1) <= 0) then
 		r = cdistance(site)
 		if (r < rmin) then
 			rmin = r
@@ -431,7 +435,8 @@ do j = 1,6
 		endif
 	endif
 enddo
-site2 = site1 + neumann(:,jmin)
+!site2 = site1 + neumann(:,jmin)
+site2 = site1 + jumpvec(:,jmin)
 end subroutine
 
 !-----------------------------------------------------------------------------------------

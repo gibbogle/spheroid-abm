@@ -4,6 +4,10 @@
 
 LOG_USE();
 
+// summaryData(1:13) = (/ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, &
+//  Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
+//	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10 /)
+
 Graphs::Graphs()
 {
 GRAPH_SET tsGraphSet[] = {
@@ -13,8 +17,8 @@ GRAPH_SET tsGraphSet[] = {
     "No. of cells",
     1, true, 0, 1, true},
 
-    {"nradiationdead",
-    "Radiation-killed Cells",
+    {"nanoxiadead",
+    "Anoxia-killed Cells",
     "No. of cells",
     2, true, 0, 1, true},
 
@@ -23,45 +27,50 @@ GRAPH_SET tsGraphSet[] = {
     "No. of cells",
     3, false, 0, 1, true},
 
-    {"nanoxiadead",
-    "Anoxia-killed Cells",
+    {"nradiationdead",
+    "Radiation-killed Cells",
     "No. of cells",
-    7, true, 0, 1, true},
+    4, true, 0, 1, true},
 
     {"nanoxiatagged",
     "Anoxia-tagged Cells",
     "No. of cells",
-    8, true, 0, 1, true},
+    5, true, 0, 1, true},
 
-    {"ntagged",
-    "Tagged Cells",
+    {"ndrugtagged",
+    "Drug-tagged Cells",
     "No. of cells",
-    4, false, 0, 1, true},
+    6, false, 0, 1, true},
+
+    {"nradiationtagged",
+    "Radiation-tagged Cells",
+    "No. of cells",
+    7, false, 0, 1, true},
 
     {"diameter",
     "Spheroid Diameter",
     "Diameter (um)",
-    5, true, 0, 1, true},
+    8, true, 0, 1, true},
 
     {"volume",
     "Spheroid Volume",
     "Volume (mm3)",
-    6, true, 0, 0.001, true},
+    9, true, 0, 0.001, true},
 
     {"hypoxicfraction",
     "Hypoxic Fraction",
     "%",
-    9, true, 0, 0.1, true},
+    10, true, 0, 0.1, true},
 
     {"growthfraction",
     "Growth Fraction",
     "%",
-    10, true, 0, 0.1, true},
+    11, true, 0, 0.1, true},
 
     {"necroticfraction",
     "Necrotic Fraction",
     "%",
-    11, false, 0, 0.1, true}
+    12, false, 0, 0.1, true}
 
 };
 

@@ -113,7 +113,7 @@ do kcell = 1,nlist
 		site = site0 + jumpvec(:,j)
 		indx = occupancy(site(1),site(2),site(3))%indx(1)
 !		if (indx < -100) then	! necrotic site
-		if (indx == 0) then	!	necrotic site
+		if (indx == 0) then	!	vacant site
 			C = occupancy(site(1),site(2),site(3))%C(:)
 			v = site_value(C)
 			d = cdistance(site)
@@ -487,13 +487,16 @@ elseif (bdrylist_present(site01,bdrylist)) then	! site01 is on the boundary
 	path(:,1) = site01
 else
 	call choose_bdrysite(site01,site1)
-	call get_path(site01,site1,path,npath)
-	! path(:,:) goes from site01 to site1, which is a bdry site
-	if (.not.isbdry(site1)) then
-	    call logger('should be bdry, is not')
-	    stop
+	if (occupancy(site1(1),site1(2),site1(3))%indx(1) == 0) then
+		write(*,*) 'after choose_bdrysite: site1 is VACANT: ',site1
+		stop
 	endif
-!	call clear_path(path,npath)
+	call get_path(site0,site01,site1,path,npath)
+	! path(:,:) goes from site01 to site1, which is a bdry site or adjacent to a vacant site
+!	if (.not.isbdry(site1)) then
+!	    call logger('should be bdry or vacant, is not')
+!	    stop
+!	endif
 endif
 !if (dbug) write(*,*) 'path: ',npath
 !do k = 1,npath
@@ -501,18 +504,21 @@ endif
 !enddo
 
 if (npath > 0) then
-	! Need to choose an outside site near site1
+	! Need to choose an outside or vacant site near site1
 	call get_outsidesite(site1,site2)
 	! path(:,:) now goes from site01 to site2, which is an outside site next to site1
 	npath = npath+1
 	path(:,npath) = site2
+	if (occupancy(site2(1),site2(2),site2(3))%indx(1) == OUTSIDE_TAG) then
+		Nsites = Nsites + 1
+	endif
 !	write(*,'(a,3i4,i6)') 'outside site: ',site2,occupancy(site2(1),site2(2),site2(3))%indx(1)
 	call push_path(path,npath)
 	if (dbug) write(*,*) 'did push_path'
 else
 	site2 = site01
+	Nsites = Nsites + 1
 endif
-Nsites = Nsites + 1
 call SetRadius(Nsites)
 !call extendODEdiff(site2)
 !call InterpolateConc(site2)
@@ -527,10 +533,10 @@ endif
 
 ! Now need to fix the bdrylist.  
 ! site1 was on the boundary, but may no longer be.
-! site2 should be now on the boundary
+! site2 may be now on the boundary
 ! First add site2
-if (dbug) write(*,*) 'add site2 to bdrylist: ',site2
 if (isbdry(site2)) then   ! add it to the bdrylist
+	if (dbug) write(*,*) 'add site2 to bdrylist: ',site2
     allocate(bdry)
     bdry%site = site2
 !    bdry%chemo_influx = .false.
@@ -539,8 +545,8 @@ if (isbdry(site2)) then   ! add it to the bdrylist
     occupancy(site2(1),site2(2),site2(3))%bdry => bdry
     call SetBdryConcs(site2)
 else
-    write(logmsg,'(a,3i4,i6)') 'Added site is not bdry: ',site2,occupancy(site2(1),site2(2),site2(3))%indx(1)
-	call logger(logmsg)
+!    write(logmsg,'(a,3i4,i6)') 'Added site is not bdry: ',site2,occupancy(site2(1),site2(2),site2(3))%indx(1)
+!	call logger(logmsg)
     call SetBdryConcs(site2)
 !    stop
 endif
@@ -652,9 +658,10 @@ end function
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine test_get_path
-integer :: site1(3), site2(3), path(3,200), npath, kpar=0
+integer :: site0(3), site1(3), site2(3), path(3,200), npath, kpar=0
 integer :: x, y, z, it, k
 
+site0 = 0
 do it = 1,10
 	do
 		x = random_int(1,NX,kpar)
@@ -670,7 +677,7 @@ do it = 1,10
 		if (occupancy(x,y,z)%indx(1) > 0) exit
 	enddo
 	site2 = (/x,y,z/)
-	call get_path(site1,site2,path,npath)
+	call get_path(site0,site1,site2,path,npath)
 	write(*,*) 'path: ',npath
 	do k = 1,npath
 		write(*,'(i3,2x,3i4)') path(:,k)
@@ -681,51 +688,66 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! Find a path of sites leading from site1 to site2
 ! The first site in the list is site1, the last is site2
+! Previously site2 was always a bdry site.  Now we stop the path when a vacant or outside site 
+! is encountered.
+! How do we avoid choosing a path through the site of the dividing cell? site0
 !-----------------------------------------------------------------------------------------
-subroutine get_path(site1,site2,path,npath)
-integer :: site1(3), site2(3), path(3,200), npath
+subroutine get_path(site0,site1,site2,path,npath)
+integer :: site0(3),site1(3), site2(3), path(3,200), npath
 integer :: v(3), jump(3), site(3), k, j, jmin
 real(REAL_KIND) :: r, d2, d2min
+logical :: hit
 
 if (occupancy(site2(1),site2(2),site2(3))%indx(1) == OUTSIDE_TAG) then
-    write(*,*) 'site2 is OUTSIDE'
+    call logger('site2 is OUTSIDE')
     stop
 endif
 !if (occupancy(site2(1),site2(2),site2(3))%indx(1) < -100) then
 if (occupancy(site2(1),site2(2),site2(3))%indx(1) == 0) then
-    write(*,*) 'site2 is NECROTIC'
-!    stop
+    call logger('site2 is VACANT')
+    stop
 endif
+if (site1(1)==45.and.site1(2)==52.and.site1(3)==52.and. &
+    site2(1)==50.and.site2(2)==51.and.site2(3)==51) dbug = .true.
+
 if (dbug) write(*,'(a,3i4,2x,3i4)') 'site1, site2: ',site1, site2
 k = 1
 site = site1
 path(:,k) = site
+hit = .false.
 do 
 	d2min = 1.0e10
 	jmin = 0
-!	do j = 1,6
-!		jump = neumann(:,j)
 	do j = 1,27
 		if (j == 14) cycle
 		jump = jumpvec(:,j)
 		v = site + jump
-		if (occupancy(v(1),v(2),v(3))%indx(1) == OUTSIDE_TAG) cycle
+		if (v(1)==site0(1) .and. v(2)==site0(2) .and. v(3)==site0(3)) cycle
+!		if (occupancy(v(1),v(2),v(3))%indx(1) == OUTSIDE_TAG) then
+		if (occupancy(v(1),v(2),v(3))%indx(1) <= 0) then	! outside or vacant - we'll use this!
+!			write(*,'(9i6,a)') k,j,site1,v,occupancy(v(1),v(2),v(3))%indx(1),'  OUTSIDE or VACANT'
+			site2 = site
+			hit = .true.
+			exit
+		endif
 !		if (occupancy(v(1),v(2),v(3))%indx(1) < -100) cycle		! necrotic
 		v = site2 - v
 		d2 = v(1)*v(1) + v(2)*v(2) + v(3)*v(3)
+		if (dbug) write(*,'(8i6,2f6.1)') k,j,site+jump,v,d2,d2min
 		if (d2 < d2min) then
 			d2min = d2
 			jmin = j
 		endif
 	enddo
+	if (hit) exit
 	if (jmin == 0) then
 	    call logger('get path: stuck')
 	    stop
 	endif
-!	site = site + neumann(:,jmin)
 	site = site + jumpvec(:,jmin)
 	k = k+1
-!	if (k>100) write(*,'(11i4,f8.1)') k,site1,site2,site,jmin,d2min
+	if (dbug) write(*,'(11i4,f8.1)') k,site1,site2,site,jmin,d2min
+	if (k==20) stop
 	path(:,k) = site
 !	if (occupancy(site(1),site(2),site(3))%indx(1) < -100) then		! necrotic
 !		write(logmsg,*) 'Error: get_path: necrotic site in path: ',site
@@ -777,12 +799,6 @@ do k = npath-1,1,-1
 	if (dbug) write(*,*) k,' site1: ',site1,kcell
 	site2 = path(:,k+1)
 	if (dbug) write(*,*) 'site2: ',site2
-!	if (kcell < 0) then
-!		write(*,'(a,i6,5i4)') 'push_path: kcell<0: k,npath,site1: ',kcell,k,npath,site1
-!		write(*,'(a,3i4)') 'moved to: ',site2
-!		write(*,'(a,4i6)') '                  dividing cell: ',kcell_dividing,cell_list(kcell_dividing)%site
-!		stop
-!	endif
 	if (kcell > 0) then
     	cell_list(kcell)%site = site2
     endif
