@@ -24,17 +24,20 @@ logical :: ok
 !call logger('grow_cells')
 ok = .true.
 if (use_radiation .and. dose > 0) then
-	call irradiation(dose)
+	call irradiation(dose, ok)
+	if (.not.ok) return
 endif
 if (use_division) then
 	call cell_division(dt,ok)
 	if (.not.ok) return
 endif
 if (use_death) then
-	call cell_death(dt)
+	call cell_death(dt,ok)
+	if (.not.ok) return
 endif
 if (use_migration) then
-	call cell_migration
+	call cell_migration(ok)
+	if (.not.ok) return
 endif
 end subroutine
 
@@ -66,11 +69,13 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! Irradiate cells with dose.
 !-----------------------------------------------------------------------------------------
-subroutine irradiation(dose)
+subroutine irradiation(dose,ok)
 real(REAL_KIND) :: dose
+logical :: ok
 integer :: kcell, site(3), iv, kpar=0
 real(REAL_KIND) :: C_O2, OER_alpha_d, OER_beta_d, expon, kill_prob, R
 
+ok = .true.
 LQ%OER_am = 2.5
 LQ%OER_bm = 3.0
 LQ%alpha_H = 0.0473
@@ -95,11 +100,18 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Cells move to preferable nearby sites.
+! For now this is turned off - need to formulate a sensible interpretation of "preferable"
 !-----------------------------------------------------------------------------------------
-subroutine cell_migration
+subroutine cell_migration(ok)
+logical :: ok
 integer :: kcell, j, indx, site0(3), site(3), jmax
 real(REAL_KIND) :: C0(MAX_CHEMO), C(MAX_CHEMO), v0, v, vmax, d0, d
 
+call logger('cell_migration is not yet implemented')
+ok = .false.
+return
+
+ok = .true.
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	site0 = cell_list(kcell)%site
@@ -147,13 +159,15 @@ end function
 ! Cells can be tagged to die, or finally die of anoxia, or they can be tagged for death 
 ! at division time if the drug is effective.
 !-----------------------------------------------------------------------------------------
-subroutine cell_death(dt)
+subroutine cell_death(dt,ok)
 real(REAL_KIND) :: dt
+logical :: ok
 integer :: kcell, nlist0, site(3), i, kpar=0 
 real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, pdeath, tnow
 logical :: use_SN30000
 
 !call logger('cell_death')
+ok = .true.
 if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
     use_SN30000 = .true.
     Kd = SN30K%Kd
