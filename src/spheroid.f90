@@ -1080,7 +1080,7 @@ if (mod(istep,60) == -1) then
 	hour = istep/60
 	write(logmsg,'(3i6,2f6.1)') istep, hour, Ncells, Radius, rmax
 	call logger(logmsg)
-!	call CheckBdryList
+	call CheckBdryList
 	call ShowConcs
 !	call check_bdry
 endif
@@ -1377,8 +1377,9 @@ subroutine get_summary(summaryData,i_hypoxia_cutoff,i_growth_cutoff) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*), i_hypoxia_cutoff,i_growth_cutoff
-integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, diam_um, vol_mm3_1000, &
-	nhypoxic(3), ngrowth(3), hypoxic_percent_10, growth_percent_10, necrotic_percent_10
+integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
+    diam_um, vol_mm3_1000, nhypoxic(3), ngrowth(3), &
+    hypoxic_percent_10, growth_percent_10, necrotic_percent_10
 real(REAL_KIND) :: vol_cm3, vol_mm3, hour
 
 hour = istep*DELTA_T/3600.
@@ -1386,20 +1387,24 @@ vol_cm3 = Vsite*Nsites				! total volume in cm^3
 vol_mm3 = vol_cm3*1000				! volume in mm^3
 vol_mm3_1000 = vol_mm3*1000			! 1000 * volume in mm^3
 diam_um = 2*DELTA_X*Radius*10000
-Ntodie = Nradiation_tag + Ndrug_tag			! total that have been tagged by drug or radiation
-Ntagdead = Nradiation_dead + Ndrug_dead		! total that died from drug or radiation
-Ndead = Nsites + Nreuse - Ncells			! total that died from any cause
-Ntagged = Ntodie - Ntagdead					! number currently tagged by drug or radiation
-Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead	! number currently tagged by anoxia
+!Ntodie = Nradiation_tag + Ndrug_tag			! total that have been tagged by drug or radiation
+!Ntagdead = Nradiation_dead + Ndrug_dead		! total that died from drug or radiation
+!Ndead = Nsites + Nreuse - Ncells			! total that died from any cause
+!Ntagged = Ntodie - Ntagdead					! number currently tagged by drug or radiation
+Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead				! number currently tagged by anoxia
+Ntagged_drug = Ndrug_tag - Ndrug_dead					! number currently tagged by drug
+Ntagged_radiation = Nradiation_tag - Nradiation_dead	! number currently tagged by radiation
 call get_hypoxic_count(nhypoxic)
 hypoxic_percent_10 = (1000*nhypoxic(i_hypoxia_cutoff))/Ncells
 call get_growth_count(ngrowth)
 growth_percent_10 = (1000*ngrowth(i_growth_cutoff))/Ncells
 necrotic_percent_10 = (1000*(Nsites-Ncells))/Nsites
-summaryData(1:12) = (/ istep, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
-	diam_um, vol_mm3_1000, Nanoxia_dead, Ntagged_anoxia, hypoxic_percent_10, growth_percent_10, necrotic_percent_10 /)
-write(nfres,'(i8,f8.2,f8.4,7i6,7f7.3)') istep, hour, vol_mm3, Ncells, Nradiation_dead, Ndrug_dead, Ntagged, &
-	diam_um, Nanoxia_dead, Ntagged_anoxia, nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)
+summaryData(1:13) = (/ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, &
+    Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
+	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10 /)
+write(nfres,'(i8,f8.2,f8.4,9i6,7f7.3)') istep, hour, vol_mm3, diam_um, Ncells, &
+    Nanoxia_dead, Ndrug_dead, Nradiation_dead, Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
+	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1714,7 +1719,8 @@ enddo
 
 open(nflog,file='spheroid.log',status='replace')
 open(nfres,file='spheroid_ts.out',status='replace')
-write(nfres,'(a)') 'istep hour vol_mm3 Ncells Nradiation_dead Ndrug_dead Ntagged diam_um Nanoxia_dead Ntagged_anoxia &
+write(nfres,'(a)') 'istep hour vol_mm3 diam_um Ncells &
+Nanoxia_dead Ndrug_dead Nradiation_dead Ntagged_anoxia Ntagged_drug Ntagged_radiation &
 f_hypox_1 f_hypox_2 f_hypox_3 f_growth_1 f_growth_2 f_growth_3 f_necrot'
 
 #ifdef GFORTRAN

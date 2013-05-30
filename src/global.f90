@@ -52,7 +52,7 @@ logical, parameter :: compute_concentrations = .true.
 logical, parameter :: use_division = .true.
 logical, parameter :: use_death = .true.
 logical, parameter :: use_react = .true.
-logical, parameter :: use_migration = .true.
+logical, parameter :: use_migration = .false.	! causing an error with vacant site becoming bdry
 logical, parameter :: use_medium_flux = .true.	! flux of constituents between spheroid and medium is accounted for.
 logical, parameter :: use_metabolites = .true.
 

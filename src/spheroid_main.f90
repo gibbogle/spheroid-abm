@@ -9,7 +9,7 @@ integer :: ncpu, res, summarydata(100)
 character*(128) :: infile, outfile, runfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
-integer :: jstep, hour, ntot, ncog, inflow, irun, icutoff, nsumm_interval
+integer :: jstep, hour, ntot, ncog, inflow, irun, i_hypoxia_cutoff,i_growth_cutoff, nsumm_interval
 character*(128) :: b, c, progname
 real :: vasc
 real(8) :: t1, t2
@@ -60,7 +60,8 @@ do i = 1, cnt
 end do
 
 !call get_dimensions(NX,NY,NZ,nsteps,DELTA_T, MAX_CHEMO, cused);
-icutoff = 3
+i_hypoxia_cutoff = 3
+i_growth_cutoff = 1
 do irun = 1,1
 	write(*,*) 'irun: ',irun
 	inbuflen = len(infile)
@@ -77,7 +78,7 @@ do irun = 1,1
 	!	write(*,*) 'jstep: ',jstep
 		call simulate_step(res)
 		if (mod(jstep,nsumm_interval) == 0) then
-			call get_summary(summarydata,icutoff)
+			call get_summary(summarydata,i_hypoxia_cutoff,i_growth_cutoff)
 		endif
 		if (res /= 0) then
 			write(*,*) 'Error exit: ',res
