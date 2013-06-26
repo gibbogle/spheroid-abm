@@ -14,7 +14,7 @@ contains
 
 !-----------------------------------------------------------------------------------------
 ! This subroutine is called to initialize a simulation run.
-! ncpu = the number of processors to use
+! ncpu = the number of processors to use 
 ! infile = file with the input data
 ! outfile = file to hold the output
 ! runfile = file to pass info to the master program (e.g. Python) as the program executes.
@@ -612,7 +612,7 @@ do
 99	exit
 enddo
 rewind(nftreatment)
-write(*,*) 'nmax: ',nmax
+!write(*,*) 'nmax: ',nmax
 do idrug = 0,2
 	allocate(protocol(idrug)%tstart(nmax))
 	allocate(protocol(idrug)%tend(nmax))
@@ -1402,7 +1402,7 @@ necrotic_percent_10 = (1000*(Nsites-Ncells))/Nsites
 summaryData(1:13) = (/ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, &
     Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
 	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10 /)
-write(nfres,'(i8,f8.2,f8.4,9i6,7f7.3)') istep, hour, vol_mm3, diam_um, Ncells, &
+write(nfres,'(i8,f8.2,f8.4,8i7,7f7.3)') istep, hour, vol_mm3, diam_um, Ncells, &
     Nanoxia_dead, Ndrug_dead, Nradiation_dead, Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
 	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)
 end subroutine
