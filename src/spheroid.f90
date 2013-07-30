@@ -944,7 +944,7 @@ integer :: nextra, ic, ichemo, kcell, site(3)
 write(logmsg,*) 'InitConcs: ',nchemo
 call logger(logmsg)
 allocate(allstate(MAX_VARS,MAX_CHEMO))
-allocate(work_rkc(8+4*MAX_VARS,MAX_CHEMO))
+allocate(work_rkc(8+5*MAX_VARS))
 
 do kcell = 1,Ncells
     site = cell_list(kcell)%site
