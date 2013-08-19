@@ -358,6 +358,7 @@ read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
+read(nfcell,*) show_progeny                 ! if != 0, the number of the cell to show descendents of
 read(nfcell,*) iuse_oxygen		!chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%cell_diff
@@ -676,6 +677,8 @@ ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! CT model
+! --------
 ! The rate of cell killing, which becomes a cell death probability rate, is inferred from
 ! the cell kill experiment.
 ! The basic assumption is that the rate of killing is proportional to the drug metabolism rate:
@@ -1111,13 +1114,13 @@ integer(c_int) :: nFDCMRC_list, nBC_list, nbond_list, FDCMRC_list(*), BC_list(*)
 integer :: k, kc, kcell, site(3), j, jb
 integer :: col(3)
 integer :: x, y, z
-integer :: ifdcstate, ibcstate, ctype, stage, region
+integer :: ifdcstate, ibcstate, ctype, stage, region, highlight=0
 integer :: last_id1, last_id2
 logical :: ok
 integer, parameter :: axis_centre = -2	! identifies the ellipsoid centre
 integer, parameter :: axis_end    = -3	! identifies the ellipsoid extent in 5 directions
 integer, parameter :: axis_bottom = -4	! identifies the ellipsoid extent in the -Y direction, i.e. bottom surface
-integer, parameter :: ninfo = 5			! the size of the info package for a cell (number of integers)
+integer, parameter :: ninfo = 6			! the size of the info package for a cell (number of integers)
 integer, parameter :: nax = 6			! number of points used to delineate the follicle
 
 nBC_list = 0
@@ -1192,7 +1195,7 @@ do kcell = 1,nlist
 		k = k+1
 		j = ninfo*(k-1)
 		site = cell_list(kcell)%site
-		call cellColour(kcell,col)
+		call cellColour(kcell,highlight,col)
 		BC_list(j+1) = kcell + last_id1
 		BC_list(j+2:j+4) = site
 		BC_list(j+5) = rgb(col)
@@ -1212,16 +1215,16 @@ integer(c_int) :: nTC_list, TC_list(*)
 integer :: k, kc, kcell, site(3), j, jb
 integer :: col(3)
 integer :: x, y, z
-integer :: itcstate, ctype, stage, region
+integer :: itcstate, ctype, stage, region, highlight
 integer :: last_id1, last_id2
-logical :: ok
+logical :: ok, highlighting
 integer, parameter :: axis_centre = -2	! identifies the spheroid centre
 integer, parameter :: axis_end    = -3	! identifies the spheroid extent in 5 directions
 integer, parameter :: axis_bottom = -4	! identifies the spheroid extent in the -Y direction, i.e. bottom surface
-integer, parameter :: ninfo = 5			! the size of the info package for a cell (number of integers)
+integer, parameter :: ninfo = 6			! the size of the info package for a cell (number of integers)
 integer, parameter :: nax = 6			! number of points used to delineate the spheroid
 
-
+highlighting = (show_progeny /= 0)
 nTC_list = 0
 
 k = 0
@@ -1285,6 +1288,7 @@ if (1 == 0) then
 		TC_list(j+1) = k-1
 		TC_list(j+2:j+4) = site
 		TC_list(j+5) = itcstate
+		TC_list(j+6) = 1
 		last_id1 = k-1
 	enddo
 	k = last_id1 + 1
@@ -1292,15 +1296,21 @@ endif
 
 ! Cells
 do kcell = 1,nlist
-	if (idbug /= 0 .and. cell_list(kcell)%ID /= idbug) cycle
+!	if (idbug /= 0 .and. cell_list(kcell)%ID /= idbug) cycle
 	if (cell_list(kcell)%exists) then
 		k = k+1
 		j = ninfo*(k-1)
 		site = cell_list(kcell)%site
-		call cellColour(kcell,col)
+	    if (highlighting .and. cell_list(kcell)%ID == show_progeny) then
+	        highlight = 1
+	    else
+	        highlight = 0
+	    endif
+		call cellColour(kcell,highlight,col)
 		TC_list(j+1) = kcell + last_id1
 		TC_list(j+2:j+4) = site
 		TC_list(j+5) = rgb(col)
+		TC_list(j+6) = highlight
 		last_id2 = kcell + last_id1
 	endif
 enddo
@@ -1312,8 +1322,8 @@ end subroutine
 ! Rendered cognate B cell colour depends on stage, state, receptor expression level.
 ! col(:) = (r,g,b)
 !-----------------------------------------------------------------------------------------
-subroutine cellColour(kcell,col)
-integer :: kcell, col(3)
+subroutine cellColour(kcell,highlight,col)
+integer :: kcell, highlight, col(3)
 integer :: stage, status
 integer, parameter :: WHITE(3) = (/255,255,255/)
 integer, parameter :: RED(3) = (/255,0,0/)
@@ -1352,7 +1362,11 @@ integer, parameter :: Qt_gray = 5
 integer, parameter :: Qt_darkGray = 4
 integer, parameter :: Qt_lightGray = 6
 
-col = LIGHTORANGE
+if (highlight == 0) then
+    col = LIGHTORANGE
+else
+    col = LIGHTRED
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
