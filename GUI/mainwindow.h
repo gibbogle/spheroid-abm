@@ -114,6 +114,8 @@ private slots:
 
     void onSelectConstituent();
 
+    void on_verticalSliderTransparency_sliderMoved(int position);
+
 public slots:
 	void preConnection();
 	void outputData(QString);
