@@ -181,7 +181,7 @@ contains
 !
 !  IDID:     Set IDID = 0 to initialize the integration.
 !
-!
+!  icase:    Added by Gib.  Conveys the chemo that is being solved for.
 !
 !  RETURNS FROM RKC
 !
@@ -413,6 +413,7 @@ contains
         do i = 1, neqn
           yn(i) = y(i)
         enddo
+!$omp end parallel do
         call f(neqn,t,yn,fn,icase)
 !        nfe = nfe + 1
         comm%nfe = comm%nfe + 1
@@ -456,6 +457,7 @@ contains
         do i = 1,neqn
           vtemp1(i) = yn(i) + absh*fn(i)
         enddo 
+!$omp end parallel do
         call f(neqn,t+absh,vtemp1,vtemp2,icase)
 !        nfe = nfe + 1
         comm%nfe = comm%nfe + 1
@@ -564,6 +566,7 @@ contains
          vtemp1(i) = ylast
          vtemp2(i) = yplast
       enddo
+!$omp end parallel do
       fac = ten
       if(naccpt .eq. 1) then
         temp2 = err**one3rd
@@ -644,7 +647,6 @@ contains
 !  Use the y array for temporary storage here.         
 !---------------------------------------------
         call f(neqn,t + h*thjm1,yjm1,y,icase)
-!GS added omp here
 !$omp parallel do default(shared)
         do i = 1, neqn
           y(i) = mu*yjm1(i) + nu*yjm2(i) + (one - mu - nu)*yn(i) + h*mus*(y(i) - ajm1*fn(i))

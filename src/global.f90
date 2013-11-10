@@ -32,8 +32,6 @@ integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
-!real(REAL_KIND), parameter :: DELTA_X = 0.002	! cm = 20 um
-!real(REAL_KIND), parameter :: MM_THRESHOLD = 0.0001
 integer, parameter :: MAX_CHEMO = 6
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
@@ -56,7 +54,6 @@ logical, parameter :: use_migration = .false.	! causing an error with vacant sit
 logical, parameter :: use_medium_flux = .true.	! flux of constituents between spheroid and medium is accounted for.
 logical, parameter :: use_metabolites = .true.
 
-!integer, parameter :: MAX_RECEPTOR = 1
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
 type occupancy_type
@@ -72,14 +69,10 @@ type cell_type
 	logical :: active
 	integer :: state
 	real(REAL_KIND) :: conc(MAX_CHEMO)
-!	real(REAL_KIND) :: oxygen
-!	real(REAL_KIND) :: drug_A
-!	real(REAL_KIND) :: drug_B
 	real(REAL_KIND) :: dVdt
 	real(REAL_KIND) :: volume
 	real(REAL_KIND) :: divide_volume
 	real(REAL_KIND) :: t_divide_last
-!	real(REAL_KIND) :: t_divide_next
 	real(REAL_KIND) :: t_hypoxic
 	real(REAL_KIND) :: t_anoxia_die
 	real(REAL_KIND) :: M
@@ -144,7 +137,6 @@ type(dist_type) :: divide_dist
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
 type(treatment_type), allocatable :: protocol(:)
-!type(boundary_type), pointer :: bdrylist
 
 integer :: NX, NY, NZ
 integer :: initial_count
@@ -277,7 +269,6 @@ endif
 R = par_shr3(kpar)
 k = abs(R)
 random_int = n1 + mod(k,(n2-n1+1))
-
 end function
 
 !--------------------------------------------------------------------------------

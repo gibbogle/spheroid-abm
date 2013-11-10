@@ -109,7 +109,6 @@ end function
 !----------------------------------------------------------------------------------
 subroutine SetupODEDiff
 integer :: x, y, z, i, site(3), ifdc, ichemo, k, nc, nin, nex, kcell, ki, ie
-!real(REAL_KIND) :: DX, DX2, c(MAX_CHEMO,7)
 real(REAL_KIND) :: secretion
 integer :: ierr
 logical :: left, right
@@ -132,8 +131,6 @@ if (.not.allocated(ODEdiff%cell_index)) then
 	allocate(ODEdiff%cell_index(MAX_VARS))
 endif
 
-!DX = 1.0
-!DX2 = DX*DX
 ODEdiff%ivar = 0
 i = 0
 nex = 0
@@ -183,8 +180,6 @@ if (.not.use_ODE_diffusion) return
 
 ierr = 0
 do i = 1,ODEdiff%nvars
-!	c = 0
-!	nc = 0
     if (ODEdiff%vartype(i) == INTRA) cycle
 	site = ODEdiff%varsite(i,:)
 	x = site(1)
@@ -196,14 +191,12 @@ do i = 1,ODEdiff%nvars
 	left = .true.
 	right = .true.
 	if (x==1) then
-!		left = .false.
 		ierr = 1
 		exit
 	elseif (ODEdiff%ivar(x-1,y,z) == 0) then
 		left = .false.
 	endif
 	if (x==NX) then
-!		right = .false.
 		ierr = 2
 		exit
 	elseif (ODEdiff%ivar(x+1,y,z) == 0) then
@@ -218,14 +211,12 @@ do i = 1,ODEdiff%nvars
 	left = .true.
 	right = .true.
 	if (y==1) then
-!		left = .false.
 		ierr = 3
 		exit
 	elseif (ODEdiff%ivar(x,y-1,z) == 0) then
 		left = .false.
 	endif
 	if (y==NY) then
-!		right = .false.
 		ierr = 4
 		exit
 	elseif (ODEdiff%ivar(x,y+1,z) == 0) then
@@ -240,14 +231,12 @@ do i = 1,ODEdiff%nvars
 	left = .true.
 	right = .true.
 	if (z==1) then
-!		left = .false.
 		ierr = 5
 		exit
 	elseif (ODEdiff%ivar(x,y,z-1) == 0) then
 		left = .false.
 	endif
 	if (z==NZ) then
-!		right = .false.
 		ierr = 6
 		exit
 	elseif (ODEdiff%ivar(x,y,z+1) == 0) then
@@ -317,7 +306,6 @@ real(REAL_KIND) :: deltaC, C0, C1
 
 C0 = chemo(OXYGEN)%MM_C0
 deltaC = MM_THRESHOLD
-!deltaC = 0.0005
 C1 = deltaC + (sqrt(C0*C0 + 8*C0*deltaC) - C0)/4
 ODEdiff%k_soft = (C1-deltaC)/(C1*C1*(C0+C1-deltaC))
 ODEdiff%C1_soft = C1
@@ -436,12 +424,10 @@ if (kv > 0) then
 	csum = csum + allstate(kv,:)
 endif
 
-!csum = csum + (6-nb)*chemo(:)%bdry_conc
 do ichemo = 1,MAX_CHEMO
     csum(ichemo) = csum(ichemo) + (6-nb)*BdryConc(ichemo,t_simulation)
 enddo
 allstate(n,:) = csum/6
-!allstatep(n,:) = 0
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -552,8 +538,6 @@ dc6 = 6*dc1 + decay_rate
 cbnd = BdryConc(ichemo,t_simulation)
 !$omp parallel do private(intracellular, vol, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab) default(shared) schedule(static)
 do i = 1,neqn
-!	ith = omp_get_thread_num()
-!	write(*,*) i,ith
 	yy = y(i)
     if (ODEdiff%vartype(i) == EXTRA) then
         intracellular = .false.
@@ -626,9 +610,6 @@ do i = 1,neqn
 				dCreact = 0
 			endif
 		endif
-		!Kex = chemo(ichemo)%cell_diff
-		!dCex = Kex*(Cex - C)
-		!dCreact = dCreact + dCex
 		dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)	
 !	    call intra_react(ichemo,Cin,Cex,vol,dCreact)
 	    dydt(i) = dCreact - yy*decay_rate
@@ -666,9 +647,6 @@ elseif (ichemo == SN30000) then
 elseif (ichemo == SN30000_METAB) then
     dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
 endif
-!Kex = chemo(ichemo)%cell_diff
-!dCex = Kex*(Cex - C)
-!dCreact = dCreact + dCex
 dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)
 end subroutine
 
@@ -767,13 +745,7 @@ atol = rtol
 
 !write(*,*) 'nchemo: ',nchemo
 do ic = 1,nchemo
-!	nth = omp_get_num_threads()
-!	write(*,*) 'nth: ',nth
 	ichemo = chemomap(ic)
-!	if (.not.chemo(ichemo)%used) cycle
-!	allocate(state(ntvars))
-!	state(:) = allstate(1:ntvars,ichemo)
-!	allocate(small_work_rkc(8+5*MAX_VARS))
 	idid = 0
 	t = tstart
 	tend = t + dt
@@ -784,14 +756,6 @@ do ic = 1,nchemo
 		call logger(logmsg)
 		stop
 	endif
-!	if (info(2) == 2 .and. ichemo == OXYGEN) then
-!		sprad_ratio = rkc_sprad/blob_radius
-!		write(logmsg,'(a,2f8.4)') 'sprad_ratio: ',blob_radius,sprad_ratio
-!		call logger(logmsg)
-!	endif
-!	allstate(1:nvars,ichemo) = state(:)
-!	deallocate(state)
-!	deallocate(small_work_rkc)
 enddo
 
 if (use_medium_flux .and. medium_volume > 0) then
@@ -800,11 +764,7 @@ endif
 
 allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 ! Note: some time we need to copy the state values to the cell_list() array.
-
 deallocate(state)
-!deallocate(extra_index)
-!deallocate(intra_index)
-!deallocate(cell_index)
 
 end subroutine
 
@@ -876,11 +836,7 @@ call logger(logmsg)
 smin = 1.0e10
 smax = -smin
 do i = 1,ODEdiff%nextra
-!	site = ODEdiff%varsite(i,:)
 	state(i) = chemo(ichemo)%bdry_conc
-!	state(i) = chemo(ichemo)%conc(site(1),site(2),site(3))
-!	if (state(i) < smin) smin = state(i)
-!	if (state(i) > smax) smax = state(i)
 enddo
 end subroutine
 
@@ -1140,7 +1096,6 @@ do
 	enddo
 enddo
 end subroutine
-
 
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------

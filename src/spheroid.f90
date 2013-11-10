@@ -17,7 +17,6 @@ contains
 ! ncpu = the number of processors to use
 ! infile = file with the input data
 ! outfile = file to hold the output
-! runfile = file to pass info to the master program (e.g. Python) as the program executes.
 !-----------------------------------------------------------------------------------------
 subroutine setup(ncpu,infile,outfile,ok)
 integer :: ncpu
@@ -1059,15 +1058,11 @@ if (.not.ok) then
 endif
 call SetupODEdiff
 call SiteCellToState
-!call logger('solving')
 do it = 1,NT_CONC
-!	write(logmsg,*) 'it: ',it
-!	call logger(logmsg)
 	tstart = (it-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
 	call Solver(it,tstart,dt,Ncells)
 enddo
-!call logger('solved')
 call StateToSiteCell
 res = 0
 
@@ -1309,7 +1304,7 @@ nTC_list = k
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Rendered cognate B cell colour depends on stage, state, receptor expression level.
+! Rendered cell colour may depend on stage, state, receptor expression level.
 ! col(:) = (r,g,b)
 !-----------------------------------------------------------------------------------------
 subroutine cellColour(kcell,col)
@@ -1363,7 +1358,6 @@ integer :: col(3)
 
 rgb = ishft(col(1),16) + ishft(col(2),8) + col(3)
 end function
-
 
 !-----------------------------------------------------------------------------------------
 ! Live cells = Ncells
@@ -1549,10 +1543,6 @@ integer :: kcell
 real(REAL_KIND) :: growthrate
 
 growthrate = cell_list(kcell)%dVdt
-!if (growthrate == 0) then
-!	write(nflog,'(a,2i6,e12.3)') 'growthrate: ',istep,kcell,growthrate
-!	stop
-!endif
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1666,7 +1656,6 @@ end subroutine
 !--------------------------------------------------------------------------------
 ! Returns the distribution of intracellular O2 level
 ! nv is passed from the GUI
-
 !--------------------------------------------------------------------------------
 subroutine get_oxyprob(nv, dv, prob) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_oxyprob
@@ -1698,8 +1687,6 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen) BIND(C)
-!!DEC$ ATTRIBUTES DLLEXPORT :: EXECUTE
-!!DEC$ ATTRIBUTES C, REFERENCE, MIXED_STR_LEN_ARG, ALIAS:"EXECUTE" :: execute
 !DEC$ ATTRIBUTES DLLEXPORT :: execute
 use, intrinsic :: iso_c_binding
 character(c_char) :: infile_array(128), outfile_array(128)
@@ -1884,7 +1871,6 @@ elseif (res == -1) then
 	call logger(' Execution stopped')
 else
 	call logger('  === Execution failed ===')
-!	call sleeper(1)
 endif
 close(nflog)
 
