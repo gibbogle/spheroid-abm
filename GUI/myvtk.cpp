@@ -75,10 +75,11 @@ MyVTK::MyVTK(QWidget *page, QWidget *key_page)
 	zoomlevel = 0.7;
 	double backgroundColor[] = {0.0,0.0,0.0};
 
+
 	Pi = 4*atan(1.0);
 	leftb = false;
     key_canvas(key_page);
-	qvtkWidget = new QVTKWidget(page,QFlag(0));
+    qvtkWidget = new QVTKWidget(page,QFlag(0));
 	LOG_MSG("Created a new QVTKWidget");
 	QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(qvtkWidget);
@@ -115,7 +116,7 @@ MyVTK::MyVTK(QWidget *page, QWidget *key_page)
 	playing = false;
 	paused = false;
     record = false;
-
+    opacity = 1.0;
 	ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
 }
 
@@ -333,6 +334,7 @@ void MyVTK::stopRecorder()
 //-----------------------------------------------------------------------------------------
 void MyVTK::get_cell_positions(bool fast)
 {
+    int ninfo = 6;
 //    LOG_QMSG("get_cell_positions");
 	double BC_diam = 0.9;
 //	double DC_diam = 1.8;
@@ -340,14 +342,15 @@ void MyVTK::get_cell_positions(bool fast)
 //	DCpos_list.clear();
 //	bondpos_list.clear();
     for (int i=0; i<ncell_list; i++) {
-		int j = 5*i;
+        int j = ninfo*i;
 		CELL_POS cp;
         cp.tag = cell_list[j];
         cp.x = cell_list[j+1];
         cp.y = cell_list[j+2];
         cp.z = cell_list[j+3];
         cp.state = cell_list[j+4];
-		cp.diameter = BC_diam;
+        cp.highlight = cell_list[j+5];
+        cp.diameter = BC_diam;
         TCpos_list.append(cp);
 //        double r, g, b;
 //        if (cp.state > 0) {
@@ -379,6 +382,8 @@ void MyVTK::get_cell_positions(bool fast)
 }
 
 //-----------------------------------------------------------------------------------------
+// Reading cell positions from a file.  Out of date.
+// NOT USED
 //-----------------------------------------------------------------------------------------
 void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool savepos)
 {	
@@ -614,6 +619,8 @@ void MyVTK::process_Tcells()
 			unpack(cp.state, &r, &g, &b);
 		}
         ap->actor->GetProperty()->SetColor(r, g, b);
+        if (cp.highlight == 0)
+            ap->actor->GetProperty()->SetOpacity(opacity);
         ap->actor->SetPosition(cp.x, cp.y, cp.z);
 	}
     for (int k=0; k<T_Actor_list.length(); k++) {
