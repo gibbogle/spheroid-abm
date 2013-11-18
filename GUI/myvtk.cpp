@@ -303,7 +303,9 @@ void MyVTK::startRecorder(QString basefile, int nframes)
         w2i = vtkWindowToImageFilter::New();
         w2i->SetInput(renWin);	//the render window
         jpgwriter = vtkSmartPointer<vtkJPEGWriter>::New();
-        jpgwriter->SetInputConnection(w2i->GetOutputPort());
+//        jpgwriter->SetInputConnection(w2i->GetOutputPort());
+        pngwriter = vtkSmartPointer<vtkPNGWriter>::New();
+        pngwriter->SetInputConnection(w2i->GetOutputPort());
 }
     framenum = 0;
     LOG_MSG("set up writer");
@@ -909,9 +911,12 @@ void MyVTK::recorder()
 //    strcpy(filename,record_basename);
 //    strcat(filename,numstr);
 //    strcat(filename,".jpg");
-    strcpy(filename ,(record_basename + numstr + ".jpg").toStdString().c_str());
-    jpgwriter->SetFileName(filename);
-    jpgwriter->Write();
+//    strcpy(filename ,(record_basename + numstr + ".jpg").toStdString().c_str());
+//    jpgwriter->SetFileName(filename);
+//    jpgwriter->Write();
+    strcpy(filename ,(record_basename + numstr + ".png").toStdString().c_str());
+    pngwriter->SetFileName(filename);
+    pngwriter->Write();
     sprintf(msg,"recorder: it: %d frame: %d filename: %s",record_it,framenum,filename);
     LOG_MSG(msg);
     record_it++;
@@ -974,8 +979,9 @@ void MyVTK::playon()
 void MyVTK::stop()
 {
 	if (save_image) {
-        jpgwriter->Delete();
-		w2i->Delete();
+        if (jpgwriter) jpgwriter->Delete();
+        if (pngwriter) pngwriter->Delete();
+        w2i->Delete();
 	}
 	delete playerStream;
 	playerData->close();

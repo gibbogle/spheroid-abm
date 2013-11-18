@@ -101,6 +101,7 @@ public:
 //	vtkSmartPointer<vtkPNGWriter> writer;
 //	vtkSmartPointer<vtkBMPWriter> writer;
     vtkSmartPointer<vtkJPEGWriter> jpgwriter;
+    vtkSmartPointer<vtkPNGWriter> pngwriter;
 //	vtkSmartPointer<vtkTIFFWriter> writer;
 //	vtkSmartPointer<vtkImageCast> castFilter;
 //	vtkWindowToImageFilter *w2img;

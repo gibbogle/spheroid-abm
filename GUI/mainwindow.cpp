@@ -14,6 +14,8 @@
 #include "field.h"
 #include "transfer.h"
 
+#include "dialog.h"
+
 #ifdef linux
 #include <QTcpServer>
 #else
@@ -136,16 +138,16 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setWidth(800);
 #endif
     mdiArea_VTK->setGeometry(rect);
-    rect.setX(10);
-    rect.setY(0);
-#ifdef __DISPLAY768
-    rect.setHeight(500);
-    rect.setWidth(1100);
-#else
-    rect.setHeight(700);
-    rect.setWidth(1500);
-#endif
-    mdiArea->setGeometry(rect);
+//    rect.setX(10);
+//    rect.setY(0);
+//#ifdef __DISPLAY768
+//    rect.setHeight(500);
+//    rect.setWidth(1100);
+//#else
+//    rect.setHeight(700);
+//    rect.setWidth(1500);
+//#endif
+//    mdiArea->setGeometry(rect);
     tabs->setCurrentIndex(1);
     widget_canvas->setFixedWidth(CANVAS_WIDTH);
     widget_canvas->setFixedHeight(CANVAS_WIDTH);
@@ -296,6 +298,11 @@ void MainWindow:: startRecorder()
 {
     bool ok;
     int nframes=0;
+
+//    Dialog *dialog = new Dialog();
+//    dialog->show();
+//    dialog->isActiveWindow();
+
     QString basefile = "movie/frame";
     int i = QInputDialog::getInteger(this, tr("Set nframes"),tr("Number of frames to capture: "), nframes, 0, 10000, 1, &ok);
     if (ok) {
