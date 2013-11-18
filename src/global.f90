@@ -149,7 +149,7 @@ integer :: jumpvec(3,27)
 integer :: nlist, Ncells, Ncells0, lastNcells, lastID
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
-integer :: istep, nsteps, NT_CONC, NT_GUI_OUT
+integer :: istep, nsteps, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volume, cell_radius
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_FACTOR, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide

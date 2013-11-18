@@ -126,7 +126,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     timer = new QTimer(this);
     vtk = new MyVTK(mdiArea_VTK, widget_key);
-	vtk->init();
+//    vtk = new MyVTK(page_3D, widget_key);
+    vtk->init();
     QRect rect;
     rect.setX(50);
     rect.setY(30);
@@ -3563,4 +3564,11 @@ void MainWindow::onSelectConstituent()
         field->selectConstituent();
 }
 
-
+void MainWindow::on_verticalSliderTransparency_sliderMoved(int position)
+{
+    if (position == 100) {
+        vtk->opacity = 0.001;
+    } else {
+        vtk->opacity = (100. - position)/100;
+    }
+}

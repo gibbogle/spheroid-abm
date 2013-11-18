@@ -38,6 +38,7 @@ struct cell_pos {
 	double diameter;
 //	double state;
 	int state;
+    int highlight;
 };
 typedef cell_pos CELL_POS;
 
@@ -111,6 +112,7 @@ public:
 
 	char msg[2048];
 	double zoomlevel;
+    double opacity;
 	double Pi;
 	bool DCmotion;
 	bool DCfade;

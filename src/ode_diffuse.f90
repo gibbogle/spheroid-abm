@@ -39,10 +39,7 @@ integer, parameter :: RKC_SOLVER = 3
 logical, parameter :: EXPLICIT_INTRA = .false.
 real(REAL_KIND), allocatable :: allstate(:,:)
 real(REAL_KIND), allocatable :: allstatep(:,:)
-real(REAL_KIND), allocatable :: work_rkc(:,:)
-!integer, allocatable :: cell_index(:)
-!integer, allocatable :: intra_index(:)
-!integer, allocatable :: extra_index(:)
+real(REAL_KIND), allocatable :: work_rkc(:)
 
 integer :: nchemo, chemomap(MAX_CHEMO)
 integer :: ivdbug
@@ -694,6 +691,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 ! In this version the diffusion/decay of each constituent is solved by a separate
 ! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
+! THIS HAS BEEN CHANGED
 ! Note that this required modifications to the way the ODE solver handles SAVEd variables,
 ! to avoid collisions between different threads.
 ! The ODE solver is RKC
@@ -710,8 +708,6 @@ integer :: ichemo, nvars, ntvars, ic, kcell, site(3), iv, nth
 integer :: ie, ki, i
 real(REAL_KIND) :: t, tend
 real(REAL_KIND), allocatable :: state(:,:)
-!real(REAL_KIND), allocatable :: state(:)
-!real(REAL_KIND), allocatable :: small_work_rkc(:)
 real(REAL_KIND) :: C(MAX_CHEMO), Ce(MAX_CHEMO), dCreact(MAX_CHEMO)
 real(REAL_KIND) :: dCsum, dC
 real(REAL_KIND) :: timer1, timer2
@@ -749,7 +745,7 @@ do ic = 1,nchemo
 	idid = 0
 	t = tstart
 	tend = t + dt
-	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:,ichemo),t,tend,rtol,atol,info,work_rkc(:,ichemo),idid,ichemo)
+	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:,ichemo),t,tend,rtol,atol,info,work_rkc,idid,ichemo)
 !	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:),t,tend,rtol,atol,info,small_work_rkc(:),idid,ichemo)
 	if (idid /= 1) then
 		write(logmsg,*) ' Failed at t = ',t,' with idid = ',idid

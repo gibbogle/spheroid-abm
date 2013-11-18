@@ -115,6 +115,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Animation interval (timesteps)",
  "Interval between animation screen updates (timesteps).  One timestep = 15 sec."},
 
+{"SHOW_PROGENY", 0, 0, 0,
+ "Show descendents of cell #",
+ "All the descendents of cell with the specified ID are highlighted.  (0 = no selection)"},
+
 {"USE_OXYGEN", 1, 0, 1,
 "Use Oxygen?",
 "Oxygen is simulated"},

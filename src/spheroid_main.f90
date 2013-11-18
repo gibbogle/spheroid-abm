@@ -74,8 +74,9 @@ do irun = 1,1
 	t1 = wtime()
 	write(*,*) 'did execute: nsteps, DELTA_T: ',nsteps, DELTA_T
 	nsumm_interval = (60*60)/DELTA_T   ! number of time steps per hour
+	write(*,*) 'nsumm_interval: ',nsumm_interval
 	do jstep = 1,Nsteps
-	!	write(*,*) 'jstep: ',jstep
+!		write(*,*) 'jstep: ',jstep
 		call simulate_step(res)
 		if (mod(jstep,nsumm_interval) == 0) then
 			call get_summary(summarydata,i_hypoxia_cutoff,i_growth_cutoff)
