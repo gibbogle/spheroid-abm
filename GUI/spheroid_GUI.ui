@@ -1720,7 +1720,7 @@ padding: 8px
                <x>10</x>
                <y>10</y>
                <width>251</width>
-               <height>341</height>
+               <height>345</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_4">
@@ -1999,7 +1999,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="18" column="2">
+              <item row="19" column="2">
                <widget class="QLineEdit" name="line_TEST_CASE">
                 <property name="maximumSize">
                  <size>
@@ -2015,14 +2015,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="18" column="0">
+              <item row="19" column="0">
                <widget class="QMyLabel" name="label_TEST_CASE">
                 <property name="text">
                  <string>label_TEST_CASE</string>
                 </property>
                </widget>
               </item>
-              <item row="18" column="1">
+              <item row="19" column="1">
                <spacer name="horizontalSpacer_33">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2306,6 +2306,42 @@ padding: 8px
                <widget class="QLabel" name="units_MEDIUM_VOLUME">
                 <property name="text">
                  <string>cm3</string>
+                </property>
+               </widget>
+              </item>
+              <item row="18" column="0">
+               <widget class="QMyLabel" name="label_SHOW_PROGENY">
+                <property name="text">
+                 <string>label_SHOW_PROGENY</string>
+                </property>
+               </widget>
+              </item>
+              <item row="18" column="1">
+               <spacer name="horizontalSpacer_46">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="18" column="2">
+               <widget class="QLineEdit" name="line_SHOW_PROGENY">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>0</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
@@ -2753,6 +2789,38 @@ padding: 8px
          <string/>
         </property>
        </widget>
+       <widget class="QSlider" name="verticalSliderTransparency">
+        <property name="geometry">
+         <rect>
+          <x>780</x>
+          <y>30</y>
+          <width>19</width>
+          <height>221</height>
+         </rect>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="sliderPosition">
+         <number>0</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+       <widget class="QLabel" name="labelTransparency">
+        <property name="geometry">
+         <rect>
+          <x>770</x>
+          <y>260</y>
+          <width>71</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Transparency</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QWidget" name="page_2D">
        <property name="sizePolicy">
@@ -3134,7 +3202,7 @@ padding: 8px
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset>
      <normaloff>:/icons/001_29.png</normaloff>:/icons/001_29.png</iconset>
    </property>
    <property name="text">
@@ -3149,7 +3217,7 @@ padding: 8px
   </action>
   <action name="action_run">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset>
      <normaloff>:/icons/001_59.png</normaloff>:/icons/001_59.png</iconset>
    </property>
    <property name="text">
@@ -3161,7 +3229,7 @@ padding: 8px
   </action>
   <action name="action_inputs">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset>
      <normaloff>:/icons/001_45.png</normaloff>:/icons/001_45.png</iconset>
    </property>
    <property name="text">
@@ -3173,7 +3241,7 @@ padding: 8px
   </action>
   <action name="action_outputs">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset>
      <normaloff>:/icons/Display2.png</normaloff>:/icons/Display2.png</iconset>
    </property>
    <property name="text">
@@ -3188,7 +3256,7 @@ padding: 8px
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset>
      <normaloff>:/icons/cell2.png</normaloff>:/icons/cell2.png</iconset>
    </property>
    <property name="text">
@@ -3200,7 +3268,7 @@ padding: 8px
   </action>
   <action name="action_pause">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset>
      <normaloff>:/icons/001_07.png</normaloff>:/icons/001_07.png</iconset>
    </property>
    <property name="text">
@@ -3270,7 +3338,7 @@ padding: 8px
   </action>
   <action name="action_field">
    <property name="icon">
-    <iconset resource="icons.qrc">
+    <iconset>
      <normaloff>:/icons/color.jpg</normaloff>:/icons/color.jpg</iconset>
    </property>
    <property name="text">
