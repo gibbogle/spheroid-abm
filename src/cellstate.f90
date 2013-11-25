@@ -162,7 +162,7 @@ end function
 subroutine cell_death(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
-integer :: kcell, nlist0, site(3), i, kpar=0 
+integer :: kcell, ict, nlist0, site(3), i, kpar=0 
 real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, pdeath, tnow
 logical :: use_SN30000
 
@@ -170,7 +170,8 @@ logical :: use_SN30000
 ok = .true.
 if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
     use_SN30000 = .true.
-    Kd = SN30K%Kd
+	ict = cell_list(kcell)%celltype
+    Kd = SN30K%Kd(ict)
 else
     use_SN30000 = .false.
 endif
@@ -200,7 +201,7 @@ do kcell = 1,nlist
 		endif
 	endif
 	if (use_SN30000) then
-	    kmet = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + C_O2))*SN30K%Kmet0
+	    kmet = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + C_O2))*SN30K%Kmet0(ict)
 	    dMdt = kmet*cell_list(kcell)%conc(DRUG_A)
 	    pdeath = Kd*dMdt*dt
 !	    write(*,'(4f10.5)') kmet,cell_list(kcell)%conc(DRUG_A),dMdt,pdeath
@@ -842,6 +843,7 @@ if (nlist > max_nlist) then
 endif
 Ncells = Ncells + 1
 kcell1 = nlist
+cell_list(kcell1)%celltype = cell_list(kcell0)%celltype
 cell_list(kcell1)%state = cell_list(kcell0)%state
 cell_list(kcell1)%site = site1
 !cell_list(kcell1)%ID = lastID

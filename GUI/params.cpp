@@ -111,6 +111,26 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Number of CPUs",
 "Number of CPUs to use for the simulation."},
 
+{"NCELLTYPES", 2, 0, 0,
+"Number of cell types",
+"Maximum number of cell types in the spheroid.  The initial percentage of each type must be specified"},
+
+{"CELLPERCENT_1", 100, 0, 100,
+"Percentage of cell type 1",
+"Percentage of cell type 1"},
+
+//{"CELLDISPLAY_1", 1, 0, 1,
+//"Display cell type 1",
+//"Display cell type 1"},
+
+{"CELLPERCENT_2", 0, 0, 100,
+"Percentage of cell type 2",
+"Percentage of cell type 2"},
+
+//{"CELLDISPLAY_2", 1, 0, 1,
+//"Display cell type 2",
+//"Display cell type 2"},
+
 {"NT_ANIMATION", 1, 0, 0,
  "Animation interval (timesteps)",
  "Interval between animation screen updates (timesteps).  One timestep = 15 sec."},
@@ -176,20 +196,20 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Name of drug A"},
 
 {"DRUG_A_BDRY_CONC", 0.0, 0, 0,
- "Drug A boundary concentration",
- "Drug A concentration in the medium"},
+ "Boundary concentration",
+ "Drug concentration in the medium"},
 
 {"DRUG_A_DECAY", 0, 0, 0,
- "Drug A decay",
- "Drug A conc decays with the specified half-life"},
+ "Decaying",
+ "Drug conc decays with the specified half-life"},
 
 {"DRUG_A_SIMULATE_METABOLITE", 0, 0, 0,
- "Drug A metabolite",
- "Drug A simulate metabolite"},
+ "Simulate metabolite",
+ "Simulate drug metabolite"},
 
 {"DRUG_A_METABOLITE_DECAY", 0, 0, 0,
- "Drug A metabolite decay",
- "Drug A metabolite conc decays with the specified half-life"},
+ "Metabolite decaying",
+ "Drug metabolite conc decays with the specified half-life"},
 
 {"SN30K_DIFF_COEF", 6.0e-7, 0, 0,
  "Diffusion coeff",
@@ -199,30 +219,6 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Membrane diff coef",
  "Cell membrane diffusion coefficient Kd (also used for metabolite)"},
 
-{"SN30K_KMET0", 1.54, 0, 0,
- "Kmet0",
- "SN30000 max value of 1st order rate constant for metabolism under zero oxygen"},
-
-{"SN30K_C1", 0.0, 0, 0,
- "C1",
- "SN30000 C1 in function for oxygen-dependence of rate of metabolism"},
-
-{"SN30K_C2", 1.0, 0, 0,
- "C2",
- "SN30000 C2 in function for oxygen-dependence of rate of metabolism"},
-
-{"SN30K_KO2", 1.14, 0, 0,
- "KO2",
- "SN30000 KO2 in function for oxygen-dependence of rate of metabolism"},
-
-{"SN30K_GAMMA", 1.0, 0, 0,
- "gamma",
- "SN30000 gamma"},
-
-{"SN30K_KLESION", 0.001, 0, 0,
- "Klesion",
- "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
-
 {"SN30K_HALFLIFE", 2.0, 0, 0,
  "Half-life",
  "SN30000 half-life (hours)"},
@@ -231,19 +227,83 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Metabolite half-life",
  "SN30000 metabolite half-life (hours)"},
 
-{"SN30K_KILL_O2_CONC", 0.0, 0, 0,
+{"SN30K_KMET0_1", 1.54, 0, 0,
+ "Kmet0",
+ "SN30000 max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"SN30K_C1_1", 0.0, 0, 0,
+ "C1",
+ "SN30000 C1 in function for oxygen-dependence of rate of metabolism"},
+
+{"SN30K_C2_1", 1.0, 0, 0,
+ "C2",
+ "SN30000 C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"SN30K_KO2_1", 1.14, 0, 0,
+ "KO2",
+ "SN30000 KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"SN30K_GAMMA_1", 1.0, 0, 0,
+ "gamma",
+ "SN30000 gamma"},
+
+{"SN30K_KLESION_1", 0.001, 0, 0,
+ "Klesion    ",
+ "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
+
+{"SN30K_KILL_O2_CONC_1", 0.0, 0, 0,
  "O2 conc",
  "SN30000 constant O2 concentration in kill experiment"},
 
-{"SN30K_KILL_DRUG_CONC", 0.01, 0, 0,
+{"SN30K_KILL_DRUG_CONC_1", 0.01, 0, 0,
  "Drug conc",
  "SN30000 constant drug concentration in kill experiment"},
 
-{"SN30K_KILL_DURATION", 60, 0, 0,
+{"SN30K_KILL_DURATION_1", 60, 0, 0,
  "Duration",
  "SN30000 duration of kill experiment"},
 
-{"SN30K_KILL_FRACTION", 0.9, 0, 0,
+{"SN30K_KILL_FRACTION_1", 0.9, 0, 0,
+ "Kill fraction",
+ "SN30000 fraction of cells killed in the experiment"},
+
+{"SN30K_KMET0_2", 1.54, 0, 0,
+ "Kmet0",
+ "SN30000 max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"SN30K_C1_2", 0.0, 0, 0,
+ "C1",
+ "SN30000 C1 in function for oxygen-dependence of rate of metabolism"},
+
+{"SN30K_C2_2", 1.0, 0, 0,
+ "C2",
+ "SN30000 C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"SN30K_KO2_2", 1.14, 0, 0,
+ "KO2",
+ "SN30000 KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"SN30K_GAMMA_2", 1.0, 0, 0,
+ "gamma",
+ "SN30000 gamma"},
+
+{"SN30K_KLESION_2", 0.001, 0, 0,
+ "Klesion",
+ "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
+
+{"SN30K_KILL_O2_CONC_2", 0.0, 0, 0,
+ "O2 conc",
+ "SN30000 constant O2 concentration in kill experiment"},
+
+{"SN30K_KILL_DRUG_CONC_2", 0.01, 0, 0,
+ "Drug conc",
+ "SN30000 constant drug concentration in kill experiment"},
+
+{"SN30K_KILL_DURATION_2", 60, 0, 0,
+ "Duration",
+ "SN30000 duration of kill experiment"},
+
+{"SN30K_KILL_FRACTION_2", 0.9, 0, 0,
  "Kill fraction",
  "SN30000 fraction of cells killed in the experiment"},
 

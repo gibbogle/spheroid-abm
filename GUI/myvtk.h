@@ -54,8 +54,19 @@ struct actor_str {
 };
 typedef actor_str ACTOR_TYPE;
 
+struct colour_str {
+    double r, g, b;
+};
+typedef colour_str COLOUR_TYPE;
+
+#define USE_CELLTYPE_COLOUR true
+
 class MyVTK
 {
+private slots:
+//    void on_checkBox_CELLDISPLAY_1_toggled(bool display);
+//    void on_checkBox_CELLDISPLAY_2_toggled(bool);
+
 public:
     MyVTK(QWidget *, QWidget *);
 	~MyVTK();
@@ -80,6 +91,7 @@ public:
     void stopRecorder();
     void recorder();
     void stop();
+    void set_celltype_colour(COLOUR_TYPE *, QString str);
 
     QList<CELL_POS > TCpos_list;
 //	QList<CELL_POS > DCpos_list;
@@ -120,6 +132,8 @@ public:
 	bool playing;
 	bool paused;
 	bool save_image;
+    bool display_celltype[10];
+    QString celltype_colour[10];
     QString casename;
 	int framenum;
 	QTimer *timer;
@@ -134,6 +148,8 @@ public:
     int record_it;
 
 public slots:
+//    void on_checkBox_CELLDISPLAY_1_toggled(bool display);
+//    void on_checkBox_CELLDISPLAY_2_toggled(bool);
 
 };
 

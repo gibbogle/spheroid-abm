@@ -144,9 +144,9 @@ do x = 1,NX
 				ODEdiff%vartype(i) = EXTRA
 				ODEdiff%cell_index(i) = kcell
 !				write(nflog,*)kcell,'E ',ODEdiff%varsite(i,:),i
-				if (kcell > 0) then ! with this numbering system the EXTRA variable corresponding to
+				if (kcell > 0) then 
 					if (cell_list(kcell)%active) then
-						i = i+1         ! an INTRA variable i is i-1
+						i = i+1  ! with this numbering system the EXTRA variable corresponding to an INTRA variable i is i-1
 						nin = nin + 1
     					ODEdiff%varsite(i,:) = (/x,y,z/)
 	    				ODEdiff%vartype(i) = INTRA
@@ -519,10 +519,10 @@ end subroutine
 subroutine f_rkc(neqn,t,y,dydt,icase)
 integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
-integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ith
+integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ict, ith
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, Cin(MAX_CHEMO), Cex
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C
-logical :: bnd, dbug
+logical :: bnd, metabolized, dbug
 real(REAL_KIND) :: metab, dMdt
 logical :: use_compartments = .true.
 logical :: intracellular, cell_exists
@@ -555,6 +555,9 @@ do i = 1,neqn
         Cex = y(i-1)
 	    Cin = allstate(i,:)
 	    Cin(ichemo) = yy
+	    kcell = ODEdiff%cell_index(i)	! for access to cell-specific parameters
+	    ict = cell_list(kcell)%celltype
+	    metabolized = (SN30K%Kmet0(ict) > 0)
 	endif
 	if (.not.intracellular) then
 	    dCsum = 0
@@ -595,14 +598,14 @@ do i = 1,neqn
 			metab = C/(chemo(GLUCOSE)%MM_C0 + C)
 			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 		elseif (ichemo == SN30000) then
-		    if (C > 0) then
-				dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*C
+		    if (metabolized .and. C > 0) then
+				dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
 			else
 				dCreact = 0
 			endif
 		elseif (ichemo == SN30000_METAB) then
-			if (Cin(SN30000) > 0) then
-				dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
+			if (metabolized .and. Cin(SN30000) > 0) then
+				dCreact = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
 			else
 				dCreact = 0
 			endif
@@ -618,11 +621,13 @@ end subroutine
 !----------------------------------------------------------------------------------
 ! Reactions here + cross-membrane diffusion
 ! Should metab depend on cell volume, stage in cell cycle?
+! NOT USED now
 !----------------------------------------------------------------------------------
 subroutine intra_react(ichemo,Cin,Cex,vol,dCreact)
 integer :: ichemo
 real(REAL_KIND) :: Cin(:), Cex, vol, dCreact
 real(REAL_KIND) :: metab, C, Kex, dCex
+integer :: ict=1
 
 C = Cin(ichemo)
 dCreact = 0
@@ -640,9 +645,9 @@ elseif (ichemo == GLUCOSE) then
 	metab = C/(chemo(GLUCOSE)%MM_C0 + C)
     dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 elseif (ichemo == SN30000) then
-    dCreact = -(SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*C
+    dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
 elseif (ichemo == SN30000_METAB) then
-    dCreact = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + Cin(OXYGEN)))*SN30K%Kmet0*Cin(SN30000)
+    dCreact = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
 endif
 dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)
 end subroutine

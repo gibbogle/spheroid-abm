@@ -117,7 +117,10 @@ MyVTK::MyVTK(QWidget *page, QWidget *key_page)
 	paused = false;
     record = false;
     opacity = 1.0;
-	ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
+    display_celltype[1] = true;
+    display_celltype[2] = true;
+    TCpos_list.clear();
+    ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
 }
 
 //-----------------------------------------------------------------------------------------
@@ -512,27 +515,35 @@ void MyVTK::renderCells(bool redo, bool zzz)
 }
 
 //---------------------------------------------------------------------------------------------
+// Interprets an int as rgb
+// USE_CELLTYPE_COLOUR, the cell type is passed in cp.state, and the colours are those
+// that were chosen in the GUI.
+// Otherwise cp.state is packed (r,g,b)
 //---------------------------------------------------------------------------------------------
 void MyVTK::unpack(int x, double *rr, double *gg, double *bb)
 {
 	int z, r, g, b;
 
-	z = x;
-	r = z>>16;
-	z = r;
-	z = z<<16;
+    if (USE_CELLTYPE_COLOUR) {
 
-	x = x - z;
+    } else {
+        z = x;
+        r = z>>16;
+        z = r;
+        z = z<<16;
 
-	z = x;
-	g = z>>8;
-	z = g;
-	z = z<<8;
+        x = x - z;
 
-	b = x - z;
-	*rr = r/255.;
-	*gg = g/255.;
-	*bb = b/255.;
+        z = x;
+        g = z>>8;
+        z = g;
+        z = z<<8;
+
+        b = x - z;
+    }
+    *rr = r/255.;
+    *gg = g/255.;
+    *bb = b/255.;
 }
 
 //---------------------------------------------------------------------------------------------
@@ -559,9 +570,13 @@ void MyVTK::process_Tcells()
     bool dbug = false;
     ACTOR_TYPE a;
     ACTOR_TYPE *ap;
+    COLOUR_TYPE colour[10];
 
  //   LOG_QMSG("process_Tcells");
+    set_celltype_colour(&colour[1],celltype_colour[1]);
+    set_celltype_colour(&colour[2],celltype_colour[2]);
     int np = TCpos_list.length();
+    if (np == 0) return;
     int na = T_Actor_list.length();
     if (istep < 0) {
         sprintf(msg,"na: %d np: %d",na,np);
@@ -593,6 +608,11 @@ void MyVTK::process_Tcells()
     for (i=0; i<np; i++) {
         cp = TCpos_list[i];
         tag = cp.tag;
+        if (USE_CELLTYPE_COLOUR) {
+            if (!display_celltype[cp.state]) {
+                continue;
+            }
+        }
         in_pos_list[tag] = true;
         if (dbug) {
             sprintf(msg,"i: %d tag: %d",i,tag);
@@ -618,7 +638,16 @@ void MyVTK::process_Tcells()
                 r = 1; g = 0.2; b = 1;
             }
 		} else {
-			unpack(cp.state, &r, &g, &b);
+            if (USE_CELLTYPE_COLOUR) {
+//                r = 0.5;
+//                g = 0.5;
+//                b = 0.0;
+                r = colour[cp.state].r;
+                g = colour[cp.state].g;
+                b = colour[cp.state].b;
+            } else {
+                unpack(cp.state, &r, &g, &b);
+            }
 		}
         ap->actor->GetProperty()->SetColor(r, g, b);
         if (cp.highlight == 0)
@@ -998,3 +1027,62 @@ void MyVTK::stop()
 	paused = false;
 }
 
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MyVTK::set_celltype_colour(COLOUR_TYPE *colour, QString str)
+{
+    if (str.compare("red") == 0) {
+        colour->r = 1.0;
+        colour->g = 0.0;
+        colour->b = 0.0;
+    } else if (str.compare("orange") == 0) {
+        colour->r = 0.8;
+        colour->g = 0.5;
+        colour->b = 0.0;
+    } else if (str.compare("yellow") == 0) {
+        colour->r = 1.0;
+        colour->g = 1.0;
+        colour->b = 0.0;
+    } else if (str.compare("green") == 0) {
+        colour->r = 0.0;
+        colour->g = 1.0;
+        colour->b = 0.0;
+    } else if (str.compare("blue") == 0) {
+        colour->r = 0.0;
+        colour->g = 0.0;
+        colour->b = 1.0;
+    } else if (str.compare("purple") == 0) {
+        colour->r = 1.0;
+        colour->g = 0.0;
+        colour->b = 1.0;
+    } else if (str.compare("brown") == 0) {
+        colour->r = 0.5;
+        colour->g = 0.5;
+        colour->b = 0.2;
+    }
+
+}
+
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+//void MyVTK::set_display_celltype(int celltype, bool display)
+//{
+//    display_celltype[celltype] = display;
+//}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+//void MyVTK::set_celltype_colour(int celltype, const QString &text)
+//{
+//    celltype_colour[celltype] = text;
+//}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+//void MyVTK::on_checkBox_CELLDISPLAY_1_toggled(bool display)
+//{
+//    display_celltype[1] = display;
+//    renderCells(false,false);
+//    LOG_QMSG("toggled display_celltype[1]");
+//}

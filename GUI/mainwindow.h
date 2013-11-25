@@ -115,6 +115,10 @@ private slots:
     void onSelectConstituent();
 
     void on_verticalSliderTransparency_sliderMoved(int position);
+    void on_checkBox_CELLDISPLAY_1_toggled(bool display);
+    void on_checkBox_CELLDISPLAY_2_toggled(bool display);
+    void on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index);
+    void on_comboBox_CELLCOLOUR_2_currentIndexChanged(int index);
 
 public slots:
 	void preConnection();
@@ -134,15 +138,16 @@ public slots:
 	void textEdited_fraction(QString text);
     void setupConc(int nc, bool *used);
 
-    void on_cbox_use_drugA_toggled(bool checked);
+    void on_cbox_USE_DRUG_A_toggled(bool checked);
 //    void on_cbox_drugA_decay_toggled(bool checked);
-    void on_cbox_drugA_metabolite_toggled(bool checked);
+    void on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked);
 //    void on_cbox_drugA_metabolite_decay_toggled(bool checked);
-    void on_cbox_use_drugB_toggled(bool checked);
+    void on_cbox_USE_DRUG_B_toggled(bool checked);
 //    void on_cbox_drugB_decay_toggled(bool checked);
-    void on_cbox_drugB_metabolite_toggled(bool checked);
+    void on_cbox_DRUG_B_SIMULATE_METABOLITE_toggled(bool checked);
 //    void on_cbox_drugB_metabolite_decay_toggled(bool checked);
-
+    void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
+    void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
 private:
     void createActions();
 	void createLists();
@@ -177,6 +182,7 @@ private:
 	void drawGraphs();
 	QString selectResultSet();
 	int selectGraphCase();
+    void setupCellColours();
     void setupGraphSelector();
     void setGraphsActive();
 

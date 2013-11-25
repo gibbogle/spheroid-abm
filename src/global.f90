@@ -43,6 +43,7 @@ integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
 integer, parameter :: SN30000 = DRUG_A
 integer, parameter :: SN30000_METAB = DRUG_A_METAB
+integer, parameter :: MAX_CELLTYPES = 4
 integer, parameter :: max_nlist = 500000
 
 logical, parameter :: use_ODE_diffusion = .true.
@@ -53,6 +54,7 @@ logical, parameter :: use_react = .true.
 logical, parameter :: use_migration = .false.	! causing an error with vacant site becoming bdry
 logical, parameter :: use_medium_flux = .true.	! flux of constituents between spheroid and medium is accounted for.
 logical, parameter :: use_metabolites = .true.
+logical, parameter :: use_celltype_colour = .true.
 
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
@@ -64,6 +66,7 @@ end type
 
 type cell_type
 	integer :: ID
+	integer :: celltype
 	integer :: site(3)
 	integer :: iv
 	logical :: active
@@ -83,19 +86,19 @@ end type
 type SN30K_type
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: cell_diff
-	real(REAL_KIND) :: C1
-	real(REAL_KIND) :: C2
-	real(REAL_KIND) :: Kmet0
-	real(REAL_KIND) :: KO2
-	real(REAL_KIND) :: gamma
-	real(REAL_KIND) :: Klesion
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: metabolite_halflife
-	real(REAL_KIND) :: kill_O2
-	real(REAL_KIND) :: kill_drug
-	real(REAL_KIND) :: kill_duration
-	real(REAL_KIND) :: kill_fraction
-	real(REAL_KIND) :: Kd
+	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES)
+	real(REAL_KIND) :: C1(MAX_CELLTYPES)
+	real(REAL_KIND) :: C2(MAX_CELLTYPES)
+	real(REAL_KIND) :: KO2(MAX_CELLTYPES)
+	real(REAL_KIND) :: gamma(MAX_CELLTYPES)
+	real(REAL_KIND) :: Klesion(MAX_CELLTYPES)
+	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES)
+	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES)
+	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES)
+	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES)
+	real(REAL_KIND) :: Kd(MAX_CELLTYPES)
 end type
 
 type boundary_type
@@ -146,12 +149,14 @@ real(REAL_KIND) :: x0,y0,z0   ! centre in global coordinates (units = grids)
 real(REAL_KIND) :: blob_radius, Radius, Centre(3)
 integer :: jumpvec(3,27)
 
-integer :: nlist, Ncells, Ncells0, lastNcells, lastID
+integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
 integer :: istep, nsteps, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volume, cell_radius
+real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
+logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_FACTOR, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 real(REAL_KIND) :: t_simulation
@@ -269,6 +274,30 @@ endif
 R = par_shr3(kpar)
 k = abs(R)
 random_int = n1 + mod(k,(n2-n1+1))
+end function
+
+!--------------------------------------------------------------------------------
+! Make a random choice of an integer from 1 - N on the basis of probabilities in
+! the array p(:) (assumed to be normalized).
+!--------------------------------------------------------------------------------
+integer function random_choice(p,N,kpar)
+integer :: N,kpar
+real(REAL_KIND) :: p(:)
+integer :: k
+real(REAL_KIND) :: R, psum
+
+R = par_uni(kpar)
+psum = 0
+do k = 1,N
+    psum = psum + p(k)
+    if (R <= psum) then
+        random_choice = k
+        return
+    endif
+enddo
+write(logmsg,*) 'ERROR: random_choice: ',N,p
+call logger(logmsg)
+stop
 end function
 
 !--------------------------------------------------------------------------------

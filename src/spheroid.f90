@@ -325,7 +325,8 @@ subroutine read_cell_params(ok)
 logical :: ok
 integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra
 integer :: iuse_oxygen, iuse_glucose, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
-real(REAL_KIND) :: days, bdry_conc
+integer :: ictype, idisplay
+real(REAL_KIND) :: days, bdry_conc, percent
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
 
@@ -356,6 +357,13 @@ read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
 read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
+read(nfcell,*) Ncelltypes					! maximum number of cell types in the spheroid
+do ictype = 1,Ncelltypes
+	read(nfcell,*) percent
+	celltype_fraction(ictype) = percent/100
+!	read(nfcell,*) idisplay
+!	celltype_display(ictype) = (idisplay == 1)
+enddo
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
 read(nfcell,*) show_progeny                 ! if != 0, the number of the cell to show descendents of
 read(nfcell,*) iuse_oxygen		!chemo(OXYGEN)%used
@@ -399,26 +407,29 @@ do i = 1,2			! currently allowing for just two different drugs
 	if (idrug == SN30000) then
 		read(nfcell,*) SN30K%diff_coef
 		read(nfcell,*) SN30K%cell_diff
-		read(nfcell,*) SN30K%Kmet0
-		read(nfcell,*) SN30K%C1
-		read(nfcell,*) SN30K%C2
-		read(nfcell,*) SN30K%KO2
-		read(nfcell,*) SN30K%gamma
-		read(nfcell,*) SN30K%Klesion
 		read(nfcell,*) SN30K%halflife
 		read(nfcell,*) SN30K%metabolite_halflife
-		read(nfcell,*) SN30K%kill_O2
-		read(nfcell,*) SN30K%kill_drug
-		read(nfcell,*) SN30K%kill_duration
-		read(nfcell,*) SN30K%kill_fraction
-		SN30K%KO2 = 1.0e-3*SN30K%KO2                    ! um -> mM
-		SN30K%kill_duration = 60*SN30K%kill_duration    ! minutes -> seconds
 		chemo(idrug)%halflife = SN30K%halflife
 		chemo(imetab)%halflife = SN30K%metabolite_halflife
 		chemo(idrug)%diff_coef = SN30K%diff_coef		! Note that metabolite is given the same diff_coef
 		chemo(imetab)%diff_coef = SN30K%diff_coef		! and cell_diff as the drug.
 		chemo(idrug)%cell_diff = SN30K%cell_diff
 		chemo(imetab)%cell_diff = SN30K%cell_diff
+		do ictype = 1,Ncelltypes
+			read(nfcell,*) SN30K%Kmet0(ictype)
+			read(nfcell,*) SN30K%C1(ictype)
+			read(nfcell,*) SN30K%C2(ictype)
+			read(nfcell,*) SN30K%KO2(ictype)
+			read(nfcell,*) SN30K%gamma(ictype)
+			read(nfcell,*) SN30K%Klesion(ictype)
+			read(nfcell,*) SN30K%kill_O2(ictype)
+			read(nfcell,*) SN30K%kill_drug(ictype)
+			read(nfcell,*) SN30K%kill_duration(ictype)
+			read(nfcell,*) SN30K%kill_fraction(ictype)
+			SN30K%KO2(ictype) = 1.0e-3*SN30K%KO2(ictype)                    ! um -> mM
+			SN30K%kill_duration(ictype) = 60*SN30K%kill_duration(ictype)    ! minutes -> seconds
+		enddo
+		
 	endif
 	if (chemo(idrug)%used .and. chemo(idrug)%decay) then
 		chemo(idrug)%decay_rate = DecayRate(chemo(idrug)%halflife)
@@ -695,9 +706,12 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine determine_Kd
 real(REAL_KIND) :: kmet
+integer :: i
 
-kmet = (SN30K%C1 + SN30K%C2*SN30K%KO2/(SN30K%KO2 + SN30K%kill_O2))*SN30K%Kmet0
-SN30K%Kd = -log(1-SN30K%kill_fraction)/(SN30K%kill_duration*kmet*SN30K%kill_drug)
+do i = 1,Ncelltypes
+	kmet = (SN30K%C1(i) + SN30K%C2(i)*SN30K%KO2(i)/(SN30K%KO2(i) + SN30K%kill_O2(i)))*SN30K%Kmet0(i)
+	SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i))
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -723,6 +737,7 @@ do x = 1,NX
 				lastID = lastID + 1
 				site = (/x,y,z/)
 				cell_list(k)%ID = lastID
+				cell_list(k)%celltype = random_choice(celltype_fraction,Ncelltypes,kpar)
 				cell_list(k)%site = site
 				cell_list(k)%state = 1
                 cell_list(k)%drug_tag = .false.
@@ -1207,7 +1222,7 @@ subroutine get_scene(nTC_list,TC_list) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_scene
 use, intrinsic :: iso_c_binding
 integer(c_int) :: nTC_list, TC_list(*)
-integer :: k, kc, kcell, site(3), j, jb
+integer :: k, kc, kcell, site(3), j, jb, colour
 integer :: col(3)
 integer :: x, y, z
 integer :: itcstate, ctype, stage, region, highlight
@@ -1301,10 +1316,15 @@ do kcell = 1,nlist
 	    else
 	        highlight = 0
 	    endif
-		call cellColour(kcell,highlight,col)
+	    if (use_celltype_colour) then
+			colour = cell_list(kcell)%celltype
+		else
+			call cellColour(kcell,highlight,col)
+			colour = rgb(col)
+		endif
 		TC_list(j+1) = kcell + last_id1
 		TC_list(j+2:j+4) = site
-		TC_list(j+5) = rgb(col)
+		TC_list(j+5) = colour
 		TC_list(j+6) = highlight
 		last_id2 = kcell + last_id1
 	endif

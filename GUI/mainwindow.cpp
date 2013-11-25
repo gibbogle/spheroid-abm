@@ -128,6 +128,9 @@ MainWindow::MainWindow(QWidget *parent)
     vtk = new MyVTK(mdiArea_VTK, widget_key);
 //    vtk = new MyVTK(page_3D, widget_key);
     vtk->init();
+    LOG_QMSG("do setupCellColours");
+    setupCellColours();
+    LOG_QMSG("did setupCellColours");
     QRect rect;
     rect.setX(50);
     rect.setY(30);
@@ -190,7 +193,7 @@ void MainWindow::createActions()
 		LOG_QMSG(label_str);
 		if (label_str.startsWith("label_")) {
 			connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
-			LOG_QMSG(label_str);
+//			LOG_QMSG(label_str);
 		}
 	}
 	// Graph menu
@@ -207,15 +210,17 @@ void MainWindow::createActions()
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
 //	  connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
 	connect(lineEdit_fraction, SIGNAL(textEdited(QString)), this, SLOT(textEdited_fraction(QString)));
-    connect((QCheckBox *)cbox_USE_DRUG_A,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugA_toggled(bool)));
+//    connect((QCheckBox *)cbox_USE_DRUG_A,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugA_toggled(bool)));
 //    connect((QCheckBox *)cbox_DRUG_A_DECAY,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_decay_toggled(bool)));
-    connect((QCheckBox *)cbox_DRUG_A_SIMULATE_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_toggled(bool)));
+//    connect((QCheckBox *)cbox_DRUG_A_SIMULATE_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_toggled(bool)));
 //    connect((QCheckBox *)cbox_DRUG_A_METABOLITE_DECAY,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugA_metabolite_decay_toggled(bool)));
-    connect((QCheckBox *)cbox_USE_DRUG_B,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugB_toggled(bool)));
+//    connect((QCheckBox *)cbox_USE_DRUG_B,SIGNAL(toggled(bool)),this,SLOT(on_cbox_use_drugB_toggled(bool)));
 //    connect((QCheckBox *)cbox_DRUG_B_DECAY,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_decay_toggled(bool)));
-    connect((QCheckBox *)cbox_DRUG_B_SIMULATE_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_toggled(bool)));
+//    connect((QCheckBox *)cbox_DRUG_B_SIMULATE_METABOLITE,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_toggled(bool)));
 //    connect((QCheckBox *)cbox_DRUG_B_METABOLITE_DECAY,SIGNAL(toggled(bool)),this,SLOT(on_cbox_drugB_metabolite_decay_toggled(bool)));
     connect(action_select_constituent, SIGNAL(triggered()), SLOT(onSelectConstituent()));
+    connect(line_CELLPERCENT_1, SIGNAL(textEdited(QString)), this, SLOT(on_line_CELLPERCENT_1_textEdited(QString)));
+    connect(line_CELLPERCENT_2, SIGNAL(textEdited(QString)), this, SLOT(on_line_CELLPERCENT_2_textEdited(QString)));
 
 }
 
@@ -3130,6 +3135,28 @@ void MainWindow::setupConc(int nc, bool *cused)
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
+void MainWindow::setupCellColours()
+{
+    comboBox_CELLCOLOUR_1->addItem("red");
+    comboBox_CELLCOLOUR_1->addItem("orange");
+    comboBox_CELLCOLOUR_1->addItem("yellow");
+    comboBox_CELLCOLOUR_1->addItem("green");
+    comboBox_CELLCOLOUR_1->addItem("blue");
+    comboBox_CELLCOLOUR_1->addItem("purple");
+    comboBox_CELLCOLOUR_1->addItem("brown");
+    comboBox_CELLCOLOUR_2->addItem("red");
+    comboBox_CELLCOLOUR_2->addItem("orange");
+    comboBox_CELLCOLOUR_2->addItem("yellow");
+    comboBox_CELLCOLOUR_2->addItem("green");
+    comboBox_CELLCOLOUR_2->addItem("blue");
+    comboBox_CELLCOLOUR_2->addItem("purple");
+    comboBox_CELLCOLOUR_2->addItem("brown");
+    comboBox_CELLCOLOUR_1->setCurrentIndex(0);
+    comboBox_CELLCOLOUR_2->setCurrentIndex(1);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 void MainWindow::setupGraphSelector()
 {
     QVBoxLayout *vbox = new QVBoxLayout;
@@ -3178,7 +3205,7 @@ void MainWindow::setGraphsActive()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_use_drugA_toggled(bool checked)
+void MainWindow::on_cbox_USE_DRUG_A_toggled(bool checked)
 {
     LOG_MSG("cbox_use_drugA toggled");
     QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_A_BDRY_CONC");
@@ -3195,6 +3222,41 @@ void MainWindow::on_cbox_use_drugA_toggled(bool checked)
     }
 }
 
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_CELLDISPLAY_1_toggled(bool display)
+{
+    vtk->display_celltype[1] = display;
+//    vtk->cleanup();
+    vtk->renderCells(false,false);
+//    LOG_QMSG("toggled display_celltype[1]");
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_CELLDISPLAY_2_toggled(bool display)
+{
+    vtk->display_celltype[2] = display;
+    vtk->renderCells(false,false);
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MainWindow::on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index)
+{
+    vtk->celltype_colour[1] = comboBox_CELLCOLOUR_1->currentText();
+    vtk->renderCells(false,false);
+//    LOG_QMSG("changed celltype_colour[1]");
+ //   LOG_QMSG(comboBox_CELLCOLOUR_1->currentText());
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MainWindow::on_comboBox_CELLCOLOUR_2_currentIndexChanged(int index)
+{
+    vtk->celltype_colour[2] = comboBox_CELLCOLOUR_2->currentText();
+    vtk->renderCells(false,false);
+}
 /*
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -3212,9 +3274,9 @@ void MainWindow::on_cbox_drugA_decay_toggled(bool checked)
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_drugA_metabolite_toggled(bool checked)
+void MainWindow::on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked)
 {
-    LOG_MSG("cbox_use_drugA_metabolite toggled");
+//    LOG_MSG("cbox_use_drugA_metabolite toggled");
     QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
     QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_METABOLITE_DECAY");
     if (checked) {
@@ -3243,9 +3305,9 @@ void MainWindow::on_cbox_drugA_metabolite_decay_toggled(bool checked)
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_use_drugB_toggled(bool checked)
+void MainWindow::on_cbox_USE_DRUG_B_toggled(bool checked)
 {
-    LOG_MSG("cbox_use_drugB toggled");
+//    LOG_MSG("cbox_use_drugB toggled");
     QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_B_BDRY_CONC");
     QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_B_DECAY");
     QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_SIMULATE_METABOLITE");
@@ -3277,9 +3339,9 @@ void MainWindow::on_cbox_drugB_decay_toggled(bool checked)
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_drugB_metabolite_toggled(bool checked)
+void MainWindow::on_cbox_DRUG_B_SIMULATE_METABOLITE_toggled(bool checked)
 {
-    LOG_MSG("cbox_use_drugB_metabolite toggled");
+//    LOG_MSG("cbox_use_drugB_metabolite toggled");
     QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
     QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_METABOLITE_DECAY");
     if (checked) {
@@ -3290,6 +3352,27 @@ void MainWindow::on_cbox_drugB_metabolite_toggled(bool checked)
         cbm->setEnabled(false);
     }
 }
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_line_CELLPERCENT_1_textEdited(QString pc1_str)
+{
+    double pc1 = pc1_str.toDouble();
+    double pc2 = 100 - pc1;
+    QString pc2_str = QString::number(pc2);
+    line_CELLPERCENT_2->setText(pc2_str);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_line_CELLPERCENT_2_textEdited(QString pc2_str)
+{
+    double pc2 = pc2_str.toDouble();
+    double pc1 = 100 - pc2;
+    QString pc1_str = QString::number(pc1);
+    line_CELLPERCENT_1->setText(pc1_str);
+}
+
 
 /*
 //--------------------------------------------------------------------------------------------------------
