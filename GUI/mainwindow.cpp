@@ -15,6 +15,7 @@
 #include "transfer.h"
 
 #include "dialog.h"
+//#include "colours.h"
 
 #ifdef linux
 #include <QTcpServer>
@@ -26,6 +27,7 @@ LOG_USE();
 
 Params *parm;	// I don't believe this is the right way, but it works
 Graphs *grph;
+//Colours *pal;
 
 int showingVTK;
 int VTKbuffer[100];
@@ -103,9 +105,9 @@ MainWindow::MainWindow(QWidget *parent)
 
 	parm = new Params();
 	nParams = parm->nParams;
-//    field = new Field(page_2D);
     field = new Field(page_2D);
     grph = new Graphs();
+//    pal = new Colours();
 
     setupGraphSelector();
     setGraphsActive();
@@ -3137,22 +3139,38 @@ void MainWindow::setupConc(int nc, bool *cused)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setupCellColours()
 {
-    comboBox_CELLCOLOUR_1->addItem("red");
-    comboBox_CELLCOLOUR_1->addItem("orange");
-    comboBox_CELLCOLOUR_1->addItem("yellow");
-    comboBox_CELLCOLOUR_1->addItem("green");
-    comboBox_CELLCOLOUR_1->addItem("blue");
-    comboBox_CELLCOLOUR_1->addItem("purple");
-    comboBox_CELLCOLOUR_1->addItem("brown");
-    comboBox_CELLCOLOUR_2->addItem("red");
-    comboBox_CELLCOLOUR_2->addItem("orange");
-    comboBox_CELLCOLOUR_2->addItem("yellow");
-    comboBox_CELLCOLOUR_2->addItem("green");
-    comboBox_CELLCOLOUR_2->addItem("blue");
-    comboBox_CELLCOLOUR_2->addItem("purple");
-    comboBox_CELLCOLOUR_2->addItem("brown");
-    comboBox_CELLCOLOUR_1->setCurrentIndex(0);
-    comboBox_CELLCOLOUR_2->setCurrentIndex(1);
+    QComboBox *combo;
+
+    for (int i=0; i<2; i++) {
+        if (i == 0)
+            combo = comboBox_CELLCOLOUR_1;
+        else
+            combo = comboBox_CELLCOLOUR_2;
+        combo->addItem("red");
+        combo->addItem("orange");
+        combo->addItem("yellow");
+        combo->addItem("green");
+        combo->addItem("blue");
+        combo->addItem("purple");
+        combo->addItem("brown");
+    }
+//    QString colstr = "red";
+//    comboBox_CELLCOLOUR_1->addItem(colstr);
+//    comboBox_CELLCOLOUR_1->addItem("orange");
+//    comboBox_CELLCOLOUR_1->addItem("yellow");
+//    comboBox_CELLCOLOUR_1->addItem("green");
+//    comboBox_CELLCOLOUR_1->addItem("blue");
+//    comboBox_CELLCOLOUR_1->addItem("purple");
+//    comboBox_CELLCOLOUR_1->addItem("brown");
+//    comboBox_CELLCOLOUR_2->addItem("red");
+//    comboBox_CELLCOLOUR_2->addItem("orange");
+//    comboBox_CELLCOLOUR_2->addItem("yellow");
+//    comboBox_CELLCOLOUR_2->addItem("green");
+//    comboBox_CELLCOLOUR_2->addItem("blue");
+//    comboBox_CELLCOLOUR_2->addItem("purple");
+//    comboBox_CELLCOLOUR_2->addItem("brown");
+//    comboBox_CELLCOLOUR_1->setCurrentIndex(0);
+//    comboBox_CELLCOLOUR_2->setCurrentIndex(1);
 }
 
 //--------------------------------------------------------------------------------------------------------
