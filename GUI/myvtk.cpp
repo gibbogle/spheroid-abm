@@ -139,55 +139,56 @@ void MyVTK::key_canvas(QWidget *key_page)
     QGraphicsTextItem *text;
 
 //    brush.setColor(QColor(255,128,77));
-    brush.setColor(QColor(150,100,0));
+    brush.setColor(QColor(150,100,0));      // dark brown
     brush.setStyle(Qt::SolidPattern);
 	scene->addEllipse(10,10,20,20,Qt::NoPen, brush);
 	text = scene->addText("FDC");
     text->setPos(35, 10);
 
 //    brush.setColor(QColor(255,77,128));
-    brush.setColor(QColor(200,60,100));
+    brush.setColor(QColor(200,60,100));     // dark red
     brush.setStyle(Qt::SolidPattern);
     scene->addEllipse(10,40,20,20,Qt::NoPen, brush);
     text = scene->addText("MRC");
     text->setPos(35, 40);
 
-    brush.setColor(QColor(30,20,255));
+    brush.setColor(QColor(30,20,255));      // dark blue
     scene->addEllipse(10,70,20,20,Qt::NoPen, brush);
 	text = scene->addText("Naive B cell");
     text->setPos(35, 70);
 
-    brush.setColor(QColor(0,200,255));
+    brush.setColor(QColor(0,200,255));      // light blue
     scene->addEllipse(10,100,20,20,Qt::NoPen, brush);
 	text = scene->addText("CCR7 UP");
     text->setPos(35, 100);
 
-    brush.setColor(QColor(50,255,150));
+    brush.setColor(QColor(50,255,150));     // light green
     scene->addEllipse(10,130,20,20,Qt::NoPen, brush);
 	text = scene->addText("EBI2 UP");
     text->setPos(35, 130);
 
-    brush.setColor(QColor(255,255,0));
+//    brush.setColor(QColor(255,255,0));      // yellow
+    brush.setColor(Qt::yellow );      // yellow
     scene->addEllipse(10,160,20,20,Qt::NoPen, brush);
 	text = scene->addText("BCL6 HI");
     text->setPos(35, 160);
 
-    brush.setColor(QColor(0,150,0));
+    brush.setColor(QColor(0,150,0));        // dark green
     scene->addEllipse(10,190,20,20,Qt::NoPen, brush);
 	text = scene->addText("BCL6 LO");
     text->setPos(35, 190);
 
-    brush.setColor(QColor(128,128,128));
+    brush.setColor(QColor(128,128,128));    // grey
     scene->addEllipse(10,220,20,20,Qt::NoPen, brush);
 	text = scene->addText("Max divisions");
     text->setPos(35, 220);
 
-    brush.setColor(QColor(255,0,0));
+    brush.setColor(QColor(255,0,0));        // red
     scene->addEllipse(10,250,20,20,Qt::NoPen, brush);
 	text = scene->addText("Plasma cell");
     text->setPos(35, 250);
 
-    brush.setColor(QColor(255,130,0));
+    brush.setColor(QColor(255,130,0));      // orange
     scene->addEllipse(10,280,20,20,Qt::NoPen, brush);
     text = scene->addText("CD4 T cell");
     text->setPos(35, 280);

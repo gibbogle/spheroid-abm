@@ -170,8 +170,6 @@ logical :: use_SN30000
 ok = .true.
 if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
     use_SN30000 = .true.
-	ict = cell_list(kcell)%celltype
-    Kd = SN30K%Kd(ict)
 else
     use_SN30000 = .false.
 endif
@@ -201,6 +199,8 @@ do kcell = 1,nlist
 		endif
 	endif
 	if (use_SN30000) then
+		ict = cell_list(kcell)%celltype
+		Kd = SN30K%Kd(ict)
 	    kmet = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + C_O2))*SN30K%Kmet0(ict)
 	    dMdt = kmet*cell_list(kcell)%conc(DRUG_A)
 	    pdeath = Kd*dMdt*dt
