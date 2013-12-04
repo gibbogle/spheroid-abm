@@ -571,11 +571,12 @@ void MyVTK::process_Tcells()
     bool dbug = false;
     ACTOR_TYPE a;
     ACTOR_TYPE *ap;
-    COLOUR_TYPE colour[10];
+    QColor qcolor;
+//    COLOUR_TYPE colour[10];
 
  //   LOG_QMSG("process_Tcells");
-    set_celltype_colour(&colour[1],celltype_colour[1]);
-    set_celltype_colour(&colour[2],celltype_colour[2]);
+//    set_celltype_colour(&colour[1],celltype_colour[1]);
+//    set_celltype_colour(&colour[2],celltype_colour[2]);
     int np = TCpos_list.length();
     if (np == 0) return;
     int na = T_Actor_list.length();
@@ -643,9 +644,15 @@ void MyVTK::process_Tcells()
 //                r = 0.5;
 //                g = 0.5;
 //                b = 0.0;
-                r = colour[cp.state].r;
-                g = colour[cp.state].g;
-                b = colour[cp.state].b;
+//                r = colour[cp.state].r;
+//                g = colour[cp.state].g;
+//                b = colour[cp.state].b;
+                qcolor = celltype_colour[cp.state];
+                r = qcolor.red()/255.;
+                g = qcolor.green()/255.;
+                b = qcolor.blue()/255.;
+//                sprintf(msg,"celltype: %d  r,g,b: %f %f %f",cp.state,r,g,b);
+//                LOG_MSG(msg);
             } else {
                 unpack(cp.state, &r, &g, &b);
             }

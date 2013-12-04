@@ -47,6 +47,7 @@ type ODEdiff_type
 	integer, allocatable :: ivar(:,:,:)
 	integer, allocatable :: varsite(:,:)
 	integer, allocatable :: icoef(:,:)
+	integer, allocatable :: iexcoef(:,:)
 	integer, allocatable :: vartype(:)
 	integer, allocatable :: cell_index(:)
 !	integer, allocatable :: ncoef(:)

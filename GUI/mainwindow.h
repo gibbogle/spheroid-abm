@@ -28,6 +28,7 @@ using namespace std;
 #include "log.h"
 #include "SimpleView3DUI.h"
 #include "SimpleView2DUI.h"
+#include "qmycanvas.h"
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -134,7 +135,8 @@ public slots:
  //   void on_buttonButton_constituent_clicked();
     void buttonClick_constituent(QAbstractButton* button);
     void buttonClick_plane(QAbstractButton* button);
-	void textChanged_fraction(QString text);
+    void buttonClick_canvas(QAbstractButton* button);
+    void textChanged_fraction(QString text);
 	void textEdited_fraction(QString text);
     void setupConc(int nc, bool *used);
 
@@ -267,6 +269,7 @@ private:
 	int progress;
 	int nGraphs;		// act, ntot_LN, ncog_PER, ...
 	int nGraphCases;
+    QColor comboColour[30];
 
 	RESULT_SET *newR;
 

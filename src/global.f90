@@ -56,6 +56,8 @@ logical, parameter :: use_medium_flux = .true.	! flux of constituents between sp
 logical, parameter :: use_metabolites = .true.
 logical, parameter :: use_celltype_colour = .true.
 
+logical, parameter :: use_new_solver = .false.
+
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
 type occupancy_type

@@ -4,7 +4,9 @@
 #include <QDialog>
 #include <QMessageBox>
 #include <QtGui>
+#include <QMouseEvent>
 #include "plot.h"
+#include "myqgraphicsview.h"
 
 #define CANVAS_WIDTH 696
 #define MAX_CONC 6
@@ -37,15 +39,14 @@ typedef field_data FIELD_DATA;
 extern "C" {
     void get_fieldinfo(int *, int *, double *, int *, int *, int *, int *);
     void get_fielddata(int *, double *, int *, int *, FIELD_DATA *, int *);
-//    void get_concdata(int *, double *, double *);
 }
 
-class Field : public QMainWindow
+//class Field : public QMainWindow
+class Field : public QWidget
 {
 public:
     Field(QWidget *);
     ~Field();
-    void chooseParameters();
     void displayField(int, int *);
     void displayField1();
     void setSliceChanged();
@@ -72,7 +73,7 @@ public:
     QWidget *field_page;
     bool save_images;
     bool use_log;
-    QGraphicsView* view;
+    MyQGraphicsView* view;
     int NX;
     int axis;
     double fraction;
@@ -92,7 +93,6 @@ public:
     bool executing;
     char msg[1024];
 
-//public slots:
     void setConstituent(QAbstractButton* button);
     void setPlane(QAbstractButton* button);
 	void setFraction(QString text);

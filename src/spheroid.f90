@@ -1079,7 +1079,8 @@ call SiteCellToState
 do it = 1,NT_CONC
 	tstart = (it-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
-	call Solver(it,tstart,dt,Ncells)
+!	call Solver(it,tstart,dt,Ncells)
+	call NewSolver(it,tstart,dt,Ncells)
 enddo
 call StateToSiteCell
 res = 0
@@ -1222,7 +1223,7 @@ subroutine get_scene(nTC_list,TC_list) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_scene
 use, intrinsic :: iso_c_binding
 integer(c_int) :: nTC_list, TC_list(*)
-integer :: k, kc, kcell, site(3), j, jb, colour
+integer :: k, kc, kcell, site(3), j, jb, colour, nlive
 integer :: col(3)
 integer :: x, y, z
 integer :: itcstate, ctype, stage, region, highlight
@@ -1305,6 +1306,7 @@ if (1 == 0) then
 endif
 
 ! Cells
+nlive = 0
 do kcell = 1,nlist
 !	if (idbug /= 0 .and. cell_list(kcell)%ID /= idbug) cycle
 	if (cell_list(kcell)%exists) then
@@ -1327,10 +1329,13 @@ do kcell = 1,nlist
 		TC_list(j+5) = colour
 		TC_list(j+6) = highlight
 		last_id2 = kcell + last_id1
+		nlive = nlive + 1
 	endif
 enddo
 !nTC_list = last_id2
 nTC_list = k
+!write(logmsg,*) 'nlive: ',nlive
+!call logger(logmsg)
 end subroutine
 
 !-----------------------------------------------------------------------------------------

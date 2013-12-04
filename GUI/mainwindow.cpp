@@ -47,7 +47,6 @@ int ndistplots = 1;
 
 QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
 {}
-
 //--------------------------------------------------------------------------------------------------------
 // Redefines mousePressEvent for QMyLabel, which extends QLabel.  This is used to display info about
 // a model parameter.
@@ -137,8 +136,8 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setX(50);
     rect.setY(30);
 #ifdef __DISPLAY768
-    rect.setHeight(600);
-    rect.setWidth(600);
+    rect.setHeight(700);
+    rect.setWidth(700);
 #else
     rect.setHeight(800);
     rect.setWidth(800);
@@ -155,8 +154,8 @@ MainWindow::MainWindow(QWidget *parent)
 //#endif
 //    mdiArea->setGeometry(rect);
     tabs->setCurrentIndex(1);
-    widget_canvas->setFixedWidth(CANVAS_WIDTH);
-    widget_canvas->setFixedHeight(CANVAS_WIDTH);
+//    widget_canvas->setFixedWidth(CANVAS_WIDTH);
+//    widget_canvas->setFixedHeight(CANVAS_WIDTH);
 
     goToInputs();
 }
@@ -223,7 +222,7 @@ void MainWindow::createActions()
     connect(action_select_constituent, SIGNAL(triggered()), SLOT(onSelectConstituent()));
     connect(line_CELLPERCENT_1, SIGNAL(textEdited(QString)), this, SLOT(on_line_CELLPERCENT_1_textEdited(QString)));
     connect(line_CELLPERCENT_2, SIGNAL(textEdited(QString)), this, SLOT(on_line_CELLPERCENT_2_textEdited(QString)));
-
+//    connect(widget_canvas, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_canvas(QAbstractButton*)));
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3140,19 +3139,45 @@ void MainWindow::setupConc(int nc, bool *cused)
 void MainWindow::setupCellColours()
 {
     QComboBox *combo;
+    QString text;
+    int i, j, k;
 
-    for (int i=0; i<2; i++) {
+//    QStringList names = QColor::colorNames();
+    for (i=0; i<2; i++) {
         if (i == 0)
             combo = comboBox_CELLCOLOUR_1;
         else
             combo = comboBox_CELLCOLOUR_2;
+        k = 0;
         combo->addItem("red");
+        comboColour[k] = QColor(Qt::red);
+        k++;
         combo->addItem("orange");
+        comboColour[k] = QColor(255,130,0);
+        k++;
         combo->addItem("yellow");
+        comboColour[k] = QColor(Qt::yellow);
+        k++;
         combo->addItem("green");
+        comboColour[k] = QColor(Qt::green);
+        k++;
         combo->addItem("blue");
-        combo->addItem("purple");
-        combo->addItem("brown");
+        comboColour[k] = QColor(Qt::blue);
+        k++;
+        combo->addItem("magenta");
+        comboColour[k] = QColor(Qt::magenta);
+        k++;
+        combo->addItem("cyan");
+        comboColour[k] = QColor(Qt::cyan);
+        k++;
+
+//        combo->addItem("red");
+//        combo->addItem("orange");
+//        combo->addItem("yellow");
+//        combo->addItem("green");
+//        combo->addItem("blue");
+//        combo->addItem("purple");
+//        combo->addItem("brown");
     }
 //    QString colstr = "red";
 //    comboBox_CELLCOLOUR_1->addItem(colstr);
@@ -3169,8 +3194,9 @@ void MainWindow::setupCellColours()
 //    comboBox_CELLCOLOUR_2->addItem("blue");
 //    comboBox_CELLCOLOUR_2->addItem("purple");
 //    comboBox_CELLCOLOUR_2->addItem("brown");
-//    comboBox_CELLCOLOUR_1->setCurrentIndex(0);
-//    comboBox_CELLCOLOUR_2->setCurrentIndex(1);
+    comboBox_CELLCOLOUR_1->setCurrentIndex(1);
+    comboBox_CELLCOLOUR_1->setCurrentIndex(0);
+    comboBox_CELLCOLOUR_2->setCurrentIndex(1);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3262,17 +3288,21 @@ void MainWindow::on_checkBox_CELLDISPLAY_2_toggled(bool display)
 //-----------------------------------------------------------------------------------------
 void MainWindow::on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index)
 {
-    vtk->celltype_colour[1] = comboBox_CELLCOLOUR_1->currentText();
+    QColor qcolor;
+//    vtk->celltype_colour[1] = comboBox_CELLCOLOUR_1->currentText();
+    qcolor = comboColour[index];
+    vtk->celltype_colour[1] = qcolor;
     vtk->renderCells(false,false);
-//    LOG_QMSG("changed celltype_colour[1]");
- //   LOG_QMSG(comboBox_CELLCOLOUR_1->currentText());
+    sprintf(msg,"changed celltype_colour[1]: index: %d r,g,b: %d %d %d",index,qcolor.red(),qcolor.green(),qcolor.blue());
+    LOG_MSG(msg);
 }
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void MainWindow::on_comboBox_CELLCOLOUR_2_currentIndexChanged(int index)
 {
-    vtk->celltype_colour[2] = comboBox_CELLCOLOUR_2->currentText();
+//    vtk->celltype_colour[2] = comboBox_CELLCOLOUR_2->currentText();
+    vtk->celltype_colour[2] = comboColour[index];
     vtk->renderCells(false,false);
 }
 /*
@@ -3639,6 +3669,11 @@ void MainWindow::buttonClick_plane(QAbstractButton* button)
 {
     LOG_MSG("buttonClick_plane");
     field->setPlane(button);
+}
+
+void MainWindow::buttonClick_canvas(QAbstractButton* button)
+{
+    LOG_MSG("buttonClick_canvas");
 }
 
 void MainWindow::textChanged_fraction(QString text)

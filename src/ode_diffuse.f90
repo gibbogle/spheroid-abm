@@ -106,7 +106,9 @@ end function
 !----------------------------------------------------------------------------------
 subroutine SetupODEDiff
 integer :: x, y, z, i, site(3), ifdc, ichemo, k, nc, nin, nex, kcell, ki, ie
+integer :: kextra, j
 real(REAL_KIND) :: secretion
+integer, allocatable :: exmap(:)
 integer :: ierr
 logical :: left, right
 
@@ -120,6 +122,9 @@ if (.not.allocated(ODEdiff%varsite)) then
 endif
 if (.not.allocated(ODEdiff%icoef)) then
 	allocate(ODEdiff%icoef(MAX_VARS,7))
+endif
+if (.not.allocated(ODEdiff%iexcoef)) then
+	allocate(ODEdiff%iexcoef(MAX_VARS,7))
 endif
 if (.not.allocated(ODEdiff%vartype)) then
 	allocate(ODEdiff%vartype(MAX_VARS))
@@ -164,6 +169,17 @@ ODEdiff%nintra = nin
 ODEdiff%nvars = i
 
 if (.not.use_ODE_diffusion) return
+
+! Set up mapping for EXTRA variables from variable index to EXTRA sequence number
+allocate(exmap(ODEdiff%nvars))
+kextra = 0
+do i = 1,ODEdiff%nvars
+	if (ODEdiff%vartype(i) == EXTRA) then
+		kextra = kextra + 1
+		exmap(i) = kextra
+	endif
+enddo
+		
 
 !if (allocated(ODEdiff%icoef)) then
 !	deallocate(ODEdiff%icoef)
@@ -245,6 +261,16 @@ do i = 1,ODEdiff%nvars
 	if (right) then
 		ODEdiff%icoef(i,7) = ODEdiff%ivar(x,y,z+1)
 	endif
+	! Set up iexcoef(:,:)
+	kextra = exmap(i)
+	do j = 1,7
+		if (ODEdiff%icoef(i,j) > 0) then
+			k = exmap(ODEdiff%icoef(i,j))
+		else
+			k = 0
+		endif
+		ODEdiff%iexcoef(kextra,j) = k
+	enddo
 enddo
 if (ierr /= 0) then
 	write(logmsg,*) 'Error: SetupODEDiff: lattice boundary reached: ierr: ',ierr
@@ -265,6 +291,7 @@ do ichemo = 1,MAX_CHEMO
 		chemomap(nchemo) = ichemo
 	endif
 enddo
+deallocate(exmap)
 !write(*,*) 'chemomap: ',nchemo,chemomap(1:nchemo)
 end subroutine
 
@@ -1280,6 +1307,192 @@ else
 	enddo
 endif
 stop
+end subroutine
+
+!----------------------------------------------------------------------------------
+! The idea is to split the solver into two parts.
+!
+! Extra:
+! -----
+! This solves the diffusion equation over all sites in the blob, 
+! for each constituent separately.  For each constituent, nvar = nextra.
+! Function: f_rkc_extra
+!
+! Intra:
+! -----
+! This solves the membrane diffusion, decay and intracellular reactions for all 
+! constituents simultaneously, at each occupied site in turn.  The variables are
+! both extra- and intracellular.  For each cell, nvar = 2*nchemo.
+! Function: f_rkc_intra
+!
+! Variable indexing: 
+! For i = 1,...,ntvars (= nextra + nintra):
+!     ODEdiff%vartype(i) = EXTRA for an extracellular concentration
+!                        = INTRA for an intracellular concentration
+!----------------------------------------------------------------------------------
+subroutine NewSolver(it,tstart,dt,ncells)
+integer :: it, ncells
+real(REAL_KIND) :: tstart, dt
+integer :: ichemo, ncvars, ntvars, ic, kcell, site(3), iv, nth
+integer :: ie, ki, i, kextra, kintra
+real(REAL_KIND) :: t, tend
+real(REAL_KIND), allocatable :: state_ex(:,:)
+real(REAL_KIND), allocatable :: state_in(:,:)
+integer, allocatable :: exindex(:)
+real(REAL_KIND), target :: Creact(2*MAX_CHEMO)
+real(REAL_KIND) :: C(MAX_CHEMO), Ce(MAX_CHEMO), dCreact(MAX_CHEMO)
+real(REAL_KIND) :: dCsum, dC
+real(REAL_KIND) :: timer1, timer2
+logical :: ok
+! Variables for RKC
+integer :: info(4), idid
+real(REAL_KIND) :: rtol, atol(1), sprad_ratio
+type(rkc_comm) :: comm_rkc(MAX_CHEMO)
+logical :: solve_intra = .false.
+
+real(REAL_KIND), pointer :: Cp(:)
+
+ODEdiff%nintra = ncells
+ntvars = ODEdiff%nextra + ODEdiff%nintra
+allocate(state_ex(ODEdiff%nextra,MAX_CHEMO))
+allocate(state_in(ODEdiff%nintra,MAX_CHEMO))
+allocate (exindex(ODEdiff%nintra))
+kextra = 0
+kintra = 0
+do i = 1,ntvars
+	if (ODEdiff%vartype(i) == EXTRA) then
+		kextra = kextra + 1
+		state_ex(kextra,:) = allstate(i,1:MAX_CHEMO)
+	else
+		kintra = kintra + 1
+		exindex(kintra) = kextra	! the index into state_ex(:) to the corresponding extracellular variables
+	endif
+enddo
+allocate(Cp(ODEdiff%nintra))
+
+!if (it == 1) then
+!	call showresults(state(:,DRUG_A))
+!	call showresults(state(:,DRUG_METAB_A))
+!endif
+
+info(1) = 1
+info(2) = 1		! = 1 => use spcrad() to estimate spectral radius, != 1 => let rkc do it
+info(3) = 1
+info(4) = 0
+rtol = 1d-2
+atol = rtol
+
+! Solve diffusion equation for each constituent
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
+	idid = 0
+	t = tstart
+	tend = t + dt
+	call rkc(comm_rkc(ichemo),ODEdiff%nextra,f_rkc_extra,state_ex(:,ichemo),t,tend,rtol,atol,info,work_rkc,idid,ichemo)
+	if (idid /= 1) then
+		write(logmsg,*) ' Failed at t = ',t,' with idid = ',idid
+		call logger(logmsg)
+		stop
+	endif
+enddo
+
+if (solve_intra) then
+ncvars = 2*nchemo
+kintra = 0
+! Solve reactions, decay, and membrane diffusion
+! Note: the order could (should?) be randomised using a permutation
+do i = 1,ntvars
+	if (ODEdiff%vartype(i) == EXTRA) cycle
+	kintra = kintra + 1
+	kextra = exindex(kintra)
+	! initialize Creact
+	do ic = 1,nchemo
+		Creact(ic) = state_ex(kextra,ic)	! extracellular concentrations first
+		Creact(ic+nchemo) = allstate(i,ic)	! intracellular concentrations next
+	enddo
+	idid = 0
+	t = tstart
+	tend = t + dt
+	call rkc(comm_rkc(1),ncvars,f_rkc_intra,Creact,t,tend,rtol,atol,info,work_rkc,idid,0)
+	if (idid /= 1) then
+		write(logmsg,*) ' Failed at t = ',t,' with idid = ',idid
+		call logger(logmsg)
+		stop
+	endif
+	! transfer results
+	do ic = 1,nchemo
+		state_ex(kextra,ic) = Creact(ic)		! extracellular concentrations first
+		state_in(kintra,ic) = Creact(ic+nchemo) ! intracellular concentrations next
+	enddo
+enddo
+endif
+
+!if (use_medium_flux .and. medium_volume > 0) then
+!	call update_medium(ntvars,state,dt)
+!endif
+
+! transfer results to allstate(:,:)
+kextra = 0
+do i = 1,ntvars
+	if (ODEdiff%vartype(i) == EXTRA) then
+		kextra = kextra + 1
+		allstate(i,1:nchemo) = state_ex(kextra,:) 
+	elseif (solve_intra) then
+		kintra = kintra + 1
+		allstate(i,1:nchemo) = state_in(kintra,:) 
+	endif
+enddo
+!allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
+! Note: some time we need to copy the state values to the cell_list() array.
+deallocate(state_ex)
+deallocate(state_in)
+deallocate(exindex)
+
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Simple extracellular diffusion of a single constituent
+! The site volumes should enter into the calculation of dydt
+!----------------------------------------------------------------------------------
+subroutine f_rkc_extra(neqn,t,y,dydt,icase)
+integer :: neqn, icase
+real(REAL_KIND) :: t, y(neqn), dydt(neqn)
+integer :: i, k, ie, ki, kv, ichemo
+real(REAL_KIND) :: dCsum, dCdiff,  DX2, DX3, vol, val
+real(REAL_KIND) :: dc1, dc6, cbnd
+
+ichemo = icase
+DX2 = DELTA_X*DELTA_X
+dc1 = chemo(ichemo)%diff_coef/DX2
+dc6 = 6*dc1 !+ decay_rate
+cbnd = BdryConc(ichemo,t_simulation)
+!$omp parallel do private(vol, dCsum, k, kv, dCdiff, val) default(shared) schedule(static)
+do ie = 1,neqn
+	vol = Vextra			!!!!!! need to worry about volume !!!!
+    dCsum = 0
+    do k = 1,7
+		kv = ODEdiff%iexcoef(ie,k)
+	    if (k == 1) then
+		    dCdiff = -dc6
+	    else
+		    dCdiff = dc1
+	    endif
+	    if (kv == 0) then
+		    val = cbnd
+	    else
+		    val = y(kv)
+	    endif
+	    dCsum = dCsum + dCdiff*val
+    enddo
+	dydt(ie) = dCsum		!+ dCreact
+enddo
+!$omp end parallel do
+end subroutine
+
+subroutine f_rkc_intra(neqn,t,y,dydt,icase)
+integer :: neqn, icase
+real(REAL_KIND) :: t, y(neqn), dydt(neqn)
+
 end subroutine
 
 end module

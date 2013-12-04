@@ -237,6 +237,7 @@ integer :: kcell
 integer :: site(3)
 
 cell_list(kcell)%state = DEAD
+cell_list(kcell)%exists = .false.
 Ncells = Ncells - 1
 !write(*,*) 'cell_dies: ',kcell,Ncells
 site = cell_list(kcell)%site

@@ -133,7 +133,8 @@ public:
 	bool paused;
 	bool save_image;
     bool display_celltype[10];
-    QString celltype_colour[10];
+//    QString celltype_colour[10];
+    QColor celltype_colour[10];
     QString casename;
 	int framenum;
 	QTimer *timer;
