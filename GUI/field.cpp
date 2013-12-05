@@ -281,8 +281,6 @@ void Field::displayField(int hr, int *res)
         cmin = MIN(MAX(cmin,0),data[i].conc[constituent]);
         cmax = MAX(cmax,data[i].conc[constituent]);
     }
-    sprintf(msg,"displayField: cmin: %f cmax: %f",cmin,cmax);
-    LOG_MSG(msg);
     brush.setStyle(Qt::SolidPattern);
     brush.setColor(QColor(0,0,0));
     scene->addRect(0,0,CANVAS_WIDTH,CANVAS_WIDTH,Qt::NoPen, brush);
@@ -298,10 +296,6 @@ void Field::displayField(int hr, int *res)
         xp = int(a*ix + b - w);
         yp = int(a*iy + b - w);
         chooseFieldColor(data[i].conc[constituent],cmin,cmax,use_log,rgbcol);
-        if (i < 20) {
-            sprintf(msg,"colour: %d %d %d",rgbcol[0],rgbcol[1],rgbcol[2]);
-            LOG_MSG(msg);
-        }
         brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
         scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
     }

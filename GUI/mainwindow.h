@@ -28,7 +28,6 @@ using namespace std;
 #include "log.h"
 #include "SimpleView3DUI.h"
 #include "SimpleView2DUI.h"
-#include "qmycanvas.h"
 
 QT_BEGIN_NAMESPACE
 class QAction;
