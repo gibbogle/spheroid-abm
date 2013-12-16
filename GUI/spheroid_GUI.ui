@@ -42,7 +42,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -2867,6 +2867,22 @@ padding: 8px
              </property>
             </widget>
            </widget>
+           <widget class="QCheckBox" name="cbox_USE_RELAX">
+            <property name="geometry">
+             <rect>
+              <x>340</x>
+              <y>230</y>
+              <width>141</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="layoutDirection">
+             <enum>Qt::RightToLeft</enum>
+            </property>
+            <property name="text">
+             <string>Use O2 relaxation solver</string>
+            </property>
+           </widget>
           </widget>
          </widget>
         </item>
@@ -3405,7 +3421,7 @@ padding: 8px
      <x>0</x>
      <y>0</y>
      <width>1294</width>
-     <height>18</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

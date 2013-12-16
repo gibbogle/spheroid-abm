@@ -183,6 +183,7 @@ logical :: use_radiation, use_treatment
 logical :: use_extracellular_O2
 logical :: use_V_dependence
 logical :: randomise_initial_volume
+logical :: relax
 logical :: dbug = .false.
 
 integer :: divide_option = DIVIDE_USE_CLEAR_SITE
