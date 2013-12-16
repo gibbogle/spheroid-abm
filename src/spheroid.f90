@@ -323,7 +323,7 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine read_cell_params(ok)
 logical :: ok
-integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra
+integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax
 integer :: iuse_oxygen, iuse_glucose, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
 integer :: ictype, idisplay
 real(REAL_KIND) :: days, bdry_conc, percent
@@ -366,7 +366,7 @@ do ictype = 1,Ncelltypes
 enddo
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
 read(nfcell,*) show_progeny                 ! if != 0, the number of the cell to show descendents of
-read(nfcell,*) iuse_oxygen		!chemo(OXYGEN)%used
+read(nfcell,*) iuse_oxygen		! chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%cell_diff
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
@@ -450,16 +450,18 @@ read(nfcell,*) growthcutoff(2)
 read(nfcell,*) growthcutoff(3)
 read(nfcell,*) spcrad_value
 read(nfcell,*) iuse_extra
+read(nfcell,*) iuse_relax
 read(nfcell,*) itreatment
 read(nfcell,*) treatmentfile						! file with treatment programme
 close(nfcell)
 
 MM_THRESHOLD = MM_THRESHOLD/1000					! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
+relax = (iuse_relax == 1)
 chemo(OXYGEN)%used = (iuse_oxygen == 1)
 chemo(GLUCOSE)%used = (iuse_glucose == 1)
 chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%MM_C0/1000		! uM -> mM
-chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%MM_C0/1000		! uM -> mM
+chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%MM_C0/1000	! uM -> mM
 blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
 divide_time_median = 60*60*divide_time_median		! hours -> seconds
@@ -1079,8 +1081,8 @@ call SiteCellToState
 do it = 1,NT_CONC
 	tstart = (it-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
-!	call Solver(it,tstart,dt,Ncells)
-	call NewSolver(it,tstart,dt,Ncells)
+	call Solver(it,tstart,dt,Ncells)
+!	call NogoodSolver(it,tstart,dt,Ncells)
 enddo
 call StateToSiteCell
 res = 0

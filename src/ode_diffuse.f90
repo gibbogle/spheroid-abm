@@ -548,7 +548,7 @@ integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ict, ith
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, Cin(MAX_CHEMO), Cex
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_flux
 logical :: bnd, metabolized, dbug
 real(REAL_KIND) :: metab, dMdt
 logical :: use_compartments = .true.
@@ -587,6 +587,7 @@ do i = 1,neqn
 	    metabolized = (SN30K%Kmet0(ict) > 0)
 	endif
 	if (.not.intracellular) then
+	! Need to check diffusion eqtn. when Vextra < Vsite = DX^3
 	    dCsum = 0
 	    do k = 1,7
 		    kv = ODEdiff%icoef(i,k)
@@ -603,13 +604,19 @@ do i = 1,neqn
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
-		    dCreact = -chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
+!	        write(*,*) 'extra vol: ',vol
+		    membrane_flux = chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))*Vextra !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!		    dCreact = -chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
 		else
-            dCreact=0
+		    membrane_flux = 0
+!            dCreact=0
 		endif
-    	dydt(i) = dCsum + dCreact
+    	dydt(i) = dCsum - membrane_flux/vol
+!    	dydt(i) = dCsum + dCreact
 	else
 		C = Cin(ichemo)
+!	    write(*,*) 'intra vol: ',vol
+		membrane_flux = chemo(ichemo)%cell_diff*(Cex - C)*Vextra   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		dCreact = 0
 		if (ichemo == OXYGEN) then
 			if (C > ODEdiff%C1_soft) then
@@ -620,25 +627,28 @@ do i = 1,neqn
 				metab = 0
 				write(*,*) 'metab = 0'
 			endif
-			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+!			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*chemo(ichemo)%max_cell_rate*1.0e6 + membrane_flux)/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 		elseif (ichemo == GLUCOSE) then
 			metab = C/(chemo(GLUCOSE)%MM_C0 + C)
-			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+!			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*chemo(ichemo)%max_cell_rate*1.0e6 + membrane_flux)/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 		elseif (ichemo == SN30000) then
 		    if (metabolized .and. C > 0) then
 				dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
 			else
 				dCreact = 0
 			endif
+			dCreact = dCreact + membrane_flux/vol
 		elseif (ichemo == SN30000_METAB) then
 			if (metabolized .and. Cin(SN30000) > 0) then
 				dCreact = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
 			else
 				dCreact = 0
 			endif
+			dCreact = dCreact + membrane_flux/vol
 		endif
-		dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)	
-!	    call intra_react(ichemo,Cin,Cex,vol,dCreact)
+!		dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)	
 	    dydt(i) = dCreact - yy*decay_rate
 	endif
 enddo
@@ -774,6 +784,7 @@ atol = rtol
 !write(*,*) 'nchemo: ',nchemo
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
+	if (relax .and. ichemo == OXYGEN) cycle
 	idid = 0
 	t = tstart
 	tend = t + dt
@@ -786,6 +797,10 @@ do ic = 1,nchemo
 	endif
 enddo
 
+if (relax) then
+    call RelaxSolver(OXYGEN,state(:,OXYGEN))
+endif
+
 if (use_medium_flux .and. medium_volume > 0) then
 	call update_medium(ntvars,state,dt)
 endif
@@ -795,6 +810,152 @@ allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 deallocate(state)
 
 end subroutine
+
+!----------------------------------------------------------------------------------
+! Solve for ichemo using the over- under-relaxation method to solve the Poisson's
+! equation that corresponds to the steady state equation with all other concentrations
+! held constant.
+! This was suggested by Tim Secomb.
+! dC/dt = K.grad^2C - f(C,...) = 0
+! where:
+!   C = C(i,j,k) = concentration of the constituent at the grid-cell we are solving for,
+!   K = diffusion coeff.
+!   f(C,...) = rate of consumption of the constituent as a function of C and other 
+!   constituents, all held fixed.
+! Tim's suggested procedure:
+! (1) In the first iteration round the concentration of C used in f(C,...) is held
+!     fixed at the "old" value.  The "diff" values are updated by a number of iterations
+!     (e.g. up to 20) of the over-relaxation procedure (w_over = 1.9)
+! (2) The "old" C values are now replaced by the "under-relaxed" values:
+!     Cnew = Cold + w_under*(Cdiff - Cold)
+! The cycle is repeated until convergence.
+! The situation is complicated by the fact that the constituent values are normally
+! stored in an array that has extra- and intracellular concentrations interleaved.
+! This will need to be addressed later to improve execution speed.
+! For now we need a mapping derived from ODEdiff%icoef(:,:) to convey the
+! extracellular array indices of the neighbours of extracellular variable ie.
+!----------------------------------------------------------------------------------
+subroutine RelaxSolver(ichemo,y)
+integer :: ichemo
+real(REAL_KIND) :: y(:)
+integer :: nvar, ie, ia, k, je, ja, k_under, k_over
+integer, allocatable :: all_index(:), extra_index(:), icoef(:,:)
+real(REAL_KIND), allocatable :: y0(:), ydiff(:)
+real(REAL_KIND) :: DX2, Kdiff, Csum, dCreact, val, cbnd, esum2, Cnew
+real(REAL_KIND), parameter :: w_over = 1.9, w_under = 0.6
+integer, parameter :: n_over = 20, n_under = 10
+
+!write(*,*) 'RelaxSolver'
+DX2 = DELTA_X*DELTA_X
+nvar = ODEdiff%nextra
+Kdiff = chemo(ichemo)%diff_coef
+cbnd = BdryConc(ichemo,t_simulation)
+
+! Allocate y0(:), ydiff(:) and copy y(:) to y0(:), ydiff(:)
+allocate(y0(nvar))
+allocate(ydiff(nvar))
+allocate(extra_index(ODEdiff%nvars))
+allocate(all_index(nvar))
+allocate(icoef(nvar,6))
+! This recapitulates SiteCellToState()
+ie = 0
+do ia = 1,ODEdiff%nvars
+    if (ODEdiff%vartype(ia) == EXTRA) then
+        ie = ie+1
+        y0(ie) = y(ia)
+        extra_index(ia) = ie
+        all_index(ie) = ia
+    endif
+enddo
+ydiff = y0
+! Set up icoef(:,:)
+do ie = 1,nvar
+    ia = all_index(ie)
+    do k = 1,6
+        ja = ODEdiff%icoef(ia,k+1)
+        if (ja == 0) then
+            je = 0
+        else
+            je = extra_index(ja)
+        endif
+        icoef(ie,k) = je
+    enddo
+enddo
+! Loop over under-relaxation until convergence
+
+do k_under = 1,n_under
+    ! Loop over diffusion by over-relaxation a fixed count
+    do k_over = 1,n_over
+!        write(*,*) 'k_under: ',k_under
+        do ie = 1,nvar
+	        Csum = 0
+	        do k = 1,6
+		        je = icoef(ie,k)
+		        if (je == 0) then
+			        val = cbnd
+		        else
+			        val = ydiff(je)
+		        endif
+		        Csum = Csum + val
+	        enddo
+!	        dCreact = 0
+            dCreact = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
+            Cnew = (Csum - DX2*dCreact/Kdiff)/6
+            ydiff(ie) = (1-w_over)*ydiff(ie)+ w_over*Cnew
+!            write(*,'(i6,3e12.3)') ie,dCreact,Csum/6,Cnew
+        enddo
+    enddo
+    
+    esum2 = 0
+    do ie = 1,nvar
+        val = y0(ie)
+        y0(ie) = y0(ie) + w_under*(ydiff(ie) - y0(ie))
+        esum2 = esum2 + (val - y0(ie))*(val - y0(ie))
+    enddo
+enddo
+!write(*,'(i6,i4,e12.4)') istep,k_under,esum2
+
+! Copy y0(:) back to y(:)
+ie = 0
+do k = 1,ODEdiff%nvars
+    if (ODEdiff%vartype(k) == EXTRA) then
+        ie = ie+1
+        y(k) = y0(ie)
+    else
+        y(k) = y(k-1)
+    endif
+enddo
+
+deallocate(y0)
+deallocate(ydiff)
+deallocate(extra_index)
+deallocate(all_index)
+deallocate(icoef)
+
+end subroutine
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+real(REAL_KIND) function UptakeRate(ichemo,C)
+integer :: ichemo
+real(REAL_KIND) :: C
+real(REAL_KIND) :: metab, vol
+
+if (ichemo == OXYGEN) then
+    vol = Vsite
+!    vol = Vsite - Vextra	! this was used in the RKC solution
+!    vol = Vextra
+	if (C > ODEdiff%C1_soft) then
+		metab = (C-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C - ODEdiff%deltaC_soft)
+	elseif (C > 0) then
+		metab = ODEdiff%k_soft*C*C
+	else
+		metab = 0
+!		write(*,*) 'metab = 0'
+	endif
+	UptakeRate = metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+endif
+end function
 
 !----------------------------------------------------------------------------------
 ! The medium concentrations are updated explicitly, assuming a sphere with boundary
@@ -1330,7 +1491,7 @@ end subroutine
 !     ODEdiff%vartype(i) = EXTRA for an extracellular concentration
 !                        = INTRA for an intracellular concentration
 !----------------------------------------------------------------------------------
-subroutine NewSolver(it,tstart,dt,ncells)
+subroutine NogoodSolver(it,tstart,dt,ncells)
 integer :: it, ncells
 real(REAL_KIND) :: tstart, dt
 integer :: ichemo, ncvars, ntvars, ic, kcell, site(3), iv, nth
