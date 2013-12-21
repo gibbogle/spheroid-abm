@@ -57,6 +57,8 @@ logical, parameter :: use_metabolites = .true.
 logical, parameter :: use_celltype_colour = .true.
 
 logical, parameter :: use_new_solver = .false.
+logical, parameter :: use_Cex_Cin = .false.
+logical, parameter :: use_O2_Hill = .true.
 
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
@@ -154,14 +156,14 @@ integer :: jumpvec(3,27)
 integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
-integer :: istep, nsteps, NT_CONC, NT_GUI_OUT, show_progeny
+integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volume, cell_radius
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_FACTOR, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
-real(REAL_KIND) :: t_simulation
+real(REAL_KIND) :: t_simulation, execute_t1
 real(REAL_KIND) :: O2cutoff(3)
 real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
@@ -185,6 +187,8 @@ logical :: use_V_dependence
 logical :: randomise_initial_volume
 logical :: relax
 logical :: dbug = .false.
+
+real(REAL_KIND) :: ysave(100000),dCreactsave(100000)
 
 integer :: divide_option = DIVIDE_USE_CLEAR_SITE
 !integer :: divide_option = DIVIDE_ALWAYS_PUSH

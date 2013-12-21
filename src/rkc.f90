@@ -409,11 +409,11 @@ contains
         newspc = .true.
         jacatt = .false.
         nstsig = 0
-!$omp parallel do default(shared)
+!!$omp parallel do default(shared)
         do i = 1, neqn
           yn(i) = y(i)
         enddo
-!$omp end parallel do
+!!$omp end parallel do
         call f(neqn,t,yn,fn,icase)
 !        nfe = nfe + 1
         comm%nfe = comm%nfe + 1
@@ -453,11 +453,11 @@ contains
         absh = hmax
         if(sprad*absh .gt. one) absh = one/sprad
         absh = max(absh,hmin)
-!$omp parallel do default(shared)
+!!$omp parallel do default(shared)
         do i = 1,neqn
           vtemp1(i) = yn(i) + absh*fn(i)
         enddo 
-!$omp end parallel do
+!!$omp end parallel do
         call f(neqn,t+absh,vtemp1,vtemp2,icase)
 !        nfe = nfe + 1
         comm%nfe = comm%nfe + 1
@@ -557,7 +557,7 @@ contains
 !------------------------------------------------------      
       work(1) = h
       work(2) = t
-!$omp parallel do default(shared) private(ylast, yplast)
+!!$omp parallel do default(shared) private(ylast, yplast)
       do i = 1, neqn
          ylast = yn(i)
          yplast = fn(i)
@@ -566,7 +566,7 @@ contains
          vtemp1(i) = ylast
          vtemp2(i) = yplast
       enddo
-!$omp end parallel do
+!!$omp end parallel do
       fac = ten
       if(naccpt .eq. 1) then
         temp2 = err**one3rd
@@ -617,12 +617,12 @@ contains
 !  Evaluate the first stage.
 !---------------------------
       mus = w1*bjm1
-!$omp parallel do default(shared)
+!!$omp parallel do default(shared)
       do i = 1, neqn
         yjm1(i) = yn(i) + h*mus*fn(i)
         yjm2(i) = yn(i)
       enddo
-!$omp end parallel do
+!!$omp end parallel do
       thjm2  = zero
       thjm1  = mus
       zjm1   = w0
@@ -647,22 +647,22 @@ contains
 !  Use the y array for temporary storage here.         
 !---------------------------------------------
         call f(neqn,t + h*thjm1,yjm1,y,icase)
-!$omp parallel do default(shared)
+!!$omp parallel do default(shared)
         do i = 1, neqn
           y(i) = mu*yjm1(i) + nu*yjm2(i) + (one - mu - nu)*yn(i) + h*mus*(y(i) - ajm1*fn(i))
         enddo
-!$omp end parallel do
+!!$omp end parallel do
         thj = mu*thjm1 + nu*thjm2 + mus*(one - ajm1)
 !------------------------------------
 !  Shift the data for the next stage.
 !------------------------------------
         if(j .lt. m) then
-!$omp parallel do default(shared)
+!!$omp parallel do default(shared)
           do i = 1, neqn
             yjm2(i) = yjm1(i)
             yjm1(i) = y(i)
           enddo
-!$omp end parallel do
+!!$omp end parallel do
           thjm2  = thjm1
           thjm1  = thj
           bjm2   = bjm1
@@ -734,11 +734,11 @@ contains
       b1 = hlast*s*(s - one)**2
       b2 = hlast*(s - one)*s**2
 
-!$omp parallel do default(shared)
+!!$omp parallel do default(shared)
       do i = 1, neqn
         yarg(i) = a1*work(ptr3+i-1) + a2*work(ptr1+i-1) + b1*work(ptr4+i-1) + b2*work(ptr2+i-1)
       enddo
-!$omp end parallel do
+!!$omp end parallel do
       end subroutine
 
       subroutine rkcrho(comm,neqn,t,f,yn,fn,v,fv,work,sprad,idid,icase)

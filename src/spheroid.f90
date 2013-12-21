@@ -1039,12 +1039,14 @@ subroutine simulate_step(res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: simulate_step  
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
-integer :: kcell, site(3), hour, it, nthour, kpar=0
+integer :: kcell, site(3), hour, nthour, kpar=0
 real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo
 logical :: ok
 
+!call compute_Cex_Cin
+!stop
 !call logger('simulate_step')
 if (Ncells == 0) then
     res = 2
@@ -1078,10 +1080,10 @@ if (.not.ok) then
 endif
 call SetupODEdiff
 call SiteCellToState
-do it = 1,NT_CONC
-	tstart = (it-1)*dt
+do it_solve = 1,NT_CONC
+	tstart = (it_solve-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
-	call Solver(it,tstart,dt,Ncells)
+	call Solver(it_solve,tstart,dt,Ncells)
 !	call NogoodSolver(it,tstart,dt,Ncells)
 enddo
 call StateToSiteCell
@@ -1590,11 +1592,11 @@ end subroutine
 ! Returns all the extracellular concentrations along a line through the blob centre.
 ! Together with the growth rate dVdt
 !--------------------------------------------------------------------------------
-subroutine get_concdata(ns, dx, conc) BIND(C)
+subroutine get_concdata(ns, dx, ex_conc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
 use, intrinsic :: iso_c_binding
 integer(c_int) :: ns
-real(c_double) :: dx, conc(*)
+real(c_double) :: dx, ex_conc(*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer rng(3,2), i, k, ichemo, kcell, x, y, z
 
@@ -1620,37 +1622,37 @@ do x = rng(1,1),rng(1,2)
         if (ichemo <= MAX_CHEMO) then
 			if (chemo(ichemo)%used) then
 				if (i > 0) then
-					conc(k) = allstate(i,ichemo)
+					ex_conc(k) = allstate(i,ichemo)
 				else
-					conc(k) = 0
+					ex_conc(k) = 0
 				endif
 			else
-				conc(k) = 0
+				ex_conc(k) = 0
 			endif
         elseif (ichemo == MAX_CHEMO+1) then	! growth rate
 			if (kcell > 0) then
-				conc(k) = cell_list(kcell)%dVdt
+				ex_conc(k) = cell_list(kcell)%dVdt
 			else
-				conc(k) = 0
+				ex_conc(k) = 0
 			endif
 		endif
     enddo
 enddo
-! Add concentrations at the two boundaries
+! Add concentrations at the two boundaries 
 ! At ns=1, at at ns=ns+1
 ns = ns+1
 do ichemo = 1,MAX_CHEMO
     if (chemo(ichemo)%used) then
         cbnd = BdryConc(ichemo,t_simulation)
         k = ichemo
-        conc(k) = cbnd
+        ex_conc(k) = cbnd
         k = (ns-1)*(MAX_CHEMO+1) + ichemo
-        conc(k) = cbnd
+        ex_conc(k) = cbnd
     else
         k = ichemo
-        conc(k) = 0
+        ex_conc(k) = 0
         k = (ns-1)*(MAX_CHEMO+1) + ichemo
-        conc(k) = 0
+        ex_conc(k) = 0
     endif
 enddo
 !do k = 1,(MAX_CHEMO+1)*ns
@@ -1809,6 +1811,7 @@ if (ok) then
 else
 	res = 1
 endif
+execute_t1 = wtime()
 
 end subroutine
 
@@ -1913,6 +1916,9 @@ elseif (res == -1) then
 else
 	call logger('  === Execution failed ===')
 endif
+write(logmsg,'(a,f10.2)') 'Execution time (min): ',(wtime() - execute_t1)/60
+call logger(logmsg)
+
 close(nflog)
 
 if (use_TCP) then

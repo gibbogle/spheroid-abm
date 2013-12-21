@@ -257,7 +257,6 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine par_evolve(Kdiffusion,Kdecay,Ctemp,z1,z2,dt,dCmax,kpar)
 integer :: z1, z2, kpar
-!real :: C(:,:,:)
 real(REAL_KIND) :: Ctemp(:,:,:,:)
 real(REAL_KIND) :: Kdiffusion(:), Kdecay(:), dt, dCmax, Cnew
 real(REAL_KIND) :: sum, dV, C0(MAX_CHEMO), dMdt(MAX_CHEMO), dCdt(MAX_CHEMO)
