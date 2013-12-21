@@ -338,13 +338,23 @@ void Field::displayField(int hr, int *res)
 //-----------------------------------------------------------------------------------------
 void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logscale, int rgbcol[])
 {
-    double f, denom;
+    double f, denom, logcmin, logc;
     int rgb_lo[3], rgb_hi[3], i;
 
     if (use_logscale) {
         if (cmin == cmax) {
             f = 1;
         } else {
+//            if (cmin > 0.0001)
+//                logcmin = log(cmin);
+//            else
+//                logcmin = 1.0e6;
+//            if (c > 0.0001)
+//                logc = log(c);
+//            else
+//                logc = 1.0e6;
+            cmin = max(cmin, 0.00001);
+            c = max(c, 0.00001);
             denom = (log(cmax) - log(cmin));
             if (denom < 0.001)
                 f = 1;

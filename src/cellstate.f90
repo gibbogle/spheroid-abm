@@ -177,6 +177,8 @@ tnow = istep*DELTA_T	! seconds
 nlist0 = nlist
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
+!	C_O2 = cell_list(kcell)%conc(OXYGEN)
+	call get_O2conc(kcell,C_O2)
 	if (cell_list(kcell)%anoxia_tag) then
 !		write(logmsg,*) 'anoxia_tag: ',kcell,cell_list(kcell)%state,tnow,cell_list(kcell)%t_anoxia_die
 !		call logger(logmsg)
@@ -187,8 +189,6 @@ do kcell = 1,nlist
 			cycle
 		endif
 	else
-!		C_O2 = cell_list(kcell)%conc(OXYGEN)
-		call get_O2conc(kcell,C_O2)
 		if (C_O2 < ANOXIA_FACTOR*MM_THRESHOLD) then
 			cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
 			if (cell_list(kcell)%t_hypoxic > t_anoxic_limit) then
@@ -372,9 +372,7 @@ r_mean = Vdivide0/(2*divide_time_mean)
 ndivide = 0
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
-!	call get_O2conc(kcell,C_O2)
 	C_O2 = cell_list(kcell)%conc(OXYGEN)
-!	metab = max(0.0,C_O2)/(chemo(OXYGEN)%MM_C0 + C_O2)
     if (C_O2 > ODEdiff%C1_soft) then
 	    metab = (C_O2-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C_O2 - ODEdiff%deltaC_soft)
     elseif (C_O2 > 0) then
@@ -387,9 +385,9 @@ do kcell = 1,nlist0
 	else
 		dVdt = r_mean*metab
 	endif
-	if (istep > 1 .and. dVdt == 0) then
-		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
-	endif
+!	if (istep > 1 .and. dVdt == 0) then
+!		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
+!	endif
 	cell_list(kcell)%dVdt = dVdt
 	vol0 = cell_list(kcell)%volume
 	cell_list(kcell)%volume = vol0 + dVdt*dt
