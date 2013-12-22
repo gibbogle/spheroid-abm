@@ -847,7 +847,7 @@ integer :: ichemo
 real(REAL_KIND) :: y(:)
 integer :: nvar, ie, ia, k, je, ja, k_under, k_over, n
 integer, allocatable :: all_index(:), extra_index(:), icoef(:,:)
-real(REAL_KIND), allocatable :: y0(:), ydiff(:)
+real(REAL_KIND), allocatable :: y0(:), ydiff(:), uptake(:)
 real(REAL_KIND) :: DX2, Kdiff, Csum, dCreact, val, cbnd, esum2, sum, Cnew, y0temp, dy
 real(REAL_KIND), parameter :: w_over = 1.6, w_under = 0.05
 real(REAL_KIND), parameter :: tol1_over = 1.0e-5, tol1_under = 1.0e-6, tol2 = 1.0e-10
@@ -862,6 +862,7 @@ cbnd = BdryConc(ichemo,t_simulation)
 ! Allocate y0(:), ydiff(:) and copy y(:) to y0(:), ydiff(:)
 allocate(y0(nvar))
 allocate(ydiff(nvar))
+allocate(uptake(nvar))
 allocate(extra_index(ODEdiff%nvars))
 allocate(all_index(nvar))
 allocate(icoef(nvar,6))
@@ -901,6 +902,9 @@ enddo
 ! Loop over under-relaxation until convergence
 
 do k_under = 1,n_under
+    do ie = 1,nvar
+        uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
+    enddo
     ! Loop over diffusion by over-relaxation a fixed count
     do k_over = 1,n_over
 !        write(*,*) 'k_under: ',k_under
@@ -917,7 +921,8 @@ do k_under = 1,n_under
 		        endif
 		        Csum = Csum + val
 	        enddo
-            dCreact = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
+!            dCreact = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
+            dCreact = uptake(ie)
 !            if (it_solve == 2) then
 !				if (dCreact /= dCreactsave(ie)) then
 !					write(*,'(a,i6,3e12.4)') 'dCreact changed: ',ie,dCreactsave(ie),dCreact,dCreact-dCreactsave(ie)
@@ -984,6 +989,7 @@ enddo
 
 deallocate(y0)
 deallocate(ydiff)
+deallocate(uptake)
 deallocate(extra_index)
 deallocate(all_index)
 deallocate(icoef)
