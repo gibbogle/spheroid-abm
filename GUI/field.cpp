@@ -423,7 +423,7 @@ void Field::makeConcPlot(QMdiArea *mdiArea)
 void Field::updateConcPlot()
 {
     int nc, nmu, i, ichemo;
-    double dx, x[1000], y[1000], *conc, cmax;
+    double dx, x[1000], y[1000], *conc, cmax, cmin;
     QString title = "Concentration";
 
 //    LOG_MSG("UpdateConcPlot");
@@ -444,11 +444,17 @@ void Field::updateConcPlot()
     pen->setColor(pencolor[0]);
     pGconc->curve[0]->setPen(*pen);
     ichemo = constituent;
+    cmin = 1.0e10;
     cmax = 0;
     for (i=0; i<nc; i++) {
         x[i] = i*dx*1.0e4;
         y[i] = conc[i*(MAX_CHEMO+1)+ichemo];
+        cmin = MIN(cmin,y[i]);
         cmax = MAX(cmax,y[i]);
+    }
+    if (constituent == OXYGEN) {
+        sprintf(msg,"cmin: %f",cmin);
+        LOG_MSG(msg);
     }
     pGconc->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);
     pGconc->curve[0]->setData(x, y, nc);

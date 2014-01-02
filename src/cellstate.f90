@@ -189,7 +189,7 @@ do kcell = 1,nlist
 			cycle
 		endif
 	else
-		if (C_O2 < ANOXIA_FACTOR*MM_THRESHOLD) then
+		if (C_O2 < ANOXIA_THRESHOLD) then
 			cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
 			if (cell_list(kcell)%t_hypoxic > t_anoxic_limit) then
 				cell_list(kcell)%anoxia_tag = .true.						! tagged to die later
@@ -373,13 +373,14 @@ ndivide = 0
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
 	C_O2 = cell_list(kcell)%conc(OXYGEN)
-    if (C_O2 > ODEdiff%C1_soft) then
-	    metab = (C_O2-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C_O2 - ODEdiff%deltaC_soft)
-    elseif (C_O2 > 0) then
-	    metab = ODEdiff%k_soft*C_O2*C_O2
-	else
-		metab = 0
-	endif
+!    if (C_O2 > ODEdiff%C1_soft) then
+!	    metab = (C_O2-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C_O2 - ODEdiff%deltaC_soft)
+!    elseif (C_O2 > 0) then
+!	    metab = ODEdiff%k_soft*C_O2*C_O2
+!	else
+!		metab = 0
+!	endif
+	metab = O2_metab(C_O2)
 	if (use_V_dependence) then
 		dVdt = c_rate*cell_list(kcell)%volume*metab
 	else
@@ -505,6 +506,7 @@ else
 		write(*,*) 'after choose_bdrysite: site1 is VACANT: ',site1
 		stop
 	endif
+	if (dbug) write(*,'(a,i6,9i4)') 'b4 ',kcell0,site0,site01,site1
 	call get_path(site0,site01,site1,path,npath)
 	! path(:,:) goes from site01 to site1, which is a bdry site or adjacent to a vacant site
 !	if (.not.isbdry(site1)) then
@@ -539,6 +541,7 @@ call SetRadius(Nsites)
 !do ichemo = 1,MAX_CHEMO
 !    occupancy(site2(1),site2(2),site2(3))%C(ichemo) = chemo(ichemo)%bdry_conc
 !enddo
+
 call add_cell(kcell0,kcell1,site01,ok)
 if (.not.ok) then
 	call logger('Error: add_cell: pushed site')

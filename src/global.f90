@@ -51,14 +51,12 @@ logical, parameter :: compute_concentrations = .true.
 logical, parameter :: use_division = .true.
 logical, parameter :: use_death = .true.
 logical, parameter :: use_react = .true.
-logical, parameter :: use_migration = .false.	! causing an error with vacant site becoming bdry
+logical, parameter :: use_migration = .false.	! causing an error with vacant site becoming bdry 
 logical, parameter :: use_medium_flux = .true.	! flux of constituents between spheroid and medium is accounted for.
 logical, parameter :: use_metabolites = .true.
 logical, parameter :: use_celltype_colour = .true.
 
-logical, parameter :: use_new_solver = .false.
-logical, parameter :: use_Cex_Cin = .false.
-logical, parameter :: use_O2_Hill = .true.
+logical, parameter :: use_Cex_Cin = .true.
 
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
@@ -161,7 +159,7 @@ integer :: Mnodes
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volume, cell_radius
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
-real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_FACTOR, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
+real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
 real(REAL_KIND) :: t_simulation, execute_t1
 real(REAL_KIND) :: O2cutoff(3)
@@ -186,6 +184,7 @@ logical :: use_extracellular_O2
 logical :: use_V_dependence
 logical :: randomise_initial_volume
 logical :: relax
+logical :: use_parallel
 logical :: dbug = .false.
 
 real(REAL_KIND) :: ysave(100000),dCreactsave(100000)
@@ -495,5 +494,39 @@ b = (log(a) - p1)/p2
 prob = 0.5 + 0.5*erf(b/sqrt(2.0))
 cum_prob_lognormal = prob
 end function
+
+!--------------------------------------------------------------------------------------
+! Determine real roots r(:) of the cubic equation:
+! x^3 + a.x^2 + b.x + c = 0
+! If there is one real root, n=1 and the root is r(1)
+! If there are three distinct real roots, n=3 and the roots are r(1), r(2), r(3)
+! If there is a repeated root, n=2 and the single root is r(1), the repeated root is r(2)
+!--------------------------------------------------------------------------------------
+subroutine cubic_roots(a, b, c, r, n)
+real(REAL_KIND) :: a, b, c, r(3)
+integer :: n
+real(REAL_KIND) :: QQ, RR, theta, R2, Q3, AA, BB
+
+QQ = (a*a - 3*b)/9
+RR = (2*a*a*a - 9*a*b + 27*c)/54
+Q3 = QQ*QQ*QQ
+R2 = RR*RR
+if (R2 < Q3) then
+	n = 3
+	theta = acos(RR/sqrt(Q3))
+	r(1) = -2*sqrt(QQ)*cos(theta/3) - a/3
+	r(2) = -2*sqrt(QQ)*cos((theta+2*PI)/3) - a/3
+	r(3) = -2*sqrt(QQ)*cos((theta-2*PI)/3) - a/3
+else
+	n = 1
+	AA = -sign(1.,RR)*(abs(RR) + sqrt(R2 - Q3))**(1.d0/3.d0)
+	if (AA == 0) then
+		BB = 0
+	else
+		BB = QQ/AA
+	endif
+	r(1) = AA + BB - a/3
+endif
+end subroutine
 
 end module

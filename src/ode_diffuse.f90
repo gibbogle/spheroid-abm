@@ -138,8 +138,10 @@ i = 0
 nex = 0
 nin = 0
 do x = 1,NX
+!do z = 1,NZ
 	do y = 1,NY
 		do z = 1,NZ
+!		do x = 1,NX
 		    kcell = occupancy(x,y,z)%indx(1)
 			if (kcell /= OUTSIDE_TAG) then
 				i = i+1
@@ -552,7 +554,7 @@ end subroutine
 subroutine f_rkc(neqn,t,y,dydt,icase)
 integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
-integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ict, ith
+integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ict, ith, N
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, Cin(MAX_CHEMO), Cex
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_flux
 logical :: bnd, metabolized, dbug
@@ -561,6 +563,9 @@ logical :: use_compartments = .true.
 logical :: intracellular, cell_exists
 
 ichemo = icase
+if (ichemo == GLUCOSE) then
+	N = chemo(GLUCOSE)%Hill_N
+endif
 DX2 = DELTA_X*DELTA_X
 decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
@@ -635,9 +640,9 @@ do i = 1,neqn
 !			endif
 			metab = O2_metab(C)
 !			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
-			dCreact = (-metab*1.0e6 + membrane_flux)/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*chemo(OXYGEN)%max_cell_rate*1.0e6 + membrane_flux)/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 		elseif (ichemo == GLUCOSE) then
-			metab = C/(chemo(GLUCOSE)%MM_C0 + C)*chemo(ichemo)%max_cell_rate
+			metab = C**N/(chemo(GLUCOSE)%MM_C0**N + C**N)*chemo(ichemo)%max_cell_rate
 !			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 			dCreact = (-metab*1.0e6 + membrane_flux)/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 		elseif (ichemo == SN30000) then
@@ -766,6 +771,7 @@ integer :: info(4), idid
 real(REAL_KIND) :: rtol, atol(1), sprad_ratio
 type(rkc_comm) :: comm_rkc(MAX_CHEMO)
 
+!write(*,*) 'Solver'
 ODEdiff%nintra = ncells
 ntvars = ODEdiff%nextra + ODEdiff%nintra
 if (EXPLICIT_INTRA) then
@@ -805,7 +811,11 @@ do ic = 1,nchemo
 enddo
 
 if (relax) then
-    call RelaxSolver(OXYGEN,state(:,OXYGEN))
+	if (use_parallel) then
+	    call ParRelaxSolver(OXYGEN,state(:,OXYGEN))
+	else
+	    call RelaxSolver(OXYGEN,state(:,OXYGEN))
+	endif
 endif
 
 if (use_medium_flux .and. medium_volume > 0) then
@@ -845,13 +855,14 @@ end subroutine
 subroutine RelaxSolver(ichemo,y)
 integer :: ichemo
 real(REAL_KIND) :: y(:)
-integer :: nvar, ie, ia, k, je, ja, k_under, k_over, n
+integer :: nvar, ie, ia, k, je, ja, k_under, k_over, n, site(3)
 integer, allocatable :: all_index(:), extra_index(:), icoef(:,:)
 real(REAL_KIND), allocatable :: y0(:), ydiff(:), uptake(:)
-real(REAL_KIND) :: DX2, Kdiff, Csum, dCreact, val, cbnd, esum2, sum, Cnew, y0temp, dy
+real(REAL_KIND) :: DX2, Kdiff, Csum, dCreact, val, cbnd, esum2, sum, Cnew, y0temp, dy, ymin
 real(REAL_KIND), parameter :: w_over = 1.6, w_under = 0.05
 real(REAL_KIND), parameter :: tol1_over = 1.0e-5, tol1_under = 1.0e-6, tol2 = 1.0e-10
 integer, parameter :: n_over = 1000, n_under = 1000
+integer, static :: iemin = 500
 
 !write(*,*) 'RelaxSolver'
 DX2 = DELTA_X*DELTA_X
@@ -874,6 +885,7 @@ do ia = 1,ODEdiff%nvars
         y0(ie) = y(ia)
         extra_index(ia) = ie
         all_index(ie) = ia
+        site = ODEdiff%varsite(ie,:)
     endif
 enddo
 ydiff = y0
@@ -903,9 +915,14 @@ enddo
 
 do k_under = 1,n_under
     do ie = 1,nvar
+		if (k_under == 2 .and. ie == iemin) then
+			dbug = .true.
+		else
+			dbug = .false.
+		endif
         uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
     enddo
-    ! Loop over diffusion by over-relaxation a fixed count
+    ! Loop over diffusion by over-relaxation until convergence
     do k_over = 1,n_over
 !        write(*,*) 'k_under: ',k_under
 		sum = 0
@@ -921,7 +938,6 @@ do k_under = 1,n_under
 		        endif
 		        Csum = Csum + val
 	        enddo
-!            dCreact = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
             dCreact = uptake(ie)
 !            if (it_solve == 2) then
 !				if (dCreact /= dCreactsave(ie)) then
@@ -931,12 +947,10 @@ do k_under = 1,n_under
 !			endif
 !            dCreactsave(ie) = dCreact
 
-!	        y0temp = y0(ie) + w_under*(ydiff(ie) - y0(ie))
-!            dCreact = UptakeRate(ichemo,y0temp)     ! rate of decrease of constituent concentration by reactions
             Cnew = (Csum - DX2*dCreact/Kdiff)/6
             val = ydiff(ie)
             ydiff(ie) = (1-w_over)*ydiff(ie)+ w_over*Cnew
-            ydiff(ie) = max(ydiff(ie),0.0001)
+            ydiff(ie) = max(ydiff(ie),0.000001)
             if (ydiff(ie) < 0) then
 				write(*,*) 'ydiff < 0'
 				stop
@@ -977,13 +991,19 @@ enddo
 !ysave(1:nvar) = y0(1:nvar)
 
 ! Copy y0(:) back to y(:)
+ymin = 1.0e10
 ie = 0
 do k = 1,ODEdiff%nvars
     if (ODEdiff%vartype(k) == EXTRA) then
         ie = ie+1
         y(k) = y0(ie)
+        if (y0(ie) < ymin) then
+			ymin = y0(ie)
+			iemin = ie
+		endif
     else
-        y(k) = y(k-1)
+!        y(k) = y(k-1)	! put Cin here
+		y(k) = getCinO2(y(k-1))
     endif
 enddo
 
@@ -994,8 +1014,224 @@ deallocate(extra_index)
 deallocate(all_index)
 deallocate(icoef)
 
-write(nfout,'(a,i6,e12.4)') 'Min y: ',istep,minval(y)
+write(nfout,'(a,2i6,e12.4)') 'Min y: ',istep,iemin,ymin
 
+end subroutine
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine ParRelaxSolver(ichemo,y)
+integer :: ichemo
+real(REAL_KIND) :: y(:)
+integer :: nvar, ie, ia, k, je, ja, k_under, k_over
+integer :: site(3), x, z, i, nt, ie1, ie2, n1, n2, nrange, ierange(100,2), n(100)
+integer, allocatable :: all_index(:), extra_index(:), icoef(:,:)
+real(REAL_KIND), allocatable :: y0(:), ydiff(:), uptake(:)
+real(REAL_KIND) :: DX2, Kdiff, Csum, dCreact, val, cbnd, esum2, sum, Cnew, y0temp, dy, ymin
+real(REAL_KIND), parameter :: w_over = 1.7, w_under = 0.05
+real(REAL_KIND), parameter :: tol1_over = 1.0e-5, tol1_under = 1.0e-6, tol2 = 1.0e-10
+integer, parameter :: n_over = 1000, n_under = 1000
+integer, static :: iemin = 500
+logical, parameter :: interleave = .false.
+
+!write(*,*) 'ParRelaxSolver'
+DX2 = DELTA_X*DELTA_X
+nvar = ODEdiff%nextra
+Kdiff = chemo(ichemo)%diff_coef
+cbnd = BdryConc(ichemo,t_simulation)
+
+! Allocate y0(:), ydiff(:) and copy y(:) to y0(:), ydiff(:)
+allocate(y0(nvar))
+allocate(ydiff(nvar))
+allocate(uptake(nvar))
+allocate(extra_index(ODEdiff%nvars))
+allocate(all_index(nvar))
+allocate(icoef(nvar,6))
+! This recapitulates SiteCellToState()
+x = 0
+z = 0
+nrange = 0
+ie = 0
+do ia = 1,ODEdiff%nvars
+    if (ODEdiff%vartype(ia) == EXTRA) then
+        ie = ie+1
+        y0(ie) = y(ia)
+        extra_index(ia) = ie
+        all_index(ie) = ia
+        site = ODEdiff%varsite(ie,:)
+        if (site(1) /= x) then
+			x = site(1)
+!        if (site(3) /= z) then
+!			z = site(3)
+			nrange = nrange + 1
+			if (nrange > 1) then
+				ierange(nrange-1,2) = ie-1
+			endif
+			ierange(nrange,1) = ie
+		endif
+    endif
+enddo
+ierange(nrange,2) = ie
+n2 = nrange/2
+n2 = 2*n2
+if (n2 == nrange) then
+	n1 = nrange - 1
+else
+	n1 = nrange
+endif
+!write(nfout,*) 'ParRelaxSolver: nrange: ',nrange
+!do i = 1,nrange
+!	write(nfout,'(3i6)') i,ierange(i,:)
+!enddo
+
+ydiff = y0
+
+! Set up icoef(:,:)
+do ie = 1,nvar
+    ia = all_index(ie)
+    do k = 1,6
+        ja = ODEdiff%icoef(ia,k+1)
+        if (ja == 0) then
+            je = 0
+        else
+            je = extra_index(ja)
+        endif
+        icoef(ie,k) = je
+    enddo
+enddo
+
+! Loop over under-relaxation until convergence
+do k_under = 1,n_under
+    do ie = 1,nvar
+		if (k_under == 2 .and. ie == iemin) then
+			dbug = .true.
+		else
+			dbug = .false.
+		endif
+        uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
+    enddo
+    ! Loop over diffusion by over-relaxation until convergence
+    do k_over = 1,n_over
+		
+		if (interleave) then
+! Interleave the sweeps to reduce memory access delays
+!$omp parallel do private(ie1,ie2) default(shared) schedule(static)
+		do i = 1,n1,2
+			ie1 = ierange(i,1)
+			ie2 = ierange(i,2)
+			call PlaneSolver(ie1,ie2,icoef,uptake,cbnd,Kdiff,ydiff,n(i))
+		enddo
+!$omp end parallel do
+
+!$omp parallel do private(ie1,ie2) default(shared) schedule(static)
+		do i = 2,n2,2
+			ie1 = ierange(i,1)
+			ie2 = ierange(i,2)
+			call PlaneSolver(ie1,ie2,icoef,uptake,cbnd,Kdiff,ydiff,n(i))
+		enddo
+!$omp end parallel do
+
+		else
+!$omp parallel do private(ie1,ie2) default(shared) schedule(dynamic) !schedule(static)
+		do i = 1,nrange
+			ie1 = ierange(i,1)
+			ie2 = ierange(i,2)
+			call PlaneSolver(ie1,ie2,icoef,uptake,cbnd,Kdiff,ydiff,n(i))
+		enddo
+!$omp end parallel do
+		endif
+
+		nt = sum(n(1:nrange))
+        if (nt == 0) exit
+    enddo
+!    write(*,'(a,4i6)') 'istep,it_solve,k_under, k_over: ',istep,it_solve,k_under,k_over
+!    sum = 0
+    nt = 0
+    do ie = 1,nvar
+        val = y0(ie)
+        y0(ie) = y0(ie) + w_under*(ydiff(ie) - y0(ie))
+        if (y0(ie) < 0) then
+			write(*,*) 'y0 < 0'
+			stop
+		endif
+        dy = abs(val-y0(ie))/y0(ie)
+!        sum = sum + dy
+        if (dy > tol1_under) nt = nt+1
+    enddo
+    if (nt == 0) exit
+!    if (sum/nvar < tol2) exit
+enddo
+!write(*,'(i6,i4,e12.4)') istep,k_under
+
+!call write_solution('end',y0,nvar)
+!ysave(1:nvar) = y0(1:nvar)
+
+! Copy y0(:) back to y(:)
+ymin = 1.0e10
+ie = 0
+do k = 1,ODEdiff%nvars
+    if (ODEdiff%vartype(k) == EXTRA) then
+        ie = ie+1
+        y(k) = y0(ie)
+        if (y0(ie) < ymin) then
+			ymin = y0(ie)
+			iemin = ie
+		endif
+    else
+!        y(k) = y(k-1)
+		y(k) = getCinO2(y(k-1))
+    endif
+enddo
+
+deallocate(y0)
+deallocate(ydiff)
+deallocate(uptake)
+deallocate(extra_index)
+deallocate(all_index)
+deallocate(icoef)
+
+!write(nfout,'(a,2i6,e12.4)') 'Min y: ',istep,iemin,ymin
+
+end subroutine
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine PlaneSolver(ie1,ie2,icoef,uptake,cbnd,Kdiff,ydiff,n)
+integer :: ie1, ie2, n
+integer :: icoef(:,:)
+real(REAL_KIND) :: cbnd, Kdiff, uptake(:), ydiff(:)
+integer :: ie, k, je
+real(REAL_KIND) :: DX2, Csum, dCreact, val, Cnew, dy
+real(REAL_KIND), parameter :: w_over = 1.7
+real(REAL_KIND), parameter :: tol1_over = 1.0e-5
+
+DX2 = DELTA_X*DELTA_X
+n = 0
+do ie = ie1,ie2
+    Csum = 0
+    do k = 1,6
+        je = icoef(ie,k)
+        if (je == 0) then
+	        val = cbnd
+        else
+	        val = ydiff(je)
+        endif
+        Csum = Csum + val
+    enddo
+    dCreact = uptake(ie)
+    Cnew = (Csum - DX2*dCreact/Kdiff)/6
+    val = ydiff(ie)
+    ydiff(ie) = (1-w_over)*ydiff(ie)+ w_over*Cnew
+    ydiff(ie) = max(ydiff(ie),0.000001)
+    if (ydiff(ie) < 0) then
+		write(*,*) 'ydiff < 0'
+		stop
+	endif
+	dy = abs(val-ydiff(ie))/ydiff(ie)
+	if (dy > tol1_over) then
+		n = n+1
+	endif
+enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1003,25 +1239,21 @@ end subroutine
 real(REAL_KIND) function UptakeRate(ichemo,C)
 integer :: ichemo
 real(REAL_KIND) :: C
-real(REAL_KIND) :: metab, vol, K1, K2, K2K1, C0, b, cc, D, Cin, flux
-real(REAL_KIND), parameter :: factor = 1.0d+6
+real(REAL_KIND) :: vol, K1, Cin, flux
+integer :: n, i
 
 if (ichemo == OXYGEN) then
-    vol = Vsite
+!    vol = Vsite
 !    vol = Vsite - Vextra	! this was used in the RKC solution
-!    vol = Vextra
+    vol = Vextra
 	if (use_Cex_Cin) then
-		K1 = chemo(OXYGEN)%cell_diff*Vsite
-		K2 = chemo(OXYGEN)%max_cell_rate*factor
-		K2K1 = K2/K1
-		C0 = chemo(OXYGEN)%MM_C0
-		b = K2K1 + C0 - C	! C = Cex
-		cc = -C0*C
-		D = sqrt(b*b - 4*cc)
-		Cin = (D - b)/2
-		flux = K1*(C - Cin)		
+		K1 = chemo(OXYGEN)%cell_diff*(Vsite - Vextra)
+		Cin = getCinO2(C)
+		flux = K1*(C - Cin)
+		if (dbug) write(nfout,'(a,2e12.4)') 'C, flux: ',C,flux
 	else
-		flux = O2_metab(C)*factor
+		flux = O2_metab(C)*chemo(OXYGEN)%max_cell_rate*1.0d6
+		if (dbug) write(nfout,'(a,2e12.4)') 'C, flux: ',C,flux
 !		flux = metab*1.0e6	! /vol	! convert mass rate (mol/s) to concentration rate (mM/s) (note: now = V*mM/s)
 	endif
 	UptakeRate = flux/vol	! concentration rate (mM/s)
@@ -1029,27 +1261,70 @@ endif
 end function
 
 !----------------------------------------------------------------------------------
+! Computes intracellular O2 concentration is a function of the extracellular level C.
+! Note that the cell's O2 uptake rate is taken to be independent of any other factors,
+! e.g. independent of cell size.
+!----------------------------------------------------------------------------------
+real(REAL_KIND) function getCinO2(C)
+real(REAL_KIND) :: C
+real(REAL_KIND) :: K1, K2, K2K1, C0, a, b, cc, D, r(3), Cin
+integer :: i, n
+
+K1 = chemo(OXYGEN)%cell_diff*(Vsite - Vextra)
+K2 = chemo(OXYGEN)%max_cell_rate*1.0d6
+K2K1 = K2/K1
+C0 = chemo(OXYGEN)%MM_C0
+if (chemo(OXYGEN)%Hill_N == 2) then
+	a = K2K1 - C
+	b = C0*C0
+	cc = -b*C
+	call cubic_roots(a,b,cc,r,n)
+	if (n == 1) then
+		Cin = r(1)
+	else
+		n = 0
+		do i = 1,3
+			if (r(i) > 0) then
+				n = n+1
+				Cin = r(i)
+			endif
+		enddo
+		if (n > 1) then
+			write(*,*) 'UptakeRate: two roots > 0: ',r
+			stop
+		endif
+	endif
+else
+	b = K2K1 + C0 - C
+	cc = -C0*C
+	D = sqrt(b*b - 4*cc)
+	Cin = (D - b)/2
+endif
+getCinO2 = Cin
+end function
+
+!----------------------------------------------------------------------------------
+! Computes metabolism rate as a fraction of the maximum cell rate
 !----------------------------------------------------------------------------------
 real(REAL_KIND) function O2_metab(C)
 real(REAL_KIND) :: C
 real(REAL_KIND) :: metab
 
-if (use_O2_Hill) then
+if (chemo(OXYGEN)%Hill_N == 2) then
 	if (C > 0) then
-		metab = C*C/(chemo(OXYGEN)%MM_C0*chemo(OXYGEN)%MM_C0 + C*C)
+		O2_metab = C*C/(chemo(OXYGEN)%MM_C0*chemo(OXYGEN)%MM_C0 + C*C)
 	else
-		metab = 0
+		O2_metab = 0
 	endif
 else
 	if (C > ODEdiff%C1_soft) then
-		metab = (C-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C - ODEdiff%deltaC_soft)
+		O2_metab = (C-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C - ODEdiff%deltaC_soft)
 	elseif (C > 0) then
-		metab = ODEdiff%k_soft*C*C
+		O2_metab = ODEdiff%k_soft*C*C
 	else
-		metab = 0
+		O2_metab = 0
 	endif
 endif
-O2_metab = metab*chemo(OXYGEN)%max_cell_rate
 end function
 
 !----------------------------------------------------------------------------------
