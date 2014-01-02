@@ -340,7 +340,7 @@ padding: 8px
               <x>30</x>
               <y>30</y>
               <width>341</width>
-              <height>191</height>
+              <height>211</height>
              </rect>
             </property>
             <property name="title">
@@ -352,7 +352,7 @@ padding: 8px
                <x>10</x>
                <y>17</y>
                <width>320</width>
-               <height>164</height>
+               <height>190</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_3">
@@ -608,7 +608,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="7" column="0">
                <widget class="QMyLabel" name="label_OXYGEN_CELL_DIFF">
                 <property name="font">
                  <font>
@@ -621,7 +621,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="6" column="3">
+              <item row="7" column="3">
                <widget class="QLineEdit" name="line_OXYGEN_CELL_DIFF">
                 <property name="maximumSize">
                  <size>
@@ -634,7 +634,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="6" column="4">
+              <item row="7" column="4">
                <widget class="QLineEdit" name="line_GLUCOSE_CELL_DIFF">
                 <property name="maximumSize">
                  <size>
@@ -693,6 +693,45 @@ padding: 8px
                 </property>
                </widget>
               </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_OXYGEN_HILL_N">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Uptake Hill function N</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="3">
+               <widget class="QLineEdit" name="line_OXYGEN_HILL_N">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="4">
+               <widget class="QLineEdit" name="line_GLUCOSE_HILL_N">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </widget>
@@ -700,9 +739,9 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>30</x>
-              <y>250</y>
+              <y>260</y>
               <width>341</width>
-              <height>211</height>
+              <height>201</height>
              </rect>
             </property>
             <property name="title">
@@ -1778,9 +1817,9 @@ padding: 8px
                </widget>
               </item>
               <item row="1" column="0">
-               <widget class="QMyLabel" name="label_ANOXIA_FACTOR">
+               <widget class="QMyLabel" name="label_ANOXIA_THRESHOLD">
                 <property name="text">
-                 <string>label_ANOXIA_FACTOR</string>
+                 <string>label_ANOXIA_THRESHOLD</string>
                 </property>
                </widget>
               </item>
@@ -1798,7 +1837,7 @@ padding: 8px
                </spacer>
               </item>
               <item row="1" column="2">
-               <widget class="QLineEdit" name="line_ANOXIA_FACTOR">
+               <widget class="QLineEdit" name="line_ANOXIA_THRESHOLD">
                 <property name="maximumSize">
                  <size>
                   <width>50</width>
@@ -1923,12 +1962,19 @@ padding: 8px
                 </property>
                </spacer>
               </item>
+              <item row="1" column="3">
+               <widget class="QLabel" name="units_ANOXIA_THRESHOLD">
+                <property name="text">
+                 <string>uM</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
             <widget class="QCheckBox" name="cbox_USE_EXTRA">
              <property name="geometry">
               <rect>
-               <x>60</x>
+               <x>20</x>
                <y>170</y>
                <width>131</width>
                <height>20</height>
@@ -1941,7 +1987,7 @@ padding: 8px
               <string>Use extracellular O2</string>
              </property>
              <property name="checked">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
             </widget>
            </widget>
@@ -2870,7 +2916,7 @@ padding: 8px
            <widget class="QCheckBox" name="cbox_USE_RELAX">
             <property name="geometry">
              <rect>
-              <x>340</x>
+              <x>300</x>
               <y>230</y>
               <width>141</width>
               <height>20</height>
@@ -2881,6 +2927,22 @@ padding: 8px
             </property>
             <property name="text">
              <string>Use O2 relaxation solver</string>
+            </property>
+           </widget>
+           <widget class="QCheckBox" name="cbox_USE_PAR_RELAX">
+            <property name="geometry">
+             <rect>
+              <x>460</x>
+              <y>230</y>
+              <width>71</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Parallel</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
           </widget>
@@ -3421,7 +3483,7 @@ padding: 8px
      <x>0</x>
      <y>0</y>
      <width>1294</width>
-     <height>21</height>
+     <height>18</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

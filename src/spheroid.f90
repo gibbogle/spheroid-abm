@@ -323,7 +323,7 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine read_cell_params(ok)
 logical :: ok
-integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax
+integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
 integer :: iuse_oxygen, iuse_glucose, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
 integer :: ictype, idisplay
 real(REAL_KIND) :: days, bdry_conc, percent
@@ -350,7 +350,7 @@ read(nfcell,*) medium_volume				! volume of medium that the spheroid is growing 
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
 read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (uM)
-read(nfcell,*) ANOXIA_FACTOR			    ! multiplying factor for MM threshold for anoxia
+read(nfcell,*) ANOXIA_THRESHOLD			    ! O2 threshold for anoxia (uM)
 read(nfcell,*) anoxia_tag_hours				! hypoxic time leading to tagging to die by anoxia (h)
 read(nfcell,*) anoxia_death_hours			! time after tagging to death by anoxia (h)
 read(nfcell,*) itestcase                    ! test case to simulate
@@ -372,12 +372,14 @@ read(nfcell,*) chemo(OXYGEN)%cell_diff
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
 read(nfcell,*) chemo(OXYGEN)%MM_C0
+read(nfcell,*) chemo(OXYGEN)%Hill_N
 read(nfcell,*) iuse_glucose		!chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%cell_diff
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
 read(nfcell,*) chemo(GLUCOSE)%MM_C0
+read(nfcell,*) chemo(GLUCOSE)%Hill_N
 
 do i = 1,2			! currently allowing for just two different drugs
 	read(nfcell,*) iuse_drug
@@ -451,13 +453,26 @@ read(nfcell,*) growthcutoff(3)
 read(nfcell,*) spcrad_value
 read(nfcell,*) iuse_extra
 read(nfcell,*) iuse_relax
+read(nfcell,*) iuse_par_relax
 read(nfcell,*) itreatment
 read(nfcell,*) treatmentfile						! file with treatment programme
 close(nfcell)
 
+if (chemo(OXYGEN)%Hill_N /= 1 .and. chemo(OXYGEN)%Hill_N /= 2) then
+	call logger('Error: OXYGEN_HILL_N must be 1 or 2')
+	ok = .false.
+	return
+endif
+if (chemo(GLUCOSE)%Hill_N /= 1 .and. chemo(GLUCOSE)%Hill_N /= 2) then
+	call logger('Error: GLUCOSE_HILL_N must be 1 or 2')
+	ok = .false.
+	return
+endif
 MM_THRESHOLD = MM_THRESHOLD/1000					! uM -> mM
+ANOXIA_THRESHOLD = ANOXIA_THRESHOLD/1000			! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
 relax = (iuse_relax == 1)
+use_parallel = (iuse_par_relax == 1)
 chemo(OXYGEN)%used = (iuse_oxygen == 1)
 chemo(GLUCOSE)%used = (iuse_glucose == 1)
 chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%MM_C0/1000		! uM -> mM
@@ -1084,7 +1099,6 @@ do it_solve = 1,NT_CONC
 	tstart = (it_solve-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
 	call Solver(it_solve,tstart,dt,Ncells)
-!	call NogoodSolver(it,tstart,dt,Ncells)
 enddo
 call StateToSiteCell
 res = 0

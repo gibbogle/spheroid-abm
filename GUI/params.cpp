@@ -52,7 +52,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Length of main time step, for cell death, division, etc.  Should be a divisor of 3600. \n\
 [days]"},
 
-{"NT_CONC", 10, 0, 0,
+{"NT_CONC", 1, 0, 0,
 "Number of ODE solver sub-steps.",
 "The number of subdivisions of the major time step, for the ODE diffusion-reaction solver."},
 
@@ -81,9 +81,9 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "O2 concentration at which the 'soft-landing' adjustment to the Michaelis-Menten function kicks in.\n\
 [uM]"},
 
-{"ANOXIA_FACTOR", 1.5, 0, 0,
-"Anoxia threshold factor",
-"A cell begins to experience anoxia leading to cell death at the O2 concentration given by this multiplying factor times the Michaelis-Menten threshold value."},
+{"ANOXIA_THRESHOLD", 0.15, 0, 0,
+"Anoxia threshold",
+"A cell begins to experience anoxia leading to cell death at the O2 concentration given by this threshold value."},
 
 {"ANOXIA_TAG_TIME", 3.0, 0, 0,
 "Anoxic time limit",
@@ -163,6 +163,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Michaelis-Menten Km",
  "Michaelis-Menten Km (uM)"},
 
+{"OXYGEN_HILL_N", 1, 1, 2,
+ "Oxygen Hill function N",
+ "Oxygen uptake rate Hill function N"},
+
 {"USE_GLUCOSE", 1, 0, 1,
 "Use Glucose?",
 "Glucose is simulated"},
@@ -186,6 +190,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"GLUCOSE_MM_KM", 1.33, 0, 0,
  "Michaelis-Menten Km",
  "Michaelis-Menten Km (uM)"},
+
+{"GLUCOSE_HILL_N", 1, 1, 2,
+ "Glucose Hill function N",
+ "Glucose uptake rate Hill function N"},
 
 {"USE_DRUG_A", 0, 0, 1,
 "Use SN30000?",
@@ -359,13 +367,17 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Spectral radius",
 "Spectral radius value used by RKC solver"},
 
-{"USE_EXTRA", 1, 0, 1,
+{"USE_EXTRA", 0, 0, 1,
 "Use extra conc",
 "Use extracellular O2 concentration to determine cell death"},
 
 {"USE_RELAX", 0, 0, 1,
 "Use O2 relaxation solver",
 "Use over- and under-relaxation to solve reaction-diffusion for oxygen"},
+
+{"USE_PAR_RELAX", 1, 0, 1,
+"Use parallel O2 relaxation solver",
+"Use over- and under-relaxation to solve reaction-diffusion for oxygen, with parallelized over-relaxation"},
 
 {"USE_TREATMENT_FILE", 0, 0, 1,
 "Use treatment file?",

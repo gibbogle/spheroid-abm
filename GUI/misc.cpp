@@ -169,7 +169,7 @@ void ExecThread::run()
     summary_done.wait(&mutex3);
 //    wait_to_go();
 
-    for (int i=1; i <= nsteps; i++) {
+    for (int i=1; i <= nsteps+1; i++) {
 		bool updated = false;
 		if (paused && !updated) {
 			snapshot();
