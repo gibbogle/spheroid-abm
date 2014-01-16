@@ -49,11 +49,10 @@ chemo(GLUCOSE)%decay_rate = 0
 
 chemo(DRUG_A)%name = 'Drug_A'
 chemo(DRUG_B)%name = 'Drug_B'
-!do ichemo = 1,MAX_CHEMO
-!	if (.not.chemo(ichemo)%used) cycle
-!	chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
-!!	write(*,*) 'decay_rate: ',ichemo,chemo(ichemo)%decay_rate
-!enddo
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	chemo(ichemo)%medium_dlayer = d_layer	! for now, using the same unstirred layer thickness for all constituents
+enddo
 call AllocateConcArrays
 !call SetMMParameters
 end subroutine

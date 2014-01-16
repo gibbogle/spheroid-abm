@@ -25,7 +25,7 @@ type chemokine_type
 	real(REAL_KIND) :: bdry_rate
 	real(REAL_KIND) :: bdry_conc
 	real(REAL_KIND) :: diff_coef
-	real(REAL_KIND) :: cell_diff
+	real(REAL_KIND) :: membrane_diff
 	logical :: decay
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: decay_rate
@@ -34,6 +34,12 @@ type chemokine_type
 	real(REAL_KIND) :: max_cell_rate	! Vmax
 	real(REAL_KIND) :: MM_C0			! Km
 	real(REAL_KIND) :: Hill_N
+	real(REAL_KIND) :: medium_diff_coef	! diffusion coefficient in the medium
+	real(REAL_KIND) :: medium_dlayer	! unstirred layer thickness
+	real(REAL_KIND) :: medium_M			! mass of constituent
+	real(REAL_KIND) :: medium_U			! total blob uptake rate
+	real(REAL_KIND) :: medium_Cext		! far-field concentration
+	real(REAL_KIND) :: medium_Cbnd		! boundary concentration
 	real(REAL_KIND), allocatable :: coef(:,:)
 	real(REAL_KIND), allocatable :: conc(:,:,:)
 	real(REAL_KIND), allocatable :: grad(:,:,:,:)

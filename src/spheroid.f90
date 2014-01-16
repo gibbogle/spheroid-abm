@@ -1,9 +1,6 @@
 module spheroid_mod
 use global
 use boundary
-!use behaviour 
-!use ode_diffuse
-!use FDC
 use fields
 use cellstate
 use winsock  
@@ -18,7 +15,7 @@ contains
 ! infile = file with the input data
 ! outfile = file to hold the output
 !-----------------------------------------------------------------------------------------
-subroutine setup(ncpu,infile,outfile,ok)
+subroutine Setup(ncpu,infile,outfile,ok)
 integer :: ncpu
 character*(*) :: infile, outfile
 logical :: ok
@@ -47,20 +44,20 @@ call logger(logmsg)
     endif
 #endif
 
-call logger("read_cell_params")
-call read_cell_params(ok)
+call logger("ReadCellParams")
+call ReadCellParams(ok)
 if (.not.ok) return
-call logger("did read_cell_params")
+call logger("did ReadCellParams")
 
-call array_initialisation(ok)
+call ArrayInitialisation(ok)
 if (.not.ok) return
-call logger('did array_initialisation')
+call logger('did ArrayInitialisation')
 
 call SetupChemo
 
 call PlaceCells(ok)
 call SetRadius(Nsites)
-write(logmsg,*) 'did placeCells: Ncells: ',Ncells,Radius
+write(logmsg,*) 'did PlaceCells: Ncells: ',Ncells,Radius
 call logger(logmsg)
 if (.not.ok) return
 
@@ -70,23 +67,17 @@ call CreateBdryList
 
 !chemo_N = 8
 !call ChemoSetup
-
-call make_split(.true.)
-
+!call MakeSplit(.true.)
 !call init_counters
 !if (save_input) then
 !    call save_inputfile(inputfile)
 !    call save_parameters
 !	call save_inputfile(treatmentfile)
 !endif
-!
 !call AllocateConcArrays
-!
 !call ChemoSteadystate
-!
 !firstSummary = .true.
 !initialized = .true.
-!
 !call checkcellcount(ok)
 
 if (use_ODE_diffusion) then
@@ -97,6 +88,7 @@ if (use_ODE_diffusion) then
 !	call TestSolver
 endif
 call SetupODEdiff
+call SetupMedium
 Nradiation_tag = 0
 Ndrug_tag = 0
 Nanoxia_tag = 0
@@ -110,6 +102,26 @@ call logger(logmsg)
 
 !call check_Coxygen
 
+end subroutine
+
+!----------------------------------------------------------------------------------------- 
+! Initialise medium concentrations, etc.
+!-----------------------------------------------------------------------------------------
+subroutine SetupMedium
+integer :: ichemo
+real(REAL_KIND) :: V, V0, R1
+
+call SetRadius(Nsites)
+R1 = Radius
+V0 = medium_volume0
+V = V0 - (4./3.)*PI*R1**3
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_M = V*chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_U = 0
+enddo
 end subroutine
 
 !----------------------------------------------------------------------------------------- 
@@ -243,7 +255,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine array_initialisation(ok)
+subroutine ArrayInitialisation(ok)
 logical :: ok
 integer :: x,y,z,k, ichemo
 integer :: MAXX, z1, z2, nc0, inflow
@@ -251,9 +263,8 @@ integer :: cog_size
 real(REAL_KIND) :: d, rr(3)
 
 ok = .false.
-call logger("call rng_initialisation")
-call rng_initialisation
-call logger("did rng_initialisation")
+call RngInitialisation
+call logger("did RngInitialisation")
 
 ! These are deallocated here instead of in subroutine wrapup so that when a simulation run ends 
 ! it will still be possible to view the cell distributions and chemokine concentration fields.
@@ -261,11 +272,6 @@ if (allocated(occupancy)) deallocate(occupancy)
 if (allocated(cell_list)) deallocate(cell_list)
 if (allocated(allstate)) deallocate(allstate)
 if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
-!do ichemo = 1,MAX_CHEMO
-!	if (allocated(chemo(ichemo)%coef)) deallocate(chemo(ichemo)%coef)
-!	if (allocated(chemo(ichemo)%conc)) deallocate(chemo(ichemo)%conc)
-!	if (allocated(chemo(ichemo)%grad)) deallocate(chemo(ichemo)%grad)
-!enddo
 call logger('did deallocation')
 
 !nsteps_per_min = 1.0/DELTA_T
@@ -303,7 +309,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine rng_initialisation
+subroutine RngInitialisation
 integer, allocatable :: zig_seed(:)
 integer :: i
 integer :: npar, grainsize = 32
@@ -321,7 +327,7 @@ end subroutine
 
 !----------------------------------------------------------------------------------------1123
 !----------------------------------------------------------------------------------------
-subroutine read_cell_params(ok)
+subroutine ReadCellParams(ok)
 logical :: ok
 integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
 integer :: iuse_oxygen, iuse_glucose, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
@@ -346,7 +352,8 @@ read(nfcell,*) DELTA_T						! time step size (sec)
 read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
 read(nfcell,*) Nmm3							! number of cells/mm^3
 read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is fluid
-read(nfcell,*) medium_volume				! volume of medium that the spheroid is growing in (cm^3)
+read(nfcell,*) medium_volume0				! initial total volume (medium + spheroid) (cm^3)
+read(nfcell,*) d_layer						! thickness of the unstirred layer around the spheroid (cm)
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
 read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (uM)
@@ -368,14 +375,16 @@ read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
 read(nfcell,*) show_progeny                 ! if != 0, the number of the cell to show descendents of
 read(nfcell,*) iuse_oxygen		! chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
-read(nfcell,*) chemo(OXYGEN)%cell_diff
+read(nfcell,*) chemo(OXYGEN)%medium_diff_coef
+read(nfcell,*) chemo(OXYGEN)%membrane_diff
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
 read(nfcell,*) chemo(OXYGEN)%MM_C0
 read(nfcell,*) chemo(OXYGEN)%Hill_N
 read(nfcell,*) iuse_glucose		!chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
-read(nfcell,*) chemo(GLUCOSE)%cell_diff
+read(nfcell,*) chemo(GLUCOSE)%medium_diff_coef
+read(nfcell,*) chemo(GLUCOSE)%membrane_diff
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
 read(nfcell,*) chemo(GLUCOSE)%MM_C0
@@ -389,7 +398,7 @@ do i = 1,2			! currently allowing for just two different drugs
 	read(nfcell,*) iuse_metab
 	read(nfcell,*) imetab_decay
 !	if (iuse_drug == 0) cycle
-	call get_indices(drug_name, idrug, imetab)
+	call getIndices(drug_name, idrug, imetab)
 	if (idrug < 0 .and. iuse_drug /= 0) then
 		write(logmsg,*) 'Unrecognized drug name: ',drug_name
 		call logger(logmsg)
@@ -408,15 +417,18 @@ do i = 1,2			! currently allowing for just two different drugs
 	chemo(imetab)%decay = (imetab_decay == 1)
 	if (idrug == SN30000) then
 		read(nfcell,*) SN30K%diff_coef
-		read(nfcell,*) SN30K%cell_diff
+		read(nfcell,*) SN30K%medium_diff_coef
+		read(nfcell,*) SN30K%membrane_diff
 		read(nfcell,*) SN30K%halflife
 		read(nfcell,*) SN30K%metabolite_halflife
 		chemo(idrug)%halflife = SN30K%halflife
 		chemo(imetab)%halflife = SN30K%metabolite_halflife
 		chemo(idrug)%diff_coef = SN30K%diff_coef		! Note that metabolite is given the same diff_coef
 		chemo(imetab)%diff_coef = SN30K%diff_coef		! and cell_diff as the drug.
-		chemo(idrug)%cell_diff = SN30K%cell_diff
-		chemo(imetab)%cell_diff = SN30K%cell_diff
+		chemo(idrug)%medium_diff_coef = SN30K%medium_diff_coef
+		chemo(imetab)%medium_diff_coef = SN30K%medium_diff_coef
+		chemo(idrug)%membrane_diff = SN30K%membrane_diff
+		chemo(imetab)%membrane_diff = SN30K%membrane_diff
 		do ictype = 1,Ncelltypes
 			read(nfcell,*) SN30K%Kmet0(ictype)
 			read(nfcell,*) SN30K%C1(ictype)
@@ -499,15 +511,18 @@ DELTA_X = DXmm/10									! mm -> cm
 Vsite = DELTA_X*DELTA_X*DELTA_X						! total site volume (cm^3)
 Vextra = fluid_fraction*Vsite						! extracellular volume in a site
 cell_radius = (3*(1-fluid_fraction)*Vsite/(4*PI))**(1./3.)
+! In a well-oxygenated tumour the average cell fractional volume is intermediate between vdivide0/2 and vdivide0.
+! We assume that 0.75*vdivide0*Vcell = (1 - fluid_fraction)*Vsite
+Vcell = (1 - fluid_fraction)*Vsite/(0.75*vdivide0)		! nominal cell volume (corresponds to %volume = 1)
 
-write(logmsg,'(a,2e12.4)') 'DELTA_X, cell_radius: ',DELTA_X,cell_radius
+write(logmsg,'(a,3e12.4)') 'DELTA_X, cell_radius: ',DELTA_X,cell_radius
 call logger(logmsg)
-write(logmsg,'(a,3e12.4)') 'Volumes: site, extra, cell (average): ',Vsite, Vextra, Vsite-Vextra
+write(logmsg,'(a,4e12.4)') 'Volumes: site, extra, cell (average, base): ',Vsite, Vextra, Vsite-Vextra, Vcell
 call logger(logmsg)
 
 if (itreatment == 1) then
 	use_treatment = .true.
-	call read_treatment(ok)
+	call ReadTreatment(ok)
 	if (.not.ok) then
 		write(logmsg,'(a,a)') 'Error reading treatment programme file: ',treatmentfile
 		call logger(logmsg)
@@ -553,13 +568,13 @@ Nsteps = days*24*60*60/DELTA_T		! DELTA_T in seconds
 write(logmsg,'(a,2i6,f6.0)') 'nsteps, NT_CONC, DELTA_T: ',nsteps,NT_CONC,DELTA_T
 call logger(logmsg)
 
-call determine_Kd
+call DetermineKd
 ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine get_indices(drug_name, idrug, imetab)
+subroutine getIndices(drug_name, idrug, imetab)
 character*(12) :: drug_name
 integer :: idrug, imetab
 
@@ -585,7 +600,7 @@ end subroutine
 ! Drug concs are mM
 ! Radiation dose is Gy
 !-----------------------------------------------------------------------------------------
-subroutine read_treatment(ok)
+subroutine ReadTreatment(ok)
 logical :: ok
 character*(64) :: line
 integer :: ichemo, idrug, nmax, i
@@ -721,7 +736,7 @@ end subroutine
 ! therefore
 ! Kd = -log(1-f)/(T.F(CkillO2).kmet0.Ckill)
 !-----------------------------------------------------------------------------------------
-subroutine determine_Kd
+subroutine DetermineKd
 real(REAL_KIND) :: kmet
 integer :: i
 
@@ -733,7 +748,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine placeCells(ok)
+subroutine PlaceCells(ok)
 logical :: ok
 integer :: x, y, z, k, site(3), ichemo, kpar=0
 real(REAL_KIND) :: r2lim,r2,rad(3)
@@ -807,146 +822,6 @@ write(logmsg,*) 'idbug: ',idbug
 call logger(logmsg)
 end subroutine
 
-!--------------------------------------------------------------------------------
-! Generates the arrays zoffset() and zdomain().
-! The domains (slices) are numbered 0,...,2*Mnodes-1
-! wz(k) = width of the slice for kth domain
-! zoffset(k) = offset of kth domain occupancy array in the occupancy array.
-! zdomain(x) = domain that global z lies in.
-! The kth domain (slice) extends from z = zoffset(k)+1 to z = zoffset(k+1)
-! The idea is to set the domain boundaries such that each domain has roughly the
-! same number of available sites.
-! This is the initial split, which will continue to be OK if:
-! not using a blob, or Mnodes <= 2
-! blobrange(:,:) holds the info about the ranges of x, y and z that the blob occupies.
-! blobrange(1,1) <= x <= blobrange(1,2)
-! blobrange(2,1) <= y <= blobrange(2,2)
-! blobrange(3,1) <= z <= blobrange(3,2)
-!--------------------------------------------------------------------------------
-subroutine make_split(force)
-logical :: force
-integer :: k, wsum, kdomain, nsum, Ntot, N, last, x, y, z
-integer, allocatable :: scount(:)
-integer, allocatable :: wz(:), ztotal(:)
-integer :: Mslices
-real(REAL_KIND) :: dNT, diff1, diff2
-logical :: show = .false.
-
-!write(*,*) 'make_split: istep,Mnodes: ',istep,Mnodes
-if (Mnodes == 1) then
-    Mslices = 1
-    zdomain = 0
-else
-	Mslices = 2*Mnodes
-endif
-dNT = abs(Ncells - lastNcells)/real(lastNcells+1)
-if (.not.force .and. dNT < 0.03) then
-    return
-endif
-lastNcells = Ncells
-if (Mslices > 1) then
-	allocate(wz(0:Mslices))
-	allocate(ztotal(0:Mslices))
-	allocate(scount(NX))
-endif
-blobrange(:,1) = 99999
-blobrange(:,2) = 0
-nsum = 0
-do z = 1,NZ
-    k = 0
-    do y = 1,NY
-        do x = 1,NX
-            if (occupancy(x,y,z)%indx(1) /= OUTSIDE_TAG) then
-                k = k + 1
-                blobrange(1,1) = min(blobrange(1,1),x)
-                blobrange(1,2) = max(blobrange(1,2),x)
-                blobrange(2,1) = min(blobrange(2,1),y)
-                blobrange(2,2) = max(blobrange(2,2),y)
-                blobrange(3,1) = min(blobrange(3,1),z)
-                blobrange(3,2) = max(blobrange(3,2),z)
-            endif
-        enddo
-    enddo
-    if (Mslices > 1) then
-	    scount(z) = k
-	    nsum = nsum + scount(z)
-	endif
-enddo
-if (Mslices == 1) return
-
-Ntot = nsum
-N = Ntot/Mslices
-nsum = 0
-last = 0
-k = 0
-do z = 1,NZ
-    nsum = nsum + scount(z)
-    if (nsum >= (k+1)*N) then
-        diff1 = nsum - (k+1)*N
-        diff2 = diff1 - scount(z)
-        if (abs(diff1) < abs(diff2)) then
-            wz(k) = z - last
-            last = z
-        else
-            wz(k) = z - last - 1
-            last = z - 1
-        endif
-        k = k+1
-        if (k == Mslices-1) exit
-    endif
-enddo
-wz(Mslices-1) = NZ - last
-if (show) then
-    write(*,*) 'Ntot, N: ',Ntot,N
-    write(*,'(10i6)') scount
-endif
-zoffset(0) = 0
-do k = 1,Mslices-1
-    zoffset(k) = zoffset(k-1) + wz(k-1)
-enddo
-zoffset(Mslices) = NZ
-z = 0
-do kdomain = 0,Mslices-1
-    do k = 1,wz(kdomain)
-        z = z+1
-        zdomain(z) = kdomain      ! = kpar with two sweeps
-    enddo
-enddo
-if (show) then
-    write(*,*) 'zoffset: ',zoffset
-    write(*,*) 'wz:      ',wz
-    write(*,*) 'zdomain: '
-    write(*,'(10i4)') zdomain
-endif
-ztotal = 0
-do k = 0,2*Mnodes-1
-    do z = zoffset(k)+1,zoffset(k+1)
-        ztotal(k) = ztotal(k) + scount(z)
-    enddo
-    if (show) write(*,*) k,ztotal(k)
-enddo
-deallocate(wz)
-deallocate(ztotal)
-deallocate(scount)
-end subroutine
-
-!--------------------------------------------------------------------------------
-! Makes an approximate count of the number of sites of the spherical blob that
-! are in the xth slice.  Uses the area of the slice.
-! The blob centre is at (x0,y0,z0), and the blob radius is R = Radius%x
-! NOT USED
-!--------------------------------------------------------------------------------
-integer function slice_count(x)
-integer :: x
-real(REAL_KIND) :: r2
-
-r2 = Radius**2 - (x-x0)**2
-if (r2 < 0) then
-    slice_count = 0
-else
-    slice_count = PI*r2
-endif
-end function
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
@@ -987,17 +862,13 @@ do kcell = 1,Ncells
         occupancy(site(1),site(2),site(3))%C(ic) = chemo(ichemo)%bdry_conc
     enddo
 enddo
-!do ic = 1,nchemo
-!	ichemo = chemomap(ic)
-!	call InitState(ichemo,allstate(1:nextra,ichemo))
-!enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
 ! Radiation treatment is stored in protocol(0)
 ! 
 !----------------------------------------------------------------------------------
-subroutine treatment(radiation_dose)
+subroutine Treatment(radiation_dose)
 real(REAL_KIND) :: radiation_dose
 integer :: i, idrug, ichemo, ichemo_metab
 
@@ -1088,11 +959,15 @@ if (use_treatment) then
 		call logger(logmsg)
 	endif
 endif
-call grow_cells(radiation_dose,DELTA_T,ok)
+call GrowCells(radiation_dose,DELTA_T,ok)
 if (.not.ok) then
 	res = 3
 	return
 endif
+
+! Update Cbnd using current M, R1 and previous U, Cext
+call UpdateCbnd
+
 call SetupODEdiff
 call SiteCellToState
 do it_solve = 1,NT_CONC
@@ -1102,6 +977,9 @@ do it_solve = 1,NT_CONC
 enddo
 call StateToSiteCell
 res = 0
+
+! Compute U and update M, Cext, Cbnd
+call UpdateMedium(DELTA_T)
 
 if (mod(istep,60) == -1) then
 	rmax = 0
@@ -1113,125 +991,10 @@ if (mod(istep,60) == -1) then
 	write(logmsg,'(3i6,2f6.1)') istep, hour, Ncells, Radius, rmax
 	call logger(logmsg)
 	call CheckBdryList
-	call ShowConcs
-!	call check_bdry
+!	call ShowConcs
+	call check_bdry
 endif
-!call test_cell_division
-end subroutine
-
-!--------------------------------------------------------------------------------  
-! The GUI calls this subroutine to fetch the cell info needed to identify and render 
-! the cells:
-!   id			the cell's sequence number
-!   position	(x,y,z)
-!   state       this is translated into a colour
-!
-! The info is stored in integer arrays, one for B cells, one for FDCs,
-! and one for cell-cell bonds (not used).
-! As a quick-and-dirty measure, the first 7 B cells in the list are actually 
-! markers to provide a visual indication of the extent of the follicular blob.
-! Improving this:
-! blobrange(:,:) holds the info about the ranges of x, y and z that the blob occupies.
-! blobrange(1,1) <= x <= blobrange(1,2)
-! blobrange(2,1) <= y <= blobrange(2,2)
-! blobrange(3,1) <= z <= blobrange(3,2)
-!--------------------------------------------------------------------------------
-subroutine get_bcell_scene(nBC_list,BC_list,nFDCMRC_list,FDCMRC_list,nbond_list,bond_list) BIND(C)
-!DEC$ ATTRIBUTES DLLEXPORT :: get_bcell_scene
-use, intrinsic :: iso_c_binding
-integer(c_int) :: nFDCMRC_list, nBC_list, nbond_list, FDCMRC_list(*), BC_list(*), bond_list(*)
-integer :: k, kc, kcell, site(3), j, jb
-integer :: col(3)
-integer :: x, y, z
-integer :: ifdcstate, ibcstate, ctype, stage, region, highlight=0
-integer :: last_id1, last_id2
-logical :: ok
-integer, parameter :: axis_centre = -2	! identifies the ellipsoid centre
-integer, parameter :: axis_end    = -3	! identifies the ellipsoid extent in 5 directions
-integer, parameter :: axis_bottom = -4	! identifies the ellipsoid extent in the -Y direction, i.e. bottom surface
-integer, parameter :: ninfo = 6			! the size of the info package for a cell (number of integers)
-integer, parameter :: nax = 6			! number of points used to delineate the follicle
-
-nBC_list = 0
-nFDCMRC_list = 0
-nbond_list = 0
-
-! Need some markers to delineate the follicle extent.  These nax "cells" are used to convey (the follicle centre
-! and) the approximate ellipsoidal blob limits in the 3 axis directions.
-do k = 1,nax
-	select case (k)
-!	case (1)
-!		x = Centre(1) + 0.5
-!		y = Centre(2) + 0.5
-!		z = Centre(3) + 0.5
-!		site = (/x, y, z/)
-!		ibcstate = axis_centre
-	case (1)
-!		x = Centre(1) - Radius%x - 2
-		x = blobrange(1,1) - 1
-		y = Centre(2) + 0.5
-		z = Centre(3) + 0.5
-		site = (/x, y, z/)
-		ibcstate = axis_end
-	case (2)
-!		x = Centre(1) + Radius%x + 2
-		x = blobrange(1,2) + 1
-		y = Centre(2) + 0.5
-		z = Centre(3) + 0.5
-		site = (/x, y, z/)
-		ibcstate = axis_end
-	case (3)
-		x = Centre(1) + 0.5
-!		y = Centre(2) - Radius%y - 2
-		y = blobrange(2,1) - 1
-		z = Centre(3) + 0.5
-		site = (/x, y, z/)
-		ibcstate = axis_bottom
-	case (4)
-		x = Centre(1) + 0.5
-!		y = Centre(2) + Radius%y + 2
-		y = blobrange(2,2) + 1
-		z = Centre(3) + 0.5
-		site = (/x, y, z/)
-		ibcstate = axis_end
-	case (5)
-		x = Centre(1) + 0.5
-		y = Centre(2) + 0.5
-!		z = Centre(3) - Radius%z - 2
-		z = blobrange(3,1) - 1
-		site = (/x, y, z/)
-		ibcstate = axis_end
-	case (6)
-		x = Centre(1) + 0.5
-		y = Centre(2) + 0.5
-!		z = Centre(3) + Radius%z + 2
-		z = blobrange(3,2) + 1
-		site = (/x, y, z/)
-		ibcstate = axis_end
-	end select
-
-	j = ninfo*(k-1)
-	BC_list(j+1) = k-1
-	BC_list(j+2:j+4) = site
-	BC_list(j+5) = ibcstate
-	last_id1 = k-1
-enddo
-k = last_id1 + 1
-
-! Cells
-do kcell = 1,nlist
-	if (cell_list(kcell)%exists) then
-		k = k+1
-		j = ninfo*(k-1)
-		site = cell_list(kcell)%site
-		call cellColour(kcell,highlight,col)
-		BC_list(j+1) = kcell + last_id1
-		BC_list(j+2:j+4) = site
-		BC_list(j+5) = rgb(col)
-		last_id2 = kcell + last_id1
-	endif
-enddo
-nBC_list = last_id2
+!call test_CellDivision
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1339,7 +1102,7 @@ do kcell = 1,nlist
 	    if (use_celltype_colour) then
 			colour = cell_list(kcell)%celltype
 		else
-			call cellColour(kcell,highlight,col)
+			call CellColour(kcell,highlight,col)
 			colour = rgb(col)
 		endif
 		TC_list(j+1) = kcell + last_id1
@@ -1360,7 +1123,7 @@ end subroutine
 ! Rendered cell colour may depend on stage, state, receptor expression level.
 ! col(:) = (r,g,b)
 !-----------------------------------------------------------------------------------------
-subroutine cellColour(kcell,highlight,col)
+subroutine CellColour(kcell,highlight,col)
 integer :: kcell, highlight, col(3)
 integer :: stage, status
 integer, parameter :: WHITE(3) = (/255,255,255/)
@@ -1445,9 +1208,9 @@ diam_um = 2*DELTA_X*Radius*10000
 Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead				! number currently tagged by anoxia
 Ntagged_drug = Ndrug_tag - Ndrug_dead					! number currently tagged by drug
 Ntagged_radiation = Nradiation_tag - Nradiation_dead	! number currently tagged by radiation
-call get_hypoxic_count(nhypoxic)
+call getHypoxicCount(nhypoxic)
 hypoxic_percent_10 = (1000*nhypoxic(i_hypoxia_cutoff))/Ncells
-call get_growth_count(ngrowth)
+call getGrowthCount(ngrowth)
 growth_percent_10 = (1000*ngrowth(i_growth_cutoff))/Ncells
 necrotic_percent_10 = (1000*(Nsites-Ncells))/Nsites
 summaryData(1:13) = (/ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, &
@@ -1460,7 +1223,7 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_hypoxic_count(nhypoxic)
+subroutine getHypoxicCount(nhypoxic)
 integer :: nhypoxic(3)
 integer :: kcell, i
 
@@ -1476,7 +1239,7 @@ end subroutine
 !--------------------------------------------------------------------------------
 ! Need to compare growth rate with a fraction of average growth rate
 !--------------------------------------------------------------------------------
-subroutine get_growth_count(ngrowth)
+subroutine getGrowthCount(ngrowth)
 integer :: ngrowth(3)
 integer :: kcell, i
 real(REAL_KIND) :: r_mean
@@ -1571,7 +1334,7 @@ do z = rng(3,1),rng(3,2)
             fdata(ns)%state = 1
             if (kcell > 0) then
                 fdata(ns)%volume = cell_list(kcell)%volume
-                call get_growthrate(kcell,growthrate)
+                call getGrowthrate(kcell,growthrate)
             else
                 fdata(ns)%volume = 0
                 growthrate = 0
@@ -1595,7 +1358,7 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_growthrate(kcell,growthrate)
+subroutine getGrowthrate(kcell,growthrate)
 integer :: kcell
 real(REAL_KIND) :: growthrate
 
@@ -1743,7 +1506,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen) BIND(C)
+subroutine Execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: execute
 use, intrinsic :: iso_c_binding
 character(c_char) :: infile_array(128), outfile_array(128)
@@ -1813,7 +1576,7 @@ DELTA_T = 600
 nsteps = 100
 res=0
 
-call setup(ncpu,infile,outfile,ok)
+call Setup(ncpu,infile,outfile,ok)
 if (ok) then
 !	clear_to_send = .true.
 !	simulation_start = .true.
@@ -1831,7 +1594,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine disableTCP
+subroutine DisableTCP
 !DEC$ ATTRIBUTES DLLEXPORT :: disableTCP
 !DEC$ ATTRIBUTES STDCALL, REFERENCE, MIXED_STR_LEN_ARG, ALIAS:"DISABLETCP" :: disableTCP
 
@@ -1840,7 +1603,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine connection(awp,port,error)
+subroutine Connection(awp,port,error)
 TYPE(winsockport) :: awp
 integer :: port, error
 integer :: address = 0
@@ -1867,14 +1630,14 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine connecter(ok)
+subroutine Connecter(ok)
 logical :: ok
 integer :: error
 
 ! Main connection
 ok = .true.
 error = 0
-call connection(awp_0,TCP_PORT_0,error)
+call Connection(awp_0,TCP_PORT_0,error)
 if (awp_0%handle < 0 .or. error /= 0) then
     write(logmsg,'(a)') 'TCP connection to TCP_PORT_0 failed'
     call logger(logmsg)
@@ -1921,7 +1684,7 @@ character*(8), parameter :: quit = '__EXIT__'
 integer :: error, i
 
 call logger('terminate_run')
-call wrapup
+call Wrapup
 
 if (res == 0) then
 	call logger(' Execution successful!')
@@ -1952,7 +1715,7 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine wrapup
+subroutine Wrapup
 integer :: ierr, ichemo, idrug
 logical :: isopen
 

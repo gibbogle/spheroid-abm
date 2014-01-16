@@ -1763,3 +1763,260 @@ enddo
 npath = k
 
 end subroutine
+
+!--------------------------------------------------------------------------------
+! Generates the arrays zoffset() and zdomain().
+! The domains (slices) are numbered 0,...,2*Mnodes-1
+! wz(k) = width of the slice for kth domain
+! zoffset(k) = offset of kth domain occupancy array in the occupancy array.
+! zdomain(x) = domain that global z lies in.
+! The kth domain (slice) extends from z = zoffset(k)+1 to z = zoffset(k+1)
+! The idea is to set the domain boundaries such that each domain has roughly the
+! same number of available sites.
+! This is the initial split, which will continue to be OK if:
+! not using a blob, or Mnodes <= 2
+! blobrange(:,:) holds the info about the ranges of x, y and z that the blob occupies.
+! blobrange(1,1) <= x <= blobrange(1,2)
+! blobrange(2,1) <= y <= blobrange(2,2)
+! blobrange(3,1) <= z <= blobrange(3,2)
+!--------------------------------------------------------------------------------
+subroutine MakeSplit(force)
+logical :: force
+integer :: k, wsum, kdomain, nsum, Ntot, N, last, x, y, z
+integer, allocatable :: scount(:)
+integer, allocatable :: wz(:), ztotal(:)
+integer :: Mslices
+real(REAL_KIND) :: dNT, diff1, diff2
+logical :: show = .false.
+
+!write(*,*) 'MakeSplit: istep,Mnodes: ',istep,Mnodes
+if (Mnodes == 1) then
+    Mslices = 1
+    zdomain = 0
+else
+	Mslices = 2*Mnodes
+endif
+dNT = abs(Ncells - lastNcells)/real(lastNcells+1)
+if (.not.force .and. dNT < 0.03) then
+    return
+endif
+lastNcells = Ncells
+if (Mslices > 1) then
+	allocate(wz(0:Mslices))
+	allocate(ztotal(0:Mslices))
+	allocate(scount(NX))
+endif
+blobrange(:,1) = 99999
+blobrange(:,2) = 0
+nsum = 0
+do z = 1,NZ
+    k = 0
+    do y = 1,NY
+        do x = 1,NX
+            if (occupancy(x,y,z)%indx(1) /= OUTSIDE_TAG) then
+                k = k + 1
+                blobrange(1,1) = min(blobrange(1,1),x)
+                blobrange(1,2) = max(blobrange(1,2),x)
+                blobrange(2,1) = min(blobrange(2,1),y)
+                blobrange(2,2) = max(blobrange(2,2),y)
+                blobrange(3,1) = min(blobrange(3,1),z)
+                blobrange(3,2) = max(blobrange(3,2),z)
+            endif
+        enddo
+    enddo
+    if (Mslices > 1) then
+	    scount(z) = k
+	    nsum = nsum + scount(z)
+	endif
+enddo
+if (Mslices == 1) return
+
+Ntot = nsum
+N = Ntot/Mslices
+nsum = 0
+last = 0
+k = 0
+do z = 1,NZ
+    nsum = nsum + scount(z)
+    if (nsum >= (k+1)*N) then
+        diff1 = nsum - (k+1)*N
+        diff2 = diff1 - scount(z)
+        if (abs(diff1) < abs(diff2)) then
+            wz(k) = z - last
+            last = z
+        else
+            wz(k) = z - last - 1
+            last = z - 1
+        endif
+        k = k+1
+        if (k == Mslices-1) exit
+    endif
+enddo
+wz(Mslices-1) = NZ - last
+if (show) then
+    write(*,*) 'Ntot, N: ',Ntot,N
+    write(*,'(10i6)') scount
+endif
+zoffset(0) = 0
+do k = 1,Mslices-1
+    zoffset(k) = zoffset(k-1) + wz(k-1)
+enddo
+zoffset(Mslices) = NZ
+z = 0
+do kdomain = 0,Mslices-1
+    do k = 1,wz(kdomain)
+        z = z+1
+        zdomain(z) = kdomain      ! = kpar with two sweeps
+    enddo
+enddo
+if (show) then
+    write(*,*) 'zoffset: ',zoffset
+    write(*,*) 'wz:      ',wz
+    write(*,*) 'zdomain: '
+    write(*,'(10i4)') zdomain
+endif
+ztotal = 0
+do k = 0,2*Mnodes-1
+    do z = zoffset(k)+1,zoffset(k+1)
+        ztotal(k) = ztotal(k) + scount(z)
+    enddo
+    if (show) write(*,*) k,ztotal(k)
+enddo
+deallocate(wz)
+deallocate(ztotal)
+deallocate(scount)
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Makes an approximate count of the number of sites of the spherical blob that
+! are in the xth slice.  Uses the area of the slice.
+! The blob centre is at (x0,y0,z0), and the blob radius is R = Radius%x
+! NOT USED
+!--------------------------------------------------------------------------------
+integer function slice_count(x)
+integer :: x
+real(REAL_KIND) :: r2
+
+r2 = Radius**2 - (x-x0)**2
+if (r2 < 0) then
+    slice_count = 0
+else
+    slice_count = PI*r2
+endif
+end function
+
+!--------------------------------------------------------------------------------  
+! The GUI calls this subroutine to fetch the cell info needed to identify and render 
+! the cells:
+!   id			the cell's sequence number
+!   position	(x,y,z)
+!   state       this is translated into a colour
+!
+! The info is stored in integer arrays, one for B cells, one for FDCs,
+! and one for cell-cell bonds (not used).
+! As a quick-and-dirty measure, the first 7 B cells in the list are actually 
+! markers to provide a visual indication of the extent of the follicular blob.
+! Improving this:
+! blobrange(:,:) holds the info about the ranges of x, y and z that the blob occupies.
+! blobrange(1,1) <= x <= blobrange(1,2)
+! blobrange(2,1) <= y <= blobrange(2,2)
+! blobrange(3,1) <= z <= blobrange(3,2)
+!--------------------------------------------------------------------------------
+subroutine get_bcell_scene(nBC_list,BC_list,nFDCMRC_list,FDCMRC_list,nbond_list,bond_list) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_bcell_scene
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nFDCMRC_list, nBC_list, nbond_list, FDCMRC_list(*), BC_list(*), bond_list(*)
+integer :: k, kc, kcell, site(3), j, jb
+integer :: col(3)
+integer :: x, y, z
+integer :: ifdcstate, ibcstate, ctype, stage, region, highlight=0
+integer :: last_id1, last_id2
+logical :: ok
+integer, parameter :: axis_centre = -2	! identifies the ellipsoid centre
+integer, parameter :: axis_end    = -3	! identifies the ellipsoid extent in 5 directions
+integer, parameter :: axis_bottom = -4	! identifies the ellipsoid extent in the -Y direction, i.e. bottom surface
+integer, parameter :: ninfo = 6			! the size of the info package for a cell (number of integers)
+integer, parameter :: nax = 6			! number of points used to delineate the follicle
+
+nBC_list = 0
+nFDCMRC_list = 0
+nbond_list = 0
+
+! Need some markers to delineate the follicle extent.  These nax "cells" are used to convey (the follicle centre
+! and) the approximate ellipsoidal blob limits in the 3 axis directions.
+do k = 1,nax
+	select case (k)
+!	case (1)
+!		x = Centre(1) + 0.5
+!		y = Centre(2) + 0.5
+!		z = Centre(3) + 0.5
+!		site = (/x, y, z/)
+!		ibcstate = axis_centre
+	case (1)
+!		x = Centre(1) - Radius%x - 2
+		x = blobrange(1,1) - 1
+		y = Centre(2) + 0.5
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	case (2)
+!		x = Centre(1) + Radius%x + 2
+		x = blobrange(1,2) + 1
+		y = Centre(2) + 0.5
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	case (3)
+		x = Centre(1) + 0.5
+!		y = Centre(2) - Radius%y - 2
+		y = blobrange(2,1) - 1
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		ibcstate = axis_bottom
+	case (4)
+		x = Centre(1) + 0.5
+!		y = Centre(2) + Radius%y + 2
+		y = blobrange(2,2) + 1
+		z = Centre(3) + 0.5
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	case (5)
+		x = Centre(1) + 0.5
+		y = Centre(2) + 0.5
+!		z = Centre(3) - Radius%z - 2
+		z = blobrange(3,1) - 1
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	case (6)
+		x = Centre(1) + 0.5
+		y = Centre(2) + 0.5
+!		z = Centre(3) + Radius%z + 2
+		z = blobrange(3,2) + 1
+		site = (/x, y, z/)
+		ibcstate = axis_end
+	end select
+
+	j = ninfo*(k-1)
+	BC_list(j+1) = k-1
+	BC_list(j+2:j+4) = site
+	BC_list(j+5) = ibcstate
+	last_id1 = k-1
+enddo
+k = last_id1 + 1
+
+! Cells
+do kcell = 1,nlist
+	if (cell_list(kcell)%exists) then
+		k = k+1
+		j = ninfo*(k-1)
+		site = cell_list(kcell)%site
+		call cellColour(kcell,highlight,col)
+		BC_list(j+1) = kcell + last_id1
+		BC_list(j+2:j+4) = site
+		BC_list(j+5) = rgb(col)
+		last_id2 = kcell + last_id1
+	endif
+enddo
+nBC_list = last_id2
+end subroutine
+
