@@ -49,19 +49,19 @@ contains
 ! t in seconds
 ! %bdry_decay = .true. for the case that a simple exponential decay of bdry conc
 ! is specified.
-! NEEDS WORK
+! Now uses %medium_Cbnd, no t dependence here.
 !----------------------------------------------------------------------------------
 real(REAL_KIND) function BdryConc(ichemo,t)
 integer :: ichemo
 real(REAL_KIND) :: t
 
-if ((use_medium_flux .and. medium_volume > 0) .or. .not.chemo(ichemo)%decay) then
-    BdryConc = chemo(ichemo)%bdry_conc
-else
-!    BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%bdry_decay_rate*t)
-    BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%decay_rate*t)
-endif
-!write(*,*) ichemo, BdryConc, exp(-chemo(ichemo)%bdry_decay_rate*30*60)
+BdryConc = chemo(ichemo)%medium_Cbnd
+
+!if ((use_medium_flux .and. medium_volume > 0) .or. .not.chemo(ichemo)%decay) then
+!    BdryConc = chemo(ichemo)%bdry_conc
+!else
+!    BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%decay_rate*t)
+!endif
 end function
 
 !----------------------------------------------------------------------------------
@@ -138,10 +138,8 @@ i = 0
 nex = 0
 nin = 0
 do x = 1,NX
-!do z = 1,NZ
 	do y = 1,NY
 		do z = 1,NZ
-!		do x = 1,NX
 		    kcell = occupancy(x,y,z)%indx(1)
 			if (kcell /= OUTSIDE_TAG) then
 				i = i+1
@@ -279,12 +277,6 @@ if (ierr /= 0) then
 	call logger(logmsg)
 	stop
 endif
-!if (allocated(extra_index)) deallocate(extra_index)
-!if (allocated(intra_index)) deallocate(intra_index)
-!if (allocated(cell_index)) deallocate(cell_index)
-!allocate(extra_index(ODEdiff%nintra))   ! extra variable number associated with intra variable number
-!allocate(intra_index(ODEdiff%nextra))   ! intra variable number associated with extra variable number
-!allocate(cell_index(ODEdiff%nintra))    ! cell number associated with intra variable number
 
 nchemo = 0
 do ichemo = 1,MAX_CHEMO
@@ -311,6 +303,7 @@ if (iv < 1) then
     stop
 endif
 end subroutine
+
 !----------------------------------------------------------------------------------
 ! Makes a slight modification to the Michaelis-Menten function to create a
 ! "soft landing" as C -> 0
@@ -326,6 +319,7 @@ end subroutine
 ! => x = e-d = (sqrt(Co^2 + 8dC0) - C0)/4
 ! k = (e-d)/(e^2(C0 + e-d))
 ! We fix d (as small as possible, by trial and error) then deduce e, k.
+! Note: This has really been superceded by the option of a Hill function with N = 2.
 !----------------------------------------------------------------------------------
 subroutine AdjustMM
 real(REAL_KIND) :: deltaC, C0, C1
@@ -616,8 +610,8 @@ do i = 1,neqn
 	    enddo
 	    if (cell_exists) then
 !	        write(*,*) 'extra vol: ',vol
-		    membrane_flux = chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))*Vextra !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!		    dCreact = -chemo(ichemo)%cell_diff*(Cex - Cin(ichemo))
+		    membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))*Vextra !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!		    dCreact = -chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))
 		else
 		    membrane_flux = 0
 !            dCreact=0
@@ -627,7 +621,7 @@ do i = 1,neqn
 	else
 		C = Cin(ichemo)
 !	    write(*,*) 'intra vol: ',vol
-		membrane_flux = chemo(ichemo)%cell_diff*(Cex - C)*Vextra   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vextra   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		dCreact = 0
 		if (ichemo == OXYGEN) then
 !			if (C > ODEdiff%C1_soft) then
@@ -660,7 +654,7 @@ do i = 1,neqn
 			endif
 			dCreact = dCreact + membrane_flux/vol
 		endif
-!		dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)	
+!		dCreact = dCreact + chemo(ichemo)%membrane_diff*(Cex - C)	
 	    dydt(i) = dCreact - yy*decay_rate
 	endif
 enddo
@@ -672,7 +666,7 @@ end subroutine
 ! Should metab depend on cell volume, stage in cell cycle?
 ! NOT USED now
 !----------------------------------------------------------------------------------
-subroutine intra_react(ichemo,Cin,Cex,vol,dCreact)
+subroutine IntraReact(ichemo,Cin,Cex,vol,dCreact)
 integer :: ichemo
 real(REAL_KIND) :: Cin(:), Cex, vol, dCreact
 real(REAL_KIND) :: metab, C, Kex, dCex
@@ -698,12 +692,12 @@ elseif (ichemo == SN30000) then
 elseif (ichemo == SN30000_METAB) then
     dCreact = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
 endif
-dCreact = dCreact + chemo(ichemo)%cell_diff*(Cex - C)
+dCreact = dCreact + chemo(ichemo)%membrane_diff*(Cex - C)
 end subroutine
 
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
-subroutine showresults(v)
+subroutine ShowResults(v)
 real(REAL_KIND) :: v(:), Cin(100), drugM(100)
 integer :: x,y,z,z1,z2,i,ki,kcell
 
@@ -818,9 +812,9 @@ if (relax) then
 	endif
 endif
 
-if (use_medium_flux .and. medium_volume > 0) then
-	call update_medium(ntvars,state,dt)
-endif
+!if (use_medium_flux .and. medium_volume > 0) then
+!	call UpdateMedium1(ntvars,state,dt)
+!endif
 
 allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 ! Note: some time we need to copy the state values to the cell_list() array.
@@ -975,12 +969,13 @@ do k_under = 1,n_under
         val = y0(ie)
         y0(ie) = y0(ie) + w_under*(ydiff(ie) - y0(ie))
         if (y0(ie) < 0) then
-			write(*,*) 'y0 < 0'
-			stop
+			write(logmsg,*) 'y0 < 0'
+			call logger(logmsg)
+			stop 
 		endif
-        dy = abs(val-y0(ie))/y0(ie)
-        sum = sum + dy
-        if (dy > tol1_under) n = n+1
+		dy = abs(val-y0(ie))/y0(ie)
+!		sum = sum + dy
+		if (dy > tol1_under) n = n+1
     enddo
     if (n == 0) exit
     if (sum/nvar < tol2) exit
@@ -1151,11 +1146,12 @@ do k_under = 1,n_under
         val = y0(ie)
         y0(ie) = y0(ie) + w_under*(ydiff(ie) - y0(ie))
         if (y0(ie) < 0) then
-			write(*,*) 'y0 < 0'
+			write(logmsg,*) 'y0 < 0'
+			call logger(logmsg)
 			stop
-		endif
-        dy = abs(val-y0(ie))/y0(ie)
-!        sum = sum + dy
+	    endif
+		dy = abs(val-y0(ie))/y0(ie)
+!		sum = sum + dy
         if (dy > tol1_under) nt = nt+1
     enddo
     if (nt == 0) exit
@@ -1247,7 +1243,7 @@ if (ichemo == OXYGEN) then
 !    vol = Vsite - Vextra	! this was used in the RKC solution
     vol = Vextra
 	if (use_Cex_Cin) then
-		K1 = chemo(OXYGEN)%cell_diff*(Vsite - Vextra)
+		K1 = chemo(OXYGEN)%membrane_diff*(Vsite - Vextra)
 		Cin = getCinO2(C)
 		flux = K1*(C - Cin)
 		if (dbug) write(nfout,'(a,2e12.4)') 'C, flux: ',C,flux
@@ -1270,7 +1266,7 @@ real(REAL_KIND) :: C
 real(REAL_KIND) :: K1, K2, K2K1, C0, a, b, cc, D, r(3), Cin
 integer :: i, n
 
-K1 = chemo(OXYGEN)%cell_diff*(Vsite - Vextra)
+K1 = chemo(OXYGEN)%membrane_diff*(Vsite - Vextra)
 K2 = chemo(OXYGEN)%max_cell_rate*1.0d6
 K2K1 = K2/K1
 C0 = chemo(OXYGEN)%MM_C0
@@ -1329,7 +1325,7 @@ end function
 
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
-subroutine write_solution(msg,y,n)
+subroutine WriteSolution(msg,y,n)
 character*(*) :: msg
 real(REAL_KIND) :: y(:)
 integer :: n
@@ -1339,11 +1335,81 @@ write(nfout,'(10f7.4)') y(1:n)
 end subroutine
 
 !----------------------------------------------------------------------------------
+! Update Cbnd using current M, R1 and previous U, Cext
+!----------------------------------------------------------------------------------
+subroutine UpdateCbnd
+integer :: ichemo
+real(REAL_KIND) :: R2
+
+call SetRadius(Nsites)
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	R2 = Radius + chemo(ichemo)%medium_dlayer
+	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (chemo(ichemo)%medium_U/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/Radius)
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! The medium concentrations are updated explicitly, assuming a sphere with 
+! known total uptake rate U.
+! Compute U and update M, Cext, Cbnd.
+! Note that for O2 Cext is fixed.
+! Need to include decay
+!----------------------------------------------------------------------------------
+subroutine UpdateMedium(dt)
+real(REAL_KIND) :: dt
+integer :: i, k, ichemo, ntvars
+real(REAL_KIND) :: dA, R1, R2, V0, U(MAX_CHEMO)
+logical :: bnd
+
+! First need the spheroid radius
+call SetRadius(Nsites)
+dA = DELTA_X*DELTA_X
+R1 = Radius
+V0 = medium_volume0
+U = 0
+! This could/should be done using sites in bdrylist
+ntvars = ODEdiff%nextra + ODEdiff%nintra
+do i = 1,ntvars
+	if (ODEdiff%vartype(i) /= EXTRA) cycle
+	bnd = .false.
+	do k = 1,7
+		if (ODEdiff%icoef(i,k) == 0) then
+			bnd = .true.
+			exit
+		endif
+	enddo
+	if (.not.bnd) cycle
+	do k = 1,7
+		if (ODEdiff%icoef(i,k) == 0) then
+			do ichemo = 1,MAX_CHEMO
+				if (.not.chemo(ichemo)%used) cycle
+				U(ichemo) = U(ichemo) + dA*chemo(ichemo)%diff_coef*(chemo(ichemo)%medium_Cbnd - allstate(i,ichemo))/DELTA_X
+			enddo
+		endif
+	enddo
+enddo
+
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	R2 = Radius + chemo(ichemo)%medium_dlayer
+	if (ichemo /= OXYGEN) then
+		chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
+		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)) &
+			*(R1*R1*(3*R2 - 2*R1)/R2 - R2*R2))/(V0 - 4*PI*R2*R2*R2/3.)
+	endif
+	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (U(ichemo)/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
+	chemo(ichemo)%medium_U = U(ichemo)
+enddo
+
+end subroutine
+
+!----------------------------------------------------------------------------------
 ! The medium concentrations are updated explicitly, assuming a sphere with boundary
 ! concentrations equal to the mean extracellular concentrations of boundary sites.
 ! Note that concentrations of O2 and glucose are not varied.
 !----------------------------------------------------------------------------------
-subroutine update_medium(ntvars,state,dt)
+subroutine UpdateMedium1(ntvars,state,dt)
 integer :: ntvars
 real(REAL_KIND) :: dt, state(:,:)
 integer :: nb, i, k
@@ -1376,20 +1442,6 @@ F(:) = area*chemo(:)%diff_coef*(Csurface(:) - chemo(:)%bdry_conc)/DELTA_X
 C_A = chemo(DRUG_A)%bdry_conc
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*(1 - dt*chemo(DRUG_A:MAX_CHEMO)%decay_rate)
-!write(*,'(a,5e12.4)') 'medium: ',area, Csurface(DRUG_A), F(DRUG_A), C_A, chemo(DRUG_A)%bdry_conc
-!write(nflog,'(a,5e12.4)') 'medium: ',area, Csurface(DRUG_A), F(DRUG_A), C_A, chemo(DRUG_A)%bdry_conc
-end subroutine
-
-!----------------------------------------------------------------------------------
-! Update intracellular concentrations for cell kcell by time dt.
-! The extracellular concentrations are Cextra(:)
-! The mass rate of transport is as for the extracellular calculation (they must
-! balance) but the conversion to concentration change is different (volume is different).
-!----------------------------------------------------------------------------------
-subroutine intracellular(kcell,Cextra,dt)
-integer :: kcell
-real(REAL_KIND) :: Cextra(:), dt
-
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1412,6 +1464,7 @@ end subroutine
 
 !----------------------------------------------------------------------------------
 ! Initialise the state vector to the current concentrations
+! NOT USED
 !----------------------------------------------------------------------------------
 subroutine InitStates(ichemo,n,allstate)
 integer :: ichemo,n
@@ -1701,7 +1754,7 @@ end subroutine
 ! The gradient determination is 2-sided if possible, 1-sided if only one adjacent
 ! value is available, and the gradient is set to 0 if neither is possible.
 !----------------------------------------------------------------------------------
-subroutine compute_gradient(conc,x,y,z,grad)
+subroutine ComputeGradient(conc,x,y,z,grad)
 real(REAL_KIND) :: conc(:)
 integer :: x, y, z
 real(REAL_KIND) :: grad(3)
@@ -1800,7 +1853,7 @@ end subroutine
 
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
-subroutine check_Coxygen
+subroutine CheckCoxygen
 real(REAL_KIND) :: MM0, dC, Cs, Ks, rmax, r, Kd, M, V, Ci, Ce
 real(REAL_KIND) :: a, b, c, d, C1, C2
 logical :: from_Ce = .false.
@@ -1812,7 +1865,7 @@ rmax = chemo(OXYGEN)%max_cell_rate
 V = Vsite - Vextra
 r = rmax*1.0e6/V
 Ks = ODEdiff%k_soft
-Kd = chemo(OXYGEN)%cell_diff
+Kd = chemo(OXYGEN)%membrane_diff
 
 write(*,'(a,3e12.4)') 'Cs, dC, MM0: ',Cs,dC,MM0
 write(*,'(a,3e12.4)') 'rmax,V,r: ',rmax,V,r
@@ -1979,7 +2032,7 @@ enddo
 endif
 
 !if (use_medium_flux .and. medium_volume > 0) then
-!	call update_medium(ntvars,state,dt)
+!	call update_medium1(ntvars,state,dt)
 !endif
 
 ! transfer results to allstate(:,:)
@@ -2052,12 +2105,12 @@ subroutine f_rkc_intra(neqn,t,y,dydt,icase)
 integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ic, ichemo, kcell, ict
-real(REAL_KIND) :: decay_rate, membrane_diff, dCreact, Vcell
+real(REAL_KIND) :: decay_rate, membrane_diff, dCreact, Vc
 real(REAL_KIND) :: Cin(MAX_CHEMO), Cex(MAX_CHEMO), C, Cox, Csn
 logical :: bnd, metabolised
 real(REAL_KIND) :: metab, dMdt
 
-Vcell = Vsite - Vextra
+Vc = Vsite - Vextra
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	Cex(ic) = y(ic)
@@ -2072,7 +2125,7 @@ do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	decay_rate = chemo(ichemo)%decay_rate
 !	decay_rate = 0
-	membrane_diff = chemo(ichemo)%cell_diff
+	membrane_diff = chemo(ichemo)%membrane_diff
 !	membrane_diff = 0
 	! extracellular
 	dydt(ic) = -membrane_diff*(Cex(ic) - Cin(ic)) - decay_rate*Cex(ic)
@@ -2093,10 +2146,10 @@ do ic = 1,nchemo
 			stop
 		endif
 		metab = 0.001*metab
-		dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vcell	! convert mass rate (mol/s) to concentration rate (mM/s)
+		dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vc	! convert mass rate (mol/s) to concentration rate (mM/s)
 	elseif (ichemo == GLUCOSE) then
 		metab = C/(chemo(GLUCOSE)%MM_C0 + C)
-		dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vcell	! convert mass rate (mol/s) to concentration rate (mM/s)
+		dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vc	! convert mass rate (mol/s) to concentration rate (mM/s)
 	elseif (ichemo == SN30000) then
 	    if (metabolised .and. C > 0) then
 			dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cox))*SN30K%Kmet0(ict)*C
@@ -2114,11 +2167,11 @@ if (icase == -1) then
 endif
 end subroutine
 
-subroutine compute_Cex_Cin
+subroutine ComputeCexCin
 real(REAL_KIND) :: K1, K2, K2K1, C0, a, b, c, Cex, Cin, D2, D
 integer :: i
 
-K1 = chemo(OXYGEN)%cell_diff*Vsite
+K1 = chemo(OXYGEN)%membrane_diff*Vsite
 K2 = chemo(OXYGEN)%max_cell_rate*1.0e6
 K2K1 = K2/K1
 C0 = chemo(OXYGEN)%MM_C0

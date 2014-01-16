@@ -28,6 +28,7 @@ using namespace std;
 #include "log.h"
 #include "SimpleView3DUI.h"
 #include "SimpleView2DUI.h"
+#include "qvideooutput.h"
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -301,6 +302,12 @@ private:
 	MyVTK *vtk;
     Field *field;
 	ExecThread *exthread;
+
+    QVideoOutput   * videoOutput;
+
+signals:
+    void pause_requested();
+
 };
 
 class MyDoubleValidator : public QDoubleValidator

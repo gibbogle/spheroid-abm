@@ -75,7 +75,7 @@ type cell_type
 	integer :: state
 	real(REAL_KIND) :: conc(MAX_CHEMO)
 	real(REAL_KIND) :: dVdt
-	real(REAL_KIND) :: volume
+	real(REAL_KIND) :: volume			! fractional volume (fraction of nominal cell volume Vcell)
 	real(REAL_KIND) :: divide_volume
 	real(REAL_KIND) :: t_divide_last
 	real(REAL_KIND) :: t_hypoxic
@@ -87,7 +87,8 @@ end type
 
 type SN30K_type
 	real(REAL_KIND) :: diff_coef
-	real(REAL_KIND) :: cell_diff
+	real(REAL_KIND) :: medium_diff_coef
+	real(REAL_KIND) :: membrane_diff
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: metabolite_halflife
 	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES)
@@ -156,7 +157,8 @@ integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes
-real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, medium_volume, cell_radius
+real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite, Vextra, Vcell
+real(REAL_KIND) :: medium_volume0, medium_volume, cell_radius, d_layer
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide

@@ -77,6 +77,7 @@ MyVTK::MyVTK(QWidget *page, QWidget *key_page)
 
 
 	Pi = 4*atan(1.0);
+    page_VTK = page;
 	leftb = false;
     key_canvas(key_page);
     qvtkWidget = new QVTKWidget(page,QFlag(0));
@@ -85,7 +86,7 @@ MyVTK::MyVTK(QWidget *page, QWidget *key_page)
     layout->addWidget(qvtkWidget);
 
 	// Associate the layout with page_VTK
-    page->setLayout(layout);
+    page_VTK->setLayout(layout);
 
 	// Create a renderer, and add it to qvtkWidget's render window.
 	// The renderer renders into the render window. 
@@ -115,7 +116,6 @@ MyVTK::MyVTK(QWidget *page, QWidget *key_page)
     DCfade = false;
 	playing = false;
 	paused = false;
-    record = false;
     opacity = 1.0;
     display_celltype[1] = true;
     display_celltype[2] = true;
@@ -300,38 +300,6 @@ void MyVTK::createMappers()
 	append2->Delete();
 }
 
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void MyVTK::startRecorder(QString basefile, int nframes)
-{
-    if (w2i == 0) {
-        w2i = vtkWindowToImageFilter::New();
-        w2i->SetInput(renWin);	//the render window
-        jpgwriter = vtkSmartPointer<vtkJPEGWriter>::New();
-//        jpgwriter->SetInputConnection(w2i->GetOutputPort());
-        pngwriter = vtkSmartPointer<vtkPNGWriter>::New();
-        pngwriter->SetInputConnection(w2i->GetOutputPort());
-}
-    framenum = 0;
-    LOG_MSG("set up writer");
-    record = true;
-    record_basename = basefile;
-    record_nframes = nframes;
-    record_it = 0;
-    LOG_MSG("Started recording");
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void MyVTK::stopRecorder()
-{
-    record = false;
-//    jpgwriter->RemoveAllInputs();
-//    jpgwriter->Delete();
-//    w2i->RemoveAllInputs();
-//    w2i->Delete();
-    LOG_MSG("Stopped recording");
-}
 
 //-----------------------------------------------------------------------------------------
 // The cell info is fetched from the DLL by ExecThread::snapshot().
@@ -510,9 +478,9 @@ void MyVTK::renderCells(bool redo, bool zzz)
 	}
 	iren->Render();
     first_VTK = false;
-    if (record) {
-        recorder();
-    }
+//    if (record) {
+//        recorder();
+//    }
 }
 
 //---------------------------------------------------------------------------------------------
@@ -675,166 +643,6 @@ void MyVTK::process_Tcells()
 	}
 }
 
-/*
-//---------------------------------------------------------------------------------------------
-//---------------------------------------------------------------------------------------------
-void MyVTK::process_Dcells()
-{
-    int i, tag, maxtag;
-    double r, g, b;
-    CELL_POS cp;
-    vtkActor *actor;
-//    double FDCColor[] = {1.0,0.5,0.3};
-    double FDCColor[] = {0.59,0.39,0.0};  // 150,100,0
-//    double MRCColor[] = {1.0,0.3,0.5};
-    double MRCColor[] = {0.78,0.24,0.39};     // 200,60,100
-    bool dbug = false;
-    ACTOR_TYPE a;
-    ACTOR_TYPE *ap;
-
-//    LOG_QMSG("process_Dcells");
-    int np = DCpos_list.length();
-    int na = D_Actor_list.length();
-    if (istep < 0) {
-        sprintf(msg,"na: %d np: %d",na,np);
-        LOG_MSG(msg);
-        dbug = true;
-    }
-    maxtag = 0;
-    for (i=0; i<np; i++) {
-        cp = DCpos_list[i];
-        tag = cp.tag;
-        maxtag = max(tag,maxtag);
-    }
-    if (dbug) {
-        sprintf(msg,"maxtag: %d",maxtag);
-        LOG_MSG(msg);
-    }
-    ap = &a;
-    for (tag=na; tag<=maxtag; tag++) {
-        ap->actor = vtkActor::New();
-        ap->actor->SetMapper(FDcellMapper);
-        ap->active = false;
-        D_Actor_list.append(a);
-    }
-    na = D_Actor_list.length();
-    bool *in_pos_list;
-    in_pos_list = new bool[na];
-    for (tag=0; tag<na; tag++)
-        in_pos_list[tag] = false;
-    for (i=0; i<np; i++) {
-        cp = DCpos_list[i];
-        tag = cp.tag;
-        in_pos_list[tag] = true;
-        if (dbug) {
-            sprintf(msg,"i: %d tag: %d",i,tag);
-            LOG_MSG(msg);
-        }
-        ap = &D_Actor_list[tag];
-        if (!ap->active) {  // Make active an actor with new tag in TCpos_list
-            if (dbug) {
-                sprintf(msg,"adding actor: %d",tag);
-                LOG_MSG(msg);
-            }
-            ren->AddActor(ap->actor);
-            ap->active = true;
-        }
-        if (cp.state == 100)
-            ap->actor->GetProperty()->SetColor(FDCColor);
-        else if (cp.state == 200)
-            ap->actor->GetProperty()->SetColor(MRCColor);
-        ap->actor->SetPosition(cp.x, cp.y, cp.z);
-    }
-    for (int k=0; k<D_Actor_list.length(); k++) {
-        ap = &D_Actor_list[k];
-        if (ap->active && !in_pos_list[k]) {
-            if (dbug) {
-                sprintf(msg,"removing actor: %d",k);
-                LOG_MSG(msg);
-            }
-            ren->RemoveActor(ap->actor);
-            ap->active = false;
-        }
-    }
-}
-
-
-//---------------------------------------------------------------------------------------------
-// A cylinder is created orientated along the y-axis, i.e. along b = (0,1,0)
-// To change the orientation to the vector v, we first create a vector r
-// normal to both b and v: r = bxv, this will be the axis of rotation.
-// We now need to rotate the cylinder by theta about r, where theta is the angle between
-// b and v, i.e. sin(theta) = |r|/(|b||v|) = |r|/|v|
-// We can now use actor.RotateWXYZ(theta,r[0],r[1],r[2]) where theta is in degrees
-// What is bxv when b = (0,1,0) and v = (v0,v1,v2)?
-// r = [v[2],0,-v[0]]
-//---------------------------------------------------------------------------------------------
-void MyVTK::process_bonds()
-{
-	int i, j;
-	BOND_POS bp;
-	vtkActor *actor, *B_actor, *D_actor;
-	double bpos[3], v[3];
-	double Pi = 3.15159;
-	double *bcpos, *dcpos;
-	double bondColor[] = {0.5,0.0,0.0};
-
-	int na = Bnd_Actor_list.length();
-    int np = bondpos_list.length();
-
-    // First remove all old bonds (strictly speaking we should remove only those not in the new list)
-
-	for (int k=0; k<na; k++) {
-		ren->RemoveActor(Bnd_Actor_list[k]);
-	}
-
-	Bnd_Actor_list.clear();
-
-	for (i=0; i<np; i++) {
-        bp = bondpos_list[i];
-		actor = vtkActor::New();
-        actor->SetMapper(bondMapper);
-		actor->GetProperty()->SetColor(bondColor);
-        B_actor = Bnd_Actor_list[bp.BCtag];
-		if (B_actor != 0)
-			bcpos = B_actor->GetPosition();
-		else {
-			sprintf(msg,"B_actor = 0 in bond: %d %d",i,bp.BCtag);
-			LOG_MSG(msg);
-			exit(1);
-		}
-		D_actor = D_Actor_list[bp.DCtag];
-		if (D_actor != 0)
-	        dcpos = D_actor->GetPosition();
-		else {
-			sprintf(msg,"D_actor = 0 in bond: %d %d",i,bp.DCtag);
-			LOG_MSG(msg);
-			exit(1);
-		}
-	
-		for (j=0; j<3; j++) {
-			bpos[j] = (bcpos[j] + dcpos[j])/2;
-			v[j] = bcpos[j] - dcpos[j];
-		}
-        double v_mod = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-		double s[] = {1, v_mod, 1};
-        actor->SetScale(s);
-        for (j=0; j<3; j++)
-            v[j] = v[j]/v_mod;
-            
-        double sina = sqrt(v[0]*v[0] + v[2]*v[2]);
-        double cosa = v[1];
-        double theta = asin(sina)*(180.0/Pi);
-		if (cosa < 0) 
-            theta = 180 - theta;
-		
-        actor->SetPosition(bpos);
-        actor->RotateWXYZ(theta,v[2],0,-v[0]);
-        ren->AddActor(actor);
-		Bnd_Actor_list.append(actor);
-	}
-}
-*/
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
@@ -939,33 +747,35 @@ bool MyVTK::nextFrame()
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void MyVTK::recorder()
+void MyVTK::pause()
 {
-    char numstr[5];
-    char filename[512];
-
-    sprintf(msg,"recorder: record_it: %d",record_it);
-    LOG_MSG(msg);
-    if (record_it > record_nframes) {
-        record = false;
-        return;
-    }
-    sprintf(numstr,"%05d",framenum);
-    w2i->Modified();	//important
-//    strcpy(filename,record_basename);
-//    strcat(filename,numstr);
-//    strcat(filename,".jpg");
-//    strcpy(filename ,(record_basename + numstr + ".jpg").toStdString().c_str());
-//    jpgwriter->SetFileName(filename);
-//    jpgwriter->Write();
-    strcpy(filename ,(record_basename + numstr + ".png").toStdString().c_str());
-    pngwriter->SetFileName(filename);
-    pngwriter->Write();
-    sprintf(msg,"recorder: it: %d frame: %d filename: %s",record_it,framenum,filename);
-    LOG_MSG(msg);
-    record_it++;
-    framenum++;
+    paused = true;
 }
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MyVTK::playon()
+{
+    paused = false;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void MyVTK::stop()
+{
+    if (save_image) {
+        if (jpgwriter) jpgwriter->Delete();
+        if (pngwriter) pngwriter->Delete();
+        w2i->Delete();
+    }
+    delete playerStream;
+    playerData->close();
+    delete playerData;
+    timer->stop();
+    playing = false;
+    paused = false;
+}
+
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
@@ -1004,36 +814,6 @@ void MyVTK::saveSnapshot(QString fileName, QString imgType)
 	}
 }
 
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void MyVTK::pause()
-{
-	paused = true;
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void MyVTK::playon()
-{
-	paused = false;
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void MyVTK::stop()
-{
-	if (save_image) {
-        if (jpgwriter) jpgwriter->Delete();
-        if (pngwriter) pngwriter->Delete();
-        w2i->Delete();
-	}
-	delete playerStream;
-	playerData->close();
-	delete playerData;
-	timer->stop();
-	playing = false;
-	paused = false;
-}
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
@@ -1071,6 +851,325 @@ void MyVTK::set_celltype_colour(COLOUR_TYPE *colour, QString str)
 
 }
 
+/*
+//-----------------------------------------------------------------------------------------
+// Uses: w2i, renWin, pngwriter,
+//       record, record_basename, record_nframes, record_it, framenum
+//-----------------------------------------------------------------------------------------
+void MyVTK::startRecorder(QString basefile, int nframes)
+{
+    if (w2i == 0) {
+        w2i = vtkWindowToImageFilter::New();
+        w2i->SetInput(renWin);	//the render window
+//        jpgwriter = vtkSmartPointer<vtkJPEGWriter>::New();
+//        jpgwriter->SetInputConnection(w2i->GetOutputPort());
+        pngwriter = vtkSmartPointer<vtkPNGWriter>::New();
+        pngwriter->SetInputConnection(w2i->GetOutputPort());
+}
+    framenum = 0;
+    LOG_MSG("set up writer");
+    record = true;
+    record_basename = basefile;
+    record_nframes = nframes;
+    record_it = 0;
+
+    LOG_MSG("Started recording");
+}
+
+//-----------------------------------------------------------------------------------------
+// Uses: w2i, videoOutput, pngwriter,
+//       record, record_basename, record_nframes, record_it, framenum
+//-----------------------------------------------------------------------------------------
+void MyVTK::recorder()
+{
+    char numstr[5];
+    char filename[512];
+
+    sprintf(msg,"recorder: record_it: %d",record_it);
+    LOG_MSG(msg);
+    if (record_it > record_nframes) {
+        record = false;
+        stopRecorder();
+        return;
+    }
+    vtkImageData *id = vtkImageData::New();
+    id = w2i->GetOutput();
+    w2i->Modified();	//important
+    id->Update();
+    int width = id->GetDimensions()[0];
+    int height = id->GetDimensions()[1];
+    if (width == 0) {
+        LOG_QMSG("ERROR: recorder: vtkImageData dimension = 0");
+        exit(1);
+    }
+    if (RECORD_VIDEO) {
+        if (!videoOutput->isOpen()) {
+            // Generate temporary filename
+            tempFile = new QTemporaryFile("qt_temp.XXXXXX.avi");
+            if (tempFile->open())
+            {
+               // Open media file and prepare for recording
+               QString fileName = tempFile->fileName();
+                bool recording = videoOutput->openMediaFile(width, height, fileName.toAscii().data());
+                if (!recording) {
+                    LOG_QMSG("ERROR: openMediaFile failed");
+                    record = false;
+                    return;
+                }
+            }
+        }
+        bool success = videoOutput->newVtkFrame(id);
+        if (!success) {
+            LOG_QMSG("ERROR: newVtkFrame failed");
+            record = false;
+            exit(1);
+        }
+        record_it++;
+        return;
+    }
+//    strcpy(filename,record_basename);
+//    strcat(filename,numstr);
+//    strcat(filename,".jpg");
+//    strcpy(filename ,(record_basename + numstr + ".jpg").toStdString().c_str());
+//    jpgwriter->SetFileName(filename);
+//    jpgwriter->Write();
+    sprintf(numstr,"%05d",framenum);
+    strcpy(filename ,(record_basename + numstr + ".png").toStdString().c_str());
+    pngwriter->SetFileName(filename);
+    pngwriter->Write();
+    sprintf(msg,"recorder: it: %d frame: %d filename: %s  id dimensions: %d %d",record_it,framenum,filename,id->GetDimensions()[0],id->GetDimensions()[1]);
+    LOG_MSG(msg);
+    framenum++;
+    record_it++;
+}
+
+//-----------------------------------------------------------------------------------------
+// Uses: record
+//-----------------------------------------------------------------------------------------
+void MyVTK::stopRecorder()
+{
+    record = false;
+    if (RECORD_VIDEO) {
+        videoOutput->closeMediaFile();
+//        QString fileName = QFileDialog::getSaveFileName(page_VTK,
+//                                                        "Save File",    //tr("Save File"),
+//                                                        QString(),
+//                                                        "Videos (*.avi)");  //tr("Videos (*.avi)"));
+        QString fileName = "testfile.avi";
+        if (fileName.isNull() == false) {
+           QFile::copy(tempFile->fileName(), fileName);
+        }
+        delete tempFile;
+        tempFile = 0x0;
+    }
+//    jpgwriter->RemoveAllInputs();
+//    jpgwriter->Delete();
+//    w2i->RemoveAllInputs();
+//    w2i->Delete();
+    LOG_MSG("Stopped recording");
+}
+*/
+
+
+/*
+void MyVTK::recordingSlot()
+{
+   if (recording)
+   {
+      videoOutput->closeMediaFile();
+      recordingButton->setIcon(QIcon(":/robotnavigator/resources/video-camera-png.png"));
+      recordingButton->setToolTip("Record Video");
+      recordingTimer->stop();
+      recording = false;
+      QString fileName = QFileDialog::getSaveFileName(this,
+                                                      tr("Save File"),
+                                                      QString(),
+                                                      tr("Videos (*.avi)"));
+      if (fileName.isNull() == false)
+      {
+         QFile::copy(tempFile->fileName(), fileName);
+      }
+      delete tempFile;
+      tempFile = 0x0;
+   }
+   else
+   {
+      blinkCount = 0;
+      // Generate temporary filename
+      tempFile = new QTemporaryFile("qt_temp.XXXXXX.avi");
+      if (tempFile->open())
+      {
+         // Open media file and prepare for recording
+         QString fileName = tempFile->fileName();
+         recording = videoOutput->openMediaFile(640, 480, fileName.toAscii().data());
+      }
+      // Change tool tip on video button and start blinking timer
+      recordingButton->setToolTip("Stop Recording");
+      recordingTimer->start(500);
+   }
+}
+*/
+
+/*
+//---------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------
+void MyVTK::process_Dcells()
+{
+    int i, tag, maxtag;
+    double r, g, b;
+    CELL_POS cp;
+    vtkActor *actor;
+//    double FDCColor[] = {1.0,0.5,0.3};
+    double FDCColor[] = {0.59,0.39,0.0};  // 150,100,0
+//    double MRCColor[] = {1.0,0.3,0.5};
+    double MRCColor[] = {0.78,0.24,0.39};     // 200,60,100
+    bool dbug = false;
+    ACTOR_TYPE a;
+    ACTOR_TYPE *ap;
+
+//    LOG_QMSG("process_Dcells");
+    int np = DCpos_list.length();
+    int na = D_Actor_list.length();
+    if (istep < 0) {
+        sprintf(msg,"na: %d np: %d",na,np);
+        LOG_MSG(msg);
+        dbug = true;
+    }
+    maxtag = 0;
+    for (i=0; i<np; i++) {
+        cp = DCpos_list[i];
+        tag = cp.tag;
+        maxtag = max(tag,maxtag);
+    }
+    if (dbug) {
+        sprintf(msg,"maxtag: %d",maxtag);
+        LOG_MSG(msg);
+    }
+    ap = &a;
+    for (tag=na; tag<=maxtag; tag++) {
+        ap->actor = vtkActor::New();
+        ap->actor->SetMapper(FDcellMapper);
+        ap->active = false;
+        D_Actor_list.append(a);
+    }
+    na = D_Actor_list.length();
+    bool *in_pos_list;
+    in_pos_list = new bool[na];
+    for (tag=0; tag<na; tag++)
+        in_pos_list[tag] = false;
+    for (i=0; i<np; i++) {
+        cp = DCpos_list[i];
+        tag = cp.tag;
+        in_pos_list[tag] = true;
+        if (dbug) {
+            sprintf(msg,"i: %d tag: %d",i,tag);
+            LOG_MSG(msg);
+        }
+        ap = &D_Actor_list[tag];
+        if (!ap->active) {  // Make active an actor with new tag in TCpos_list
+            if (dbug) {
+                sprintf(msg,"adding actor: %d",tag);
+                LOG_MSG(msg);
+            }
+            ren->AddActor(ap->actor);
+            ap->active = true;
+        }
+        if (cp.state == 100)
+            ap->actor->GetProperty()->SetColor(FDCColor);
+        else if (cp.state == 200)
+            ap->actor->GetProperty()->SetColor(MRCColor);
+        ap->actor->SetPosition(cp.x, cp.y, cp.z);
+    }
+    for (int k=0; k<D_Actor_list.length(); k++) {
+        ap = &D_Actor_list[k];
+        if (ap->active && !in_pos_list[k]) {
+            if (dbug) {
+                sprintf(msg,"removing actor: %d",k);
+                LOG_MSG(msg);
+            }
+            ren->RemoveActor(ap->actor);
+            ap->active = false;
+        }
+    }
+}
+
+
+//---------------------------------------------------------------------------------------------
+// A cylinder is created orientated along the y-axis, i.e. along b = (0,1,0)
+// To change the orientation to the vector v, we first create a vector r
+// normal to both b and v: r = bxv, this will be the axis of rotation.
+// We now need to rotate the cylinder by theta about r, where theta is the angle between
+// b and v, i.e. sin(theta) = |r|/(|b||v|) = |r|/|v|
+// We can now use actor.RotateWXYZ(theta,r[0],r[1],r[2]) where theta is in degrees
+// What is bxv when b = (0,1,0) and v = (v0,v1,v2)?
+// r = [v[2],0,-v[0]]
+//---------------------------------------------------------------------------------------------
+void MyVTK::process_bonds()
+{
+    int i, j;
+    BOND_POS bp;
+    vtkActor *actor, *B_actor, *D_actor;
+    double bpos[3], v[3];
+    double Pi = 3.15159;
+    double *bcpos, *dcpos;
+    double bondColor[] = {0.5,0.0,0.0};
+
+    int na = Bnd_Actor_list.length();
+    int np = bondpos_list.length();
+
+    // First remove all old bonds (strictly speaking we should remove only those not in the new list)
+
+    for (int k=0; k<na; k++) {
+        ren->RemoveActor(Bnd_Actor_list[k]);
+    }
+
+    Bnd_Actor_list.clear();
+
+    for (i=0; i<np; i++) {
+        bp = bondpos_list[i];
+        actor = vtkActor::New();
+        actor->SetMapper(bondMapper);
+        actor->GetProperty()->SetColor(bondColor);
+        B_actor = Bnd_Actor_list[bp.BCtag];
+        if (B_actor != 0)
+            bcpos = B_actor->GetPosition();
+        else {
+            sprintf(msg,"B_actor = 0 in bond: %d %d",i,bp.BCtag);
+            LOG_MSG(msg);
+            exit(1);
+        }
+        D_actor = D_Actor_list[bp.DCtag];
+        if (D_actor != 0)
+            dcpos = D_actor->GetPosition();
+        else {
+            sprintf(msg,"D_actor = 0 in bond: %d %d",i,bp.DCtag);
+            LOG_MSG(msg);
+            exit(1);
+        }
+
+        for (j=0; j<3; j++) {
+            bpos[j] = (bcpos[j] + dcpos[j])/2;
+            v[j] = bcpos[j] - dcpos[j];
+        }
+        double v_mod = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+        double s[] = {1, v_mod, 1};
+        actor->SetScale(s);
+        for (j=0; j<3; j++)
+            v[j] = v[j]/v_mod;
+
+        double sina = sqrt(v[0]*v[0] + v[2]*v[2]);
+        double cosa = v[1];
+        double theta = asin(sina)*(180.0/Pi);
+        if (cosa < 0)
+            theta = 180 - theta;
+
+        actor->SetPosition(bpos);
+        actor->RotateWXYZ(theta,v[2],0,-v[0]);
+        ren->AddActor(actor);
+        Bnd_Actor_list.append(actor);
+    }
+}
+*/
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------

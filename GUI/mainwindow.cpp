@@ -30,6 +30,7 @@ Graphs *grph;
 //Colours *pal;
 
 int showingVTK;
+int recording;
 int VTKbuffer[100];
 int cell_list[NINFO*MAX_CELLS];
 int ncell_list;
@@ -74,7 +75,7 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_MSG("did setupUi");
     showMaximized();
 
-	// Some initializations
+    // Some initializations
     nDistPts = 200;
 	nTicks = 1000;
 	tickVTK = 100;	// timer tick for VTK in milliseconds
@@ -87,7 +88,9 @@ MainWindow::MainWindow(QWidget *parent)
 	started = false;
     firstVTK = true;
     exthread = NULL;
+    recording = 0;
     showingVTK = 0;
+    showingVTK += recording;
 	nGraphCases = 0;
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
@@ -129,6 +132,9 @@ MainWindow::MainWindow(QWidget *parent)
     vtk = new MyVTK(mdiArea_VTK, widget_key);
 //    vtk = new MyVTK(page_3D, widget_key);
     vtk->init();
+
+    videoOutput = new QVideoOutput(this, vtk->renWin);
+
     LOG_QMSG("do setupCellColours");
     setupCellColours();
     LOG_QMSG("did setupCellColours");
@@ -136,11 +142,11 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setX(50);
     rect.setY(30);
 #ifdef __DISPLAY768
-    rect.setHeight(640);
-    rect.setWidth(640);
+    rect.setHeight(642);
+    rect.setWidth(642);
 #else
-    rect.setHeight(800);
-    rect.setWidth(800);
+    rect.setHeight(786);
+    rect.setWidth(786);
 #endif
     mdiArea_VTK->setGeometry(rect);
 //    rect.setX(10);
@@ -188,6 +194,9 @@ void MainWindow::createActions()
     connect(action_stop, SIGNAL(triggered()), SLOT(stopServer()));
     connect(action_play_VTK, SIGNAL(triggered()), SLOT(playVTK()));
     connect(action_set_speed, SIGNAL(triggered()), SLOT(setVTKSpeed()));
+
+    connect(this,SIGNAL(pause_requested()),SLOT(pauseServer()));
+
 	for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
@@ -306,19 +315,38 @@ void MainWindow:: startRecorder()
     bool ok;
     int nframes=0;
 
-//    Dialog *dialog = new Dialog();
-//    dialog->show();
-//    dialog->isActiveWindow();
-
-    QString basefile = "movie/frame";
     int i = QInputDialog::getInteger(this, tr("Set nframes"),tr("Number of frames to capture: "), nframes, 0, 10000, 1, &ok);
     if (ok) {
         nframes = i;
     }
     if (!ok || nframes == 0) return;
-    vtk->startRecorder(basefile,nframes);
+
+    QStringList formatItems;
+    formatItems << tr("avi") << tr("mov") << tr("mpg");
+    QString itemFormat = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+                                         tr("Video file format:"), formatItems, 0, false, &ok);
+    QStringList codecItems;
+    codecItems << tr("h264") << tr("mpeg4") << tr("mpeg");
+    QString itemCodec = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+                                              tr("Codec:"), codecItems, 0, false, &ok);
+
+    const char *prompt;
+    if (itemFormat.contains("avi")) {
+        prompt = "Videos (*.avi)";
+    } else if (itemFormat.contains("mov")) {
+        prompt = "Videos (*.mov)";
+    } else if (itemFormat.contains("mpg")) {
+        prompt = "Videos (*.mpg)";
+    }
+    QString videoFileName = QFileDialog::getSaveFileName(this,
+                                                    tr("Save File"),
+                                                    QString(),
+                                                    tr(prompt));
+    videoOutput->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
     action_start_recording->setEnabled(false);
     action_stop_recording->setEnabled(true);
+    recording = 10;
+    started = true;
     goToVTK();
 }
 
@@ -326,9 +354,11 @@ void MainWindow:: startRecorder()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow:: stopRecorder()
 {
-    vtk->stopRecorder();
+    videoOutput->stopRecorder();
     action_start_recording->setEnabled(true);
     action_stop_recording->setEnabled(false);
+    showingVTK -= 10;
+    recording = 0;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1262,12 +1292,13 @@ double MainWindow::getMaximum(RESULT_SET *R, double *x)
 
 //-------------------------------------------------------------
 // Switches to the input screen
-// For when the outputs are being displayed
+// For when the inputs are being displayed
 //-------------------------------------------------------------
 void MainWindow::goToInputs()
 {
     stackedWidget->setCurrentIndex(0);
 	showingVTK = 0;
+    showingVTK += recording;
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(true);
     action_VTK->setEnabled(true);
@@ -1281,6 +1312,7 @@ void MainWindow::goToOutputs()
 {
     stackedWidget->setCurrentIndex(1);    
 	showingVTK = 0;
+    showingVTK += recording;
     action_outputs->setEnabled(false);
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
@@ -1298,6 +1330,7 @@ void MainWindow::goToVTK()
     action_field->setEnabled(true);
     action_VTK->setEnabled(false);
     showingVTK = 1;
+    showingVTK += recording;
 }
 
 //-------------------------------------------------------------
@@ -1305,7 +1338,6 @@ void MainWindow::goToVTK()
 //-------------------------------------------------------------
 void MainWindow::goToField()
 {
-    int res;
     stackedWidget->setCurrentIndex(3);
     action_outputs->setEnabled(true);
     action_inputs->setEnabled(true);
@@ -1313,6 +1345,7 @@ void MainWindow::goToField()
     action_VTK->setEnabled(true);
     action_field->setEnabled(false);
     showingVTK = 0;
+    showingVTK += recording;
     LOG_MSG("goToField");
 //    field->displayField(hour,&res);
 //    if (res != 0) {
@@ -1340,7 +1373,6 @@ void MainWindow::playVTK()
 	else
 		save_image = false;
 	started = true;
-	showingVTK = 0;
 	goToVTK();
 	if (!vtk->startPlayer(QFileInfo(fileName).absoluteFilePath(), timer, save_image)) {
 		LOG_MSG("startPlayer failed");
@@ -1513,7 +1545,8 @@ void MainWindow::runServer()
 		stackedWidget->setCurrentIndex(1);
 		showingVTK = 0;
 	}
-    // Disable parts of the GUI        
+    showingVTK += recording;
+    // Disable parts of the GUI
     action_run->setEnabled(false);
     action_pause->setEnabled(true);
     action_stop->setEnabled(true);
@@ -1742,6 +1775,13 @@ void MainWindow::displayScene()
 	bool fast = true;
 	vtk->get_cell_positions(fast);
 	vtk->renderCells(redo,false);
+    if (videoOutput->record) {
+        videoOutput->recorder();
+    } else if (action_stop_recording->isEnabled()) {
+//        emit pause_requested();
+        action_start_recording->setEnabled(true);
+        action_stop_recording->setEnabled(false);
+    }
     exthread->mutex2.unlock();
 }
 
@@ -1827,9 +1867,9 @@ void MainWindow::outputData(QString qdata)
 		if (showingVTK > 0 || firstVTK) {
 			firstVTK = false;
 			bool redo = false;
-			if (showingVTK == 1) {
+            if (showingVTK == 1) {
 				redo = true;
-				showingVTK = 2;
+//				showingVTK = 2;
 			} 
 	        vtk->renderCells(redo,false);
 		} 
@@ -1914,6 +1954,9 @@ void MainWindow::postConnection()
 	// Add the new result set to the list
 //	result_list.append(newR);
 //	vtk->renderCells(true,true);		// for the case that the VTK page is viewed only after the execution is complete
+    if (action_stop_recording->isEnabled()) {
+        stopRecorder();
+    }
     posdata = false;
 	LOG_MSG("completed postConnection");
 }
@@ -3140,7 +3183,7 @@ void MainWindow::setupCellColours()
 {
     QComboBox *combo;
     QString text;
-    int i, j, k;
+    int i, k;
 
 //    QStringList names = QColor::colorNames();
     for (i=0; i<2; i++) {

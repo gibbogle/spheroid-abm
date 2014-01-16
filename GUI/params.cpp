@@ -68,6 +68,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Medium volume",
 "Volume of the medium in which the spheroid is growing."},
 
+{"UNSTIRRED_LAYER", 0.01, 0, 0,
+"Unstirred layer width",
+"Thickness of the unstirred layer around the spheroid."},
+
 {"VDIVIDE0", 1.6, 0, 0,
 "Nominal divide volume",
 "Nominal multiple of normal cell volume at which division occurs."},
@@ -144,12 +148,16 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Oxygen is simulated"},
 
 {"OXYGEN_DIFF_COEF", 2.0e-5, 0, 0,
- "Diffusion coeff",
- "Constituent diffusion coefficient"},
+ "Spheroid diffusion coeff",
+ "Constituent diffusion coefficient in the spheroid"},
+
+{"OXYGEN_MEDIUM_DIFF", 2.0e-5, 0, 0,
+ "Medium diffusion coeff",
+ "Constituent diffusion coefficient in the medium"},
 
 {"OXYGEN_CELL_DIFF", 20, 0, 0,
- "Membrane diff coef",
- "Cell membrane diffusion coefficient Kd"},
+ "Membrane diff constant",
+ "Cell membrane diffusion constant Kd"},
 
 {"OXYGEN_BDRY_CONC", 0.18, 0, 0,
  "Boundary concentration",
@@ -174,6 +182,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"GLUCOSE_DIFF_COEF", 6.0e-7, 0, 0,
  "GLUCOSE diffusion coeff",
  "GLUCOSE diffusion coefficient"},
+
+{"GLUCOSE_MEDIUM_DIFF", 6.0e-6, 0, 0,
+ "Medium diffusion coeff",
+ "Constituent diffusion coefficient in the medium"},
 
 {"GLUCOSE_CELL_DIFF", 20, 0, 0,
  "Membrane diff coef",
@@ -220,12 +232,16 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Drug metabolite conc decays with the specified half-life"},
 
 {"SN30K_DIFF_COEF", 6.0e-7, 0, 0,
- "Diffusion coeff",
- "SN30000 diffusion coefficient (also used for metabolite)"},
+ "Spheroid diffusion coeff",
+ "SN30000 diffusion coefficient in the spheroid (also used for metabolite)"},
+
+{"SN30K_MEDIUM_DIFF", 6.0e-6, 0, 0,
+ "Medium diffusion coeff",
+ "SN30000 diffusion coefficient in the medium (also used for metabolite)"},
 
 {"SN30K_CELL_DIFF", 5, 0, 0,
- "Membrane diff coef",
- "Cell membrane diffusion coefficient Kd (also used for metabolite)"},
+ "Membrane diff constant",
+ "Cell membrane diffusion constant Kd (also used for metabolite)"},
 
 {"SN30K_HALFLIFE", 2.0, 0, 0,
  "Half-life",

@@ -171,6 +171,7 @@ end subroutine
 ! Finally the bdry sites in the vicinity are tested to see if any need to be removed from
 ! the bdrylist. (This is why it makes sense to use a linked list).
 ! Removal of bdry sites is done by FixBdrylist.
+! NOT USED
 !----------------------------------------------------------------------------------------
 subroutine AddSite(ok)
 logical :: ok
@@ -383,6 +384,7 @@ ok = .true.
 end subroutine
 
 !--------------------------------------------------------------------------------
+! NOT USED
 !--------------------------------------------------------------------------------
 subroutine AddSites(n,ok)
 integer :: n
@@ -416,7 +418,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! Choose an outside site or vacant site adjacent to site1
 !-----------------------------------------------------------------------------------------
-subroutine get_outsidesite(site1,site2)
+subroutine getoutsidesite(site1,site2)
 integer :: site1(3), site2(3)
 integer :: j, jmin, site(3)
 real(REAL_KIND) :: r, rmin

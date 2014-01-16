@@ -30,6 +30,15 @@
 
 //#include <vtkConfigure.h>
 
+#include <QInputDialog>
+#include <QFileDialog>
+#ifdef _WIN32
+#include "windows.h"
+#define sleep(n) Sleep(n)   // milliseconds
+#else
+#define sleep(n) usleep(1000*n)
+#endif
+
 using namespace std;
 
 struct cell_pos {
@@ -102,6 +111,7 @@ public:
 //  QList<ACTOR_TYPE> D_Actor_list;
 //    QList<vtkActor *> Bnd_Actor_list;
 
+    QWidget *page_VTK;
 	QVTKWidget* qvtkWidget;
 	vtkRenderWindow *renWin;	
 	vtkRenderer* ren;
@@ -143,10 +153,11 @@ public:
 	QTextStream *playerStream;
 
     // Image recorder
-    bool record;
-    QString record_basename;
-    int record_nframes;
-    int record_it;
+//    bool record;
+//    QString record_basename;
+//    int record_nframes;
+//    int record_it;
+//    QTemporaryFile * tempFile;
 
 public slots:
 //    void on_checkBox_CELLDISPLAY_1_toggled(bool display);

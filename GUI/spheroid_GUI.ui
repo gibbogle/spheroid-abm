@@ -340,7 +340,7 @@ padding: 8px
               <x>30</x>
               <y>30</y>
               <width>341</width>
-              <height>211</height>
+              <height>241</height>
              </rect>
             </property>
             <property name="title">
@@ -352,7 +352,7 @@ padding: 8px
                <x>10</x>
                <y>17</y>
                <width>320</width>
-               <height>190</height>
+               <height>221</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_3">
@@ -391,11 +391,11 @@ padding: 8px
                  </font>
                 </property>
                 <property name="text">
-                 <string>Diffusion coefficient</string>
+                 <string>Spheroid diffusion coefficient</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
+              <item row="5" column="0">
                <widget class="QMyLabel" name="label_OXYGEN_BDRY_CONC">
                 <property name="font">
                  <font>
@@ -464,7 +464,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="3" column="4">
+              <item row="5" column="4">
                <widget class="QLineEdit" name="line_GLUCOSE_BDRY_CONC">
                 <property name="maximumSize">
                  <size>
@@ -503,7 +503,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="3" column="3">
+              <item row="5" column="3">
                <widget class="QLineEdit" name="line_OXYGEN_BDRY_CONC">
                 <property name="maximumSize">
                  <size>
@@ -555,14 +555,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="3" column="1">
+              <item row="5" column="1">
                <widget class="QLabel" name="units_bdryconc">
                 <property name="text">
                  <string>mM</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
+              <item row="6" column="0">
                <widget class="QMyLabel" name="label_OXYGEN_CONSUMPTION">
                 <property name="font">
                  <font>
@@ -575,14 +575,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="4" column="1">
+              <item row="6" column="1">
                <widget class="QLabel" name="units_consumption">
                 <property name="text">
                  <string>mol/cell/s</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="3">
+              <item row="6" column="3">
                <widget class="QLineEdit" name="line_OXYGEN_CONSUMPTION">
                 <property name="maximumSize">
                  <size>
@@ -595,7 +595,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="4" column="4">
+              <item row="6" column="4">
                <widget class="QLineEdit" name="line_GLUCOSE_CONSUMPTION">
                 <property name="maximumSize">
                  <size>
@@ -609,45 +609,6 @@ padding: 8px
                </widget>
               </item>
               <item row="7" column="0">
-               <widget class="QMyLabel" name="label_OXYGEN_CELL_DIFF">
-                <property name="font">
-                 <font>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Membrane diff coef</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="3">
-               <widget class="QLineEdit" name="line_OXYGEN_CELL_DIFF">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="4">
-               <widget class="QLineEdit" name="line_GLUCOSE_CELL_DIFF">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0">
                <widget class="QMyLabel" name="label_OXYGEN_MM_KM">
                 <property name="font">
                  <font>
@@ -660,14 +621,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="5" column="1">
+              <item row="7" column="1">
                <widget class="QLabel" name="units_MM_Km">
                 <property name="text">
                  <string>uM</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="3">
+              <item row="7" column="3">
                <widget class="QLineEdit" name="line_OXYGEN_MM_KM">
                 <property name="maximumSize">
                  <size>
@@ -680,7 +641,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="5" column="4">
+              <item row="7" column="4">
                <widget class="QLineEdit" name="line_GLUCOSE_MM_KM">
                 <property name="maximumSize">
                  <size>
@@ -693,7 +654,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
+              <item row="8" column="0">
                <widget class="QLabel" name="label_OXYGEN_HILL_N">
                 <property name="font">
                  <font>
@@ -706,7 +667,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="6" column="3">
+              <item row="8" column="3">
                <widget class="QLineEdit" name="line_OXYGEN_HILL_N">
                 <property name="maximumSize">
                  <size>
@@ -719,7 +680,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="6" column="4">
+              <item row="8" column="4">
                <widget class="QLineEdit" name="line_GLUCOSE_HILL_N">
                 <property name="maximumSize">
                  <size>
@@ -732,6 +693,91 @@ padding: 8px
                 </property>
                </widget>
               </item>
+              <item row="4" column="0">
+               <widget class="QMyLabel" name="label_OXYGEN_CELL_DIFF">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Membrane diff constant</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="3">
+               <widget class="QLineEdit" name="line_OXYGEN_CELL_DIFF">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="4">
+               <widget class="QLineEdit" name="line_GLUCOSE_CELL_DIFF">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3">
+               <widget class="QLineEdit" name="line_OXYGEN_MEDIUM_DIFF">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="4">
+               <widget class="QLineEdit" name="line_GLUCOSE_MEDIUM_DIFF">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QMyLabel" name="label_OXYGEN_MEDIUM_DIFF">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Medium diffusion coefficient</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLabel" name="units_diffcoef_2">
+                <property name="text">
+                 <string>cm2/s</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </widget>
@@ -739,9 +785,9 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>30</x>
-              <y>260</y>
+              <y>270</y>
               <width>341</width>
-              <height>201</height>
+              <height>211</height>
              </rect>
             </property>
             <property name="title">
@@ -1056,168 +1102,25 @@ padding: 8px
              </layout>
             </widget>
            </widget>
-           <widget class="QGroupBox" name="groupBox">
+           <widget class="QGroupBox" name="groupBox_SN30K_2">
             <property name="geometry">
              <rect>
               <x>390</x>
-              <y>30</y>
+              <y>170</y>
               <width>321</width>
-              <height>431</height>
+              <height>311</height>
              </rect>
             </property>
             <property name="title">
              <string/>
             </property>
-            <widget class="QWidget" name="gridLayoutWidget_2">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>13</y>
-               <width>251</width>
-               <height>101</height>
-              </rect>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_6">
-              <item row="0" column="3">
-               <widget class="QLineEdit" name="line_SN30K_DIFF_COEF">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="baseSize">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0" colspan="2">
-               <widget class="QMyLabel" name="label_SN30K_DIFF_COEF">
-                <property name="text">
-                 <string>Diff coefficient</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0" colspan="2">
-               <widget class="QMyLabel" name="label_SN30K_CELL_DIFF">
-                <property name="text">
-                 <string>Membrane diff coef</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QLineEdit" name="line_SN30K_CELL_DIFF">
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0" colspan="2">
-               <widget class="QMyLabel" name="label_SN30K_HALFLIFE">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Half-life</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="3">
-               <widget class="QLineEdit" name="line_SN30K_HALFLIFE">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0" colspan="2">
-               <widget class="QMyLabel" name="label_SN30K_METABOLITE_HALFLIFE">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Metabolite half-life   </string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="3">
-               <widget class="QLineEdit" name="line_SN30K_METABOLITE_HALFLIFE">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>50</width>
-                  <height>16777215</height>
-                 </size>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="units_diffcoef_3">
-                <property name="text">
-                 <string>cm2/s</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLabel" name="units_halflife">
-                <property name="text">
-                 <string>hours</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="2">
-               <widget class="QLabel" name="units_metabolite_halflife">
-                <property name="text">
-                 <string>hours</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
             <widget class="QWidget" name="gridLayoutWidget_6">
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>130</y>
+               <y>3</y>
                <width>301</width>
-               <height>294</height>
+               <height>301</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_2">
@@ -1673,6 +1576,189 @@ padding: 8px
              <string>SN30000</string>
             </property>
            </widget>
+           <widget class="QGroupBox" name="groupBox_SN30K_1">
+            <property name="geometry">
+             <rect>
+              <x>390</x>
+              <y>30</y>
+              <width>321</width>
+              <height>141</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QWidget" name="gridLayoutWidget_2">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>10</y>
+               <width>251</width>
+               <height>126</height>
+              </rect>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_6" rowstretch="0,0,0,0,0,0,0" columnstretch="0,0,0,0" rowminimumheight="0,0,0,0,0,0,0" columnminimumwidth="0,0,0,0">
+              <item row="0" column="3">
+               <widget class="QLineEdit" name="line_SN30K_DIFF_COEF">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="baseSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0" colspan="2">
+               <widget class="QMyLabel" name="label_SN30K_DIFF_COEF">
+                <property name="text">
+                 <string>label_SN30K_DIFF_COEF</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0" colspan="2">
+               <widget class="QMyLabel" name="label_SN30K_CELL_DIFF">
+                <property name="text">
+                 <string>label_SN30K_CELL_DIFF</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3">
+               <widget class="QLineEdit" name="line_SN30K_CELL_DIFF">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0" colspan="2">
+               <widget class="QMyLabel" name="label_SN30K_HALFLIFE">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>label_SN30K_HALFLIFE</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="3">
+               <widget class="QLineEdit" name="line_SN30K_HALFLIFE">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0" colspan="2">
+               <widget class="QMyLabel" name="label_SN30K_METABOLITE_HALFLIFE">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Metabolite half-life   </string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="3">
+               <widget class="QLineEdit" name="line_SN30K_METABOLITE_HALFLIFE">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="units_diffcoef_3">
+                <property name="text">
+                 <string>cm2/s</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="2">
+               <widget class="QLabel" name="units_halflife">
+                <property name="text">
+                 <string>hours</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="2">
+               <widget class="QLabel" name="units_metabolite_halflife">
+                <property name="text">
+                 <string>hours</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="3">
+               <widget class="QLineEdit" name="line_SN30K_MEDIUM_DIFF">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLabel" name="units_diffcoef_4">
+                <property name="text">
+                 <string>cm2/s</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QMyLabel" name="label_SN30K_MEDIUM_DIFF">
+                <property name="text">
+                 <string>label_SN30K_MEDIUM_DIFF</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
           </widget>
           <widget class="QWidget" name="tab_run">
            <attribute name="title">
@@ -1682,7 +1768,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>20</x>
-              <y>400</y>
+              <y>440</y>
               <width>101</width>
               <height>21</height>
              </rect>
@@ -1695,7 +1781,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>120</x>
-              <y>400</y>
+              <y>440</y>
               <width>100</width>
               <height>20</height>
              </rect>
@@ -1714,7 +1800,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>230</x>
-              <y>400</y>
+              <y>440</y>
               <width>51</width>
               <height>18</height>
              </rect>
@@ -1997,7 +2083,7 @@ padding: 8px
               <x>10</x>
               <y>20</y>
               <width>271</width>
-              <height>361</height>
+              <height>391</height>
              </rect>
             </property>
             <property name="title">
@@ -2009,7 +2095,7 @@ padding: 8px
                <x>10</x>
                <y>10</y>
                <width>251</width>
-               <height>345</height>
+               <height>371</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_4">
@@ -2097,7 +2183,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="14" column="0">
+              <item row="15" column="0">
                <widget class="QMyLabel" name="label_SEED1">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -2113,7 +2199,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="14" column="1">
+              <item row="15" column="1">
                <spacer name="horizontalSpacer_30">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2126,7 +2212,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="14" column="2">
+              <item row="15" column="2">
                <widget class="QSpinBox" name="spin_SEED1">
                 <property name="maximumSize">
                  <size>
@@ -2142,7 +2228,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="15" column="0">
+              <item row="16" column="0">
                <widget class="QMyLabel" name="label_SEED2">
                 <property name="mouseTracking">
                  <bool>false</bool>
@@ -2158,7 +2244,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="15" column="1">
+              <item row="16" column="1">
                <spacer name="horizontalSpacer_31">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2171,7 +2257,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="15" column="2">
+              <item row="16" column="2">
                <widget class="QSpinBox" name="spin_SEED2">
                 <property name="maximumSize">
                  <size>
@@ -2203,7 +2289,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="17" column="0">
+              <item row="18" column="0">
                <widget class="QMyLabel" name="label_NT_ANIMATION">
                 <property name="toolTip">
                  <string>animation update interval</string>
@@ -2213,7 +2299,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="17" column="1">
+              <item row="18" column="1">
                <spacer name="horizontalSpacer_32">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2226,7 +2312,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="17" column="2">
+              <item row="18" column="2">
                <widget class="QSpinBox" name="spin_NT_ANIMATION">
                 <property name="maximumSize">
                  <size>
@@ -2249,7 +2335,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="16" column="0">
+              <item row="17" column="0">
                <widget class="QMyLabel" name="label_NCPU">
                 <property name="toolTip">
                  <string>animation update interval</string>
@@ -2259,7 +2345,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="16" column="1">
+              <item row="17" column="1">
                <spacer name="horizontalSpacer_34">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2272,7 +2358,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="16" column="2">
+              <item row="17" column="2">
                <widget class="QSpinBox" name="spin_NCPU">
                 <property name="maximumSize">
                  <size>
@@ -2288,7 +2374,7 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="19" column="2">
+              <item row="20" column="2">
                <widget class="QLineEdit" name="line_TEST_CASE">
                 <property name="maximumSize">
                  <size>
@@ -2304,14 +2390,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="19" column="0">
+              <item row="20" column="0">
                <widget class="QMyLabel" name="label_TEST_CASE">
                 <property name="text">
                  <string>label_TEST_CASE</string>
                 </property>
                </widget>
               </item>
-              <item row="19" column="1">
+              <item row="20" column="1">
                <spacer name="horizontalSpacer_33">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2485,14 +2571,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="8" column="0">
+              <item row="9" column="0">
                <widget class="QMyLabel" name="label_VDIVIDE0">
                 <property name="text">
                  <string>label_VDIVIDE0</string>
                 </property>
                </widget>
               </item>
-              <item row="8" column="1">
+              <item row="9" column="1">
                <spacer name="horizontalSpacer_39">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2505,7 +2591,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="8" column="2">
+              <item row="9" column="2">
                <widget class="QLineEdit" name="line_VDIVIDE0">
                 <property name="maximumSize">
                  <size>
@@ -2518,14 +2604,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
+              <item row="10" column="0">
                <widget class="QMyLabel" name="label_DVDIVIDE">
                 <property name="text">
                  <string>label_DVDIVIDE</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="1">
+              <item row="10" column="1">
                <spacer name="horizontalSpacer_40">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2538,7 +2624,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="9" column="2">
+              <item row="10" column="2">
                <widget class="QLineEdit" name="line_DVDIVIDE">
                 <property name="maximumSize">
                  <size>
@@ -2598,14 +2684,14 @@ padding: 8px
                 </property>
                </widget>
               </item>
-              <item row="18" column="0">
+              <item row="19" column="0">
                <widget class="QMyLabel" name="label_SHOW_PROGENY">
                 <property name="text">
                  <string>label_SHOW_PROGENY</string>
                 </property>
                </widget>
               </item>
-              <item row="18" column="1">
+              <item row="19" column="1">
                <spacer name="horizontalSpacer_46">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
@@ -2618,7 +2704,7 @@ padding: 8px
                 </property>
                </spacer>
               </item>
-              <item row="18" column="2">
+              <item row="19" column="2">
                <widget class="QLineEdit" name="line_SHOW_PROGENY">
                 <property name="maximumSize">
                  <size>
@@ -2631,6 +2717,46 @@ padding: 8px
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QLabel" name="label_UNSTIRRED_LAYER">
+                <property name="text">
+                 <string>label_UNSTIRRED_LAYER</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <spacer name="horizontalSpacer_47">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>13</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item row="8" column="2">
+               <widget class="QLineEdit" name="line_UNSTIRRED_LAYER">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="3">
+               <widget class="QLabel" name="units_layer">
+                <property name="text">
+                 <string>cm</string>
                 </property>
                </widget>
               </item>
@@ -3264,6 +3390,16 @@ padding: 8px
           <string>Colour</string>
          </property>
         </widget>
+       </widget>
+       <widget class="QWidget" name="widget_dialog" native="true">
+        <property name="geometry">
+         <rect>
+          <x>860</x>
+          <y>330</y>
+          <width>120</width>
+          <height>80</height>
+         </rect>
+        </property>
        </widget>
       </widget>
       <widget class="QWidget" name="page_2D">
