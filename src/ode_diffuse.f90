@@ -617,6 +617,9 @@ do i = 1,neqn
 !            dCreact=0
 		endif
     	dydt(i) = dCsum - membrane_flux/vol
+!    	if (ichemo == TRACER) then
+!    		write(nfout,'(a,4e12.4)') 'E: ',Cex, Cin(ichemo),membrane_flux,dydt(i)
+!    	endif
 !    	dydt(i) = dCsum + dCreact
 	else
 		C = Cin(ichemo)
@@ -639,6 +642,8 @@ do i = 1,neqn
 			metab = C**N/(chemo(GLUCOSE)%MM_C0**N + C**N)*chemo(ichemo)%max_cell_rate
 !			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
 			dCreact = (-metab*1.0e6 + membrane_flux)/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+		elseif (ichemo == TRACER) then
+			dCreact = membrane_flux/vol
 		elseif (ichemo == SN30000) then
 		    if (metabolized .and. C > 0) then
 				dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
@@ -656,6 +661,9 @@ do i = 1,neqn
 		endif
 !		dCreact = dCreact + chemo(ichemo)%membrane_diff*(Cex - C)	
 	    dydt(i) = dCreact - yy*decay_rate
+!    	if (ichemo == TRACER) then
+!    		write(nfout,'(a,4e12.4)') 'I: ',Cex, Cin(ichemo),membrane_flux,dydt(i)
+!    	endif
 	endif
 enddo
 !$omp end parallel do
@@ -687,6 +695,8 @@ if (ichemo == OXYGEN) then
 elseif (ichemo == GLUCOSE) then
 	metab = C/(chemo(GLUCOSE)%MM_C0 + C)
     dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+elseif (ichemo == TRACER) then
+	dCreact = 0
 elseif (ichemo == SN30000) then
     dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
 elseif (ichemo == SN30000_METAB) then
@@ -749,8 +759,8 @@ end subroutine
 !     blob changes (i.e. grows or shrinks).  This could entail variable renumbering.
 !   * work(:,:) is correctly sized (ODEdiff%nextra)
 !----------------------------------------------------------------------------------
-subroutine Solver(it,tstart,dt,ncells)
-integer :: it, ncells
+subroutine Solver(it,tstart,dt,nc)
+integer :: it, nc
 real(REAL_KIND) :: tstart, dt
 integer :: ichemo, nvars, ntvars, ic, kcell, site(3), iv, nth
 integer :: ie, ki, i
@@ -766,7 +776,7 @@ real(REAL_KIND) :: rtol, atol(1), sprad_ratio
 type(rkc_comm) :: comm_rkc(MAX_CHEMO)
 
 !write(*,*) 'Solver'
-ODEdiff%nintra = ncells
+ODEdiff%nintra = nc
 ntvars = ODEdiff%nextra + ODEdiff%nintra
 if (EXPLICIT_INTRA) then
     nvars = ODEdiff%nextra
@@ -1339,13 +1349,17 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine UpdateCbnd
 integer :: ichemo
-real(REAL_KIND) :: R2
+real(REAL_KIND) :: R1, R2
 
 call SetRadius(Nsites)
+R1 = Radius*DELTA_X		! cm
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
-	R2 = Radius + chemo(ichemo)%medium_dlayer
-	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (chemo(ichemo)%medium_U/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/Radius)
+	R2 = R1 + chemo(ichemo)%medium_dlayer
+	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (chemo(ichemo)%medium_U/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
+!	if (ichemo == TRACER) then
+!		write(*,'(a,3e12.4,i8)') 'Cbnd,Cext,U,Nsites: ',chemo(ichemo)%medium_Cbnd, chemo(ichemo)%medium_Cext, chemo(ichemo)%medium_U,Nsites
+!	endif
 enddo
 end subroutine
 
@@ -1359,17 +1373,19 @@ end subroutine
 subroutine UpdateMedium(dt)
 real(REAL_KIND) :: dt
 integer :: i, k, ichemo, ntvars
-real(REAL_KIND) :: dA, R1, R2, V0, U(MAX_CHEMO)
+real(REAL_KIND) :: dA, R1, R2, V0, U(MAX_CHEMO), tracer_C, tracer_N
 logical :: bnd
 
 ! First need the spheroid radius
 call SetRadius(Nsites)
-dA = DELTA_X*DELTA_X
-R1 = Radius
-V0 = medium_volume0
+dA = DELTA_X*DELTA_X	! cm2
+R1 = Radius*DELTA_X		! cm
+V0 = medium_volume0		!cm3
 U = 0
 ! This could/should be done using sites in bdrylist
 ntvars = ODEdiff%nextra + ODEdiff%nintra
+tracer_C = 0
+tracer_N = 0
 do i = 1,ntvars
 	if (ODEdiff%vartype(i) /= EXTRA) cycle
 	bnd = .false.
@@ -1381,10 +1397,14 @@ do i = 1,ntvars
 	enddo
 	if (.not.bnd) cycle
 	do k = 1,7
-		if (ODEdiff%icoef(i,k) == 0) then
+		if (ODEdiff%icoef(i,k) == 0) then	! boundary with medium
 			do ichemo = 1,MAX_CHEMO
 				if (.not.chemo(ichemo)%used) cycle
 				U(ichemo) = U(ichemo) + dA*chemo(ichemo)%diff_coef*(chemo(ichemo)%medium_Cbnd - allstate(i,ichemo))/DELTA_X
+				if (ichemo == TRACER) then
+					tracer_C = tracer_C + allstate(i,ichemo)
+					tracer_N = tracer_N + 1
+				endif
 			enddo
 		endif
 	enddo
@@ -1392,9 +1412,13 @@ enddo
 
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
-	R2 = Radius + chemo(ichemo)%medium_dlayer
+	R2 = R1 + chemo(ichemo)%medium_dlayer
 	if (ichemo /= OXYGEN) then
 		chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
+		if (ichemo == TRACER) then
+!			write(*,'(a,4e12.4)') 'M, decay, U*dt, Cave: ',chemo(ichemo)%medium_M,(1 - chemo(ichemo)%decay_rate*dt), U(ichemo)*dt, tracer_C/tracer_N
+!			write(*,*) 'R1,R2,V0,Vfactor: ',R1,R2,V0,((R1*R1*(3*R2 - 2*R1)/R2 - R2*R2)),(V0 - 4*PI*R2*R2*R2/3.)
+		endif
 		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)) &
 			*(R1*R1*(3*R2 - 2*R1)/R2 - R2*R2))/(V0 - 4*PI*R2*R2*R2/3.)
 	endif
@@ -1925,8 +1949,8 @@ end subroutine
 !     ODEdiff%vartype(i) = EXTRA for an extracellular concentration
 !                        = INTRA for an intracellular concentration
 !----------------------------------------------------------------------------------
-subroutine NogoodSolver(it,tstart,dt,ncells)
-integer :: it, ncells
+subroutine NogoodSolver(it,tstart,dt,nc)
+integer :: it, nc
 real(REAL_KIND) :: tstart, dt
 integer :: ichemo, ncvars, ntvars, ic, kcell, site(3), iv, nth
 integer :: ie, ki, i, kextra, kintra
@@ -1946,7 +1970,7 @@ real(REAL_KIND) :: rtol, atol(1), sprad_ratio
 type(rkc_comm), allocatable :: comm_rkc(:)
 logical :: solve_intra = .true.
 
-ODEdiff%nintra = ncells
+ODEdiff%nintra = nc
 ntvars = ODEdiff%nextra + ODEdiff%nintra
 allocate(state_ex(ODEdiff%nextra,MAX_CHEMO))
 allocate(state_in(ODEdiff%nintra,MAX_CHEMO))
@@ -2150,6 +2174,8 @@ do ic = 1,nchemo
 	elseif (ichemo == GLUCOSE) then
 		metab = C/(chemo(GLUCOSE)%MM_C0 + C)
 		dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vc	! convert mass rate (mol/s) to concentration rate (mM/s)
+	elseif (ichemo == TRACER) then
+		dCreact = 0
 	elseif (ichemo == SN30000) then
 	    if (metabolised .and. C > 0) then
 			dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cox))*SN30K%Kmet0(ict)*C

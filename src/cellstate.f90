@@ -393,8 +393,10 @@ logical :: ok
 integer :: kcell, nlist0, site(3)
 integer :: divide_list(10000), ndivide, i
 real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean, c_rate
-real(REAL_KIND) :: Cin(MAX_CHEMO), Cex(MAX_CHEMO)
+real(REAL_KIND) :: Vin_0, Vex_0, dV
+real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
+logical :: C_option = 1
 
 !call logger('CellGrowth')
 ok = .true.
@@ -423,13 +425,22 @@ do kcell = 1,nlist0
 !		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
 !	endif
 	site = cell_list(kcell)%site
-	Cin = cell_list(kcell)%conc
-	Cex = occupancy(site(1),site(2),site(3))%C
+	Cin_0 = cell_list(kcell)%conc
+	Cex_0 = occupancy(site(1),site(2),site(3))%C
 	cell_list(kcell)%dVdt = dVdt
-	vol0 = cell_list(kcell)%volume
-	cell_list(kcell)%volume = vol0 + dVdt*dt
-	cell_list(kcell)%conc = vol0*Cin/cell_list(kcell)%volume
-	occupancy(site(1),site(2),site(3))%C = (Vsite - vol0*Vcell)*Cex/(Vsite - cell_list(kcell)%volume*Vcell)
+	Vin_0 = cell_list(kcell)%volume*Vcell	! cm^3
+	Vex_0 = Vsite - Vin_0					! cm^3
+	dV = dVdt*dt*Vcell						! cm^3
+	cell_list(kcell)%volume = (Vin_0 + dV)/Vcell
+	if (C_option == 1) then
+		! Calculation based on transfer of an extracellular volume dV with constituents, i.e. holding extracellular concentrations constant
+		cell_list(kcell)%conc = (Vin_0*Cin_0 + dV*Cex_0)/(Vin_0 + dV)
+		occupancy(site(1),site(2),site(3))%C = (Vex_0*Cex_0 - dV*Cex_0)/(Vex_0 - dV)
+	elseif (C_option == 2) then
+		! Calculation based on change in volumes without mass transfer of constituents
+		cell_list(kcell)%conc = Vin_0*Cin_0/(Vin_0 + dV)
+		occupancy(site(1),site(2),site(3))%C = Vex_0*Cex_0/(Vex_0 - dV)
+	endif
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then
 		if (cell_list(kcell)%radiation_tag) then
 			call CellDies(kcell)

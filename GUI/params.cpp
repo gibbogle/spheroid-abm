@@ -68,7 +68,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Medium volume",
 "Volume of the medium in which the spheroid is growing."},
 
-{"UNSTIRRED_LAYER", 0.01, 0, 0,
+{"UNSTIRRED_LAYER", 0.001, 0, 0,
 "Unstirred layer width",
 "Thickness of the unstirred layer around the spheroid."},
 
@@ -206,6 +206,38 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"GLUCOSE_HILL_N", 1, 1, 2,
  "Glucose Hill function N",
  "Glucose uptake rate Hill function N"},
+
+{"USE_TRACER", 0, 0, 1,
+"Use Tracer?",
+"Tracer is simulated"},
+
+{"TRACER_DIFF_COEF", 6.0e-7, 0, 0,
+ "TRACER diffusion coeff",
+ "TRACER diffusion coefficient"},
+
+{"TRACER_MEDIUM_DIFF", 6.0e-6, 0, 0,
+ "Medium diffusion coeff",
+ "Constituent diffusion coefficient in the medium"},
+
+{"TRACER_CELL_DIFF", 20, 0, 0,
+ "Membrane diff coef",
+ "Cell membrane diffusion coefficient Kd"},
+
+{"TRACER_BDRY_CONC", 1.0, 0, 0,
+ "TRACER boundary concentration",
+ "TRACER boundary concentration"},
+
+{"TRACER_CONSUMPTION", 0, 0, 0,
+ "TRACER consumption rate",
+ "TRACER consumption rate"},
+
+{"TRACER_MM_KM", 0, 0, 0,
+ "Michaelis-Menten Km",
+ "Michaelis-Menten Km (uM)"},
+
+{"TRACER_HILL_N", 0, 0, 2,
+ "Tracer Hill function N",
+ "Tracer uptake rate Hill function N"},
 
 {"USE_DRUG_A", 0, 0, 1,
 "Use SN30000?",

@@ -44,8 +44,10 @@ integer :: ichemo
 
 chemo(OXYGEN)%name = 'Oxygen'
 chemo(GLUCOSE)%name = 'Glucose'
+chemo(TRACER)%name = 'Tracer'
 chemo(OXYGEN)%decay_rate = 0
 chemo(GLUCOSE)%decay_rate = 0
+chemo(TRACER)%decay_rate = 0
 
 chemo(DRUG_A)%name = 'Drug_A'
 chemo(DRUG_B)%name = 'Drug_B'

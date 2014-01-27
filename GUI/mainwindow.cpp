@@ -516,6 +516,16 @@ void MainWindow::loadParams()
                             if (use_GLUCOSE)
                                 disableUseGlucose();
                         }
+                        bool use_TRACER = qsname.contains("USE_TRACER");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_TRACER)
+                                enableUseTracer();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_TRACER)
+                                disableUseTracer();
+                        }
                         bool use_DRUG_A = qsname.contains("USE_DRUG_A");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
@@ -888,6 +898,16 @@ void MainWindow::reloadParams()
                             w_cb->setChecked(false);
                             if (use_GLUCOSE)
                                 disableUseGlucose();
+                        }
+                        bool use_TRACER = qsname.contains("USE_TRACER");
+                        if (p.value == 1) {
+                            w_cb->setChecked(true);
+                            if (use_TRACER)
+                                enableUseTracer();
+                        } else {
+                            w_cb->setChecked(false);
+                            if (use_TRACER)
+                                disableUseTracer();
                         }
                         bool use_DRUG_A = qsname.contains("USE_DRUG_A");
                         if (p.value == 1) {
@@ -2283,6 +2303,17 @@ void MainWindow::changeParam()
                     disableUseGlucose();
             }
 
+            bool use_TRACER = wname.contains("USE_TRACER");
+            if (checkBox->isChecked()) {
+                v = 1;
+                if (use_TRACER)
+                    enableUseTracer();
+            } else {
+                v = 0;
+                if (use_TRACER)
+                    disableUseTracer();
+            }
+
             bool use_DRUG_A = wname.contains("USE_DRUG_A");
             if (checkBox->isChecked()) {
                 v = 1;
@@ -2502,6 +2533,32 @@ void MainWindow::disableUseGlucose()
         QLineEdit *w = lineEdit_list[i];
         QString wname = w->objectName();
         if (wname.contains("line_GLUCOSE")) {
+            w->setEnabled(false);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::enableUseTracer()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_TRACER")) {
+            w->setEnabled(true);
+        }
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::disableUseTracer()
+{
+    for (int i=0; i<lineEdit_list.length(); i++) {
+        QLineEdit *w = lineEdit_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("line_TRACER")) {
             w->setEnabled(false);
         }
     }
@@ -3155,17 +3212,19 @@ void MainWindow::setupConc(int nc, bool *cused)
 
     LOG_MSG("setupConc");
     for (ichemo=0; ichemo<nc; ichemo++) {
-        if (ichemo == 0)
+        if (ichemo == OXYGEN)
             rbText = "radioButton_oxygen";
-        else if (ichemo == 1)
+        else if (ichemo == GLUCOSE)
             rbText = "radioButton_glucose";
-        else if (ichemo == 2)
+        else if (ichemo == TRACER)
+            rbText = "radioButton_tracer";
+        else if (ichemo == DRUG_A)
             rbText = "radioButton_drugA";
-        else if (ichemo == 3)
+        else if (ichemo == DRUG_A_METAB)
             rbText = "radioButton_drugA_metabolite";
-        else if (ichemo == 4)
+        else if (ichemo == DRUG_B)
             rbText = "radioButton_drugB";
-        else if (ichemo == 5)
+        else if (ichemo == DRUG_B_METAB)
             rbText = "radioButton_drugB_metabolite";
         LOG_QMSG(rbText);
         QRadioButton *rb = findChild<QRadioButton*>(rbText);

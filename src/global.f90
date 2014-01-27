@@ -32,13 +32,14 @@ integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
-integer, parameter :: MAX_CHEMO = 6
+integer, parameter :: MAX_CHEMO = 7
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
-integer, parameter :: DRUG_A = 3
-integer, parameter :: DRUG_A_METAB = 4
-integer, parameter :: DRUG_B = 5
-integer, parameter :: DRUG_B_METAB = 6
+integer, parameter :: TRACER = 3
+integer, parameter :: DRUG_A = 4
+integer, parameter :: DRUG_A_METAB = DRUG_A + 1
+integer, parameter :: DRUG_B = 6
+integer, parameter :: DRUG_B_METAB = DRUG_B + 1
 integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
 integer, parameter :: SN30000 = DRUG_A
