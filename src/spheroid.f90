@@ -112,15 +112,17 @@ integer :: ichemo
 real(REAL_KIND) :: V, V0, R1
 
 call SetRadius(Nsites)
-R1 = Radius
-V0 = medium_volume0
-V = V0 - (4./3.)*PI*R1**3
+R1 = Radius*DELTA_X			! cm
+V0 = medium_volume0			! cm3
+V = V0 - (4./3.)*PI*R1**3	! cm3
+write(*,'(a,3f10.3)') 'SetupMedium: ',R1,V0,V
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_M = V*chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_U = 0
+	write(*,'(i4,2e12.4)') ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
 enddo
 end subroutine
 
@@ -287,11 +289,11 @@ x0 = (NX + 1.0)/2.        ! global value
 y0 = (NY + 1.0)/2.
 z0 = (NZ + 1.0)/2.
 Centre = (/x0,y0,z0/)   ! now, actually the global centre (units = grids)
-Radius = blob_radius    ! starting value
-
-nc0 = (4./3.)*PI*Radius**3
+!Radius = blob_radius    ! starting value
+!nc0 = (4./3.)*PI*Radius**3
 !max_nlist = 200*nc0
-write(logmsg,*) 'Initial radius, nc0, max_nlist: ',Radius, nc0, max_nlist
+call SetRadius(initial_count)
+write(logmsg,*) 'Initial radius, nc0, max_nlist: ',Radius, initial_count, max_nlist
 call logger(logmsg)
 
 allocate(cell_list(max_nlist))
@@ -330,7 +332,7 @@ end subroutine
 subroutine ReadCellParams(ok)
 logical :: ok
 integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
-integer :: iuse_oxygen, iuse_glucose, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
+integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
 integer :: ictype, idisplay
 real(REAL_KIND) :: days, bdry_conc, percent
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
@@ -389,6 +391,14 @@ read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
 read(nfcell,*) chemo(GLUCOSE)%MM_C0
 read(nfcell,*) chemo(GLUCOSE)%Hill_N
+read(nfcell,*) iuse_tracer		!chemo(TRACER)%used
+read(nfcell,*) chemo(TRACER)%diff_coef
+read(nfcell,*) chemo(TRACER)%medium_diff_coef
+read(nfcell,*) chemo(TRACER)%membrane_diff
+read(nfcell,*) chemo(TRACER)%bdry_conc
+read(nfcell,*) chemo(TRACER)%max_cell_rate
+read(nfcell,*) chemo(TRACER)%MM_C0
+read(nfcell,*) chemo(TRACER)%Hill_N
 
 do i = 1,2			! currently allowing for just two different drugs
 	read(nfcell,*) iuse_drug
@@ -487,9 +497,10 @@ relax = (iuse_relax == 1)
 use_parallel = (iuse_par_relax == 1)
 chemo(OXYGEN)%used = (iuse_oxygen == 1)
 chemo(GLUCOSE)%used = (iuse_glucose == 1)
+chemo(TRACER)%used = (iuse_tracer == 1)
 chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%MM_C0/1000		! uM -> mM
 chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%MM_C0/1000	! uM -> mM
-blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
+!blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
 divide_time_median = 60*60*divide_time_median		! hours -> seconds
 sigma = log(divide_time_shape)
@@ -513,7 +524,8 @@ Vextra = fluid_fraction*Vsite						! extracellular volume in a site
 cell_radius = (3*(1-fluid_fraction)*Vsite/(4*PI))**(1./3.)
 ! In a well-oxygenated tumour the average cell fractional volume is intermediate between vdivide0/2 and vdivide0.
 ! We assume that 0.75*vdivide0*Vcell = (1 - fluid_fraction)*Vsite
-Vcell = (1 - fluid_fraction)*Vsite/(0.75*vdivide0)		! nominal cell volume (corresponds to %volume = 1)
+Vcell = (1 - fluid_fraction)*Vsite/(0.75*vdivide0)		! nominal cell volume (cm^3) (corresponds to %volume = 1)
+														! %volume = (volume in cm^3)/Vcell
 
 write(logmsg,'(a,3e12.4)') 'DELTA_X, cell_radius: ',DELTA_X,cell_radius
 call logger(logmsg)
@@ -609,7 +621,7 @@ logical :: use_it(0:2)
 allocate(protocol(0:2))
 
 !use_treatment = .true.
-chemo(GLUCOSE+1:)%used = .false.
+chemo(TRACER+1:)%used = .false.
 !use_radiation = .false.
 open(nftreatment,file=treatmentfile,status='old')
 use_it = .false.
@@ -799,6 +811,7 @@ do x = 1,NX
 				cell_list(k)%conc = 0
 				cell_list(k)%conc(OXYGEN) = chemo(OXYGEN)%bdry_conc
 				cell_list(k)%conc(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
+				cell_list(k)%conc(TRACER) = chemo(TRACER)%bdry_conc
 				cell_list(k)%M = 0
 				occupancy(x,y,z)%indx(1) = k
 			else
@@ -812,6 +825,7 @@ do ichemo = 1,MAX_CHEMO
 enddo
 occupancy(:,:,:)%C(OXYGEN) = chemo(OXYGEN)%bdry_conc
 occupancy(:,:,:)%C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
+occupancy(:,:,:)%C(TRACER) = chemo(TRACER)%bdry_conc
 nlist = k
 Nsites = k
 Ncells = k
@@ -882,7 +896,7 @@ do i = 1,protocol(0)%n
 	endif
 enddo
 do idrug = 1,2
-	ichemo = idrug + GLUCOSE
+	ichemo = idrug + TRACER
 	if (idrug == 1) then
 		ichemo_metab = DRUG_A_METAB
 	elseif (idrug == 2) then

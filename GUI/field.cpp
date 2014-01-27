@@ -28,6 +28,7 @@ Field::Field(QWidget *aParent) : QWidget(aParent)
     fraction = 0;
     const_name[OXYGEN] = "Oxygen";
     const_name[GLUCOSE] = "Glucose";
+    const_name[TRACER] = "Tracer";
     const_name[DRUG_A] = "Drug A";
     const_name[DRUG_B] = "Drug B";
     const_name[DRUG_A_METAB] = "Drug A metabolite";

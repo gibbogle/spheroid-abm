@@ -164,6 +164,8 @@ private:
     void disableUseOxygen();
     void enableUseGlucose();
     void disableUseGlucose();
+    void enableUseTracer();
+    void disableUseTracer();
     void enableUseSN30K();
     void disableUseSN30K();
     void enableUseDrugA();
