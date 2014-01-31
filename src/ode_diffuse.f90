@@ -1360,6 +1360,11 @@ do ichemo = 1,MAX_CHEMO
 !	if (ichemo == TRACER) then
 !		write(*,'(a,3e12.4,i8)') 'Cbnd,Cext,U,Nsites: ',chemo(ichemo)%medium_Cbnd, chemo(ichemo)%medium_Cext, chemo(ichemo)%medium_U,Nsites
 !	endif
+	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd < 0) then
+		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateCbnd: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
+		call logger(logmsg)
+		stop
+	endif
 enddo
 end subroutine
 
@@ -1373,7 +1378,8 @@ end subroutine
 subroutine UpdateMedium(dt)
 real(REAL_KIND) :: dt
 integer :: i, k, ichemo, ntvars
-real(REAL_KIND) :: dA, R1, R2, V0, U(MAX_CHEMO), tracer_C, tracer_N
+real(REAL_KIND) :: dA, R1, R2, V0, Csum(MAX_CHEMO), U(MAX_CHEMO), tracer_C, tracer_N
+real(REAL_KIND) :: a(MAX_CHEMO), b(MAX_CHEMO), Rlayer(MAX_CHEMO)
 logical :: bnd
 
 ! First need the spheroid radius
@@ -1381,11 +1387,16 @@ call SetRadius(Nsites)
 dA = DELTA_X*DELTA_X	! cm2
 R1 = Radius*DELTA_X		! cm
 V0 = medium_volume0		!cm3
+Rlayer(:) = R1 + chemo(:)%medium_dlayer
+b = dA*chemo(:)%diff_coef/DELTA_X
+a = (1/Rlayer(:) - 1/R1)/(4*PI*chemo(:)%diff_coef)
 U = 0
 ! This could/should be done using sites in bdrylist
 ntvars = ODEdiff%nextra + ODEdiff%nintra
 tracer_C = 0
 tracer_N = 0
+Nbnd = 0
+Csum = 0
 do i = 1,ntvars
 	if (ODEdiff%vartype(i) /= EXTRA) cycle
 	bnd = .false.
@@ -1397,10 +1408,12 @@ do i = 1,ntvars
 	enddo
 	if (.not.bnd) cycle
 	do k = 1,7
-		if (ODEdiff%icoef(i,k) == 0) then	! boundary with medium
+		if (ODEdiff%icoef(i,k) == 0) then	! boundary with medium ????????????????????????????????????????????????????????????????????
+			Nbnd = Nbnd + 1
 			do ichemo = 1,MAX_CHEMO
 				if (.not.chemo(ichemo)%used) cycle
-				U(ichemo) = U(ichemo) + dA*chemo(ichemo)%diff_coef*(chemo(ichemo)%medium_Cbnd - allstate(i,ichemo))/DELTA_X
+!				U(ichemo) = U(ichemo) + dA*chemo(ichemo)%diff_coef*(chemo(ichemo)%medium_Cbnd - allstate(i,ichemo))/DELTA_X
+				Csum(ichemo) = Csum(ichemo) + allstate(i,ichemo)
 				if (ichemo == TRACER) then
 					tracer_C = tracer_C + allstate(i,ichemo)
 					tracer_N = tracer_N + 1
@@ -1409,22 +1422,34 @@ do i = 1,ntvars
 		endif
 	enddo
 enddo
+U = (dA*chemo(:)%diff_coef/DELTA_X)*(Nbnd*chemo(:)%medium_Cbnd - Csum(:))
 
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
-	R2 = R1 + chemo(ichemo)%medium_dlayer
+	R2 = Rlayer(ichemo)
 	if (ichemo /= OXYGEN) then
 		chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
-		if (ichemo == TRACER) then
+!		if (ichemo == TRACER) then
 !			write(*,'(a,4e12.4)') 'M, decay, U*dt, Cave: ',chemo(ichemo)%medium_M,(1 - chemo(ichemo)%decay_rate*dt), U(ichemo)*dt, tracer_C/tracer_N
 !			write(*,*) 'R1,R2,V0,Vfactor: ',R1,R2,V0,((R1*R1*(3*R2 - 2*R1)/R2 - R2*R2)),(V0 - 4*PI*R2*R2*R2/3.)
-		endif
+!		endif
 		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)) &
 			*(R1*R1*(3*R2 - 2*R1)/R2 - R2*R2))/(V0 - 4*PI*R2*R2*R2/3.)
 	endif
-	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (U(ichemo)/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
-	chemo(ichemo)%medium_U = U(ichemo)
-enddo
+enddo	
+U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
+chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
+chemo(:)%medium_U = U(:)
+!do ichemo = 1,MAX_CHEMO
+!	R2 = Rlayer(ichemo)
+!	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (U(ichemo)/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
+!	chemo(ichemo)%medium_U = U(ichemo)
+!	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd < 0) then
+!		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateMedium: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
+!		call logger(logmsg)
+!		stop
+!	endif
+!enddo
 
 end subroutine
 

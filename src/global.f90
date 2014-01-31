@@ -98,6 +98,7 @@ type SN30K_type
 	real(REAL_KIND) :: KO2(MAX_CELLTYPES)
 	real(REAL_KIND) :: gamma(MAX_CELLTYPES)
 	real(REAL_KIND) :: Klesion(MAX_CELLTYPES)
+	integer         :: kill_model(MAX_CELLTYPES)
 	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES)
 	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES)
 	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES)
@@ -195,6 +196,7 @@ real(REAL_KIND) :: ysave(100000),dCreactsave(100000)
 integer :: divide_option = DIVIDE_USE_CLEAR_SITE
 !integer :: divide_option = DIVIDE_ALWAYS_PUSH
 integer :: idbug = 0
+integer :: Nbnd
 integer :: seed(2)
 
 real(REAL_KIND), allocatable :: omp_x(:), omp_y(:), omp_z(:)
