@@ -307,6 +307,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion    ",
  "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
 
+{"SN30K_KILL_MODEL_1", 1, 1, 3,
+ "Kill model",
+ "Model of SN30000 killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
 {"SN30K_KILL_O2_CONC_1", 0.0, 0, 0,
  "O2 conc",
  "SN30000 constant O2 concentration in kill experiment"},
@@ -346,6 +350,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"SN30K_KLESION_2", 0.001, 0, 0,
  "Klesion",
  "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
+
+{"SN30K_KILL_MODEL_2", 1, 1, 3,
+ "Kill model",
+ "Model of SN30000 killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
 
 {"SN30K_KILL_O2_CONC_2", 0.0, 0, 0,
  "O2 conc",

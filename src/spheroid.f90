@@ -115,14 +115,14 @@ call SetRadius(Nsites)
 R1 = Radius*DELTA_X			! cm
 V0 = medium_volume0			! cm3
 V = V0 - (4./3.)*PI*R1**3	! cm3
-write(*,'(a,3f10.3)') 'SetupMedium: ',R1,V0,V
+!write(*,'(a,3f10.3)') 'SetupMedium: ',R1,V0,V
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_M = V*chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_U = 0
-	write(*,'(i4,2e12.4)') ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
+!	write(*,'(i4,2e12.4)') ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
 enddo
 end subroutine
 
@@ -446,6 +446,7 @@ do i = 1,2			! currently allowing for just two different drugs
 			read(nfcell,*) SN30K%KO2(ictype)
 			read(nfcell,*) SN30K%gamma(ictype)
 			read(nfcell,*) SN30K%Klesion(ictype)
+			read(nfcell,*) SN30K%kill_model(ictype)
 			read(nfcell,*) SN30K%kill_O2(ictype)
 			read(nfcell,*) SN30K%kill_drug(ictype)
 			read(nfcell,*) SN30K%kill_duration(ictype)
@@ -735,8 +736,14 @@ end subroutine
 ! --------
 ! The rate of cell killing, which becomes a cell death probability rate, is inferred from
 ! the cell kill experiment.
-! The basic assumption is that the rate of killing is proportional to the drug metabolism rate:
-! killing rate = c = Kd.dM/dt
+! The basic assumption is that the rate of killing depends on the drug metabolism rate.
+! There are three models:
+! kill_model = 1:
+!   killing rate = c = Kd.dM/dt
+! kill_model = 2:
+!   killing rate = c = Kd.Ci.dM/dt
+! kill_model = 3:
+!   killing rate = c = Kd.(dM/dt)^2
 ! where dM/dt = F(O2).kmet0.Ci
 ! In the kill experiment both O2 and Ci are held constant:
 ! O2 = CkillO2, Ci = Ckill
@@ -744,9 +751,12 @@ end subroutine
 ! N(t) = N(0).exp(-ct), i.e.
 ! c = -log(N(T)/N(0))/T where T is the duration of the experiment
 ! N(T)/N(0) = 1 - f, where f = kill fraction
-! c = Kd.F(CkillO2).kmet0.Ckill
-! therefore
-! Kd = -log(1-f)/(T.F(CkillO2).kmet0.Ckill)
+! kill_model = 1:
+!   c = Kd.F(CkillO2).kmet0.Ckill => Kd = -log(1-f)/(T.F(CkillO2).kmet0.Ckill)
+! kill_model = 2:
+!   c = Kd.F(CkillO2).kmet0.Ckill^2 => Kd = -log(1-f)/(T.F(CkillO2).kmet0.Ckill^2)
+! kill_model = 3:
+!   c = Kd.(F(CkillO2).kmet0.Ckill)^2 => Kd = -log(1-f)/(T.(F(CkillO2).kmet0.Ckill)^2)
 !-----------------------------------------------------------------------------------------
 subroutine DetermineKd
 real(REAL_KIND) :: kmet
@@ -754,7 +764,13 @@ integer :: i
 
 do i = 1,Ncelltypes
 	kmet = (SN30K%C1(i) + SN30K%C2(i)*SN30K%KO2(i)/(SN30K%KO2(i) + SN30K%kill_O2(i)))*SN30K%Kmet0(i)
-	SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i))
+	if (SN30K%kill_model(i) == 1) then
+		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i))
+	elseif (SN30K%kill_model(i) == 2) then
+		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i)**2)
+	elseif (SN30K%kill_model(i) == 3) then
+		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*(kmet*SN30K%kill_drug(i))**2)
+	endif
 enddo
 end subroutine
 
@@ -963,6 +979,8 @@ if (mod(istep,nthour) == 0) then
 	if (bdry_changed) then
 		call UpdateBdrylist
 	endif
+	write(logmsg,'(a,2e12.3,i6)') 'Oxygen U, Cbnd, Nbnd: ', chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd, Nbnd
+	call logger(logmsg)
 endif
 istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds

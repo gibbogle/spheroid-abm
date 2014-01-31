@@ -203,7 +203,13 @@ do kcell = 1,nlist
 		Kd = SN30K%Kd(ict)
 	    kmet = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + C_O2))*SN30K%Kmet0(ict)
 	    dMdt = kmet*cell_list(kcell)%conc(DRUG_A)
-	    pdeath = Kd*dMdt*dt
+	    if (SN30K%kill_model(ict) == 1) then
+		    pdeath = Kd*dMdt*dt
+	    elseif (SN30K%kill_model(ict) == 2) then
+		    pdeath = Kd*dMdt*cell_list(kcell)%conc(DRUG_A)*dt
+	    elseif (SN30K%kill_model(ict) == 3) then
+		    pdeath = Kd*dMdt**2*dt
+		endif
 !	    write(*,'(4f10.5)') kmet,cell_list(kcell)%conc(DRUG_A),dMdt,pdeath
 	    if (par_uni(kpar) < pdeath) then
             cell_list(kcell)%drug_tag = .true.

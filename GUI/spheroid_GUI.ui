@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>1</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -655,7 +655,7 @@ padding: 8px
                </widget>
               </item>
               <item row="8" column="0">
-               <widget class="QLabel" name="label_OXYGEN_HILL_N">
+               <widget class="QMyLabel" name="label_OXYGEN_HILL_N">
                 <property name="font">
                  <font>
                   <weight>75</weight>
@@ -779,7 +779,7 @@ padding: 8px
                </widget>
               </item>
               <item row="0" column="5">
-               <widget class="QLabel" name="label_tracer">
+               <widget class="QLabel" name="alabel_tracer">
                 <property name="maximumSize">
                  <size>
                   <width>50</width>
@@ -1234,7 +1234,7 @@ padding: 8px
               <x>440</x>
               <y>170</y>
               <width>321</width>
-              <height>311</height>
+              <height>341</height>
              </rect>
             </property>
             <property name="title">
@@ -1246,7 +1246,7 @@ padding: 8px
                <x>10</x>
                <y>3</y>
                <width>301</width>
-               <height>301</height>
+               <height>331</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_2">
@@ -1669,6 +1669,39 @@ padding: 8px
               </item>
               <item row="11" column="3">
                <widget class="QLineEdit" name="line_SN30K_KILL_FRACTION_2">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="0">
+               <widget class="QMyLabel" name="label_SN30K_KILL_MODEL_1">
+                <property name="text">
+                 <string>Kill model</string>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="2">
+               <widget class="QLineEdit" name="line_SN30K_KILL_MODEL_1">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="12" column="3">
+               <widget class="QLineEdit" name="line_SN30K_KILL_MODEL_2">
                 <property name="maximumSize">
                  <size>
                   <width>50</width>
@@ -2847,7 +2880,7 @@ padding: 8px
                </widget>
               </item>
               <item row="8" column="0">
-               <widget class="QLabel" name="label_UNSTIRRED_LAYER">
+               <widget class="QMyLabel" name="label_UNSTIRRED_LAYER">
                 <property name="text">
                  <string>label_UNSTIRRED_LAYER</string>
                 </property>
