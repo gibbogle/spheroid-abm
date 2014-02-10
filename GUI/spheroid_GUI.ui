@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -181,7 +181,7 @@ padding: 8px
              </rect>
             </property>
            </widget>
-           <widget class="QCheckBox" name="cbox_V_DEPENDENT_GROWTH_RATE">
+           <widget class="QMyCheckBox" name="cbox_V_DEPENDENT_GROWTH_RATE">
             <property name="geometry">
              <rect>
               <x>450</x>
@@ -197,7 +197,7 @@ padding: 8px
              <bool>false</bool>
             </property>
            </widget>
-           <widget class="QCheckBox" name="cbox_RANDOMISE_INITIAL_V">
+           <widget class="QMyCheckBox" name="cbox_RANDOMISE_INITIAL_V">
             <property name="geometry">
              <rect>
               <x>450</x>
@@ -517,7 +517,7 @@ padding: 8px
                </widget>
               </item>
               <item row="1" column="3">
-               <widget class="QCheckBox" name="cbox_USE_OXYGEN">
+               <widget class="QMyCheckBox" name="cbox_USE_OXYGEN">
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -533,7 +533,7 @@ padding: 8px
                </widget>
               </item>
               <item row="1" column="4">
-               <widget class="QCheckBox" name="cbox_USE_GLUCOSE">
+               <widget class="QMyCheckBox" name="cbox_USE_GLUCOSE">
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -798,7 +798,7 @@ padding: 8px
                </widget>
               </item>
               <item row="1" column="5">
-               <widget class="QCheckBox" name="cbox_USE_TRACER">
+               <widget class="QMyCheckBox" name="cbox_USE_TRACER">
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -988,7 +988,7 @@ padding: 8px
                </widget>
               </item>
               <item row="2" column="2">
-               <widget class="QCheckBox" name="cbox_USE_DRUG_A">
+               <widget class="QMyCheckBox" name="cbox_USE_DRUG_A">
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -1045,7 +1045,7 @@ padding: 8px
                </widget>
               </item>
               <item row="2" column="3">
-               <widget class="QCheckBox" name="cbox_USE_DRUG_B">
+               <widget class="QMyCheckBox" name="cbox_USE_DRUG_B">
                 <property name="maximumSize">
                  <size>
                   <width>60</width>
@@ -1090,7 +1090,7 @@ padding: 8px
                </widget>
               </item>
               <item row="4" column="2">
-               <widget class="QCheckBox" name="cbox_DRUG_A_DECAY">
+               <widget class="QMyCheckBox" name="cbox_DRUG_A_DECAY">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -1103,7 +1103,7 @@ padding: 8px
                </widget>
               </item>
               <item row="4" column="3">
-               <widget class="QCheckBox" name="cbox_DRUG_B_DECAY">
+               <widget class="QMyCheckBox" name="cbox_DRUG_B_DECAY">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -1126,7 +1126,7 @@ padding: 8px
                </widget>
               </item>
               <item row="5" column="2">
-               <widget class="QCheckBox" name="cbox_DRUG_A_SIMULATE_METABOLITE">
+               <widget class="QMyCheckBox" name="cbox_DRUG_A_SIMULATE_METABOLITE">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -1136,7 +1136,7 @@ padding: 8px
                </widget>
               </item>
               <item row="5" column="3">
-               <widget class="QCheckBox" name="cbox_DRUG_B_SIMULATE_METABOLITE">
+               <widget class="QMyCheckBox" name="cbox_DRUG_B_SIMULATE_METABOLITE">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -1159,7 +1159,7 @@ padding: 8px
                </widget>
               </item>
               <item row="6" column="2">
-               <widget class="QCheckBox" name="cbox_DRUG_A_METABOLITE_DECAY">
+               <widget class="QMyCheckBox" name="cbox_DRUG_A_METABOLITE_DECAY">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -1172,7 +1172,7 @@ padding: 8px
                </widget>
               </item>
               <item row="6" column="3">
-               <widget class="QCheckBox" name="cbox_DRUG_B_METABOLITE_DECAY">
+               <widget class="QMyCheckBox" name="cbox_DRUG_B_METABOLITE_DECAY">
                 <property name="enabled">
                  <bool>false</bool>
                 </property>
@@ -1955,7 +1955,7 @@ padding: 8px
              <string>treatment.data</string>
             </property>
            </widget>
-           <widget class="QCheckBox" name="cbox_USE_TREATMENT_FILE">
+           <widget class="QMyCheckBox" name="cbox_USE_TREATMENT_FILE">
             <property name="geometry">
              <rect>
               <x>230</x>
@@ -2216,7 +2216,7 @@ padding: 8px
               </item>
              </layout>
             </widget>
-            <widget class="QCheckBox" name="cbox_USE_EXTRA">
+            <widget class="QMyCheckBox" name="cbox_USE_EXTRA">
              <property name="geometry">
               <rect>
                <x>20</x>
@@ -2922,7 +2922,7 @@ padding: 8px
              </layout>
             </widget>
            </widget>
-           <widget class="QCheckBox" name="checkBox_record2D">
+           <widget class="QMyCheckBox" name="checkBox_record2D">
             <property name="geometry">
              <rect>
               <x>750</x>
@@ -2935,7 +2935,7 @@ padding: 8px
              <string>Save 2D slice images?</string>
             </property>
            </widget>
-           <widget class="QCheckBox" name="checkBox_O2logscale">
+           <widget class="QMyCheckBox" name="checkBox_O2logscale">
             <property name="geometry">
              <rect>
               <x>750</x>
@@ -3060,7 +3060,7 @@ padding: 8px
               <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
              </property>
             </widget>
-            <widget class="QLabel" name="alabel_hypoxia">
+            <widget class="QMyLabel" name="label_DUMMY_HYPOXIA_THRESHOLD">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -3111,7 +3111,7 @@ padding: 8px
               </rect>
              </property>
             </widget>
-            <widget class="QLabel" name="alabel_growthfraction">
+            <widget class="QMyLabel" name="label_DUMMY_GROWTH_FRACTION">
              <property name="geometry">
               <rect>
                <x>10</x>
@@ -3198,7 +3198,7 @@ padding: 8px
              </property>
             </widget>
            </widget>
-           <widget class="QCheckBox" name="cbox_USE_RELAX">
+           <widget class="QMyCheckBox" name="cbox_USE_RELAX">
             <property name="geometry">
              <rect>
               <x>300</x>
@@ -3214,7 +3214,7 @@ padding: 8px
              <string>Use O2 relaxation solver</string>
             </property>
            </widget>
-           <widget class="QCheckBox" name="cbox_USE_PAR_RELAX">
+           <widget class="QMyCheckBox" name="cbox_USE_PAR_RELAX">
             <property name="geometry">
              <rect>
               <x>460</x>
@@ -4086,6 +4086,11 @@ padding: 8px
    <slots>
     <signal>mouseClick()</signal>
    </slots>
+  </customwidget>
+  <customwidget>
+   <class>QMyCheckBox</class>
+   <extends>QCheckBox</extends>
+   <header>qmycheckbox.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

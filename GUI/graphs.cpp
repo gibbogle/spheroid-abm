@@ -15,61 +15,73 @@ GRAPH_SET tsGraphSet[] = {
     {"nlive",
     "Live Cells",
     "No. of cells",
+    "Number of live cells in the blob",
     1, true, 0, 1, true},
 
     {"nanoxiadead",
     "Anoxia-killed Cells",
     "No. of cells",
+     "Total number of cells that have been killed by anoxia",
     2, true, 0, 1, true},
 
     {"ndrugdead",
     "Drug-killed Cells",
     "No. of cells",
+     "Total number of cells that have been killed by drug",
     3, false, 0, 1, true},
 
     {"nradiationdead",
     "Radiation-killed Cells",
     "No. of cells",
+     "Total number of cells that have been killed by radiation",
     4, true, 0, 1, true},
 
     {"nanoxiatagged",
     "Anoxia-tagged Cells",
     "No. of cells",
+     "Current number of cells tagged to die by anoxia",
     5, true, 0, 1, true},
 
     {"ndrugtagged",
     "Drug-tagged Cells",
     "No. of cells",
+     "Current number of cells tagged to die by drug",
     6, false, 0, 1, true},
 
     {"nradiationtagged",
     "Radiation-tagged Cells",
     "No. of cells",
+     "Current number of cells tagged to die by radiation",
     7, false, 0, 1, true},
 
     {"diameter",
     "Spheroid Diameter",
     "Diameter (um)",
+     "Spheroid diameter (um)",
     8, true, 0, 1, true},
 
     {"volume",
     "Spheroid Volume",
     "Volume (mm3)",
+     "Spheroid volume (mm3)",
     9, true, 0, 0.001, true},
 
     {"hypoxicfraction",
     "Hypoxic Fraction",
     "%",
+     "Fraction of cells with oxygen level below the specified threshold for hypoxia",
     10, true, 0, 0.1, true},
 
     {"growthfraction",
     "Growth Fraction",
     "%",
+     "Percentage of cells that are growing at a rate less than the specified fraction of the mean growth rate with no nutrient limits",
     11, true, 0, 0.1, true},
 
     {"necroticfraction",
     "Necrotic Fraction",
     "%",
+     "Percentage of the spheroid that is necrotic = (number of cells that have died)/(number of sites occupied by the spheroid)",
     12, false, 0, 0.1, true}
 
 };
@@ -107,6 +119,11 @@ QString Graphs::get_title(int k)
 QString Graphs::get_yAxisTitle(int k)
 {
 	return graphList[k].yAxisTitle;
+}
+
+QString Graphs::get_description(int k)
+{
+    return graphList[k].description;
 }
 
 double Graphs::get_maxValue(int k) {
