@@ -20,6 +20,8 @@ using namespace std;
 //#endif
 #include <qwt_plot_curve.h>
 #include "params.h"
+#include "qmylabel.h"
+#include "qmycheckbox.h"
 #include "misc.h"
 #include "plot.h"
 #include "myvtk.h"
@@ -238,6 +240,7 @@ private:
 	int nSliders;
 	int nWidgets;
 	int nLabels;
+    int nCheckBoxes;
 	int *param_to_sliderIndex;
 	bool paramSaved;
 	bool paused;
@@ -287,10 +290,10 @@ private:
 	Plot *graph_dummy;	// placeholder
 
     Plot *pGraph[32];
-    QCheckBox *checkBox_conc;
-    QCheckBox *checkBox_vol;
-    QCheckBox *checkBox_oxy;
-    QCheckBox **cbox_ts;
+    QMyCheckBox *checkBox_conc;
+    QMyCheckBox *checkBox_vol;
+    QMyCheckBox *checkBox_oxy;
+    QMyCheckBox **cbox_ts;
 
 	QString graphCaseName[Plot::ncmax];
 	RESULT_SET *graphResultSet[Plot::ncmax];

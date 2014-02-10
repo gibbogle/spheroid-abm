@@ -7,6 +7,7 @@ struct graph_set {
 	QString tag;
 	QString title;
 	QString yAxisTitle;
+    QString description;
 	int dataIndex;		// this must be consistent with the ordering of summary_data[]
 	bool active;		// false for dummy graphs
 	double maxValue;
@@ -32,6 +33,7 @@ public:
 	QString get_tag(int);
 	QString get_title(int);
 	QString get_yAxisTitle(int);
+    QString get_description(int);
 	double get_maxValue(int);
 	double get_scaling(int);
 	bool isActive(int);

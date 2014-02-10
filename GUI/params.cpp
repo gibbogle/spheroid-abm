@@ -441,7 +441,17 @@ The shape value must be greater than 1, and values close to 1 give distributions
 
 {"TREATMENT_FILE", 0, 0, 0,
 "treatment.data",
-"The treatment file contains data describing the drug and radiation dosing schedule"}
+"The treatment file contains data describing the drug and radiation dosing schedule"},
+
+// Entries after this point are QMyLabel dummies, to enable display of explanatory info  - no input data is transmitted
+
+{"DUMMY_HYPOXIA_THRESHOLD", 0, 0, 0,
+"Hypoxia threshold",
+"Select the intracellular O2 level below which the cell is counted as hypoxic"},
+
+{"DUMMY_GROWTH_FRACTION", 0, 0, 0,
+"Growth fraction",
+"Select the threshold fraction of average growth rate (i.e. with no nutrient limits) used to count slow-growing cells"},
 
 };
 	nParams = sizeof(params)/sizeof(PARAM_SET);

@@ -65,6 +65,32 @@ void QMyLabel::mousePressEvent (QMouseEvent *event) {
     emit labelClicked(text);
 };	
 
+QMyCheckBox::QMyCheckBox(QWidget *parent) : QCheckBox(parent)
+{}
+//--------------------------------------------------------------------------------------------------------
+// Redefines mousePressEvent for QMyCheckBox, which extends QCheckBox.  This is used to display info about
+// a model parameter.
+//--------------------------------------------------------------------------------------------------------
+void QMyCheckBox::mousePressEvent (QMouseEvent *event) {
+    event->accept();
+    QString text;
+    if (objectName().contains("cbox_")) {
+        QString sname = objectName().mid(5);
+        // Find which cbox_ sent the signal, and read its text
+        for (int k=0; k<parm->nParams; k++) {
+            PARAM_SET param = parm->get_param(k);
+            if (sname.compare(param.tag) == 0)
+                text = param.text;
+        }
+    } else if (objectName().contains("checkBox_")) {
+        text = this->description;
+    }
+    if (event->button() == Qt::LeftButton) {
+        this->toggle();
+    }
+    emit checkBoxClicked(text);
+};
+
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 MainWindow::MainWindow(QWidget *parent)
@@ -200,13 +226,24 @@ void MainWindow::createActions()
 	for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
-		LOG_QMSG(label_str);
+//		LOG_QMSG(label_str);
 		if (label_str.startsWith("label_")) {
 			connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
 //			LOG_QMSG(label_str);
 		}
 	}
-	// Graph menu
+
+    for (int i=0; i<nCheckBoxes; i++) {
+        QCheckBox *cbox = checkbox_list[i];
+        QString cbox_str = cbox->objectName();
+//		LOG_QMSG(label_str);
+        if (cbox_str.startsWith("cbox_")) {
+            connect((QObject *)cbox, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
+//			LOG_QMSG(label_str);
+        }
+    }
+
+    // Graph menu
 //    connect(action_add_graph, SIGNAL(triggered()), this, SLOT(addGraph()));
 //    connect(action_remove_graph, SIGNAL(triggered()), this, SLOT(removeGraph()));
 //    connect(action_remove_all, SIGNAL(triggered()), this, SLOT(removeAllGraphs()));
@@ -264,7 +301,8 @@ void MainWindow::createLists()
 
 	nWidgets = widget_list.length();
 	nSliders = slider_list.length();
-	nLabels = label_list.length();
+    nLabels = label_list.length();
+    nCheckBoxes = checkbox_list.length();
 
 	for (int i=0; i<nWidgets; i++) {
 		QWidget *w = widget_list[i];
@@ -1084,18 +1122,16 @@ void MainWindow::showMore(QString moreText)
 	LOG_MSG("label clicked!");
 	LOG_QMSG(moreText);
 	
-//	if ((uintptr_t)sender() != currentDescription) {
-    long i = reinterpret_cast<long>(sender());
-    if (i != currentDescription) {
+//    long i = reinterpret_cast<long>(sender());
+//    if (i != currentDescription) {
         text_more->setEnabled(true); // self.ui.text_description.setEnabled(1) #show()
         text_more->setText(moreText); // text_description
-//		currentDescription = (uintptr_t)sender();
-        currentDescription = i;
-    } else {
-        text_more->clear(); // text_description
-        text_more->setEnabled(false); // hide()#text_description
-        currentDescription = 0;
-	}
+//        currentDescription = i;
+//    } else {
+//        text_more->clear(); // text_description
+//        text_more->setEnabled(false); // hide()#text_description
+//        currentDescription = 0;
+//	}
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3306,24 +3342,41 @@ void MainWindow::setupCellColours()
 void MainWindow::setupGraphSelector()
 {
     QVBoxLayout *vbox = new QVBoxLayout;
-    checkBox_conc = new QCheckBox("Concentration Profile");
+    checkBox_conc = new QMyCheckBox();
+    checkBox_conc->setText("Concentration Profile");
     checkBox_conc->setChecked(field->isConcPlot());
+    checkBox_conc->setObjectName("checkBox_conc");
+    checkBox_conc->description = "Concentration along a line through the centre of the blob";
     vbox->addWidget(checkBox_conc);
-    checkBox_vol = new QCheckBox("Cell Volume Distribution");
-    checkBox_vol->setChecked(field->isVolPlot());
-    vbox->addWidget(checkBox_vol);
-    checkBox_oxy = new QCheckBox("Cell Oxygen Distribution");
-    checkBox_oxy->setChecked(field->isOxyPlot());
-    vbox->addWidget(checkBox_oxy);
+    connect((QObject *)checkBox_conc, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
 
-    cbox_ts = new QCheckBox*[grph->n_tsGraphs];
+    checkBox_vol = new QMyCheckBox();
+    checkBox_vol->setText("Cell Volume Distribution");
+    checkBox_vol->setChecked(field->isVolPlot());
+    checkBox_vol->setObjectName("checkBox_vol");
+    checkBox_vol->description = "Probability distribution (histogram) of cell volume";
+    vbox->addWidget(checkBox_vol);
+    connect((QObject *)checkBox_vol, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
+
+    checkBox_oxy = new QMyCheckBox();
+    checkBox_oxy->setChecked(field->isOxyPlot());
+    checkBox_oxy = new QMyCheckBox();
+    checkBox_oxy->setText("Cell Oxygen Distribution");
+    checkBox_oxy->setObjectName("checkBox_oxy");
+    checkBox_oxy->description = "Probability distribution (histogram) of cell oxygen concentration";
+    vbox->addWidget(checkBox_oxy);
+    connect((QObject *)checkBox_oxy, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
+
+    cbox_ts = new QMyCheckBox*[grph->n_tsGraphs];
     for (int i=0; i<grph->n_tsGraphs; i++) {
         QString text = grph->tsGraphs[i].title;
-        cbox_ts[i] = new QCheckBox;
+        cbox_ts[i] = new QMyCheckBox;
         cbox_ts[i]->setText(text);
         cbox_ts[i]->setObjectName("checkBox_"+grph->tsGraphs[i].tag);
         cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
+        cbox_ts[i]->description = grph->tsGraphs[i].description;
         vbox->addWidget(cbox_ts[i]);
+        connect((QObject *)cbox_ts[i], SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
     }
     groupBox_graphselect->setLayout(vbox);
 
