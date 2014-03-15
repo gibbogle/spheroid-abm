@@ -57,6 +57,9 @@ type ODEdiff_type
 	integer, allocatable :: iexcoef(:,:)
 	integer, allocatable :: vartype(:)
 	integer, allocatable :: cell_index(:)
+	integer, allocatable :: isite_extra(:)
+	integer, allocatable :: isite_intra(:)
+	integer, allocatable :: extra_isite(:)
 !	integer, allocatable :: ncoef(:)
 	real(REAL_KIND) :: deltaC_soft
 	real(REAL_KIND) :: k_soft

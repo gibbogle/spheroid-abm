@@ -521,7 +521,7 @@ anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
 DELTA_X = DXmm/10									! mm -> cm
 Vsite = DELTA_X*DELTA_X*DELTA_X						! total site volume (cm^3)
-Vextra = fluid_fraction*Vsite						! extracellular volume in a site
+Vextra = fluid_fraction*Vsite						! extracellular volume in a site (cm^3)
 cell_radius = (3*(1-fluid_fraction)*Vsite/(4*PI))**(1./3.)
 ! In a well-oxygenated tumour the average cell fractional volume is intermediate between vdivide0/2 and vdivide0.
 ! We assume that 0.75*vdivide0*Vcell = (1 - fluid_fraction)*Vsite
@@ -979,8 +979,8 @@ if (mod(istep,nthour) == 0) then
 	if (bdry_changed) then
 		call UpdateBdrylist
 	endif
-	write(logmsg,'(a,2e12.3,i6)') 'Oxygen U, Cbnd, Nbnd: ', chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd, Nbnd
-	call logger(logmsg)
+!	write(logmsg,'(a,2e12.3,i6)') 'Oxygen U, Cbnd, Nbnd: ', chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd, Nbnd
+!	call logger(logmsg)
 endif
 istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds

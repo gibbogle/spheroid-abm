@@ -990,6 +990,7 @@ integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
 
 ok = .true.
+!write(*,*) 'AddCell'
 tnow = istep*DELTA_T
 !lastID = lastID + 1
 nlist = nlist + 1
