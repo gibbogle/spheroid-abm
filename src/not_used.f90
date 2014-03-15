@@ -2020,3 +2020,245 @@ enddo
 nBC_list = last_id2
 end subroutine
 
+subroutine ComputeCexCin
+real(REAL_KIND) :: K1, K2, K2K1, C0, a, b, c, Cex, Cin, D2, D
+integer :: i
+
+K1 = chemo(OXYGEN)%membrane_diff*Vsite
+K2 = chemo(OXYGEN)%max_cell_rate*1.0e6
+K2K1 = K2/K1
+C0 = chemo(OXYGEN)%MM_C0
+do i = 1,37
+	if (i < 10) then
+		Cex = i*0.0001
+	elseif (i < 19) then
+		Cex = i*0.001
+	else
+		Cex = (i-9)*0.01
+	endif
+	b = K2K1 + C0 - Cex
+	c = -C0*Cex
+	D2 = b*b - 4*c
+	D = sqrt(D2)
+	Cin = (D - b)/2
+	write(nfout,'(3e12.4)') Cex,Cin,Cex-Cin
+enddo	
+end subroutine
+
+!----------------------------------------------------------------------------------
+! To implement IRKC solver.
+! The basic idea is that at every grid point (site) there are Nc extracellular
+! variables and Nc intracellular, i.e. 2*Nc in all.  At a vacant site the Nc
+! intracellular concentrations will all be zero, and dy/dt = 0.
+! The PDE system is split into two parts.  For the diffusion part, which is solved
+! by explicit RK, the derivatives are given by F_E, while the reaction part, which
+! involves no coupling between variables at different grid points, is given by F_I.
+! We just need to take care of the mapping of variable indices.
+! For now, stick with the approximate method of holding all other constituents fixed
+! while solving for one constituent.
+! The numbering of variables for IRKC (for a single constituent) needs to be:
+! site  extra  intra
+!   1     1      2
+!   2     3      4
+!   3     5      6
+! ....
+!   k   2k-1    2k
+! ....
+!   Ns  2Ns-1   2Ns
+!
+! where Ns is the number of sites.  Effectively, NPDES = 2.
+! From the site index (1,..,Ns) we need to be able to determine:
+!   if the site is vacant
+!   if vacant, extracellular concentrations
+!   if occupied, extra- and intracellular concentrations.
+!----------------------------------------------------------------------------------
+subroutine irkc_solver(it,tstart,dt,nc)
+use irkc_m
+integer :: it, nc
+real(REAL_KIND) :: tstart, dt
+integer :: ic, ichemo, isite, ivar, nextra
+real(REAL_KIND) :: t, tend
+real(REAL_KIND), allocatable :: y(:)
+real(REAL_KIND), parameter :: rtol = 1.d-3, atol = rtol/10
+TYPE(IRKC_SOL) :: SOL
+
+nextra = ODEdiff%nextra
+allocate(y(2*nextra))
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
+	! initialize y(:) from allstate(:,:)
+	! this is inefficient because we are using the variable storage mechanism that was developed for RKC
+	! it could be worth simplifying this (and changing ODEdiff) to store intracellular values even for
+	! vacant sites
+!	write(*,*) 'irk_solver: ',ichemo,ODEdiff%nvars,2*nextra
+!	write(*,*) 'allstate'
+!	write(*,'(10f7.3)') allstate(1:ODEdiff%nvars,ichemo)
+	y = 0
+	do ivar = 1,ODEdiff%nvars
+		if (ODEdiff%vartype(ivar) == EXTRA) then
+			isite = ODEdiff%extra_isite(ivar)
+			y(2*isite-1) = allstate(ivar,ichemo)
+		else
+			isite = ODEdiff%extra_isite(ivar-1)
+			y(2*isite) = allstate(ivar,ichemo)
+		endif
+	enddo
+	ichemo_sol = ichemo
+	t = tstart
+	tend = t + dt
+	SOL = IRKC_SET(t,y,tend,RE=rtol,AE=atol,NPDES=2,ONE_STEP=.false.)
+	call IRKC(SOL,F_E,F_I)
+	do ivar = 1,ODEdiff%nvars
+		if (ODEdiff%vartype(ivar) == EXTRA) then
+			isite = ODEdiff%extra_isite(ivar)
+			allstate(ivar,ichemo) = SOL%y(2*isite-1)
+		else
+			isite = ODEdiff%extra_isite(ivar-1)
+			allstate(ivar,ichemo) = SOL%y(2*isite)
+		endif
+	enddo
+enddo
+
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Diffusion + decay for extracellular variables
+!----------------------------------------------------------------------------------
+subroutine F_E(neqn,t,y,dy)
+integer :: neqn
+real(REAL_KIND) ::  t, y(neqn), dy(neqn)
+integer :: iex, isite, ivar, ichemo, k, kv(7)
+real(REAL_KIND) :: DX2, decay_rate, dc1, dc6, cbnd, dCdiff, dCsum, val, v(7)
+
+! need ichemo
+ichemo = ichemo_sol
+!write(*,*) 'F_E: ',ichemo,neqn
+!write(*,'(10f7.3)') y
+DX2 = DELTA_X*DELTA_X
+decay_rate = chemo(ichemo)%decay_rate
+dc1 = chemo(ichemo)%diff_coef/DX2
+dc6 = 6*dc1 + decay_rate
+cbnd = BdryConc(ichemo,t_simulation)	
+dy = 0
+!$omp parallel do private(isite, ivar, k, kv, v, dCdiff, dCsum, val ) default(shared) schedule(static)
+do iex = 1,neqn-1,2
+	isite = (iex + 1)/2
+	ivar = ODEdiff%isite_extra(isite)
+    dCsum = 0
+    do k = 1,7
+		kv(k) = ODEdiff%icoef(ivar,k)
+	    if (k == 1) then
+		    dCdiff = -dc6
+	    else
+		    dCdiff = dc1
+	    endif
+	    if (kv(k) == 0) then
+		    val = cbnd
+	    else
+		    val = y(kv(k))
+	    endif
+	    v(k) = val
+	    dCsum = dCsum + dCdiff*val
+    enddo
+	dy(iex) = dCsum - decay_rate*y(iex)
+!	write(*,'(8i6)') isite,kv
+!	write(*,'(i4,7f10.2)') iex,v
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Reactions + membrane transfer + decay for intracellular
+! Membrane transfer for extracellular (decay handled in F_E)
+! This version is for a single constituent (ichemo_sol), all others held constant
+! => NPDES = 2 (1=extra, 2 = intra)
+! Note: index i is the starting index of the grid-point in the vector of length neqn
+!----------------------------------------------------------------------------------
+subroutine F_I(i,npdes,t,y,dy,want_jac,jac)
+integer :: i, npdes
+real(REAL_KIND) :: t, y(npdes), dy(npdes),jac(npdes,npdes)
+logical :: want_jac
+integer :: isite, iex, kcell, ichemo, ict, Ng
+real(REAL_KIND) :: Kmemb, membrane_flux, Vin, Vex, C, metab, dmetab, decay_rate, dCreact, Cin(MAX_CHEMO)
+
+isite = (i+npdes-1)/npdes
+iex = ODEdiff%isite_extra(isite)	! extra variable index
+kcell = ODEdiff%cell_index(iex)	! cell index
+if (kcell == 0) then	! vacant site
+	dy = 0
+	if (want_jac) then
+		jac = 0
+	endif
+	return
+endif
+ichemo = ichemo_sol
+!write(*,*) 'F_I: ',ichemo,y
+!write(*,*) i,isite,ivar,kcell
+!if (y(1) == 0 .or. y(2) == 0) stop
+Cin = allstate(iex+1,:)		! could use iin = %isite_intra
+decay_rate = chemo(ichemo)%decay_rate
+Vex = Vextra	! use the constant value for now
+Vin = Vsite - Vex
+Kmemb = chemo(ichemo)%membrane_diff*Vsite
+membrane_flux = Kmemb*(y(1) - y(2))
+dy(1) = -membrane_flux/Vex
+!if (dy(1) > 0) then
+!	write(*,'(a,i4,3e12.3)') 'dy(1) > 0: ',isite,dy(1),y
+!endif
+ict = cell_list(kcell)%celltype
+C = y(2)
+!SN30K_metabolized = (SN30K%Kmet0(ict) > 0)	
+if (ichemo == OXYGEN) then
+	metab = O2_metab(C)
+	dCreact = (-metab*chemo(OXYGEN)%max_cell_rate*1.0e6 + membrane_flux)/Vin	! convert mass rate (mol/s) to concentration rate (mM/s)
+elseif (ichemo == GLUCOSE) then
+	Ng = chemo(GLUCOSE)%Hill_N
+	metab = C**Ng/(chemo(GLUCOSE)%MM_C0**Ng + C**Ng)
+	dCreact = (-metab*chemo(ichemo)%max_cell_rate*1.0e6 + membrane_flux)/Vin	! convert mass rate (mol/s) to concentration rate (mM/s)
+elseif (ichemo == TRACER) then
+	dCreact = membrane_flux/Vin
+elseif (ichemo == SN30000) then
+    if ((SN30K%Kmet0(ict) > 0) .and. C > 0) then
+		dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
+	else
+		dCreact = 0
+	endif
+	dCreact = dCreact + membrane_flux/Vin
+elseif (ichemo == SN30000_METAB) then
+	if ((SN30K%Kmet0(ict) > 0) .and. Cin(SN30000) > 0) then
+		dCreact = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
+	else
+		dCreact = 0
+	endif
+	dCreact = dCreact + membrane_flux/Vin
+endif
+dy(2) = dCreact - C*decay_rate
+!if (dy(2) > 0) then
+!	write(*,'(a,i4,3e12.3)') 'dy(2) > 0: ',isite,dy(2),y
+!endif
+!write(*,'(2i6,2e12.3)') ichemo,isite,dy
+if (want_jac) then
+	jac(1,1) = -Kmemb/Vex
+	jac(1,2) = Kmemb/Vex
+	jac(2,1) = Kmemb/Vin
+	if (ichemo == OXYGEN) then
+		dmetab = (O2_metab(1.01*C) - metab)/(0.01*C)
+		jac(2,2) = -decay_rate - Kmemb/Vin - dmetab*chemo(OXYGEN)%max_cell_rate*1.0e6/Vin
+	elseif (ichemo == GLUCOSE) then
+		dmetab = ((1.01*C)**Ng/(chemo(GLUCOSE)%MM_C0**Ng + (1.01*C)**Ng) - metab)/(0.01*C)
+		jac(2,2) = -decay_rate - Kmemb/Vin - dmetab*chemo(ichemo)%max_cell_rate*1.0e6/Vin
+	elseif (ichemo == TRACER) then
+		jac(2,2) = -decay_rate - Kmemb/Vin
+	elseif (ichemo == SN30000) then
+		jac(2,2) = -decay_rate - Kmemb/Vin	
+		if ((SN30K%Kmet0(ict) > 0) .and. C > 0) then
+			jac(2,2) = jac(2,2) - (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)
+		endif
+	elseif (ichemo == SN30000_METAB) then
+		jac(2,2) = -decay_rate - Kmemb/Vin	
+		if ((SN30K%Kmet0(ict) > 0) .and. C > 0) then
+			jac(2,2) = jac(2,2) - (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)
+		endif
+	endif
+!	write(*,'(a,i4,4e12.3)') 'jac: ',ichemo,jac
+endif		
+end subroutine

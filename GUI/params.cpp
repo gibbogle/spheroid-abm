@@ -68,7 +68,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Medium volume",
 "Volume of the medium in which the spheroid is growing."},
 
-{"UNSTIRRED_LAYER", 0.001, 0, 0,
+{"UNSTIRRED_LAYER", 0.01, 0, 0,
 "Unstirred layer width",
 "Thickness of the unstirred layer around the spheroid."},
 
@@ -151,11 +151,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Spheroid diffusion coeff",
  "Constituent diffusion coefficient in the spheroid"},
 
-{"OXYGEN_MEDIUM_DIFF", 2.0e-5, 0, 0,
+{"OXYGEN_MEDIUM_DIFF", 2.5e-5, 0, 0,
  "Medium diffusion coeff",
  "Constituent diffusion coefficient in the medium"},
 
-{"OXYGEN_CELL_DIFF", 20, 0, 0,
+{"OXYGEN_CELL_DIFF", 10, 0, 0,
  "Membrane diff constant",
  "Cell membrane diffusion constant Kd"},
 
