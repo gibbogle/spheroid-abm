@@ -520,17 +520,18 @@ t_anoxic_limit = 60*60*anoxia_tag_hours				! hours -> seconds
 anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
 DXmm = 1.0/(Nmm3**(1./3))
 DELTA_X = DXmm/10									! mm -> cm
-Vsite = DELTA_X*DELTA_X*DELTA_X						! total site volume (cm^3)
-Vextra = fluid_fraction*Vsite						! extracellular volume in a site (cm^3)
-cell_radius = (3*(1-fluid_fraction)*Vsite/(4*PI))**(1./3.)
+Vsite_cm3 = DELTA_X*DELTA_X*DELTA_X					! total site volume (cm^3)
+Vextra_cm3 = fluid_fraction*Vsite_cm3				! extracellular volume in a site (cm^3)
+cell_radius = (3*(1-fluid_fraction)*Vsite_cm3/(4*PI))**(1./3.)
 ! In a well-oxygenated tumour the average cell fractional volume is intermediate between vdivide0/2 and vdivide0.
-! We assume that 0.75*vdivide0*Vcell = (1 - fluid_fraction)*Vsite
-Vcell = (1 - fluid_fraction)*Vsite/(0.75*vdivide0)		! nominal cell volume (cm^3) (corresponds to %volume = 1)
-														! %volume = (volume in cm^3)/Vcell
+! We assume that 0.75*vdivide0*Vcell_cm3 = (1 - fluid_fraction)*Vsite_cm3
+Vcell_cm3 = (1 - fluid_fraction)*Vsite_cm3/(0.75*vdivide0)	! nominal cell volume (cm^3) (corresponds to %volume = 1)
+															! fractional volume: cell%volume = (cell volume in cm^3)/Vcell_cm3, 
+															! actual volume (cm^3) = Vcell_cm3*%cellvolume
 
 write(logmsg,'(a,3e12.4)') 'DELTA_X, cell_radius: ',DELTA_X,cell_radius
 call logger(logmsg)
-write(logmsg,'(a,4e12.4)') 'Volumes: site, extra, cell (average, base): ',Vsite, Vextra, Vsite-Vextra, Vcell
+write(logmsg,'(a,4e12.4)') 'Volumes: site, extra, cell (average, base): ',Vsite_cm3, Vextra_cm3, Vsite_cm3-Vextra_cm3, Vcell_cm3
 call logger(logmsg)
 
 if (itreatment == 1) then
@@ -1229,13 +1230,13 @@ integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, Ntagged_drug, Ntagg
 real(REAL_KIND) :: vol_cm3, vol_mm3, hour
 
 hour = istep*DELTA_T/3600.
-vol_cm3 = Vsite*Nsites				! total volume in cm^3
+vol_cm3 = Vsite_cm3*Nsites			! total volume in cm^3
 vol_mm3 = vol_cm3*1000				! volume in mm^3
 vol_mm3_1000 = vol_mm3*1000			! 1000 * volume in mm^3
 diam_um = 2*DELTA_X*Radius*10000
 !Ntodie = Nradiation_tag + Ndrug_tag			! total that have been tagged by drug or radiation
 !Ntagdead = Nradiation_dead + Ndrug_dead		! total that died from drug or radiation
-!Ndead = Nsites + Nreuse - Ncells			! total that died from any cause
+!Ndead = Nsites + Nreuse - Ncells				! total that died from any cause
 !Ntagged = Ntodie - Ntagdead					! number currently tagged by drug or radiation
 Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead				! number currently tagged by anoxia
 Ntagged_drug = Ndrug_tag - Ndrug_dead					! number currently tagged by drug

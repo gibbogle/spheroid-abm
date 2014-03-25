@@ -50,7 +50,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"DELTA_T", 600, 0, 0,
 "Time step",
 "Length of main time step, for cell death, division, etc.  Should be a divisor of 3600. \n\
-[days]"},
+[mins]"},
 
 {"NT_CONC", 1, 0, 0,
 "Number of ODE solver sub-steps.",
@@ -172,7 +172,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Michaelis-Menten Km (uM)"},
 
 {"OXYGEN_HILL_N", 1, 1, 2,
- "Oxygen Hill function N",
+ "Hill function N",
  "Oxygen uptake rate Hill function N"},
 
 {"USE_GLUCOSE", 1, 0, 1,
@@ -180,7 +180,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Glucose is simulated"},
 
 {"GLUCOSE_DIFF_COEF", 6.0e-7, 0, 0,
- "GLUCOSE diffusion coeff",
+ "Spheroid diffusion coeff",
  "GLUCOSE diffusion coefficient"},
 
 {"GLUCOSE_MEDIUM_DIFF", 6.0e-6, 0, 0,
@@ -188,15 +188,15 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Constituent diffusion coefficient in the medium"},
 
 {"GLUCOSE_CELL_DIFF", 20, 0, 0,
- "Membrane diff coef",
+ "Membrane diff constant",
  "Cell membrane diffusion coefficient Kd"},
 
 {"GLUCOSE_BDRY_CONC", 9.0, 0, 0,
- "GLUCOSE boundary concentration",
+ "Boundary concentration",
  "GLUCOSE boundary concentration"},
 
 {"GLUCOSE_CONSUMPTION", 3.8e-17, 0, 0,
- "GLUCOSE consumption rate",
+ "Max consumption rate",
  "GLUCOSE consumption rate"},
 
 {"GLUCOSE_MM_KM", 1.33, 0, 0,
@@ -204,7 +204,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Michaelis-Menten Km (uM)"},
 
 {"GLUCOSE_HILL_N", 1, 1, 2,
- "Glucose Hill function N",
+ "Hill function N",
  "Glucose uptake rate Hill function N"},
 
 {"USE_TRACER", 0, 0, 1,
@@ -212,7 +212,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Tracer is simulated"},
 
 {"TRACER_DIFF_COEF", 6.0e-7, 0, 0,
- "TRACER diffusion coeff",
+ "Spheroid diffusion coeff",
  "TRACER diffusion coefficient"},
 
 {"TRACER_MEDIUM_DIFF", 6.0e-6, 0, 0,
@@ -220,15 +220,15 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Constituent diffusion coefficient in the medium"},
 
 {"TRACER_CELL_DIFF", 20, 0, 0,
- "Membrane diff coef",
+ "Membrane diff constant",
  "Cell membrane diffusion coefficient Kd"},
 
 {"TRACER_BDRY_CONC", 1.0, 0, 0,
- "TRACER boundary concentration",
+ "Boundary concentration",
  "TRACER boundary concentration"},
 
 {"TRACER_CONSUMPTION", 0, 0, 0,
- "TRACER consumption rate",
+ "Consumption rate",
  "TRACER consumption rate"},
 
 {"TRACER_MM_KM", 0, 0, 0,
@@ -236,7 +236,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Michaelis-Menten Km (uM)"},
 
 {"TRACER_HILL_N", 0, 0, 2,
- "Tracer Hill function N",
+ "Hill function N",
  "Tracer uptake rate Hill function N"},
 
 {"USE_DRUG_A", 0, 0, 1,
@@ -376,7 +376,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Drug B is simulated"},
 
 {"DRUG_B_NAME", 0, 0, 0,
-"",
+"DRUG_B",
 "Name of drug B"},
 
 {"DRUG_B_BDRY_CONC", 0.0, 0, 0,

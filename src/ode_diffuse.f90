@@ -564,19 +564,19 @@ end subroutine
 ! This version has the intracellular variables interleaved with the extracellular.
 ! Volumes:
 ! If cell volume did not change, and there was no cell death, every site would contain
-! fixed extra- and intracellular volumes, Vextra + Vcell = Vsite
-! When there is no cell the extracellular volume is Vsite.
+! fixed extra- and intracellular volumes, Vextra_cm3 + Vcell_cm3 = Vsite_cm3
+! When there is no cell the extracellular volume is Vsite_cm3.
 !----------------------------------------------------------------------------------
 subroutine f_rkc(neqn,t,y,dydt,icase)
 integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ict, ith, Ng
-real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol, val, Cin(MAX_CHEMO), Cex
+real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol_cm3, val, Cin(MAX_CHEMO), Cex
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_flux
 logical :: bnd, metabolized, dbug
 real(REAL_KIND) :: metab, dMdt
-logical :: use_compartments = .true.
 logical :: intracellular, cell_exists
+logical :: use_actual_cell_volume = .false.
 
 ichemo = icase
 if (ichemo == GLUCOSE) then
@@ -587,34 +587,43 @@ decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
 cbnd = BdryConc(ichemo,t_simulation)
-!$omp parallel do private(intracellular, vol, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab) default(shared) schedule(static)
+!$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab) default(shared) schedule(static)
 do i = 1,neqn
 	yy = y(i)
     if (ODEdiff%vartype(i) == EXTRA) then
         intracellular = .false.
-		vol = Vsite
+		vol_cm3 = Vsite_cm3
         Cex = yy
         cell_exists = .false.
         if (i < neqn) then
             if (ODEdiff%vartype(i+1) == INTRA) then
                 cell_exists = .true.
-                vol = Vextra
+				kcell = ODEdiff%cell_index(i+1)		! for access to cell-specific parameters (note that the intra variable follows the extra variable)
+				if (use_actual_cell_volume) then
+					vol_cm3 = Vsite_cm3 - Vcell_cm3*cell_list(kcell)%volume	! accounting for cell volume change
+				else
+	                vol_cm3 = Vextra_cm3									! for now, ignoring cell volume change!!!!!
+	            endif
 	            Cin = allstate(i+1,:)
 	            Cin(ichemo) = y(i+1)
 	        endif
 	    endif
 	else
         intracellular = .true.
-		vol = Vsite - Vextra	! for now, ignoring cell volume change!!!!!
+	    kcell = ODEdiff%cell_index(i)					! for access to cell-specific parameters
+	    if (use_actual_cell_volume) then
+			vol_cm3 = Vcell_cm3*cell_list(kcell)%volume	! accounting for cell volume change
+		else
+			vol_cm3 = Vsite_cm3 - Vextra_cm3			! for now, ignoring cell volume change!!!!!
+		endif
         Cex = y(i-1)
 	    Cin = allstate(i,:)
 	    Cin(ichemo) = yy
-	    kcell = ODEdiff%cell_index(i)	! for access to cell-specific parameters
 	    ict = cell_list(kcell)%celltype
 	    metabolized = (SN30K%Kmet0(ict) > 0)	! only valid for SN30K !!!!!
 	endif
 	if (.not.intracellular) then
-	! Need to check diffusion eqtn. when Vextra < Vsite = DX^3
+		! Need to check diffusion eqtn. when Vextra_cm3 < Vsite_cm3 = DX^3 !!!!!!!!!!!!!!!!!!!!!!
 	    dCsum = 0
 	    do k = 1,7
 		    kv = ODEdiff%icoef(i,k)
@@ -631,20 +640,14 @@ do i = 1,neqn
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
-!	        write(*,*) 'extra vol: ',vol
-!		    membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))*Vextra !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))*Vsite		! just a scaling
-!		    dCreact = -chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))
+			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))*Vsite_cm3	! just a scaling.  We should account for change in surface area
 		else
 		    membrane_flux = 0
-!            dCreact=0
 		endif
-    	dydt(i) = dCsum - membrane_flux/vol
+    	dydt(i) = dCsum - membrane_flux/vol_cm3
 	else
 		C = Cin(ichemo)
-!	    write(*,*) 'intra vol: ',vol
-!		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vextra   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vsite		! just a scaling
+		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vsite_cm3		! just a scaling.  We should account for change in surface area
 		dCreact = 0
 		if (ichemo == OXYGEN) then
 !			if (C > ODEdiff%C1_soft) then
@@ -656,34 +659,28 @@ do i = 1,neqn
 !				write(*,*) 'metab = 0'
 !			endif
 			metab = O2_metab(C)
-!			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
-			dCreact = (-metab*chemo(OXYGEN)%max_cell_rate*1.0e6 + membrane_flux)/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*chemo(OXYGEN)%max_cell_rate*1.0e6 + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
 		elseif (ichemo == GLUCOSE) then
 			metab = C**Ng/(chemo(GLUCOSE)%MM_C0**Ng + C**Ng)*chemo(ichemo)%max_cell_rate
-!			dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
-			dCreact = (-metab*1.0e6 + membrane_flux)/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*1.0e6 + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
 		elseif (ichemo == TRACER) then
-			dCreact = membrane_flux/vol
+			dCreact = membrane_flux/vol_cm3
 		elseif (ichemo == SN30000) then
 		    if (metabolized .and. C > 0) then
 				dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
 			else
 				dCreact = 0
 			endif
-			dCreact = dCreact + membrane_flux/vol
+			dCreact = dCreact + membrane_flux/vol_cm3
 		elseif (ichemo == SN30000_METAB) then
 			if (metabolized .and. Cin(SN30000) > 0) then
 				dCreact = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
 			else
 				dCreact = 0
 			endif
-			dCreact = dCreact + membrane_flux/vol
+			dCreact = dCreact + membrane_flux/vol_cm3
 		endif
-!		dCreact = dCreact + chemo(ichemo)%membrane_diff*(Cex - C)	
 	    dydt(i) = dCreact - yy*decay_rate
-!    	if (ichemo == TRACER) then
-!    		write(nfout,'(a,4e12.4)') 'I: ',Cex, Cin(ichemo),membrane_flux,dydt(i)
-!    	endif
 	endif
 enddo
 !$omp end parallel do
@@ -722,7 +719,7 @@ elseif (ichemo == SN30000) then
 elseif (ichemo == SN30000_METAB) then
     dCreact = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
 endif
-dCreact = dCreact + chemo(ichemo)%membrane_diff*(Cex - C)*Vsite
+dCreact = dCreact + chemo(ichemo)%membrane_diff*(Cex - C)*Vsite_cm3
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1288,12 +1285,12 @@ real(REAL_KIND) :: vol, K1, Cin, flux
 integer :: n, i
 
 if (ichemo == OXYGEN) then
-!    vol = Vsite
-!    vol = Vsite - Vextra	! this was used in the RKC solution
-    vol = Vextra	! the current extracellular volume should be used I think !!!!!!!!!!!!!!!
+!    vol = Vsite_cm3
+!    vol = Vsite_cm3 - Vextra_cm3	! this was used in the RKC solution
+    vol = Vextra_cm3	! the current extracellular volume should be used I think !!!!!!!!!!!!!!!
 	if (use_Cex_Cin) then
 		Cin = getCinO2(Cex)
-		flux = chemo(OXYGEN)%membrane_diff*(Cex - Cin)*Vsite
+		flux = chemo(OXYGEN)%membrane_diff*(Cex - Cin)*Vsite_cm3
 	else	! 
 		flux = O2_metab(Cex)*chemo(OXYGEN)%max_cell_rate*1.0d6
 !		flux = metab*1.0e6	! /vol	! convert mass rate (mol/s) to concentration rate (mM/s) (note: now = V*mM/s)
@@ -1313,8 +1310,8 @@ real(REAL_KIND) :: C
 real(REAL_KIND) :: K1, K2, K2K1, C0, a, b, cc, D, r(3), Cin
 integer :: i, n
 
-!K1 = chemo(OXYGEN)%membrane_diff*(Vsite - Vextra)
-K1 = chemo(OXYGEN)%membrane_diff*Vsite		! just a scaling
+!K1 = chemo(OXYGEN)%membrane_diff*(Vsite_cm3 - Vextra_cm3)
+K1 = chemo(OXYGEN)%membrane_diff*Vsite_cm3		! just a scaling
 K2 = chemo(OXYGEN)%max_cell_rate*1.0d6
 K2K1 = K2/K1
 C0 = chemo(OXYGEN)%MM_C0
@@ -1949,7 +1946,7 @@ Cs = ODEdiff%C1_soft
 dC = ODEdiff%deltaC_soft
 MM0 = chemo(OXYGEN)%MM_C0
 rmax = chemo(OXYGEN)%max_cell_rate
-V = Vsite - Vextra
+V = Vsite_cm3 - Vextra_cm3
 r = rmax*1.0e6/V
 Ks = ODEdiff%k_soft
 Kd = chemo(OXYGEN)%membrane_diff
@@ -2162,7 +2159,7 @@ dc6 = 6*dc1 !+ decay_rate
 cbnd = BdryConc(ichemo,t_simulation)
 !$omp parallel do private(vol, dCsum, k, kv, dCdiff, val) default(shared) schedule(static)
 do ie = 1,neqn
-	vol = Vextra			!!!!!! need to worry about volume !!!!
+	vol = Vextra_cm3			!!!!!! need to worry about volume !!!!
     dCsum = 0
     do k = 1,7
 		kv = ODEdiff%iexcoef(ie,k)
@@ -2199,7 +2196,7 @@ real(REAL_KIND) :: Cin(MAX_CHEMO), Cex(MAX_CHEMO), C, Cox, Csn
 logical :: bnd, metabolised
 real(REAL_KIND) :: metab, dMdt
 
-Vc = Vsite - Vextra
+Vc = Vsite_cm3 - Vextra_cm3
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	Cex(ic) = y(ic)

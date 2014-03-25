@@ -61,7 +61,7 @@ end subroutine
 
 !----------------------------------------------------------------------------------------
 ! Consumption rate = Rmax*C/(MM_C0 + C)  (Michaelis-Menten)
-! where Km = MM_C0 >= Rmax*T*10^6/Vextra is the O2 concentration at which cell uptake is halved,
+! where Km = MM_C0 >= Rmax*T*10^6/Vextra_cm3 is the O2 concentration at which cell uptake is halved,
 ! and T is the maximum expected time step
 ! This is to ensure that all the O2 in the site is not depleted in a time step, making
 ! O2 conc go negative.  For now it seems reasonable to assume that glucose uptake

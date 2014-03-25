@@ -257,8 +257,8 @@ if (associated(occupancy(site(1),site(2),site(3))%bdry)) then
 	call OutsideNeighbours(site)
 	call AddToMedium(kcell,site)
 else
-	V = cell_list(kcell)%volume*Vcell
-	occupancy(site(1),site(2),site(3))%C = ((Vsite - V)*occupancy(site(1),site(2),site(3))%C + V*cell_list(kcell)%conc)/Vsite
+	V = cell_list(kcell)%volume*Vcell_cm3
+	occupancy(site(1),site(2),site(3))%C = ((Vsite_cm3 - V)*occupancy(site(1),site(2),site(3))%C + V*cell_list(kcell)%conc)/Vsite_cm3
 endif
 !call NecroticMigration(site)
 end subroutine
@@ -272,10 +272,10 @@ real(REAL_KIND) :: V, Cex(MAX_CHEMO), Cin(MAX_CHEMO)
 
 Cex = occupancy(site(1),site(2),site(3))%C
 Cin = cell_list(kcell)%conc
-V = cell_list(kcell)%volume*Vcell
+V = cell_list(kcell)%volume*Vcell_cm3
 do ic = 1,MAX_CHEMO
 	if (.not.chemo(ic)%used) cycle
-	chemo(ic)%medium_M = chemo(ic)%medium_M + V*Cin(ic) + (Vsite - V)*Cex(ic)
+	chemo(ic)%medium_M = chemo(ic)%medium_M + V*Cin(ic) + (Vsite_cm3 - V)*Cex(ic)
 enddo
 end subroutine
 
@@ -286,7 +286,7 @@ integer :: ic
 
 do ic = 1,MAX_CHEMO
 	if (.not.chemo(ic)%used) cycle
-	chemo(ic)%medium_M = chemo(ic)%medium_M - Vsite*chemo(ic)%medium_Cbnd
+	chemo(ic)%medium_M = chemo(ic)%medium_M - Vsite_cm3*chemo(ic)%medium_Cbnd
 enddo
 end subroutine
 
@@ -434,10 +434,10 @@ do kcell = 1,nlist0
 	Cin_0 = cell_list(kcell)%conc
 	Cex_0 = occupancy(site(1),site(2),site(3))%C
 	cell_list(kcell)%dVdt = dVdt
-	Vin_0 = cell_list(kcell)%volume*Vcell	! cm^3
-	Vex_0 = Vsite - Vin_0					! cm^3
-	dV = dVdt*dt*Vcell						! cm^3
-	cell_list(kcell)%volume = (Vin_0 + dV)/Vcell
+	Vin_0 = cell_list(kcell)%volume*Vcell_cm3	! cm^3
+	Vex_0 = Vsite_cm3 - Vin_0					! cm^3
+	dV = dVdt*dt*Vcell_cm3						! cm^3
+	cell_list(kcell)%volume = (Vin_0 + dV)/Vcell_cm3
 	if (C_option == 1) then
 		! Calculation based on transfer of an extracellular volume dV with constituents, i.e. holding extracellular concentrations constant
 		cell_list(kcell)%conc = (Vin_0*Cin_0 + dV*Cex_0)/(Vin_0 + dV)
@@ -610,7 +610,7 @@ call ScalePathConcentrations(site0,site01,path,npath,alpha)
 !endif
 !! Now adjust extracellular concentrations for the parent cell site to ensure mass conservation
 !Cex = occupancy(site0(1),site0(2),site0(3))%C(:)
-!occupancy(site0(1),site0(2),site0(3))%C(:) = (Cex*(Vsite - V0) + occupancy(site01(1),site01(2),site01(3))%C(:)*V0/2)/(Vsite - V0/2)
+!occupancy(site0(1),site0(2),site0(3))%C(:) = (Cex*(Vsite_cm3 - V0) + occupancy(site01(1),site01(2),site01(3))%C(:)*V0/2)/(Vsite_cm3 - V0/2)
 
 call SetRadius(Nsites)
 !call extendODEdiff(site2)
@@ -678,31 +678,31 @@ do ic = 1,MAX_CHEMO
 	C = occupancy(site0(1),site0(2),site0(3))%C(ic)
 	kcell = occupancy(site0(1),site0(2),site0(3))%indx(1)
 	if (kcell > 0) then
-		V = cell_list(kcell)%volume*Vcell
+		V = cell_list(kcell)%volume*Vcell_cm3
 	else
 		V = 0
 	endif
-	mass(ic) = mass(ic) + C*(Vsite - V)
+	mass(ic) = mass(ic) + C*(Vsite_cm3 - V)
 	if (npath == 0) then
 		C = occupancy(site01(1),site01(2),site01(3))%C(ic)
 		kcell = occupancy(site01(1),site01(2),site01(3))%indx(1)
 		if (kcell > 0) then
-			V = cell_list(kcell)%volume*Vcell
+			V = cell_list(kcell)%volume*Vcell_cm3
 		else
 			V = 0
 		endif
-		mass(ic) = mass(ic) + C*(Vsite - V)
+		mass(ic) = mass(ic) + C*(Vsite_cm3 - V)
 	else
 		do k = 1, npath
 			site = path(:,k)
 			C = occupancy(site01(1),site01(2),site01(3))%C(ic)
 			kcell = occupancy(site(1),site(2),site(3))%indx(1)
 			if (kcell > 0) then
-				V = cell_list(kcell)%volume*Vcell
+				V = cell_list(kcell)%volume*Vcell_cm3
 			else
 				V = 0
 			endif
-			mass(ic) = mass(ic) + C*(Vsite - V)
+			mass(ic) = mass(ic) + C*(Vsite_cm3 - V)
 		enddo
 	endif
 enddo
@@ -741,17 +741,17 @@ real(REAL_KIND) :: V, Cex(MAX_CHEMO)
 do k = npath-1,1,-1
 	site1 = path(:,k)
 	kcell = occupancy(site1(1),site1(2),site1(3))%indx(1)
-	V = cell_list(kcell)%volume*Vcell
+	V = cell_list(kcell)%volume*Vcell_cm3
 	Cex = occupancy(site1(1),site1(2),site1(3))%C
 	site2 = path(:,k+1)
-	occupancy(site1(1),site1(2),site1(3))%C = ((Vsite - V)*Cex + V*occupancy(site2(1),site2(2),site2(3))%C)/Vsite
+	occupancy(site1(1),site1(2),site1(3))%C = ((Vsite_cm3 - V)*Cex + V*occupancy(site2(1),site2(2),site2(3))%C)/Vsite_cm3
 	do ic = 1,MAX_CHEMO
 		if (.not.chemo(ic)%used) cycle
 		if (occupancy(site1(1),site1(2),site1(3))%C(ic) < 0) then
 			occupancy(site1(1),site1(2),site1(3))%C(ic) = max(occupancy(site2(1),site2(2),site2(3))%C(ic), Cex(ic))
 		endif
 	enddo
-!	write(*,'(i4,4e12.4)') k,Cex(1:2),Vsite,V
+!	write(*,'(i4,4e12.4)') k,Cex(1:2),Vsite_cm3,V
 !	write(*,'(4x,2e12.4)') occupancy(site2(1),site2(2),site2(3))%C(1:2)
 !	write(*,'(4x,2e12.4)') occupancy(site1(1),site1(2),site1(3))%C(1:2)
 enddo
@@ -772,7 +772,7 @@ subroutine AdjustMedium1
 real(REAL_KIND) :: total(MAX_CHEMO)
 
 total(DRUG_A:MAX_CHEMO) = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume
-medium_volume = medium_volume - Vsite
+medium_volume = medium_volume - Vsite_cm3
 chemo(DRUG_A:MAX_CHEMO)%bdry_conc = total(DRUG_A:MAX_CHEMO)/medium_volume
 end subroutine
 
