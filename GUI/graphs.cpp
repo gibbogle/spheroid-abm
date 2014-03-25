@@ -73,7 +73,7 @@ GRAPH_SET tsGraphSet[] = {
     10, true, 0, 0.1, true},
 
     {"growthfraction",
-    "Growth Fraction",
+    "Slow growth Fraction",
     "%",
      "Percentage of cells that are growing at a rate less than the specified fraction of the mean growth rate with no nutrient limits",
     11, true, 0, 0.1, true},
@@ -81,7 +81,7 @@ GRAPH_SET tsGraphSet[] = {
     {"necroticfraction",
     "Necrotic Fraction",
     "%",
-     "Percentage of the spheroid that is necrotic = (number of cells that have died)/(number of sites occupied by the spheroid)",
+     "Percentage of the spheroid that is necrotic = (number of vacant sites)/(number of sites taken up by the spheroid)",
     12, false, 0, 0.1, true}
 
 };

@@ -1166,7 +1166,11 @@ void MainWindow::writeout()
 		for (int i=0; i<max(12-nch,1); i++)
 			line += " ";
 		line += p.tag;
-		line += "\n";
+        nch = line.length();
+        for (int i=0; i<max(50-nch,1); i++)
+            line += " ";
+        line += p.label;
+        line += "\n";
 		out << line;
 	}
 
