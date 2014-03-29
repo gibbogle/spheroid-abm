@@ -158,7 +158,7 @@ integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
-integer :: Mnodes
+integer :: Mnodes, ncpu_input
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3
 real(REAL_KIND) :: medium_volume0, medium_volume, cell_radius, d_layer
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
