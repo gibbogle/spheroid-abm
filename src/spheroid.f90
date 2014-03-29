@@ -25,6 +25,15 @@ integer :: error
 ok = .true.
 initialized = .false.
 par_zig_init = .false.
+
+call logger("ReadCellParams")
+call ReadCellParams(ok)
+if (.not.ok) return
+call logger("did ReadCellParams")
+
+if (ncpu == 0) then
+	ncpu = ncpu_input
+endif
 Mnodes = ncpu
 inputfile = infile
 outputfile = outfile
@@ -43,11 +52,6 @@ call logger(logmsg)
         Mnodes = 1
     endif
 #endif
-
-call logger("ReadCellParams")
-call ReadCellParams(ok)
-if (.not.ok) return
-call logger("did ReadCellParams")
 
 call ArrayInitialisation(ok)
 if (.not.ok) return
@@ -331,7 +335,7 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine ReadCellParams(ok)
 logical :: ok
-integer :: i, idrug, imetab, itestcase, ncpu_dummy, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
+integer :: i, idrug, imetab, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
 integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
 integer :: ictype, idisplay
 real(REAL_KIND) :: days, bdry_conc, percent
@@ -365,7 +369,7 @@ read(nfcell,*) anoxia_death_hours			! time after tagging to death by anoxia (h)
 read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
-read(nfcell,*) ncpu_dummy					! just a placeholder for ncpu, not used currently
+read(nfcell,*) ncpu_input					! for GUI just a placeholder for ncpu, used only when execute parameter ncpu = 0
 read(nfcell,*) Ncelltypes					! maximum number of cell types in the spheroid
 do ictype = 1,Ncelltypes
 	read(nfcell,*) percent
@@ -584,6 +588,7 @@ call logger(logmsg)
 
 call DetermineKd
 ok = .true.
+
 end subroutine
 
 !-----------------------------------------------------------------------------------------
