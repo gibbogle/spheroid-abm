@@ -26,6 +26,8 @@ ok = .true.
 initialized = .false.
 par_zig_init = .false.
 
+inputfile = infile
+outputfile = outfile
 call logger("ReadCellParams")
 call ReadCellParams(ok)
 if (.not.ok) return
@@ -35,8 +37,6 @@ if (ncpu == 0) then
 	ncpu = ncpu_input
 endif
 Mnodes = ncpu
-inputfile = infile
-outputfile = outfile
 write(logmsg,*) 'ncpu: ',ncpu 
 call logger(logmsg)
 
