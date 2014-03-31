@@ -573,7 +573,7 @@ real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ict, ith, Ng
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol_cm3, val, Cin(MAX_CHEMO), Cex
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_flux
-logical :: bnd, metabolized, dbug
+logical :: bnd, metabolised, dbug
 real(REAL_KIND) :: metab, dMdt
 logical :: intracellular, cell_exists
 logical :: use_actual_cell_volume = .false.
@@ -587,7 +587,8 @@ decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
 cbnd = BdryConc(ichemo,t_simulation)
-!$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab) default(shared) schedule(static)
+!$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, &
+                          kcell, ict, metabolised, membrane_flux) default(shared) schedule(static)
 do i = 1,neqn
 	yy = y(i)
     if (ODEdiff%vartype(i) == EXTRA) then
@@ -620,7 +621,7 @@ do i = 1,neqn
 	    Cin = allstate(i,:)
 	    Cin(ichemo) = yy
 	    ict = cell_list(kcell)%celltype
-	    metabolized = (SN30K%Kmet0(ict) > 0)	! only valid for SN30K !!!!!
+	    metabolised = (SN30K%Kmet0(ict) > 0)	! only valid for SN30K !!!!!
 	endif
 	if (.not.intracellular) then
 		! Need to check diffusion eqtn. when Vextra_cm3 < Vsite_cm3 = DX^3 !!!!!!!!!!!!!!!!!!!!!!
@@ -666,14 +667,14 @@ do i = 1,neqn
 		elseif (ichemo == TRACER) then
 			dCreact = membrane_flux/vol_cm3
 		elseif (ichemo == SN30000) then
-		    if (metabolized .and. C > 0) then
+		    if (metabolised .and. C > 0) then
 				dCreact = -(SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
 			else
 				dCreact = 0
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
 		elseif (ichemo == SN30000_METAB) then
-			if (metabolized .and. Cin(SN30000) > 0) then
+			if (metabolised .and. Cin(SN30000) > 0) then
 				dCreact = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
 			else
 				dCreact = 0
