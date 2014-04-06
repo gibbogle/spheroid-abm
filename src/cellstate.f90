@@ -414,14 +414,8 @@ ndivide = 0
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
 	C_O2 = cell_list(kcell)%conc(OXYGEN)
-!    if (C_O2 > ODEdiff%C1_soft) then
-!	    metab = (C_O2-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C_O2 - ODEdiff%deltaC_soft)
-!    elseif (C_O2 > 0) then
-!	    metab = ODEdiff%k_soft*C_O2*C_O2
-!	else
-!		metab = 0
-!	endif
 	metab = O2_metab(C_O2)
+!	metab = metabolic_rate(OXYGEN,C_O2)
 	if (use_V_dependence) then
 		dVdt = c_rate*cell_list(kcell)%volume*metab
 	else

@@ -84,15 +84,15 @@ call CreateBdryList
 !initialized = .true.
 !call checkcellcount(ok)
 
-if (use_ODE_diffusion) then
+!if (use_ODE_diffusion) then
 !	call SetupODEDiff
-	call InitConcs
-	call AdjustMM
 !	call TestODEDiffusion
 !	call TestSolver
-endif
+!endif
 call SetupODEdiff
+call InitConcs
 call SetupMedium
+call AdjustMM
 Nradiation_tag = 0
 Ndrug_tag = 0
 Nanoxia_tag = 0
@@ -836,6 +836,10 @@ do x = 1,NX
 				cell_list(k)%conc(TRACER) = chemo(TRACER)%bdry_conc
 				cell_list(k)%M = 0
 				occupancy(x,y,z)%indx(1) = k
+				if (x == NX/2 .and. y == NY/2 .and. z == NZ/2) then
+					idbug = k
+					write(nfout,*) 'Mid-blob cell: idbug: ',idbug, x,y,z
+				endif
 			else
 				occupancy(x,y,z)%indx(1) = OUTSIDE_TAG
 			endif
@@ -884,7 +888,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine InitConcs
-integer :: nextra, ic, ichemo, kcell, site(3)
+integer :: nextra, ic, ichemo, kcell, site(3), ntvars
 
 write(logmsg,*) 'InitConcs: ',nchemo
 call logger(logmsg)
@@ -897,6 +901,11 @@ do kcell = 1,Ncells
 	    ichemo = chemomap(ic)
         occupancy(site(1),site(2),site(3))%C(ic) = chemo(ichemo)%bdry_conc
     enddo
+enddo
+ntvars = ODEdiff%nextra + ODEdiff%nintra
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
+	allstate(1:ntvars,ichemo) = chemo(ichemo)%bdry_conc
 enddo
 end subroutine
 
@@ -964,7 +973,7 @@ integer(c_int) :: res
 integer :: kcell, site(3), hour, nthour, kpar=0
 real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose
 !integer, parameter :: NT_CONC = 6
-integer :: nchemo
+integer :: nchemo, i
 logical :: ok
 
 !call compute_Cex_Cin
@@ -1013,6 +1022,10 @@ do it_solve = 1,NT_CONC
 	t_simulation = (istep-1)*DELTA_T + tstart
 	call Solver(it_solve,tstart,dt,Ncells)
 enddo
+if (idbug /= 0) then
+	i = cell_list(idbug)%iv
+	write(nfout,'(i6,2f10.4)') istep,allstate(i-1,OXYGEN),allstate(i,OXYGEN)
+endif
 call StateToSiteCell
 res = 0
 
