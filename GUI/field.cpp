@@ -227,7 +227,7 @@ void Field::displayField(int hr, int *res)
     int Nc;
     bool growthRate;
 
-//    LOG_MSG("displayField");
+    LOG_MSG("displayField");
     *res = 0;
     hour = hr;
 	if (slice_changed) {

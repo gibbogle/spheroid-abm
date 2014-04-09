@@ -597,14 +597,14 @@ subroutine getIndices(drug_name, idrug, imetab)
 character*(12) :: drug_name
 integer :: idrug, imetab
 
-if (drug_name == ' ') then
-	idrug = 0
-	imetab = 0
-elseif (drug_name == 'SN30000') then
+!if (drug_name == ' ') then
+!	idrug = 0
+!	imetab = 0
+if (drug_name == 'SN30000') then
 	idrug = SN30000
 	imetab = SN30000_METAB
 else
-	idrug = -1
+	idrug = 0
 	imetab = 0
 endif
 end subroutine
@@ -822,7 +822,8 @@ do x = 1,NX
 				cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 				R = par_uni(kpar)
 				if (randomise_initial_volume) then
-					cell_list(k)%volume = Vdivide0*0.5*(1 + R)
+!					cell_list(k)%volume = Vdivide0*0.5*(1 + R)
+					cell_list(k)%volume = cell_list(k)%divide_volume*0.5*(1 + R)
 				else
 					cell_list(k)%volume = 1.0
 				endif
@@ -1447,6 +1448,9 @@ do x = rng(1,1),rng(1,2)
 !	        write(logmsg,'(7i6)') x,kcell,ichemo,i,k
 !		    call logger(logmsg)
 !		endif
+!if (ichemo == OXYGEN) then
+!	write(nfout,'(i4,f10.6)') x,allstate(i,ichemo)
+!endif
         if (ichemo <= MAX_CHEMO) then
 			if (chemo(ichemo)%used) then
 				if (i > 0) then
@@ -1549,6 +1553,7 @@ do kcell = 1,nlist
 	O2max = max(O2max,v)
 	k = (v - Vmin)/dv + 1
 	k = min(k,nv)
+	k = max(k,1)
 	prob(k) = prob(k) + 1
 	n = n+1
 enddo
