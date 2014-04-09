@@ -421,6 +421,9 @@ do kcell = 1,nlist0
 	else
 		dVdt = r_mean*metab
 	endif
+	if (suppress_growth) then	! for checking solvers
+		dVdt = 0
+	endif
 !	if (istep > 1 .and. dVdt == 0) then
 !		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
 !	endif

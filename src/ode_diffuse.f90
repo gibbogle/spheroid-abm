@@ -1367,6 +1367,7 @@ end function
 
 !----------------------------------------------------------------------------------
 ! Computes metabolism rate as a fraction of the maximum cell rate
+! Use the "soft landing" option for Hill_N = 1 if MM_threshold = 0
 !----------------------------------------------------------------------------------
 real(REAL_KIND) function O2_metab(C)
 !real(REAL_KIND) function metabolic_rate(ichemo,C)
@@ -1383,12 +1384,20 @@ if (ichemo == OXYGEN) then
 			metab = 0
 		endif
 	else
-		if (C > ODEdiff%C1_soft) then
-			metab = (C-ODEdiff%deltaC_soft)/(chemo(ichemo)%MM_C0 + C - ODEdiff%deltaC_soft)
-		elseif (C > 0) then
-			metab = ODEdiff%k_soft*C*C
+		if (MM_THRESHOLD > 0) then
+			if (C > ODEdiff%C1_soft) then
+				metab = (C-ODEdiff%deltaC_soft)/(chemo(ichemo)%MM_C0 + C - ODEdiff%deltaC_soft)
+			elseif (C > 0) then
+				metab = ODEdiff%k_soft*C*C
+			else
+				metab = 0
+			endif
 		else
-			metab = 0
+			if (C > 0) then
+				metab = C/(chemo(ichemo)%MM_C0 + C)
+			else
+				metab = 0
+			endif
 		endif
 	endif
 endif

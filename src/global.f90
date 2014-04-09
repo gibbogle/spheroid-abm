@@ -58,6 +58,7 @@ logical, parameter :: use_metabolites = .true.
 logical, parameter :: use_celltype_colour = .true.
 
 logical, parameter :: use_Cex_Cin = .true.		! assume equilibrium to derive Cin from Cex
+logical, parameter :: suppress_growth = .false.
 
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 
@@ -221,21 +222,23 @@ end function
 subroutine logger(msg)
 character*(*) :: msg
 integer :: error
-logical :: isopen
+logical :: logfile_isopen
 character*(1) :: LF = char(94)
 
 error = 0
+inquire(unit=nflog,OPENED=logfile_isopen)
 if (use_TCP) then
     if (awp_0%is_open) then
         call winsock_send(awp_0,trim(msg)//LF,len_trim(msg)+1,error)
+    elseif (logfile_isopen) then
+        write(nflog,*) trim(msg)
     else
         write(99,*) trim(msg)
     endif
 else
 	write(*,*) trim(msg)
 endif
-inquire(unit=nflog,OPENED=isopen)
-if (isopen) then
+if (logfile_isopen) then
 	write(nflog,*) 'msg: ',trim(msg)
 	if (error /= 0) then
 	    write(nflog,'(a,i4)') 'winsock_send error: ',error
