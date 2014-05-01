@@ -3,7 +3,7 @@
 module cellstate
 use global
 use boundary
-use fields
+use chemokine
 use ode_diffuse
 implicit none
 
@@ -469,7 +469,6 @@ enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Note: updating of concentrations is now done in extendODEdiff()
 ! The dividing cell, kcell0, is at site0.
 ! A neighbour site site01 is chosen randomly.  This becomes the site for the daughter cell.
 !-----------------------------------------------------------------------------------------
@@ -483,8 +482,10 @@ real(REAL_KIND) :: tnow, R, v, vmax, V0, Cex(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_C
 logical :: freesite(27,3)
 type (boundary_type), pointer :: bdry
 
-!write(logmsg,*) 'CellDivider: ',kcell0
-!call logger(logmsg)
+if (dbug) then
+	write(logmsg,*) 'CellDivider: ',kcell0
+	call logger(logmsg)
+endif
 ok = .true.
 tnow = istep*DELTA_T
 cell_list(kcell0)%t_divide_last = tnow
@@ -526,46 +527,56 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 		if (.not.ok) then
 			call logger('Error: AddCell: vacant site')
 		endif
+
 		Nreuse = Nreuse + 1
 		return
 	endif
 endif
 
-!ok = .false.
-!k = 0
-!do while (.not.ok)
-!    k = k + 1
-!!	j = random_int(1,26,kpar)       ! This generates disconnected cells at the boundary
-!!	if (j >= 14) j = j+1
-!!	site01 = site0 + jumpvec(:,j)
-!	j = random_int(1,6,kpar)
-!	site01 = site0 + neumann(:,j)
-!	if (k > 50 .or. occupancy(site01(1),site01(2),site01(3))%indx(1) >= -100) ok = .true.	! site01 is not necrotic
-!enddo
-j = random_int(1,6,kpar)
-site01 = site0 + neumann(:,j)
-!if (dbug) write(*,*) 'CellDivider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
-if (occupancy(site01(1),site01(2),site01(3))%indx(1) == OUTSIDE_TAG) then	! site01 is outside, use it directly
-	npath = 0
-	site1 = site0
-elseif (bdrylist_present(site01,bdrylist)) then	! site01 is on the boundary
-	npath = 1
-	site1 = site01
-	path(:,1) = site01
-else
-	call ChooseBdrysite(site01,site1)
-	if (occupancy(site1(1),site1(2),site1(3))%indx(1) == 0) then
-		write(*,*) 'after choose_bdrysite: site1 is VACANT: ',site1
-		stop
+do
+	j = random_int(1,6,kpar)
+	site01 = site0 + neumann(:,j)
+	if (site01(3) < zmin) then
+		cycle
 	endif
-	if (dbug) write(*,'(a,i6,9i4)') 'b4 ',kcell0,site0,site01,site1
-	call SelectPath(site0,site01,site1,path,npath)
-	! path(:,:) goes from site01 to site1, which is a bdry site or adjacent to a vacant site
-!	if (.not.isbdry(site1)) then
-!	    call logger('should be bdry or vacant, is not')
-!	    stop
-!	endif
-endif
+	!if (dbug) write(*,*) 'CellDivider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
+	if (occupancy(site01(1),site01(2),site01(3))%indx(1) == OUTSIDE_TAG) then	! site01 is outside, use it directly
+		npath = 0
+		site1 = site0
+		if (site01(3) < zmin) then
+			write(*,*) 'CellDivider: OUTSIDE: z < zmin'
+			stop
+		endif
+	elseif (bdrylist_present(site01,bdrylist)) then	! site01 is on the boundary
+		npath = 1
+		site1 = site01
+		path(:,1) = site01
+		if (site01(3) < zmin) then
+			write(*,*) 'CellDivider: boundary: z < zmin'
+			stop
+		endif
+	else
+		if (dbug) call logger('ChooseBdrySite')
+		call ChooseBdrysite(site01,site1,ok)
+		if (dbug) call logger('did ChooseBdrySite')
+		if (.not.ok) return
+		if (site01(3) < zmin) then
+			write(*,*) 'CellDivider: chosen: z < zmin'
+			stop
+		endif
+		if (occupancy(site1(1),site1(2),site1(3))%indx(1) == 0) then
+			write(*,*) 'after choose_bdrysite: site1 is VACANT: ',site1
+			stop
+		endif
+		call SelectPath(site0,site01,site1,path,npath)
+		! path(:,:) goes from site01 to site1, which is a bdry site or adjacent to a vacant site
+	!	if (.not.isbdry(site1)) then
+	!	    call logger('should be bdry or vacant, is not')
+	!	    stop
+	!	endif
+	endif
+	exit
+enddo
 !if (dbug) write(*,*) 'path: ',npath
 !do k = 1,npath
 !	if (dbug) write(*,'(i3,2x,3i4)') path(:,k)
@@ -591,13 +602,15 @@ endif
 call GetPathMass(site0,site01,path,npath,M0)
 if (npath > 0) then
 	call PushPath(path,npath)
-	if (dbug) write(*,*) 'did push_path'
+!	call CheckBdryList('after PushPath')
 endif
 call AddCell(kcell0,kcell1,site01,ok)
 if (.not.ok) then
 	call logger('Error: AddCell: pushed site')
 	return
 endif
+!write(*,*) 'added cell at: ',site01
+
 call GetPathMass(site0,site01,path,npath,M1)
 alpha = M0/M1	! scaling for concentrations on the path
 call ScalePathConcentrations(site0,site01,path,npath,alpha)
@@ -616,7 +629,10 @@ call SetRadius(Nsites)
 ! site2 may be now on the boundary
 ! First add site2
 if (isbdry(site2)) then   ! add it to the bdrylist
-	if (dbug) write(*,*) 'add site2 to bdrylist: ',site2
+	if (dbug) then
+		write(logmsg,*) 'add site2 to bdrylist: ',site2
+		call logger(logmsg)
+	endif
     allocate(bdry)
     bdry%site = site2
 !    bdry%chemo_influx = .false.
@@ -628,13 +644,14 @@ else
 !    write(logmsg,'(a,3i4,i6)') 'Added site is not bdry: ',site2,occupancy(site2(1),site2(2),site2(3))%indx(1)
 !	call logger(logmsg)
     call SetBdryConcs(site2)
-!    stop
 endif
-if (dbug) write(*,*) 'Check for changed boundary status'
 ! Now check sites near site2 that may have changed their boundary status (including site1)
-do j = 1,6
-	site = site2 + neumann(:,j)
-	if (dbug) write(*,*) j,site
+!do j = 1,6
+!	site = site2 + neumann(:,j)
+do j = 1,27
+	if (j == 14) cycle
+	site = site2 + jumpvec(:,j)
+	!write(*,*) j,site
 	if (isbdry(site)) then
 		if (dbug) write(*,*) 'isbdry'
 		if (.not.bdrylist_present(site,bdrylist)) then	! add it
@@ -644,16 +661,18 @@ do j = 1,6
 		!    bdry%chemo_influx = .false.
 			nullify(bdry%next)
 			call bdrylist_insert(bdry,bdrylist)
+			if (dbug) write(*,*) 'inserted bdry site: ',site
 			occupancy(site(1),site(2),site(3))%bdry => bdry
-!		    call SetBdryConcs(site)
+!			call CheckBdryList('after bdrylist_insert')
 		endif
 	else
 		if (dbug) write(*,*) 'not isbdry'
 		if (bdrylist_present(site,bdrylist)) then	! remove it
 			if (dbug) write(*,*) 'present, remove it'
 			call bdrylist_delete(site,bdrylist)
+			if (dbug) write(*,*) 'deleted bdry site: ',site
 			nullify(occupancy(site(1),site(2),site(3))%bdry)
-!			call ResetConcs(site)
+!			call CheckBdryList('after bdrylist_delete')
 		endif
 	endif
 enddo
@@ -775,35 +794,77 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Need to choose a site on the boundary in some sense near site0, and also to preserve
-! the spherical shape
+! the required shape.
+! alpha_max is calculated as a function of the fractional distance of site0 from Centre,
+! i.e. of r/Radius.
+! This determines the subset of boundary sites that are examined.
+! The criterion for a site to be a candidate is:
+! the angle between v = site - Centre and vc = site0 - Centre must be < alpha_max
+! In fact the decision is made based on cos(angle) > cos(alpha_max).
+! From this set of sites we choose the one that departs most from the desired boundary
+! in the negative sense.  In the case of a sphere this means the site with the least
+! distance from Centre, but for a squashed sphere we need a different way to choose.
+! 
 !-----------------------------------------------------------------------------------------
-subroutine ChooseBdrysite(site0,site1)
+subroutine ChooseBdrysite(site0,site1,ok)
 integer :: site0(3), site1(3)
+logical :: ok
 integer :: site(3), sitemin(3)
 real(REAL_KIND) :: vc(3), v(3), r, rfrac, d, alpha_max, cosa_min, dmin, cosa
+real(REAL_KIND) :: z, r2, sin2, cos2, d2, dd, dsq, dsqmax, tempCentre(3)
 logical :: hit
 type (boundary_type), pointer :: bdry
 
 if (dbug) write(*,*) 'ChooseBdrysite: ',site0
-vc = site0 - Centre
+tempCentre = Centre
+if (is_squashed .and. site0(3) < Centre(3)) then
+	tempCentre(3) = (site0(3) + 2*Centre(3))/3
+endif
+vc = site0 - tempCentre
 r = norm(vc)
 vc = vc/r
 rfrac = r/Radius
 alpha_max = getAlphaMax(rfrac)
 cosa_min = cos(alpha_max)
 dmin = 1.0e10
+dsqmax = -1.0e10
 hit = .false.
 bdry => bdrylist
 do while ( associated ( bdry )) 
     site = bdry%site
-    v = site - Centre
-    d = norm(v)
-    cosa = dot_product(v,vc)/d
-    if (cosa > cosa_min) then
+    v = site - tempCentre
+    d = norm(v)	
+	cosa = dot_product(v,vc)/d
+	if (cosa > cosa_min) then	! Note: in squashed case we need to worry about cells near the surface
 		hit = .true.
-		if (d < dmin) then
-			dmin = d
-			sitemin = site
+		if (is_squashed) then
+			z = site0(3) + cdrop - zmin
+			if (z < 2*bdrop*Radius) then
+				cos2 = (1 - (z)/(bdrop*Radius))**2
+				sin2 = 1 - cos2
+			else
+				r2 = (site0(1)-Centre(1))**2 + (site0(2)-Centre(2))**2
+				sin2 = r2/(adrop*Radius)**2
+				cos2 = 1 - sin2
+			endif
+			d2 = adrop*adrop*sin2 + bdrop*bdrop*cos2
+			if (d2 < 0) then
+				write(*,*) 'd2 < 0: cos2, sin2: ',cos2,sin2
+				write(*,*) 'site0(3),cdrop,zmin: ',site0(3),cdrop,zmin,(site0(3) + cdrop - zmin)/(bdrop*Radius)
+				stop
+			endif
+			dd = Radius*sqrt(d2)	! this is the desired distance for this z
+			dsq = dd - d	! could use dd/d or dd-d
+			if (dsq > dsqmax) then
+				dsqmax = dsq
+				sitemin = site
+			endif
+		else	! this is OK for a sphere, not for the squashed sphere
+			if (d < dmin) then
+				dmin = d
+				sitemin = site
+				if (dbug) write(*,*) 'sitemin: ',sitemin
+			endif
 		endif
 	endif
     bdry => bdry%next
@@ -811,27 +872,32 @@ enddo
 if (.not.hit) then
 	write(logmsg,*) 'Error: choose_bdrysite: no candidate bdry site'
 	call logger(logmsg)
-	stop
+	ok = .false.
+	return
 endif
 site1 = sitemin
 if (dbug) write(*,*) 'site1: ',site1,occupancy(site1(1),site1(2),site1(3))%indx
+ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! r is the fractional distance from the sphere centre = (distance from centre)/Radius
+! The parameter alphamax varies: alpha1 -> alpha2 as r: r1 -> r2
 !-----------------------------------------------------------------------------------------
 real(REAL_KIND) function getAlphaMax(r)
 real(REAL_KIND) :: r
-real(REAL_KIND) :: alf
+real(REAL_KIND) :: alf, alphamax
 real(REAL_KIND) :: r1 = 0.0, r2 = 0.8, alpha1 = PI/2, alpha2 = PI/6
 
 if (r < r1) then
-	getAlphaMax = alpha1
+	alphamax = alpha1
 elseif (r > r2) then
-	getAlphaMax = alpha2
+	alphamax = alpha2
 else
 	alf = (r-r1)/(r2-r1)
-	getAlphaMax = (1-alf)*alpha1 + alf*alpha2
+	alphamax = (1-alf)*alpha1 + alf*alpha2
 endif
+getAlphaMax = alphamax
 end function
 
 
@@ -874,12 +940,12 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine SelectPath(site0,site1,site2,path,npath)
 integer :: site0(3),site1(3), site2(3), path(3,200), npath
-integer :: v(3), jump(3), site(3), k, j, jmin
+integer :: v(3), jump(3), site(3), k, j, jmin, indx
 real(REAL_KIND) :: r, d2, d2min
 logical :: hit
 
-if (occupancy(site2(1),site2(2),site2(3))%indx(1) == OUTSIDE_TAG) then
-    call logger('site2 is OUTSIDE')
+if (occupancy(site2(1),site2(2),site2(3))%indx(1) <= OUTSIDE_TAG) then
+    call logger('site2 is OUTSIDE or UNREACHABLE')
     stop
 endif
 if (occupancy(site2(1),site2(2),site2(3))%indx(1) == 0) then
@@ -900,12 +966,12 @@ do
 		v = site + jump
 		if (v(1)==site0(1) .and. v(2)==site0(2) .and. v(3)==site0(3)) cycle
 !		if (occupancy(v(1),v(2),v(3))%indx(1) == OUTSIDE_TAG) then
-		if (occupancy(v(1),v(2),v(3))%indx(1) <= 0) then	! outside or vacant - we'll use this!
+		indx = occupancy(v(1),v(2),v(3))%indx(1)
+		if (indx == 0 .or. indx == OUTSIDE_TAG) then	! outside or vacant - we'll use this!
 			site2 = site
 			hit = .true.
 			exit
 		endif
-!		if (occupancy(v(1),v(2),v(3))%indx(1) < -100) cycle		! necrotic
 		v = site2 - v
 		d2 = v(1)*v(1) + v(2)*v(2) + v(3)*v(3)
 		if (dbug) write(*,'(8i6,2f6.1)') k,j,site+jump,v,d2,d2min
@@ -1059,6 +1125,25 @@ enddo
 write(*,'(a,2(f7.1,3i4,2x))') 'rmin, rmax: ',rmin,minv,rmax,maxv
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine CheckUnreachable
+integer :: kcell, site(3), indx(2)
+
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	site = cell_list(kcell)%site
+	indx = occupancy(site(1),site(2),site(3))%indx
+	if (indx(1) == UNREACHABLE_TAG .or. indx(1) == OUTSIDE_TAG) then
+		write(*,'(a,6i6)') 'CheckUnreachable: bad indx: ',kcell,Ncells,site,indx(1)
+		stop
+	endif
+	if (site(3) < zmin) then	
+		write(*,'(a,6i6)') 'CheckUnreachable: bad z: ',kcell,Ncells,site,indx(1)
+		stop
+	endif
+enddo
+end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! The location site0 is just outside the blob.

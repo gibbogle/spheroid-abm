@@ -107,6 +107,8 @@ end function
 ! at more points.
 !
 ! Note that now %coef(:,:) is not used.  Only %icoef(:,:) is needed.
+! With dropping, need to account for boundary at zmin-1, the surface that the blob
+! is sitting on.  
 !----------------------------------------------------------------------------------
 subroutine SetupODEDiff
 integer :: x, y, z, i, site(3), ifdc, ichemo, k, nc, nin, nex, kcell, ki, ie	!, isite
@@ -146,7 +148,10 @@ endif
 !	allocate(ODEdiff%extra_isite(MAX_VARS))
 !endif
 
-ODEdiff%ivar = 0
+
+! Now %ivar = variable index, OUTSIDE_TAG, or UNREACHABLE_TAG
+
+!ODEdiff%ivar = OUTSIDE_TAG
 i = 0
 !isite = 0
 nex = 0
@@ -155,7 +160,7 @@ do x = 1,NX
 	do y = 1,NY
 		do z = 1,NZ
 		    kcell = occupancy(x,y,z)%indx(1)
-			if (kcell /= OUTSIDE_TAG) then
+			if (kcell > OUTSIDE_TAG) then
 				i = i + 1
 !				isite = isite + 1
 				nex = nex + 1
@@ -178,6 +183,8 @@ do x = 1,NX
 	!					write(nflog,*)kcell,'I ',ODEdiff%varsite(i,:),i
 	    			endif
 	    		endif
+	    	else
+	    		ODEdiff%ivar(x,y,z) = kcell
 			endif
 		enddo
 	enddo
@@ -199,16 +206,98 @@ do i = 1,ODEdiff%nvars
 	endif
 enddo
 		
-
-!if (allocated(ODEdiff%icoef)) then
-!	deallocate(ODEdiff%icoef)
-!endif
-!allocate(ODEdiff%icoef(ODEdiff%nextra,7))
-!do ichemo = 1,MAX_CHEMO
-!	if (.not.chemo(ichemo)%used) cycle
-!	if (allocated(chemo(ichemo)%coef)) deallocate(chemo(ichemo)%coef)
-!	allocate(chemo(ichemo)%coef(ODEdiff%nextra,7))
+!ierr = 0
+!do i = 1,ODEdiff%nvars
+!    if (ODEdiff%vartype(i) == INTRA) cycle
+!	site = ODEdiff%varsite(i,:)
+!	x = site(1)
+!	y = site(2)
+!	z = site(3)
+!	ODEdiff%icoef(i,:) = OUTSIDE_TAG
+!	ODEdiff%icoef(i,1) = i
+!
+!	left = .true.
+!	right = .true.
+!	if (x==1) then
+!		ierr = 1
+!		exit
+!	elseif (ODEdiff%ivar(x-1,y,z) < 0) then
+!		left = .false.
+!	endif
+!	if (x==NX) then
+!		ierr = 2
+!		exit
+!	elseif (ODEdiff%ivar(x+1,y,z) < 0) then
+!		right = .false.
+!	endif
+!	if (left) then
+!		ODEdiff%icoef(i,2) = ODEdiff%ivar(x-1,y,z)
+!	endif
+!	if (right) then
+!		ODEdiff%icoef(i,3) = ODEdiff%ivar(x+1,y,z)
+!	endif
+!	
+!	left = .true.
+!	right = .true.
+!	if (y==1) then
+!		ierr = 3
+!		exit
+!	elseif (ODEdiff%ivar(x,y-1,z) < 0) then
+!		left = .false.
+!	endif
+!	if (y==NY) then
+!		ierr = 4
+!		exit
+!	elseif (ODEdiff%ivar(x,y+1,z) < 0) then
+!		right = .false.
+!	endif
+!	if (left) then
+!		ODEdiff%icoef(i,4) = ODEdiff%ivar(x,y-1,z)
+!	endif
+!	if (right) then
+!		ODEdiff%icoef(i,5) = ODEdiff%ivar(x,y+1,z)
+!	endif
+!	left = .true.
+!	right = .true.
+!	if (z==1) then
+!		ierr = 5
+!		exit
+!	elseif (ODEdiff%ivar(x,y,z-1) < 0) then
+!		left = .false.
+!	endif
+!	if (z==NZ) then
+!		ierr = 6
+!		exit
+!	elseif (ODEdiff%ivar(x,y,z+1) < 0) then
+!		right = .false.
+!	endif
+!	if (left) then
+!		ODEdiff%icoef(i,6) = ODEdiff%ivar(x,y,z-1)
+!	endif
+!	if (right) then
+!		ODEdiff%icoef(i,7) = ODEdiff%ivar(x,y,z+1)
+!	endif
+!	! Set up iexcoef(:,:)
+!	kextra = exmap(i)
+!	do j = 1,7
+!		if (ODEdiff%icoef(i,j) > 0) then
+!			k = exmap(ODEdiff%icoef(i,j))
+!		else
+!			k = 0
+!		endif
+!		ODEdiff%iexcoef(kextra,j) = k
+!	enddo
 !enddo
+!if (ierr /= 0) then
+!	write(logmsg,*) 'Error: SetupODEDiff: lattice boundary reached: ierr: ',ierr
+!	call logger(logmsg)
+!	stop
+!endif
+
+! New method
+! We need to account for the two types of boundary: 
+!	OUTSIDE_TAG = medium
+!	UNREACHABLE_TAG = wall
 
 ierr = 0
 do i = 1,ODEdiff%nvars
@@ -217,85 +306,39 @@ do i = 1,ODEdiff%nvars
 	x = site(1)
 	y = site(2)
 	z = site(3)
-	ODEdiff%icoef(i,:) = 0
 	ODEdiff%icoef(i,1) = i
 
-	left = .true.
-	right = .true.
 	if (x==1) then
-		ierr = 1
-		exit
-	elseif (ODEdiff%ivar(x-1,y,z) == 0) then
-		left = .false.
-	endif
-	if (x==NX) then
-		ierr = 2
-		exit
-	elseif (ODEdiff%ivar(x+1,y,z) == 0) then
-		right = .false.
-	endif
-	if (left) then
+		ODEdiff%icoef(i,2) = UNREACHABLE_TAG
+	else
 		ODEdiff%icoef(i,2) = ODEdiff%ivar(x-1,y,z)
 	endif
-	if (right) then
+	if (x==NX) then
+		ODEdiff%icoef(i,3) = UNREACHABLE_TAG
+	else
 		ODEdiff%icoef(i,3) = ODEdiff%ivar(x+1,y,z)
 	endif
-	left = .true.
-	right = .true.
 	if (y==1) then
-		ierr = 3
-		exit
-	elseif (ODEdiff%ivar(x,y-1,z) == 0) then
-		left = .false.
-	endif
-	if (y==NY) then
-		ierr = 4
-		exit
-	elseif (ODEdiff%ivar(x,y+1,z) == 0) then
-		right = .false.
-	endif
-	if (left) then
+		ODEdiff%icoef(i,4) = UNREACHABLE_TAG
+	else
 		ODEdiff%icoef(i,4) = ODEdiff%ivar(x,y-1,z)
 	endif
-	if (right) then
+	if (y==NY) then
+		ODEdiff%icoef(i,5) = UNREACHABLE_TAG
+	else
 		ODEdiff%icoef(i,5) = ODEdiff%ivar(x,y+1,z)
 	endif
-	left = .true.
-	right = .true.
 	if (z==1) then
-		ierr = 5
-		exit
-	elseif (ODEdiff%ivar(x,y,z-1) == 0) then
-		left = .false.
-	endif
-	if (z==NZ) then
-		ierr = 6
-		exit
-	elseif (ODEdiff%ivar(x,y,z+1) == 0) then
-		right = .false.
-	endif
-	if (left) then
+		ODEdiff%icoef(i,6) = UNREACHABLE_TAG
+	else
 		ODEdiff%icoef(i,6) = ODEdiff%ivar(x,y,z-1)
 	endif
-	if (right) then
+	if (z==NZ) then
+		ODEdiff%icoef(i,7) = UNREACHABLE_TAG
+	else
 		ODEdiff%icoef(i,7) = ODEdiff%ivar(x,y,z+1)
 	endif
-	! Set up iexcoef(:,:)
-	kextra = exmap(i)
-	do j = 1,7
-		if (ODEdiff%icoef(i,j) > 0) then
-			k = exmap(ODEdiff%icoef(i,j))
-		else
-			k = 0
-		endif
-		ODEdiff%iexcoef(kextra,j) = k
-	enddo
 enddo
-if (ierr /= 0) then
-	write(logmsg,*) 'Error: SetupODEDiff: lattice boundary reached: ierr: ',ierr
-	call logger(logmsg)
-	stop
-endif
 
 nchemo = 0
 do ichemo = 1,MAX_CHEMO
@@ -359,121 +402,6 @@ endif
 !call logger(logmsg)
 end subroutine
 
-!----------------------------------------------------------------------------------
-! A cell has moved to site(:), which was previously exterior (boundary), and the
-! variable-site mappings need to be updated, together with %icoef(:,:)
-! The relevant neighbours are at x +/- 1, y +/- 1, z +/- 1
-! %nextra is incremented, and allstate(nextra,:) is initialized.
-!----------------------------------------------------------------------------------
-subroutine ExtendODEDiff(site)
-integer :: site(3)
-integer :: x, y, z, x1, x2, y1, y2, z1, z2, n, kv, nb, ichemo
-real(REAL_KIND) :: csum(MAX_CHEMO)
-
-x = site(1)
-y = site(2)
-z = site(3)
-n = ODEdiff%nextra + 1
-if (n > MAX_VARS) then
-	write(logmsg,*) 'Error: ExtendODEdiff: Too many variables: n > MAX_VARS: ',MAX_VARS
-	call logger(logmsg)
-	write(logmsg,*) 'Increase MAX_VARS and rebuild spheroid.DLL'
-	call logger(logmsg)
-	stop
-endif
-ODEdiff%ivar(x,y,z) = n
-ODEdiff%varsite(n,:) = site
-ODEdiff%nextra = n
-ODEdiff%icoef(n,:) = 0
-ODEdiff%icoef(n,1) = n
-! See which neighbours of site are interior, and require to have
-! %icoef = 0 replaced by %icoef = n
-nb = 0
-csum = 0
-x2 = x+1
-kv = ODEdiff%ivar(x2,y,z)
-if (kv > 0) then
-	if (ODEdiff%icoef(kv,2) /= 0) then
-		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,2): ',ODEdiff%icoef(kv,2)
-		call logger(logmsg)
-		stop
-	endif
-	ODEdiff%icoef(kv,2) = n
-	ODEdiff%icoef(n,3) = kv
-	nb = nb+1
-	csum = csum + allstate(kv,:)
-endif
-x1 = x-1
-kv = ODEdiff%ivar(x1,y,z)
-if (kv > 0) then
-	if (ODEdiff%icoef(kv,3) /= 0) then
-		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,3): ',ODEdiff%icoef(kv,3)
-		call logger(logmsg)
-		stop
-	endif
-	ODEdiff%icoef(kv,3) = n
-	ODEdiff%icoef(n,2) = kv
-	nb = nb+1
-	csum = csum + allstate(kv,:)
-endif
-y2 = y+1
-kv = ODEdiff%ivar(x,y2,z)
-if (kv > 0) then
-	if (ODEdiff%icoef(kv,4) /= 0) then
-		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,4): ',ODEdiff%icoef(kv,4)
-		call logger(logmsg)
-		stop
-	endif
-	ODEdiff%icoef(kv,4) = n
-	ODEdiff%icoef(n,5) = kv
-	nb = nb+1
-	csum = csum + allstate(kv,:)
-endif
-y1 = y-1
-kv = ODEdiff%ivar(x,y1,z)
-if (kv > 0) then
-	if (ODEdiff%icoef(kv,5) /= 0) then
-		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,5): ',ODEdiff%icoef(kv,5)
-		call logger(logmsg)
-		stop
-	endif
-	ODEdiff%icoef(kv,5) = n
-	ODEdiff%icoef(n,4) = kv
-	nb = nb+1
-	csum = csum + allstate(kv,:)
-endif
-z2 = z+1
-kv = ODEdiff%ivar(x,y,z2)
-if (kv > 0) then
-	if (ODEdiff%icoef(kv,6) /= 0) then
-		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,6): ',ODEdiff%icoef(kv,6)
-		call logger(logmsg)
-		stop
-	endif
-	ODEdiff%icoef(kv,6) = n
-	ODEdiff%icoef(n,7) = kv
-	nb = nb+1
-	csum = csum + allstate(kv,:)
-endif
-z1 = z-1
-kv = ODEdiff%ivar(x,y,z1)
-if (kv > 0) then
-	if (ODEdiff%icoef(kv,7) /= 0) then
-		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,7): ',ODEdiff%icoef(kv,7)
-		call logger(logmsg)
-		stop
-	endif
-	ODEdiff%icoef(kv,7) = n
-	ODEdiff%icoef(n,6) = kv
-	nb = nb+1
-	csum = csum + allstate(kv,:)
-endif
-
-do ichemo = 1,MAX_CHEMO
-    csum(ichemo) = csum(ichemo) + (6-nb)*BdryConc(ichemo,t_simulation)
-enddo
-allstate(n,:) = csum/6
-end subroutine
 
 !----------------------------------------------------------------------------------
 ! Interpolate site and cell concentrations on cell division
@@ -632,8 +560,10 @@ do i = 1,neqn
 		    else
 			    dCdiff = dc1
 		    endif
-		    if (kv == 0) then
+		    if (kv == OUTSIDE_TAG) then
 			    val = cbnd
+		    elseif (kv == UNREACHABLE_TAG) then
+				val = y(ODEdiff%icoef(i,1))		! reflect concentration --> no flux
 		    else
 			    val = y(kv)
 		    endif
@@ -931,8 +861,8 @@ do ie = 1,nvar
     ia = all_index(ie)
     do k = 1,6
         ja = ODEdiff%icoef(ia,k+1)
-        if (ja == 0) then
-            je = 0
+        if (ja < 0) then
+            je = ja
         else
             je = extra_index(ja)
         endif
@@ -962,8 +892,10 @@ do k_under = 1,n_under
 	        Csum = 0
 	        do k = 1,6
 		        je = icoef(ie,k)
-		        if (je == 0) then
+		        if (je == OUTSIDE_TAG) then
 			        val = cbnd
+		        elseif (je == UNREACHABLE_TAG) then
+					val = ydiff(ie)
 		        else
 			        val = ydiff(je)
 		        endif
@@ -1121,8 +1053,8 @@ do ie = 1,nexvar
     ia = all_index(ie)
     do k = 1,6
         ja = ODEdiff%icoef(ia,k+1)
-        if (ja == 0) then
-            je = 0
+        if (ja < 0) then
+            je = ja
         else
             je = extra_index(ja)
         endif
@@ -1244,8 +1176,10 @@ do ie = ie1,ie2
     Csum = 0
     do k = 1,6
         je = icoef(ie,k)
-        if (je == 0) then
+        if (je == OUTSIDE_TAG) then
 	        val = cbnd
+        elseif (je == UNREACHABLE_TAG) then
+			val = ydiff(ie)
         else
 	        val = ydiff(je)
         endif
@@ -1473,14 +1407,14 @@ do i = 1,ntvars
 	if (ODEdiff%vartype(i) /= EXTRA) cycle
 	bnd = .false.
 	do k = 1,7
-		if (ODEdiff%icoef(i,k) == 0) then
+		if (ODEdiff%icoef(i,k) < 0) then
 			bnd = .true.
 			exit
 		endif
 	enddo
 	if (.not.bnd) cycle
 	do k = 1,7
-		if (ODEdiff%icoef(i,k) == 0) then	! boundary with medium ????????????????????????????????????????????????????????????????????
+		if (ODEdiff%icoef(i,k) < 0) then	! boundary with medium ????????????????????????????????????????????????????????????????????
 			Nbnd = Nbnd + 1
 			do ichemo = 1,MAX_CHEMO
 				if (.not.chemo(ichemo)%used) cycle
@@ -1547,7 +1481,7 @@ do i = 1,ntvars
 	if (ODEdiff%vartype(i) /= EXTRA) cycle
 	bnd = .false.
 	do k = 1,7
-		if (ODEdiff%icoef(i,k) == 0) then
+		if (ODEdiff%icoef(i,k) < 0) then
 			bnd = .true.
 			exit
 		endif
@@ -2293,6 +2227,122 @@ if (icase == -1) then
 endif
 end subroutine
 
+!----------------------------------------------------------------------------------
+! A cell has moved to site(:), which was previously exterior (boundary), and the
+! variable-site mappings need to be updated, together with %icoef(:,:)
+! The relevant neighbours are at x +/- 1, y +/- 1, z +/- 1
+! %nextra is incremented, and allstate(nextra,:) is initialized.
+! NOT USED
+!----------------------------------------------------------------------------------
+subroutine ExtendODEDiff(site)
+integer :: site(3)
+integer :: x, y, z, x1, x2, y1, y2, z1, z2, n, kv, nb, ichemo
+real(REAL_KIND) :: csum(MAX_CHEMO)
+
+x = site(1)
+y = site(2)
+z = site(3)
+n = ODEdiff%nextra + 1
+if (n > MAX_VARS) then
+	write(logmsg,*) 'Error: ExtendODEdiff: Too many variables: n > MAX_VARS: ',MAX_VARS
+	call logger(logmsg)
+	write(logmsg,*) 'Increase MAX_VARS and rebuild spheroid.DLL'
+	call logger(logmsg)
+	stop
+endif
+ODEdiff%ivar(x,y,z) = n
+ODEdiff%varsite(n,:) = site
+ODEdiff%nextra = n
+ODEdiff%icoef(n,:) = 0
+ODEdiff%icoef(n,1) = n
+! See which neighbours of site are interior, and require to have
+! %icoef = 0 replaced by %icoef = n
+nb = 0
+csum = 0
+x2 = x+1
+kv = ODEdiff%ivar(x2,y,z)
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,2) /= 0) then
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,2): ',ODEdiff%icoef(kv,2)
+		call logger(logmsg)
+		stop
+	endif
+	ODEdiff%icoef(kv,2) = n
+	ODEdiff%icoef(n,3) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+x1 = x-1
+kv = ODEdiff%ivar(x1,y,z)
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,3) /= 0) then
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,3): ',ODEdiff%icoef(kv,3)
+		call logger(logmsg)
+		stop
+	endif
+	ODEdiff%icoef(kv,3) = n
+	ODEdiff%icoef(n,2) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+y2 = y+1
+kv = ODEdiff%ivar(x,y2,z)
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,4) /= 0) then
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,4): ',ODEdiff%icoef(kv,4)
+		call logger(logmsg)
+		stop
+	endif
+	ODEdiff%icoef(kv,4) = n
+	ODEdiff%icoef(n,5) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+y1 = y-1
+kv = ODEdiff%ivar(x,y1,z)
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,5) /= 0) then
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,5): ',ODEdiff%icoef(kv,5)
+		call logger(logmsg)
+		stop
+	endif
+	ODEdiff%icoef(kv,5) = n
+	ODEdiff%icoef(n,4) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+z2 = z+1
+kv = ODEdiff%ivar(x,y,z2)
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,6) /= 0) then
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,6): ',ODEdiff%icoef(kv,6)
+		call logger(logmsg)
+		stop
+	endif
+	ODEdiff%icoef(kv,6) = n
+	ODEdiff%icoef(n,7) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+z1 = z-1
+kv = ODEdiff%ivar(x,y,z1)
+if (kv > 0) then
+	if (ODEdiff%icoef(kv,7) /= 0) then
+		write(logmsg,*) 'Error: ExtendODEDiff: icoef(kv,7): ',ODEdiff%icoef(kv,7)
+		call logger(logmsg)
+		stop
+	endif
+	ODEdiff%icoef(kv,7) = n
+	ODEdiff%icoef(n,6) = kv
+	nb = nb+1
+	csum = csum + allstate(kv,:)
+endif
+
+do ichemo = 1,MAX_CHEMO
+    csum(ichemo) = csum(ichemo) + (6-nb)*BdryConc(ichemo,t_simulation)
+enddo
+allstate(n,:) = csum/6
+end subroutine
 
 end module
 

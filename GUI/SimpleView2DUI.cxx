@@ -428,7 +428,7 @@ void SimpleView2D::CreateGradientData(vtkSmartPointer<vtkStructuredGrid> sgrid_a
     for (ichemo=0; ichemo<max_chemo; ichemo++) {
         sgrid_array[ichemo]->SetDimensions(dims);
     }
-  get_gradient2d_info(chemo_simulated, &nsites, &axis, &fraction);
+//  get_gradient2d_info(chemo_simulated, &nsites, &axis, &fraction);
   nchemo_used = 0;
   for (ichemo=0; ichemo<max_chemo; ichemo++) {
       if (chemo_simulated[ichemo] == 1) {
@@ -443,7 +443,7 @@ void SimpleView2D::CreateGradientData(vtkSmartPointer<vtkStructuredGrid> sgrid_a
   sprintf(msg,"nchem_used: %d nsites: %d ndata: %d",nchemo_used,nsites,ndata);
   LOG_MSG(msg);
   gradient_array = (float *)malloc(ndata*sizeof(float));
-  get_gradients2d(chemo_simulated, &nsites, gradient_array, &axis, &fraction, &use_strength);
+//  get_gradients2d(chemo_simulated, &nsites, gradient_array, &axis, &fraction, &use_strength);
 
   vtkSmartPointer<vtkFloatArray> vectors;
   vtkSmartPointer<vtkPoints> points;

@@ -24,6 +24,7 @@ integer, parameter :: QUIESCENT = 2
 integer, parameter :: DEAD      = 3
 
 integer, parameter :: OUTSIDE_TAG  = -1
+integer, parameter :: UNREACHABLE_TAG  = -2
 
 integer, parameter :: DIVIDE_ALWAYS_PUSH  = 1
 integer, parameter :: DIVIDE_USE_CLEAR_SITE  = 2
@@ -151,8 +152,14 @@ integer :: NX, NY, NZ
 integer :: initial_count
 integer, allocatable :: zdomain(:),zoffset(:)
 integer :: blobrange(3,2)
-real(REAL_KIND) :: x0,y0,z0   ! centre in global coordinates (units = grids)
-real(REAL_KIND) :: blob_radius, Radius, Centre(3)
+real(REAL_KIND) :: Radius, Centre(3)		! sphere radius and centre
+real(REAL_KIND) :: x0,y0,z0					! sphere centre in global coordinates (units = grids)
+
+real(REAL_KIND) :: alpha_shape, beta_shape	! squashed sphere shape parameters
+real(REAL_KIND) :: adrop, bdrop, cdrop		! drop shape transformation parameters
+integer :: zmin								! drop lower bound at drop time = lower limit of blob thereafter
+logical :: is_squashed
+
 integer :: jumpvec(3,27)
 
 integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes
@@ -265,10 +272,15 @@ enddo
 end subroutine
 
 !---------------------------------------------------------------------
+! This calculates the radius of the equivalent sphere.
 !---------------------------------------------------------------------
 subroutine SetRadius(N)
 integer :: N
 Radius = (3.0*N/(4.0*PI))**(1./3.)
+if (is_squashed) then
+	z0 = zmin + (bdrop-cdrop)*Radius
+	Centre(3) = z0
+endif
 end subroutine
 
 !---------------------------------------------------------------------

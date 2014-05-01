@@ -1,9 +1,11 @@
 module spheroid_mod
 use global
 use boundary
-use fields
+use chemokine
 use cellstate
 use winsock  
+use deform
+use drop
 
 IMPLICIT NONE
 
@@ -59,6 +61,11 @@ call logger('did ArrayInitialisation')
 
 call SetupChemo
 
+is_squashed = .false.
+adrop = 1
+bdrop = 1
+cdrop = 0
+zmin = 1
 call PlaceCells(ok)
 call SetRadius(Nsites)
 write(logmsg,*) 'did PlaceCells: Ncells: ',Ncells,Radius
@@ -104,7 +111,11 @@ istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
-!call check_Coxygen
+! Testing
+alpha_shape = 0.5
+beta_shape = 0.3
+call squasher
+call dropper
 
 end subroutine
 
@@ -293,9 +304,6 @@ x0 = (NX + 1.0)/2.        ! global value
 y0 = (NY + 1.0)/2.
 z0 = (NZ + 1.0)/2.
 Centre = (/x0,y0,z0/)   ! now, actually the global centre (units = grids)
-!Radius = blob_radius    ! starting value
-!nc0 = (4./3.)*PI*Radius**3
-!max_nlist = 200*nc0
 call SetRadius(initial_count)
 write(logmsg,*) 'Initial radius, nc0, max_nlist: ',Radius, initial_count, max_nlist
 call logger(logmsg)
@@ -347,7 +355,7 @@ chemo(:)%used = .false.
 
 open(nfcell,file=inputfile,status='old')
 
-read(nfcell,*) NX							! rule of thumb: about 4*BLOB_RADIUS
+read(nfcell,*) NX							! size of grid
 read(nfcell,*) initial_count				! initial number of tumour cells
 read(nfcell,*) divide_time_median
 read(nfcell,*) divide_time_shape
@@ -505,7 +513,6 @@ chemo(GLUCOSE)%used = (iuse_glucose == 1)
 chemo(TRACER)%used = (iuse_tracer == 1)
 chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%MM_C0/1000		! uM -> mM
 chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%MM_C0/1000	! uM -> mM
-!blob_radius = (initial_count*3./(4.*PI))**(1./3)	! units = grids
 divide_dist%class = LOGNORMAL_DIST
 divide_time_median = 60*60*divide_time_median		! hours -> seconds
 sigma = log(divide_time_shape)
@@ -975,10 +982,8 @@ integer :: kcell, site(3), hour, nthour, kpar=0
 real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo, i
-logical :: ok
+logical :: ok = .true.
 
-!call compute_Cex_Cin
-!stop
 !call logger('simulate_step')
 if (Ncells == 0) then
     res = 2
@@ -989,11 +994,17 @@ dt = DELTA_T/NT_CONC
 !if (istep == 0) then
 !    call SetupODEdiff
 !endif
+		
+!call CheckBdryList('simulate_step')
+
 if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
 	call logger(logmsg)
 	if (bdry_changed) then
 		call UpdateBdrylist
+	endif
+	if (mod(istep,6*nthour) == 0) then
+		call CheckBdryList('simulate_step')
 	endif
 !	write(logmsg,'(a,2e12.3,i6)') 'Oxygen U, Cbnd, Nbnd: ', chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd, Nbnd
 !	call logger(logmsg)
@@ -1007,7 +1018,7 @@ if (use_treatment) then
 		call logger(logmsg)
 	endif
 endif
-call GrowCells(radiation_dose,DELTA_T,ok)
+if (istep < 3) call GrowCells(radiation_dose,DELTA_T,ok)
 if (.not.ok) then
 	res = 3
 	return
@@ -1042,7 +1053,6 @@ if (mod(istep,60) == -1) then
 	hour = istep/60
 	write(logmsg,'(3i6,2f6.1)') istep, hour, Ncells, Radius, rmax
 	call logger(logmsg)
-	call CheckBdryList
 !	call ShowConcs
 	call check_bdry
 endif
@@ -1328,8 +1338,8 @@ do ichemo = 1,MAX_CHEMO
     endif
 enddo
 cused(MAX_CHEMO+1) = 1		! Growth rate
-rng(:,1) = Centre(:) - (Radius + 2)
-rng(:,2) = Centre(:) + (Radius + 2)
+rng(:,1) = Centre(:) - (adrop*Radius + 2)
+rng(:,2) = Centre(:) + (adrop*Radius + 2)
 rng(axis,:) = Centre(axis) + fraction*Radius
 !write(logmsg,*) 'Centre, Radius, axis, fraction: ',Centre, Radius, axis, fraction
 !call logger(logmsg)
@@ -1340,7 +1350,7 @@ do z = rng(3,1),rng(3,2)
     do y = rng(2,1),rng(2,2)
         do x = rng(1,1),rng(1,2)
             kcell = occupancy(x,y,z)%indx(1)
-            if (kcell == OUTSIDE_TAG) cycle
+            if (kcell <= OUTSIDE_TAG) cycle
             ns = ns + 1
         enddo
     enddo
@@ -1370,15 +1380,15 @@ if (nc > MAX_CHEMO) then
 	res = 1
 	return
 endif
-rng(:,1) = Centre(:) - (Radius + 2)
-rng(:,2) = Centre(:) + (Radius + 2)
+rng(:,1) = Centre(:) - (adrop*Radius + 2)
+rng(:,2) = Centre(:) + (adrop*Radius + 2)
 rng(axis,:) = Centre(axis) + fraction*Radius
 ns = 0
 do z = rng(3,1),rng(3,2)
     do y = rng(2,1),rng(2,2)
         do x = rng(1,1),rng(1,2)
             kcell = occupancy(x,y,z)%indx(1)
-            if (kcell == OUTSIDE_TAG) cycle
+            if (kcell <= OUTSIDE_TAG) cycle
 !            write(nflog,*) x,y,z,kcell
             ns = ns + 1
 	        i = ODEdiff%ivar(x,y,z)
@@ -1431,15 +1441,15 @@ integer rng(3,2), i, k, ichemo, kcell, x, y, z
 
 !call logger('get_concdata')
 dx = DELTA_X
-rng(:,1) = Centre(:) - (Radius + 2)
-rng(:,2) = Centre(:) + (Radius + 2)
+rng(:,1) = Centre(:) - (adrop*Radius + 2)
+rng(:,2) = Centre(:) + (adrop*Radius + 2)
 !rng(axis,:) = Centre(axis) + fraction*Radius
 y = Centre(2) + 0.5
 z = Centre(3) + 0.5
 ns = 1
 do x = rng(1,1),rng(1,2)
     kcell = occupancy(x,y,z)%indx(1)
-    if (kcell == OUTSIDE_TAG) cycle
+    if (kcell <= OUTSIDE_TAG) cycle
     ns = ns + 1
     do ichemo = 1,MAX_CHEMO+1
         i = ODEdiff%ivar(x,y,z)
