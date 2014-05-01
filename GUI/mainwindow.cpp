@@ -1853,8 +1853,9 @@ void MainWindow::showSummary(int hr)
     double val;
     int res;
 
-//    LOG_MSG("showSummary");
-	step++;
+//    sprintf(msg,"showSummary: step: %d",step);
+//    LOG_MSG(msg);
+    step++;
     if (step >= newR->nsteps) {
 		LOG_MSG("ERROR: step >= nsteps");
         stopServer();
@@ -1899,11 +1900,13 @@ void MainWindow::showSummary(int hr)
         pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
     }
     field->setSliceChanged();
-    field->displayField(hour,&res);
-    if (res != 0) {
-        sprintf(msg,"displayField returned res: %d",res);
-        LOG_MSG(msg);
-        stopServer();
+    if (step > 0) {
+        field->displayField(hour,&res);
+        if (res != 0) {
+            sprintf(msg,"displayField returned res: %d",res);
+            LOG_MSG(msg);
+            stopServer();
+        }
     }
     exthread->mutex1.unlock();
     exthread->summary_done.wakeOne();

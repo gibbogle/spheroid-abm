@@ -33,7 +33,7 @@ x = site(1)
 y = site(2)
 z = site(3)
 !if (occupancy(x,y,z)%indx(1) == OUTSIDE_TAG) then	! outside
-if (occupancy(x,y,z)%indx(1) <= 0) then	! outside or vacant
+if (occupancy(x,y,z)%indx(1) <= 0) then	! outside or unreachable or vacant
     isbdry = .false.
     return
 endif
@@ -75,6 +75,24 @@ do x = 1,NX
     enddo
 enddo
 bdry_changed = .false.
+end subroutine
+
+!----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+subroutine DestroyBdrylist
+integer :: x, y, z
+integer :: k, site(3)
+type (boundary_type), pointer :: bdry, next
+
+bdry => bdrylist
+do while ( associated ( bdry )) 
+    next => bdry%next
+    site = bdry%site
+    nullify(occupancy(site(1),site(2),site(3))%bdry)
+	nullify(bdry)
+	bdry => next
+enddo
+nullify(bdrylist)
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -148,6 +166,165 @@ call logger(logmsg)
 end subroutine
 
 
+!----------------------------------------------------------------------------------------
+! Check all sites in bdrylist to ensure that they are still on the bdry, and remove any 
+! that are not from bdrylist.
+! When a site is removed from the list its chemokine concs and gradients are replaced by
+! neighbourhood averages.
+!----------------------------------------------------------------------------------------
+subroutine FixBdrylist
+integer :: site(3), sitelist(1000,3), k, n
+type (boundary_type), pointer :: bdry
+
+n = 0
+bdry => bdrylist
+do while ( associated ( bdry )) 
+    site = bdry%site
+    if (.not.isbdry(site)) then
+        n = n+1
+        sitelist(n,:) = site
+    endif
+    bdry => bdry%next
+enddo
+do k = 1,n
+    site = sitelist(k,:)
+    call bdrylist_delete(site,bdrylist)
+    nullify(occupancy(site(1),site(2),site(3))%bdry)
+    if (bdrylist_present(site, bdrylist)) then
+        write(logmsg,*) 'Error: FixBdrylist: still in bdrylist: ',site
+		call logger(logmsg)
+        stop
+    endif
+!    call SetConcs(site)
+enddo
+end subroutine
+
+
+!-----------------------------------------------------------------------------------------
+! Choose an outside site or vacant site adjacent to site1
+!-----------------------------------------------------------------------------------------
+subroutine getoutsidesite(site1,site2)
+integer :: site1(3), site2(3)
+integer :: j, jmin, site(3), kcell
+real(REAL_KIND) :: r, rmin
+
+rmin = 1.0e10
+do j = 1,27
+	if (j == 14) cycle
+!	site = site1 + neumann(:,j)
+	site = site1 + jumpvec(:,j)
+!	if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) then
+!	if (occupancy(site(1),site(2),site(3))%indx(1) <= 0) then
+	kcell = occupancy(site(1),site(2),site(3))%indx(1)
+	if (kcell == 0 .or. kcell == OUTSIDE_TAG) then
+		r = cdistance(site)
+		if (r < rmin) then
+			rmin = r
+			jmin = j
+		endif
+	endif
+enddo
+!site2 = site1 + neumann(:,jmin)
+site2 = site1 + jumpvec(:,jmin)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Move any cells from site to allow the site to be released (made 'outside')
+!-----------------------------------------------------------------------------------------
+subroutine ClearSite(csite)
+integer :: csite(3)
+integer :: i, k, cindx(2), kcell, site(3), indx(2), r
+logical :: done
+
+cindx = occupancy(csite(1),csite(2),csite(3))%indx
+do i = 2,1,-1
+    kcell = cindx(i)
+    if (kcell == 0) cycle
+    r = 0
+    done = .false.
+    do while (.not.done)
+        r = r + 1
+        do k = 1,27
+            if (k == 14) cycle
+	        site = csite + r*jumpvec(:,k)
+	        if (outside_xyz(site(1),site(2),site(3))) cycle
+	        indx = occupancy(site(1),site(2),site(3))%indx
+            if (indx(1) <= OUTSIDE_TAG) cycle  ! outside or unreachable
+            if (indx(1) == 0) then  ! use this slot
+                occupancy(site(1),site(2),site(3))%indx(1) = kcell
+                cell_list(kcell)%site = site
+                done = .true.
+                exit
+            endif
+        enddo
+    enddo
+enddo           
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Check consistency between bdrylist and occupancy%bdry
+!-----------------------------------------------------------------------------------------
+subroutine CheckBdryList(infomsg)
+character*(*) :: infomsg
+type (boundary_type), pointer :: bdry => null(), ocbdry => null()
+integer :: x, y, z, site(3), dy, nb1, nb2, nbx, indx(2)
+
+write(logmsg,'(a,a,i6)') 'CheckBdryList: ',infomsg,istep
+call logger(logmsg)
+nb1 = 0
+nbx = 0
+bdry => bdrylist
+do while ( associated ( bdry )) 
+	nb1 = nb1 + 1
+!	if (bdry%exit_ok) nbx = nbx + 1
+    site = bdry%site
+    ocbdry => occupancy(site(1),site(2),site(3))%bdry
+    if (.not.associated(ocbdry,bdry)) then
+		write(logmsg,*) 'Error: CheckBdryList: inconsistent bdry pointers at site: ',site
+		call logger(logmsg)
+		stop
+	endif
+	indx = occupancy(site(1),site(2),site(3))%indx
+	if (indx(1) <= OUTSIDE_TAG) then
+		write(logmsg,*) 'Error: CheckBdryList: site is outside: ',site
+		call logger(logmsg)
+		stop
+	endif
+	if (.not.isbdry(site)) then
+		write(logmsg,*) 'Error: CheckBdryList: site in bdrylist is NOT bdry: ',site
+		call logger(logmsg)
+		stop
+	endif
+		
+    bdry => bdry%next
+enddo
+nb2 = 0
+do x = 1,NX
+	do y = 1,NY
+		do z = 1,NZ
+			bdry => occupancy(x,y,z)%bdry
+			if (associated(bdry)) then
+				nb2 = nb2 + 1
+				dy = y - Centre(2)
+			else
+				site = (/x,y,z/)
+				if (isbdry(site)) then
+					write(logmsg,*) 'Error: boundary site not in bdrylist: ',x,y,z
+					call logger(logmsg)
+					stop
+				endif
+			endif
+		enddo
+	enddo				
+enddo
+if (nb1 /= nb2) then
+	write(logmsg,*) 'Error: inconsistent boundary site counts: ',nb1,nb2
+	call logger(logmsg)
+	stop
+endif
+write(logmsg,*) 'bdrylist and occupancy%bdry are consistent: ',nb1,nbx
+call logger(logmsg)
+end subroutine
 
 !----------------------------------------------------------------------------------------
 ! A new site is to be added to the blob.  The site is chosen so as to maintain the
@@ -254,39 +431,6 @@ return
 end subroutine
 
 !----------------------------------------------------------------------------------------
-! Check all sites in bdrylist to ensure that they are still on the bdry, and remove any 
-! that are not from bdrylist.
-! When a site is removed from the list its chemokine concs and gradients are replaced by
-! neighbourhood averages.
-!----------------------------------------------------------------------------------------
-subroutine FixBdrylist
-integer :: site(3), sitelist(1000,3), k, n
-type (boundary_type), pointer :: bdry
-
-n = 0
-bdry => bdrylist
-do while ( associated ( bdry )) 
-    site = bdry%site
-    if (.not.isbdry(site)) then
-        n = n+1
-        sitelist(n,:) = site
-    endif
-    bdry => bdry%next
-enddo
-do k = 1,n
-    site = sitelist(k,:)
-    call bdrylist_delete(site,bdrylist)
-    nullify(occupancy(site(1),site(2),site(3))%bdry)
-    if (bdrylist_present(site, bdrylist)) then
-        write(logmsg,*) 'Error: FixBdrylist: still in bdrylist: ',site
-		call logger(logmsg)
-        stop
-    endif
-!    call SetConcs(site)
-enddo
-end subroutine
-
-!----------------------------------------------------------------------------------------
 ! The logic is similar to AddSite.  We look for the bdry site P which is most outside
 ! the ellipsoid, i.e. to minimise OQ-OP, where Q is the point at
 ! which the line through OP intersects the ellipsoid surface.  We then choose the 'inside'
@@ -336,7 +480,7 @@ dmax = -1.0e10
 kmax = 0
 do k = 1,27
 	site = psite + jumpvec(:,k)
-    if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) cycle   ! outside
+    if (occupancy(site(1),site(2),site(3))%indx(1) <= OUTSIDE_TAG) cycle   ! outside or unreachable
     r = site - Centre
     x2 = r(1)**2
     y2 = r(2)**2
@@ -367,7 +511,7 @@ if (associated(occupancy(site(1),site(2),site(3))%bdry)) then   ! remove it from
     psite = site
     do k = 1,27
 	    site = psite + jumpvec(:,k)
-        if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) cycle   ! outside
+        if (occupancy(site(1),site(2),site(3))%indx(1) <= OUTSIDE_TAG) cycle   ! outside or unreachable
         if (associated(occupancy(site(1),site(2),site(3))%bdry)) cycle   ! bdry
         if (isbdry(site)) then
             allocate(bdry)
@@ -415,71 +559,6 @@ enddo
 ok = .true.
 end subroutine
 
-!-----------------------------------------------------------------------------------------
-! Choose an outside site or vacant site adjacent to site1
-!-----------------------------------------------------------------------------------------
-subroutine getoutsidesite(site1,site2)
-integer :: site1(3), site2(3)
-integer :: j, jmin, site(3)
-real(REAL_KIND) :: r, rmin
-
-rmin = 1.0e10
-do j = 1,27
-	if (j == 14) cycle
-!	site = site1 + neumann(:,j)
-	site = site1 + jumpvec(:,j)
-!	if (occupancy(site(1),site(2),site(3))%indx(1) == OUTSIDE_TAG) then
-	if (occupancy(site(1),site(2),site(3))%indx(1) <= 0) then
-		r = cdistance(site)
-		if (r < rmin) then
-			rmin = r
-			jmin = j
-		endif
-	endif
-enddo
-!site2 = site1 + neumann(:,jmin)
-site2 = site1 + jumpvec(:,jmin)
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! Move any cells from site to allow the site to be released (made 'outside')
-!-----------------------------------------------------------------------------------------
-subroutine ClearSite(csite)
-integer :: csite(3)
-integer :: i, k, cindx(2), kcell, site(3), indx(2), r
-logical :: done
-
-cindx = occupancy(csite(1),csite(2),csite(3))%indx
-do i = 2,1,-1
-    kcell = cindx(i)
-    if (kcell == 0) cycle
-    r = 0
-    done = .false.
-    do while (.not.done)
-        r = r + 1
-        do k = 1,27
-            if (k == 14) cycle
-	        site = csite + r*jumpvec(:,k)
-	        if (outside_xyz(site(1),site(2),site(3))) cycle
-	        indx = occupancy(site(1),site(2),site(3))%indx
-            if (indx(1) == OUTSIDE_TAG) cycle  ! outside
-            if (indx(1) == 0) then  ! use this slot
-                occupancy(site(1),site(2),site(3))%indx(1) = kcell
-                cell_list(kcell)%site = site
-                done = .true.
-                exit
-            elseif (indx(2) == 0) then  ! use this slot
-                occupancy(site(1),site(2),site(3))%indx(2) = kcell
-                cell_list(kcell)%site = site
-                occupancy(csite(1),csite(2),csite(3))%indx(i) = 0
-                done = .true.
-                exit
-            endif
-        enddo
-    enddo
-enddo           
-end subroutine
-
 !----------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------
 subroutine TestAddRemoveSites
@@ -500,66 +579,5 @@ enddo
 call CreateCheckList
 end subroutine
 
-!-----------------------------------------------------------------------------------------
-! Check consistency between bdrylist and occupancy%bdry
-!-----------------------------------------------------------------------------------------
-subroutine CheckBdryList
-type (boundary_type), pointer :: bdry => null(), ocbdry => null()
-integer :: x, y, z, site(3), dy, nb1, nb2, nbx, indx(2)
-
-nb1 = 0
-nbx = 0
-bdry => bdrylist
-do while ( associated ( bdry )) 
-	nb1 = nb1 + 1
-!	if (bdry%exit_ok) nbx = nbx + 1
-    site = bdry%site
-    ocbdry => occupancy(site(1),site(2),site(3))%bdry
-    if (.not.associated(ocbdry,bdry)) then
-		write(logmsg,*) 'Error: CheckBdryList: inconsistent bdry pointers at site: ',site
-		call logger(logmsg)
-		stop
-	endif
-	indx = occupancy(site(1),site(2),site(3))%indx
-	if (indx(1) == OUTSIDE_TAG) then
-		write(logmsg,*) 'Error: CheckBdryList: site is outside: ',site
-		call logger(logmsg)
-		stop
-	endif
-	if (.not.isbdry(site)) then
-		write(logmsg,*) 'Error: CheckBdryList: bdry site is NOT bdry: ',site
-		call logger(logmsg)
-		stop
-	endif
-		
-    bdry => bdry%next
-enddo
-nb2 = 0
-do x = 1,NX
-	do y = 1,NY
-		do z = 1,NZ
-			bdry => occupancy(x,y,z)%bdry
-			if (associated(bdry)) then
-				nb2 = nb2 + 1
-				dy = y - Centre(2)
-			else
-				site = (/x,y,z/)
-				if (isbdry(site)) then
-					write(logmsg,*) 'Error: boundary site not in list: ',x,y,z
-					call logger(logmsg)
-					stop
-				endif
-			endif
-		enddo
-	enddo				
-enddo
-if (nb1 /= nb2) then
-	write(logmsg,*) 'Error: inconsistent boundary site counts: ',nb1,nb2
-	call logger(logmsg)
-	stop
-endif
-write(logmsg,*) 'bdrylist and occupancy%bdry are consistent: ',nb1,nbx
-call logger(logmsg)
-end subroutine
 
 end module
