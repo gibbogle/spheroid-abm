@@ -523,9 +523,9 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 			j = random_int(1,nfree,0)
 			site01 = freesite(j,:)
 		endif
-		call AddCell(kcell0,kcell1,site01,ok)
+		call CloneCell(kcell0,kcell1,site01,ok)
 		if (.not.ok) then
-			call logger('Error: AddCell: vacant site')
+			call logger('Error: CloneCell: vacant site')
 		endif
 
 		Nreuse = Nreuse + 1
@@ -604,9 +604,9 @@ if (npath > 0) then
 	call PushPath(path,npath)
 !	call CheckBdryList('after PushPath')
 endif
-call AddCell(kcell0,kcell1,site01,ok)
+call CloneCell(kcell0,kcell1,site01,ok)
 if (.not.ok) then
-	call logger('Error: AddCell: pushed site')
+	call logger('Error: CloneCell: pushed site')
 	return
 endif
 !write(*,*) 'added cell at: ',site01
@@ -1046,14 +1046,14 @@ end subroutine
 ! The daughter cell kcell1 is given the same characteristics as kcell0 and placed at site1.
 ! Random variation is introduced into %divide_volume.
 !-----------------------------------------------------------------------------------------
-subroutine AddCell(kcell0,kcell1,site1,ok)
+subroutine CloneCell(kcell0,kcell1,site1,ok)
 integer :: kcell0, kcell1, site1(3)
 logical :: ok
 integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
 
 ok = .true.
-!write(*,*) 'AddCell'
+!write(*,*) 'CloneCell'
 tnow = istep*DELTA_T
 !lastID = lastID + 1
 nlist = nlist + 1
