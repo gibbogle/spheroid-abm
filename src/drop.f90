@@ -56,11 +56,13 @@ end function
 !--------------------------------------------------------------------------------
 ! (1) At (x,y) with r <= a.R.sin(theta0), the column of cells is dropped until
 ! the lowest cell is at z = zmin.
+! (2) At (x,y) with a.R.sin(theta0) < r < aR, drop the column to zbnd(x,y)
+! where zbnd = the lower boundary z for (x,y).  
 !--------------------------------------------------------------------------------
 subroutine dropper
-real(REAL_KIND) :: sintheta0, Rcontact, Rc2, r, r2, rb, cosa, sina
+real(REAL_KIND) :: sintheta0, Rcontact, Rc2, Ra2, r, r2, rb, cosa, sina, theta
 integer :: x, y, z, z1, z2, dz, kcell, zbmax, zmax, xv, yv, nv, npath, nvtot, nstot, newtot
-integer :: zb(NX,NY), noutside
+integer :: zlow, zb(NX,NY), noutside, incontact
 real(REAL_KIND) :: z0drop	! drop centre is at x0,y0,z0drop = zmin + (bdrop-cdrop)*R
 logical :: ok
 type(path_type) :: path(NX)
@@ -84,23 +86,36 @@ Centre(3) = z0
 sintheta0 = sqrt(1 - (1-cdrop/bdrop)**2)
 Rcontact = adrop*Radius*sintheta0
 Rc2 = Rcontact*Rcontact
+Ra2 = (adrop*Radius)**2
 write(*,*) 'z0drop,sintheta0,Rcontact: ',z0drop,sintheta0,Rcontact
 ! drop cells in contact disc
 zmax = 0
 do x = 1,NX
 	do y = 1,NY
-		do z = zmin+1,NZ
+		r2 = (x-x0)*(x-x0) + (y-y0)*(y-y0)
+!		if (r2 > Rc2) cycle							! outside the contact disc
+		if (r2 > Ra2) cycle
+		r = sqrt(r2)
+		if (r2 > Rc2) then
+			incontact = 0
+			! we need to find the desired lower boundary z=zlow at (x,y)
+			! r = a.R.sin(theta) ==> theta = asin(r/aR)
+			theta = asin(r/(adrop*Radius))
+			zlow = bdrop*Radius*(1-cos(theta)) + zmin - cdrop + 1
+		else
+			incontact = 1
+			zlow = zmin
+		endif
+		do z = zlow+1,NZ
 			if (occupancy(x,y,z)%indx(1) > 0) then
 				zmax = max(z,zmax)
 			endif
 		enddo
-		r2 = (x-x0)*(x-x0) + (y-y0)*(y-y0)
-		if (r2 > Rc2) cycle							! outside the contact disc
-		if (occupancy(x,y,zmin)%indx(1) > 0) cycle	! already in contact
+		if (occupancy(x,y,zlow)%indx(1) > 0) cycle	! already in contact
 !		write(*,*) x,y,r2,occupancy(x,y,zmin)%indx(1)
 		z1 = 0
 		z2 = 0
-		do z = zmin+1,NZ
+		do z = zlow+1,NZ
 			if (occupancy(x,y,z)%indx(1) > 0) then
 				if (z1 == 0) then
 					z1 = z
@@ -110,10 +125,13 @@ do x = 1,NX
 				exit
 			endif
 		enddo
-		if (z1 == 0) cycle
+		if (z1 <= 0) cycle
+!		if (incontact == 0) then
+!			write(*,'(6i4,f6.1)') x,y,incontact,zlow,z1,z2,r
+!		endif
 !		write(*,*) 'x,y,z1,z2: ',x,y,z1,z2
 		! cells span z1 <= z <= z2
-		dz = z1 - zmin
+		dz = z1 - zlow
 		do z = z1,z2
 			! move the cell at (x,y,z) to (x,y,z-dz)
 			kcell = occupancy(x,y,z)%indx(1)
@@ -188,10 +206,10 @@ enddo
 noutside = CountOutside()
 write(*,*) 'noutside, Ncells: ',noutside,Ncells
 
-if (.false.) then
+if (.true.) then
 ! move cells to the expanded radius
 do z = zmin+1,zmax
-	write(*,*) 'z: ',z
+!	write(*,*) 'z: ',z
 	usable = .true.		! initially set all sites as usable
 	do 
 		call GetNearestVacantSite(z,xv,yv,nv)

@@ -110,6 +110,7 @@ t_simulation = 0
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
+return
 
 ! Testing
 alpha_shape = 0.5
@@ -791,61 +792,25 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine PlaceCells(ok)
 logical :: ok
-integer :: x, y, z, k, site(3), ichemo, kpar=0
+integer :: x, y, z, kcell, site(3), ichemo
 real(REAL_KIND) :: r2lim,r2,rad(3)
-real(REAL_KIND) :: R, tpast, tdiv
 
 occupancy(:,:,:)%indx(1) = 0
 occupancy(:,:,:)%indx(2) = 0
-r2lim = Radius*Radius
+r2lim = 0.95*Radius*Radius
 lastID = 0
-k = 0
+kcell = 0
 do x = 1,NX
 	do y = 1,NY
 		do z = 1,NZ
 			rad = (/x-x0,y-y0,z-z0/)
 			r2 = dot_product(rad,rad)
 			if (r2 < r2lim) then
-				k = k+1
-				lastID = lastID + 1
+				kcell = kcell+1
 				site = (/x,y,z/)
-				cell_list(k)%ID = lastID
-				cell_list(k)%celltype = random_choice(celltype_fraction,Ncelltypes,kpar)
-				cell_list(k)%site = site
-				cell_list(k)%state = 1
-                cell_list(k)%drug_tag = .false.
-                cell_list(k)%radiation_tag = .false.
-                cell_list(k)%anoxia_tag = .false.
-				cell_list(k)%exists = .true.
-				cell_list(k)%active = .true.
-!				do
-!					R = par_uni(kpar)
-!					tpast = -R*divide_time_median
-!					tdiv = DivideTime()
-!					if (tdiv + tpast > 0) exit
-!				enddo
-!				cell_list(k)%divide_volume = Vdivide0
-				R = par_uni(kpar)
-				cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
-				R = par_uni(kpar)
-				if (randomise_initial_volume) then
-!					cell_list(k)%volume = Vdivide0*0.5*(1 + R)
-					cell_list(k)%volume = cell_list(k)%divide_volume*0.5*(1 + R)
-				else
-					cell_list(k)%volume = 1.0
-				endif
-!				write(nflog,'(i6,2f8.4)') k,R,cell_list(k)%volume
-				cell_list(k)%t_divide_last = 0		! not used
-!				cell_list(k)%t_divide_next = tdiv + tpast
-				cell_list(k)%t_hypoxic = 0
-				cell_list(k)%conc = 0
-				cell_list(k)%conc(OXYGEN) = chemo(OXYGEN)%bdry_conc
-				cell_list(k)%conc(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
-				cell_list(k)%conc(TRACER) = chemo(TRACER)%bdry_conc
-				cell_list(k)%M = 0
-				occupancy(x,y,z)%indx(1) = k
+				call AddCell(kcell,site)
 				if (x == NX/2 .and. y == NY/2 .and. z == NZ/2) then
-					idbug = k
+					idbug = kcell
 					write(nfout,*) 'Mid-blob cell: idbug: ',idbug, x,y,z
 				endif
 			else
@@ -854,22 +819,138 @@ do x = 1,NX
 		enddo
 	enddo
 enddo
+
+!write(*,*) 'Initial placement: ',kcell
+if (kcell > initial_count) then
+	write(logmsg,*) 'Cell count already exceeds specified number: ',kcell,initial_count
+	call logger(logmsg)
+	ok = .false.
+	return
+endif
+! Now add cells to make the count up to the specified initial_count
+if (kcell < initial_count) then
+	call AddBdryCells(kcell)
+	kcell = initial_count
+endif
+	
 do ichemo = 1,MAX_CHEMO
     occupancy(:,:,:)%C(ichemo) = 0
 enddo
 occupancy(:,:,:)%C(OXYGEN) = chemo(OXYGEN)%bdry_conc
 occupancy(:,:,:)%C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
 occupancy(:,:,:)%C(TRACER) = chemo(TRACER)%bdry_conc
-nlist = k
-Nsites = k
-Ncells = k
+nlist = kcell
+Nsites = kcell
+Ncells = kcell
 Ncells0 = Ncells
 Nreuse = 0	
 ok = .true.
-write(logmsg,*) 'idbug: ',idbug
-call logger(logmsg)
+!write(*,*) 'initial_count, Ncells: ',initial_count, Ncells
+!write(logmsg,*) 'idbug: ',idbug
+!call logger(logmsg)
 end subroutine
 
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine AddCell(k,site)
+integer :: k, site(3)
+integer :: kpar = 0
+real(REAL_KIND) :: R
+
+lastID = lastID + 1
+cell_list(k)%ID = lastID
+cell_list(k)%celltype = random_choice(celltype_fraction,Ncelltypes,kpar)
+cell_list(k)%site = site
+cell_list(k)%state = 1
+cell_list(k)%drug_tag = .false.
+cell_list(k)%radiation_tag = .false.
+cell_list(k)%anoxia_tag = .false.
+cell_list(k)%exists = .true.
+cell_list(k)%active = .true.
+R = par_uni(kpar)
+cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+R = par_uni(kpar)
+if (randomise_initial_volume) then
+	cell_list(k)%volume = cell_list(k)%divide_volume*0.5*(1 + R)
+else
+	cell_list(k)%volume = 1.0
+endif
+cell_list(k)%t_divide_last = 0		! not used
+cell_list(k)%t_hypoxic = 0
+cell_list(k)%conc = 0
+cell_list(k)%conc(OXYGEN) = chemo(OXYGEN)%bdry_conc
+cell_list(k)%conc(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
+cell_list(k)%conc(TRACER) = chemo(TRACER)%bdry_conc
+cell_list(k)%M = 0
+occupancy(site(1),site(2),site(3))%indx(1) = k
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Add cells at the boundary to bring the total count from k up to initial_count
+! (1) Make a list of all boundary sites (sites in contact with an OUTSIDE site)
+! (2) Iteratively traverse the list to select the adjacent OUTSIDE site closest 
+! to the centre.
+!--------------------------------------------------------------------------------
+subroutine AddBdryCells(klast)
+integer :: klast
+integer :: kcell, i, kb, site(3), nbsite(3), nbt, kbmin, imin
+integer, allocatable :: sitelist(:,:)
+real(REAL_KIND) :: r2, r2min
+
+nbt = 0
+do kcell = 1,klast
+	site = cell_list(kcell)%site
+	do i = 1,27
+		if (i == 14) cycle
+		nbsite = site + jumpvec(:,i)
+		if (occupancy(nbsite(1),nbsite(2),nbsite(3))%indx(1) == OUTSIDE_TAG) then
+			nbt = nbt+1
+			exit
+		endif
+	enddo
+enddo
+
+allocate(sitelist(3,nbt))
+
+nbt = 0
+do kcell = 1,klast
+	site = cell_list(kcell)%site
+	do i = 1,27
+		if (i == 14) cycle
+		nbsite = site + jumpvec(:,i)
+		if (occupancy(nbsite(1),nbsite(2),nbsite(3))%indx(1) == OUTSIDE_TAG) then
+			nbt = nbt+1
+			sitelist(:,nbt) = site
+			exit
+		endif
+	enddo
+enddo
+	
+
+do kcell = klast+1,initial_count
+	r2min = 1.0e10
+	do kb = 1,nbt
+		site = sitelist(:,kb)
+		do i = 1,27
+			if (i == 14) cycle
+			nbsite = site + jumpvec(:,i)
+			if (occupancy(nbsite(1),nbsite(2),nbsite(3))%indx(1) == OUTSIDE_TAG) then
+				r2 = (nbsite(1) - Centre(1))**2 + (nbsite(2) - Centre(2))**2 + (nbsite(3) - Centre(3))**2
+				if (r2 < r2min) then
+					kbmin = kb
+					imin = i
+					r2min = r2
+				endif
+			endif
+		enddo
+	enddo
+	site = sitelist(:,kbmin) + jumpvec(:,imin)
+	call AddCell(kcell,site)
+enddo
+
+deallocate(sitelist)
+		
+end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
@@ -1018,7 +1099,7 @@ if (use_treatment) then
 		call logger(logmsg)
 	endif
 endif
-if (istep < 3) call GrowCells(radiation_dose,DELTA_T,ok)
+call GrowCells(radiation_dose,DELTA_T,ok)
 if (.not.ok) then
 	res = 3
 	return
