@@ -443,6 +443,23 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "treatment.data",
 "The treatment file contains data describing the drug and radiation dosing schedule"},
 
+{"USE_DROP", 0, 0, 1,
+"Account for drop deformation",
+"Account for drop deformation when it is released to sit at the bottom of the well"},
+
+{"NDROP", 1000, 0, 0,
+"Dropping cell count",
+"Number of cells in the spheroid when it is dropped."},
+
+{"DROP_ALPHA", 0.4, 0, 0,
+"Contact_diameter/diameter",
+"Drop parameter alpha = initial (surface contact diameter)/(blob diameter).  Must be < 1."},
+
+{"DROP_BETA", 0.6, 0, 0,
+"Height/diameter",
+"Drop parameter beta = initial (blob height)/(blob diameter).  Must be < 1."},
+
+
 // Entries after this point are QMyLabel dummies, to enable display of explanatory info  - no input data is transmitted
 
 {"DUMMY_HYPOXIA_THRESHOLD", 0, 0, 0,
