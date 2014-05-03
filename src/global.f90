@@ -155,10 +155,12 @@ integer :: blobrange(3,2)
 real(REAL_KIND) :: Radius, Centre(3)		! sphere radius and centre
 real(REAL_KIND) :: x0,y0,z0					! sphere centre in global coordinates (units = grids)
 
+logical :: use_dropper
+integer :: Ndrop
 real(REAL_KIND) :: alpha_shape, beta_shape	! squashed sphere shape parameters
 real(REAL_KIND) :: adrop, bdrop, cdrop		! drop shape transformation parameters
-integer :: zmin								! drop lower bound at drop time = lower limit of blob thereafter
-logical :: is_squashed
+integer :: zmin     						! drop lower bound at drop time = lower limit of blob thereafter
+logical :: is_dropped
 
 integer :: jumpvec(3,27)
 
@@ -277,7 +279,7 @@ end subroutine
 subroutine SetRadius(N)
 integer :: N
 Radius = (3.0*N/(4.0*PI))**(1./3.)
-if (is_squashed) then
+if (is_dropped) then
 	z0 = zmin + (bdrop-cdrop)*Radius
 	Centre(3) = z0
 endif

@@ -61,7 +61,7 @@ call logger('did ArrayInitialisation')
 
 call SetupChemo
 
-is_squashed = .false.
+is_dropped = .false.
 adrop = 1
 bdrop = 1
 cdrop = 0
@@ -110,12 +110,6 @@ t_simulation = 0
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
-
-! Testing
-alpha_shape = 0.5
-beta_shape = 0.6
-call squasher
-call dropper
 
 end subroutine
 
@@ -346,6 +340,7 @@ logical :: ok
 integer :: i, idrug, imetab, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
 integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
 integer :: ictype, idisplay
+integer :: iuse_drop
 real(REAL_KIND) :: days, bdry_conc, percent
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
@@ -491,6 +486,10 @@ read(nfcell,*) iuse_relax
 read(nfcell,*) iuse_par_relax
 read(nfcell,*) itreatment
 read(nfcell,*) treatmentfile						! file with treatment programme
+read(nfcell,*) iuse_drop
+read(nfcell,*) Ndrop
+read(nfcell,*) alpha_shape
+read(nfcell,*) beta_shape
 close(nfcell)
 
 if (chemo(OXYGEN)%Hill_N /= 1 .and. chemo(OXYGEN)%Hill_N /= 2) then
@@ -569,6 +568,8 @@ else
 !		endif
 !	enddo
 endif
+
+use_dropper = (iuse_drop == 1)
 
 !if (use_metabolites) then
 !	do ichemo = DRUG_A,MAX_CHEMO
@@ -1076,6 +1077,11 @@ dt = DELTA_T/NT_CONC
 !endif
 		
 !call CheckBdryList('simulate_step')
+
+if (use_dropper .and. Ncells >= Ndrop .and. .not.is_dropped) then
+    call shaper
+    call dropper
+endif
 
 if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells

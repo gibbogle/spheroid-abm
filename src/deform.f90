@@ -33,10 +33,8 @@ contains
 !
 ! We set x(1) = a, x(2) = b, x(3) = c.
 !---------------------------------------------------------------------------------
-subroutine squasher
+subroutine shaper
 implicit none
-!use deform
-!use nleq_driver
 INTEGER NN
 PARAMETER ( NN=3 )
 INTEGER N,I,N1
@@ -81,8 +79,5 @@ q = (x(2) - x(3))/x(2)
 F(1) = x(1)*x(1)*x(2)*(q - (q**3)/3 + 2./3.) - 4./3.
 F(2) = (2*x(2) - x(3))/(2*x(1)) - beta_shape
 F(3) = (1 - q*q) - alpha_shape*alpha_shape
-!write(*,'(3f10.4)') x
-!write(*,'(3f10.4)') F
-!stop
 IFAIL = 0
 end subroutine

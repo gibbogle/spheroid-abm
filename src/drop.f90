@@ -73,13 +73,9 @@ allocate(rz(NZ))
 allocate(nstack(NX,NY))
 allocate(usable(NX,NY))
 
-!adrop = 1.105
-!bdrop = 0.829
-!cdrop = 0.111
-
 call SetRadius(Nsites)
 zmin = GetZmin()
-write(*,*) 'Radius, zmin: ',Radius,zmin
+!write(*,*) 'Radius, zmin: ',Radius,zmin
 z0drop = zmin + (bdrop-cdrop)*Radius
 z0 = z0drop
 Centre(3) = z0
@@ -87,7 +83,7 @@ sintheta0 = sqrt(1 - (1-cdrop/bdrop)**2)
 Rcontact = adrop*Radius*sintheta0
 Rc2 = Rcontact*Rcontact
 Ra2 = (adrop*Radius)**2
-write(*,*) 'z0drop,sintheta0,Rcontact: ',z0drop,sintheta0,Rcontact
+!write(*,*) 'z0drop,sintheta0,Rcontact: ',z0drop,sintheta0,Rcontact
 
 ! Stage 1
 !--------
@@ -96,7 +92,6 @@ zmax = 0
 do x = 1,NX
 	do y = 1,NY
 		r2 = (x-x0)*(x-x0) + (y-y0)*(y-y0)
-!		if (r2 > Rc2) cycle							! outside the contact disc
 		if (r2 > Ra2) cycle
 		r = sqrt(r2)
 		if (r2 > Rc2) then
@@ -115,7 +110,6 @@ do x = 1,NX
 			endif
 		enddo
 		if (occupancy(x,y,zlow)%indx(1) > 0) cycle	! already in contact
-!		write(*,*) x,y,r2,occupancy(x,y,zmin)%indx(1)
 		z1 = 0
 		z2 = 0
 		do z = zlow+1,NZ
@@ -129,10 +123,6 @@ do x = 1,NX
 			endif
 		enddo
 		if (z1 <= 0) cycle
-!		if (incontact == 0) then
-!			write(*,'(6i4,f6.1)') x,y,incontact,zlow,z1,z2,r
-!		endif
-!		write(*,*) 'x,y,z1,z2: ',x,y,z1,z2
 		! cells span z1 <= z <= z2
 		dz = z1 - zlow
 		do z = z1,z2
@@ -168,7 +158,7 @@ do z = zmin,zbmax
 	rz(z) = adrop*Radius*sina
 	newtot = newtot + 3.14159*rz(z)*rz(z)
 enddo
-write(*,*) 'Approximate number of sites in the squashed spheroid: ',newtot
+!write(*,*) 'Approximate number of sites in the squashed spheroid: ',newtot
 
 bdist = -1
 nbtot = 0
@@ -183,50 +173,39 @@ do x = 1,NX
 		nstot = nstot + nstack(x,y)
 		r = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0))
 		cdist(x,y) = r
-!		if (nstack(x,y) > 0) then
-!			write(*,*) x,y,nstack(x,y),r
-!		endif
 		do z = zmin,zmax
 			if (z <= zmin + Radius*(2*bdrop - cdrop)) then
 				if (rz(z) >= r) then
 					bdist(x,y,z) = rz(z) - r
 					nbtot = nbtot + 1
-!					write(*,*) x,y,z,rb,r
 				endif
 			endif
 		enddo
 	enddo
 enddo
 
-write(*,*) 'Actual number of sites in the squashed spheroid: ',nbtot
-write(*,*) 'zbmax: ',zbmax, zmin + (2*bdrop-cdrop)*Radius
-write(*,*) 'zmax: ',zmax
+!write(*,*) 'Actual number of sites in the squashed spheroid: ',nbtot
 nvtot = 0
 do z = zmin+1,zmax
 	usable = .true.		! initially set all sites in this layer as usable
 	call GetNearestVacantSite(z,xv,yv,nv)
-!	write(*,'(a,4i4)') 'z: xv,yv,nv: ',z,xv,yv,nv
 	nvtot = nvtot + nv
 enddo
-write(*,*) 'nstot,nvtot: ',nstot,nvtot
+!write(*,*) 'nstot,nvtot: ',nstot,nvtot
 
 noutside = CountOutside()
-write(*,*) 'noutside, Ncells: ',noutside,Ncells
+!write(*,*) 'noutside, Ncells: ',noutside,Ncells
 
 if (.true.) then
 ! move cells to the expanded radius
 do z = zmin+1,zmax
-!	write(*,*) 'z: ',z
 	usable = .true.		! initially set all sites in this layer as usable
 	do 
 		call GetNearestVacantSite(z,xv,yv,nv)
 		if (nv == 0) exit
-!		if (yv == 50) write(*,*) xv,yv
 		call GetBestPath(xv,yv,z,path,npath,ok)
-!		call GetCentrePath(xv,yv,path,npath,ok)
 		if (ok) then
-!			if (yv == 50) write(*,*) xv,yv,npath
-			call UseCentrePath(xv,yv,z,path,npath)
+			call UsePath(xv,yv,z,path,npath)
 		else
 			usable(xv,yv) = .false.
 			cycle
@@ -235,15 +214,6 @@ do z = zmin+1,zmax
 enddo
 endif
 
-!nvtot = 0
-!do z = zmin+1,zmax
-!	usable = .true.		! initially set all sites in this layer as usable
-!	call GetNearestVacantSite(z,xv,yv,nv)
-!!	write(*,'(a,4i4)') 'z: xv,yv,nv: ',z,xv,yv,nv
-!	nvtot = nvtot + nv
-!enddo
-!write(*,*) 'nstot,nvtot: ',nstot,nvtot
-
 deallocate(bdist)
 deallocate(cdist)
 deallocate(rz)
@@ -251,9 +221,9 @@ deallocate(nstack)
 deallocate(usable)
 
 noutside = CountOutside()
-write(*,*) 'noutside, Ncells: ',noutside,Ncells
+!write(*,*) 'noutside, Ncells: ',noutside,Ncells
 
-is_squashed = .true.
+is_dropped = .true.
 occupancy(:,:,1:zmin-1)%indx(1) = UNREACHABLE_TAG
 ! Presumably we need to first delete the bdrylist
 call DestroyBdryList
@@ -286,7 +256,6 @@ cr = sqrt((xv-ix0)**2 + (yv-iy0)**2 + 2.0)/2
 cr2 = cr*cr
 cx0 = (xv + ix0)/2.
 cy0 = (yv + iy0)/2.
-!write(*,'(2i4,3f6.1)') xv,yv,cx0,cy0,cr
 ! Find best site inside the circle
 vmax = 0
 do x = 1,NX
@@ -297,7 +266,6 @@ do x = 1,NX
 			if (r2 <= cr2 .and. nstack(x,y) > 0) then	! inside the circle
 				d = sqrt((x-xv)**2. + (y-yv)**2.)
 				val = nstack(x,y)/d
-!				write(*,'(3i4,3f6.2)') x,y,nstack(x,y),r2,d,val
 				if (val > vmax) then
 					vmax = val
 					xbest = x
@@ -312,7 +280,6 @@ if (vmax == 0) then
 	return
 endif
 ok = .true.
-!write(*,*) 'Best: ',xv,yv,xbest,ybest,vmax
 ! Now we need the path from (xv,yv) to (xbest,ybest)
 call GetPath(xv,yv,z,xbest,ybest,path,npath)
 end subroutine
@@ -346,7 +313,6 @@ do
 			endif
 		enddo
 	enddo
-!	write(*,*) xmin,ymin,r2min
 	if (r2min < r2prev) then
 		npath = npath + 1
 		path(npath)%x = xmin
@@ -366,6 +332,7 @@ end subroutine
 ! Find the shortest path from (xv,yv) to the centre of the squashed spheroid,
 ! in the z plane, i.e. to (x0,y0)
 ! If all nstack are 0, no use can be made of the path, ok = .false.
+! NOT USED
 !--------------------------------------------------------------------------------
 subroutine GetCentrePath(xv,yv,z,path,npath,ok)
 integer :: xv, yv, z,npath
@@ -395,7 +362,6 @@ do
 			endif
 		enddo
 	enddo
-!	write(*,*) xmin,ymin,r2min
 	if (r2min < r2prev) then
 		npath = npath + 1
 		path(npath)%x = xmin
@@ -417,11 +383,10 @@ end subroutine
 ! site, then drop cells down to fill the created vacancy.
 ! Decrement nstack().
 !--------------------------------------------------------------------------------
-subroutine UseCentrePath(xv,yv,zslice,path,npath)
+subroutine UsePath(xv,yv,zslice,path,npath)
 integer :: xv, yv, zslice, npath
 type(path_type) :: path(NX)
 integer :: kpath, nsmax, np, kcell, site(3), z, z1, z2
-
 
 nsmax = 0
 do kpath = 1,npath
@@ -435,10 +400,10 @@ enddo
 do kpath = 1,np
 	kcell = occupancy(path(kpath)%x,path(kpath)%y,zslice)%indx(1)
 	if (kcell <= 0) then
-		write(*,*) 'Error: UseCentrePath: kcell: ',kcell,path(kpath)%x,path(kpath)%y,zslice
+		write(logmsg,*) 'Error: UsePath: kcell: ',kcell,path(kpath)%x,path(kpath)%y,zslice
+		call logger(logmsg)
 		stop
 	endif
-!	write(*,*) 'loc, kcell: ',kpath,np,path(kpath)%x,path(kpath)%y,zslice,kcell
 	cell_list(kcell)%site = (/xv,yv,zslice/)
 	occupancy(xv,yv,zslice)%indx(1) = kcell
 	xv = path(kpath)%x
@@ -494,7 +459,6 @@ do x = 1,NX
 		endif
 	enddo
 enddo
-!if (z == 43) write(*,*) xv,yv,z,cdistmin
 end subroutine
 
 !--------------------------------------------------------------------------------

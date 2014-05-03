@@ -817,7 +817,7 @@ type (boundary_type), pointer :: bdry
 
 if (dbug) write(*,*) 'ChooseBdrysite: ',site0
 tempCentre = Centre
-if (is_squashed .and. site0(3) < Centre(3)) then
+if (is_dropped .and. site0(3) < Centre(3)) then
 	tempCentre(3) = (site0(3) + 2*Centre(3))/3
 endif
 vc = site0 - tempCentre
@@ -837,7 +837,7 @@ do while ( associated ( bdry ))
 	cosa = dot_product(v,vc)/d
 	if (cosa > cosa_min) then	! Note: in squashed case we need to worry about cells near the surface
 		hit = .true.
-		if (is_squashed) then
+		if (is_dropped) then
 			z = site0(3) + cdrop - zmin
 			if (z < 2*bdrop*Radius) then
 				cos2 = (1 - (z)/(bdrop*Radius))**2

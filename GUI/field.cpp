@@ -281,6 +281,8 @@ void Field::displayField(int hr, int *res)
         rmax = MAX(rmax,data[i].dVdt);
         cmin = MIN(MAX(cmin,0),data[i].conc[constituent]);
         cmax = MAX(cmax,data[i].conc[constituent]);
+        // Flip it
+        data[i].site[yindex] = NX - data[i].site[yindex];
     }
     brush.setStyle(Qt::SolidPattern);
     brush.setColor(QColor(0,0,0));
