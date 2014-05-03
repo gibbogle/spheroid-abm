@@ -110,11 +110,10 @@ t_simulation = 0
 istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
-return
 
 ! Testing
 alpha_shape = 0.5
-beta_shape = 0.3
+beta_shape = 0.6
 call squasher
 call dropper
 

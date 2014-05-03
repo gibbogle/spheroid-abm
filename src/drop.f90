@@ -30,7 +30,7 @@ logical function OutsideSquashedSphere(site) result(out)
 integer :: site(3)
 real(REAL_KIND) :: r, z, cos2, sin2
 
-z = site(3) + cdrop - zmin
+z = site(3) + cdrop*Radius - zmin
 if (z < 0 .or. z > 2*bdrop*Radius) then
 	out = .true.
 	return
@@ -61,7 +61,7 @@ end function
 !--------------------------------------------------------------------------------
 subroutine dropper
 real(REAL_KIND) :: sintheta0, Rcontact, Rc2, Ra2, r, r2, rb, cosa, sina, theta
-integer :: x, y, z, z1, z2, dz, kcell, zbmax, zmax, xv, yv, nv, npath, nvtot, nstot, newtot
+integer :: x, y, z, z1, z2, dz, kcell, zbmax, zmax, xv, yv, nv, npath, nvtot, nstot, newtot, nbtot
 integer :: zlow, zb(NX,NY), noutside, incontact
 real(REAL_KIND) :: z0drop	! drop centre is at x0,y0,z0drop = zmin + (bdrop-cdrop)*R
 logical :: ok
@@ -88,6 +88,9 @@ Rcontact = adrop*Radius*sintheta0
 Rc2 = Rcontact*Rcontact
 Ra2 = (adrop*Radius)**2
 write(*,*) 'z0drop,sintheta0,Rcontact: ',z0drop,sintheta0,Rcontact
+
+! Stage 1
+!--------
 ! drop cells in contact disc
 zmax = 0
 do x = 1,NX
@@ -101,7 +104,7 @@ do x = 1,NX
 			! we need to find the desired lower boundary z=zlow at (x,y)
 			! r = a.R.sin(theta) ==> theta = asin(r/aR)
 			theta = asin(r/(adrop*Radius))
-			zlow = bdrop*Radius*(1-cos(theta)) + zmin - cdrop + 1
+			zlow = bdrop*Radius*(1-cos(theta)) + zmin - cdrop*Radius + 1
 		else
 			incontact = 1
 			zlow = zmin
@@ -142,6 +145,8 @@ do x = 1,NX
 	enddo
 enddo
 	
+! Stage 2
+!--------
 ! Compute initial nstack, bdist, cdist
 bdist = -1
 zbmax = 0
@@ -165,9 +170,12 @@ do z = zmin,zbmax
 enddo
 write(*,*) 'Approximate number of sites in the squashed spheroid: ',newtot
 
+bdist = -1
+nbtot = 0
 do x = 1,NX
 	do y = 1,NY
 		nstack(x,y) = 0
+		if (zb(x,y) <= 0) cycle
 		do z = 1,NZ
 			if (occupancy(x,y,z)%indx(1) <= 0) cycle
 			if (z > zb(x,y)) nstack(x,y) = nstack(x,y) + 1
@@ -179,29 +187,28 @@ do x = 1,NX
 !			write(*,*) x,y,nstack(x,y),r
 !		endif
 		do z = zmin,zmax
-			if (z > zmin + Radius*(2*bdrop - cdrop)) then
-				bdist(x,y,z) = -1
-			else
+			if (z <= zmin + Radius*(2*bdrop - cdrop)) then
 				if (rz(z) >= r) then
 					bdist(x,y,z) = rz(z) - r
+					nbtot = nbtot + 1
 !					write(*,*) x,y,z,rb,r
-				else
-					bdist(x,y,z) = -1
 				endif
 			endif
 		enddo
 	enddo
 enddo
 
+write(*,*) 'Actual number of sites in the squashed spheroid: ',nbtot
 write(*,*) 'zbmax: ',zbmax, zmin + (2*bdrop-cdrop)*Radius
 write(*,*) 'zmax: ',zmax
 nvtot = 0
 do z = zmin+1,zmax
+	usable = .true.		! initially set all sites in this layer as usable
 	call GetNearestVacantSite(z,xv,yv,nv)
 !	write(*,'(a,4i4)') 'z: xv,yv,nv: ',z,xv,yv,nv
 	nvtot = nvtot + nv
 enddo
-!write(*,*) 'nstot,nvtot: ',nstot,nvtot
+write(*,*) 'nstot,nvtot: ',nstot,nvtot
 
 noutside = CountOutside()
 write(*,*) 'noutside, Ncells: ',noutside,Ncells
@@ -210,14 +217,15 @@ if (.true.) then
 ! move cells to the expanded radius
 do z = zmin+1,zmax
 !	write(*,*) 'z: ',z
-	usable = .true.		! initially set all sites as usable
+	usable = .true.		! initially set all sites in this layer as usable
 	do 
 		call GetNearestVacantSite(z,xv,yv,nv)
 		if (nv == 0) exit
-		call GetCentrePath(xv,yv,path,npath,ok)
+!		if (yv == 50) write(*,*) xv,yv
+		call GetBestPath(xv,yv,z,path,npath,ok)
+!		call GetCentrePath(xv,yv,path,npath,ok)
 		if (ok) then
-!			write(*,'(a,2f8.1,3i5)') 'path: ',x0,y0,xv,yv,npath
-!			write(*,'(10i6)') path(1:npath)
+!			if (yv == 50) write(*,*) xv,yv,npath
 			call UseCentrePath(xv,yv,z,path,npath)
 		else
 			usable(xv,yv) = .false.
@@ -226,6 +234,15 @@ do z = zmin+1,zmax
 	enddo
 enddo
 endif
+
+!nvtot = 0
+!do z = zmin+1,zmax
+!	usable = .true.		! initially set all sites in this layer as usable
+!	call GetNearestVacantSite(z,xv,yv,nv)
+!!	write(*,'(a,4i4)') 'z: xv,yv,nv: ',z,xv,yv,nv
+!	nvtot = nvtot + nv
+!enddo
+!write(*,*) 'nstot,nvtot: ',nstot,nvtot
 
 deallocate(bdist)
 deallocate(cdist)
@@ -246,13 +263,112 @@ call CheckBdryList('after dropper')
 
 end subroutine
 
+
+!--------------------------------------------------------------------------------
+! The best path is the shortest path from (xv,yv) to the best site.  
+! The best site is the site (x,y) within a circle that has the highest nstack(x,y)/dist,
+! where dist is the distance from (xv,yv)  
+! The circle is defined such that (xv,yv) and (x0,y0) are at ends of a diameter,
+! and both lie in the circle.
+!--------------------------------------------------------------------------------
+subroutine GetBestPath(xv,yv,z,path,npath,ok)
+integer :: xv, yv, z, npath
+type(path_type) :: path(NX)
+logical :: ok
+integer :: ix0, iy0, x, y, xbest, ybest
+real(REAL_KIND) :: cx0, cy0, cr, cr2, r2, d, val, vmax
+
+ix0 = x0
+iy0 = y0
+
+! Define the circle: radius and centre
+cr = sqrt((xv-ix0)**2 + (yv-iy0)**2 + 2.0)/2
+cr2 = cr*cr
+cx0 = (xv + ix0)/2.
+cy0 = (yv + iy0)/2.
+!write(*,'(2i4,3f6.1)') xv,yv,cx0,cy0,cr
+! Find best site inside the circle
+vmax = 0
+do x = 1,NX
+	do y = 1,NY
+		if (x == xv .and. y == yv) cycle
+		if (bdist(x,y,z) > 0) then	! inside the squashed sphere
+			r2 = (x - cx0)**2 + (y - cy0)**2
+			if (r2 <= cr2 .and. nstack(x,y) > 0) then	! inside the circle
+				d = sqrt((x-xv)**2. + (y-yv)**2.)
+				val = nstack(x,y)/d
+!				write(*,'(3i4,3f6.2)') x,y,nstack(x,y),r2,d,val
+				if (val > vmax) then
+					vmax = val
+					xbest = x
+					ybest = y
+				endif
+			endif
+		endif
+	enddo
+enddo
+if (vmax == 0) then
+	ok = .false.
+	return
+endif
+ok = .true.
+!write(*,*) 'Best: ',xv,yv,xbest,ybest,vmax
+! Now we need the path from (xv,yv) to (xbest,ybest)
+call GetPath(xv,yv,z,xbest,ybest,path,npath)
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Get shortest path from (xv,yv) to (xe,ye)
+!--------------------------------------------------------------------------------
+subroutine GetPath(xv,yv,z,xe,ye,path,npath)
+integer :: xv, yv, z, xe, ye, npath
+type(path_type) :: path(NX)
+integer :: x, y, dx, dy, xmin, ymin, xlast, ylast, nstot
+real(REAL_KIND) :: r2, r2min, r2prev
+
+nstot = 0
+xlast = xv
+ylast = yv
+r2prev = 1.0e10
+npath = 0
+do
+	r2min = 1.0e10
+	do dx = -1,1	!,2
+		do dy = -1,1	!,2
+			if (dx == 0 .and. dy == 0) cycle
+			x = xlast + dx
+			y = ylast + dy
+			r2 = (x-xe)*(x-xe) + (y-ye)*(y-ye)
+			if (r2 < r2min) then
+				r2min = r2
+				xmin = x
+				ymin = y
+			endif
+		enddo
+	enddo
+!	write(*,*) xmin,ymin,r2min
+	if (r2min < r2prev) then
+		npath = npath + 1
+		path(npath)%x = xmin
+		path(npath)%y = ymin
+		path(npath)%nstack = nstack(xmin,ymin)
+		nstot = nstot + nstack(xmin,ymin)
+		r2prev = r2min
+		xlast = xmin
+		ylast = ymin
+	else
+		return
+	endif
+enddo		
+end subroutine
+
 !--------------------------------------------------------------------------------
 ! Find the shortest path from (xv,yv) to the centre of the squashed spheroid,
 ! in the z plane, i.e. to (x0,y0)
 ! If all nstack are 0, no use can be made of the path, ok = .false.
 !--------------------------------------------------------------------------------
-subroutine GetCentrePath(xv,yv,path,npath,ok)
-integer :: xv, yv, npath
+subroutine GetCentrePath(xv,yv,z,path,npath,ok)
+integer :: xv, yv, z,npath
 type(path_type) :: path(NX)
 logical :: ok
 integer :: x, y, dx, dy, xmin, ymin, xlast, ylast, nstot
@@ -266,8 +382,9 @@ r2prev = 1.0e10
 npath = 0
 do
 	r2min = 1.0e10
-	do dx = -1,1,2
-		do dy = -1,1,2
+	do dx = -1,1	!,2
+		do dy = -1,1	!,2
+			if (dx == 0 .and. dy == 0) cycle
 			x = xlast + dx
 			y = ylast + dy
 			r2 = (x-x0)*(x-x0) + (y-y0)*(y-y0)
@@ -317,12 +434,16 @@ enddo
 ! Move cells in the z plane
 do kpath = 1,np
 	kcell = occupancy(path(kpath)%x,path(kpath)%y,zslice)%indx(1)
+	if (kcell <= 0) then
+		write(*,*) 'Error: UseCentrePath: kcell: ',kcell,path(kpath)%x,path(kpath)%y,zslice
+		stop
+	endif
 !	write(*,*) 'loc, kcell: ',kpath,np,path(kpath)%x,path(kpath)%y,zslice,kcell
 	cell_list(kcell)%site = (/xv,yv,zslice/)
 	occupancy(xv,yv,zslice)%indx(1) = kcell
 	xv = path(kpath)%x
 	yv = path(kpath)%y
-	occupancy(xv,yv,zslice)%indx(1) = OUTSIDE_TAG
+	occupancy(xv,yv,zslice)%indx(1) = 0
 enddo
 
 ! Drop cells to fill vacancy at (xv,yv)
@@ -373,6 +494,7 @@ do x = 1,NX
 		endif
 	enddo
 enddo
+!if (z == 43) write(*,*) xv,yv,z,cdistmin
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -404,8 +526,8 @@ if (r > adrop*Radius) then
 	return
 endif
 sina = r/(adrop*Radius)
-cosa = sqrt(1 - sina*sina)
-GetZb = zmin + Radius*(bdrop*(1 + cosa) - cdrop)
+cosa = -sqrt(1 - sina*sina)
+GetZb = zmin + Radius*(bdrop*(1 - cosa) - cdrop)
 end function
 
 end module
