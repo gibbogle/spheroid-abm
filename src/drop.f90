@@ -64,6 +64,7 @@ real(REAL_KIND) :: sintheta0, Rcontact, Rc2, Ra2, r, r2, rb, cosa, sina, theta
 integer :: x, y, z, z1, z2, dz, kcell, zbmax, zmax, xv, yv, nv, npath, nvtot, nstot, newtot, nbtot
 integer :: zlow, zb(NX,NY), noutside, incontact
 real(REAL_KIND) :: z0drop	! drop centre is at x0,y0,z0drop = zmin + (bdrop-cdrop)*R
+real(REAL_KIND) :: Cext(MAX_CHEMO)
 logical :: ok
 type(path_type) :: path(NX)
 
@@ -126,10 +127,12 @@ do x = 1,NX
 		! cells span z1 <= z <= z2
 		dz = z1 - zlow
 		do z = z1,z2
-			! move the cell at (x,y,z) to (x,y,z-dz)
+			! move the site+cell at (x,y,z) to (x,y,z-dz)
 			kcell = occupancy(x,y,z)%indx(1)
+			Cext = occupancy(x,y,z)%C
 			cell_list(kcell)%site = (/x,y,z-dz/)
 			occupancy(x,y,z-dz)%indx(1) = kcell
+			occupancy(x,y,z-dz)%C = Cext
 			occupancy(x,y,z)%indx(1) = OUTSIDE_TAG
 		enddo
 	enddo
@@ -387,6 +390,7 @@ subroutine UsePath(xv,yv,zslice,path,npath)
 integer :: xv, yv, zslice, npath
 type(path_type) :: path(NX)
 integer :: kpath, nsmax, np, kcell, site(3), z, z1, z2
+real(REAL_KIND) :: Cext(MAX_CHEMO)
 
 nsmax = 0
 do kpath = 1,npath
@@ -396,7 +400,7 @@ do kpath = 1,npath
 	endif
 enddo
 
-! Move cells in the z plane
+! Move site+cells in the z plane
 do kpath = 1,np
 	kcell = occupancy(path(kpath)%x,path(kpath)%y,zslice)%indx(1)
 	if (kcell <= 0) then
@@ -404,14 +408,16 @@ do kpath = 1,np
 		call logger(logmsg)
 		stop
 	endif
+	Cext = occupancy(path(kpath)%x,path(kpath)%y,zslice)%C
 	cell_list(kcell)%site = (/xv,yv,zslice/)
 	occupancy(xv,yv,zslice)%indx(1) = kcell
+	occupancy(xv,yv,zslice)%C = Cext
 	xv = path(kpath)%x
 	yv = path(kpath)%y
 	occupancy(xv,yv,zslice)%indx(1) = 0
 enddo
 
-! Drop cells to fill vacancy at (xv,yv)
+! Drop site+cells to fill vacancy at (xv,yv)
 z1 = 0
 z2 = 0
 do z = zslice+1,NZ
@@ -427,8 +433,10 @@ enddo
 do z = z1,z2
 	! move the cell at (xv,yv,z) to (xv,yv,z-1)
 	kcell = occupancy(xv,yv,z)%indx(1)
+	Cext = occupancy(xv,yv,z)%C
 	cell_list(kcell)%site = (/xv,yv,z-1/)
 	occupancy(xv,yv,z-1)%indx(1) = kcell
+	occupancy(xv,yv,z-1)%C = Cext
 	occupancy(xv,yv,z)%indx(1) = OUTSIDE_TAG
 enddo
 nstack(xv,yv) = nstack(xv,yv) - 1
