@@ -3242,7 +3242,7 @@ padding: 8px
             <property name="title">
              <string/>
             </property>
-            <widget class="QCheckBox" name="cbox_USE_DROP">
+            <widget class="QMyCheckBox" name="cbox_USE_DROP">
              <property name="geometry">
               <rect>
                <x>70</x>
@@ -3268,7 +3268,7 @@ padding: 8px
               </rect>
              </property>
             </widget>
-            <widget class="QLabel" name="label_NDROP">
+            <widget class="QMyLabel" name="label_NDROP">
              <property name="geometry">
               <rect>
                <x>90</x>
@@ -3291,7 +3291,7 @@ padding: 8px
               </rect>
              </property>
             </widget>
-            <widget class="QLabel" name="label_DROP_ALPHA">
+            <widget class="QMyLabel" name="label_DROP_ALPHA">
              <property name="geometry">
               <rect>
                <x>90</x>
@@ -3314,7 +3314,7 @@ padding: 8px
               </rect>
              </property>
             </widget>
-            <widget class="QLabel" name="label_DROP_BETA">
+            <widget class="QMyLabel" name="label_DROP_BETA">
              <property name="geometry">
               <rect>
                <x>90</x>
