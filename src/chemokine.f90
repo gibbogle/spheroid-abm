@@ -21,6 +21,7 @@ implicit none
 type chemokine_type
 	character(16) :: name
 	logical :: used
+	logical :: present
 	logical :: use_secretion
 	real(REAL_KIND) :: bdry_rate
 	real(REAL_KIND) :: bdry_conc
@@ -106,8 +107,13 @@ chemo(TRACER)%decay_rate = 0
 chemo(DRUG_A)%name = 'Drug_A'
 chemo(DRUG_B)%name = 'Drug_B'
 do ichemo = 1,MAX_CHEMO
-	if (.not.chemo(ichemo)%used) cycle
-	chemo(ichemo)%medium_dlayer = d_layer	! for now, using the same unstirred layer thickness for all constituents
+	chemo(ichemo)%present = .false.
+	if (chemo(ichemo)%used) then
+		chemo(ichemo)%medium_dlayer = d_layer	! for now, using the same unstirred layer thickness for all constituents
+		if (ichemo == OXYGEN .or. ichemo == GLUCOSE .or. ichemo == TRACER) then
+			chemo(OXYGEN)%present = .true.
+		endif
+	endif
 enddo
 call AllocateConcArrays
 !call SetMMParameters

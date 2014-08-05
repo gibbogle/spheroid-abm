@@ -267,26 +267,32 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine AddToMedium(kcell,site)
 integer :: kcell, site(3)
-integer :: ic
+integer :: ichemo
 real(REAL_KIND) :: V, Cex(MAX_CHEMO), Cin(MAX_CHEMO)
 
 Cex = occupancy(site(1),site(2),site(3))%C
 Cin = cell_list(kcell)%conc
 V = cell_list(kcell)%volume*Vcell_cm3
-do ic = 1,MAX_CHEMO
-	if (.not.chemo(ic)%used) cycle
-	chemo(ic)%medium_M = chemo(ic)%medium_M + V*Cin(ic) + (Vsite_cm3 - V)*Cex(ic)
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	chemo(ichemo)%medium_M = chemo(ichemo)%medium_M + V*Cin(ichemo) + (Vsite_cm3 - V)*Cex(ichemo)
+	if (ichemo == DRUG_A) then
+		write(*,*) 'AddToMedium: ',chemo(ichemo)%medium_M
+	endif
 enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine RemoveFromMedium
-integer :: ic
+integer :: ichemo
 
-do ic = 1,MAX_CHEMO
-	if (.not.chemo(ic)%used) cycle
-	chemo(ic)%medium_M = chemo(ic)%medium_M - Vsite_cm3*chemo(ic)%medium_Cbnd
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	chemo(ichemo)%medium_M = chemo(ichemo)%medium_M - Vsite_cm3*chemo(ichemo)%medium_Cbnd
+	if (ichemo == DRUG_A) then
+		write(*,*) 'RemoveFromMedium: ',chemo(ichemo)%medium_M
+	endif
 enddo
 end subroutine
 
