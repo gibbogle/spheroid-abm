@@ -97,6 +97,8 @@ call CreateBdryList
 !	call TestSolver
 !endif
 call SetupODEdiff
+allocate(allstate(MAX_VARS,MAX_CHEMO))
+allocate(work_rkc(8+5*MAX_VARS))
 call InitConcs
 call SetupMedium
 call AdjustMM
@@ -131,7 +133,7 @@ do ichemo = 1,MAX_CHEMO
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_M = V*chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_U = 0
-!	write(*,'(i4,2e12.4)') ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
+	write(*,'(a,i4,2e12.4)') 'SetupMedium: ',ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
 enddo
 end subroutine
 
@@ -716,6 +718,7 @@ do
 				read(nftreatment,*) tend
 				protocol(idrug)%tend(i) = 3600*tend
 				read(nftreatment,*) protocol(idrug)%conc(i)
+				write(nflog,*) 'treatment: ',chemo(ichemo)%name,protocol(idrug)%n,i,tstart,tend,protocol(idrug)%conc(i)
 			enddo
 		endif
 	else
@@ -981,8 +984,6 @@ integer :: nextra, ic, ichemo, kcell, site(3), ntvars
 
 write(logmsg,*) 'InitConcs: ',nchemo
 call logger(logmsg)
-allocate(allstate(MAX_VARS,MAX_CHEMO))
-allocate(work_rkc(8+5*MAX_VARS))
 
 do kcell = 1,Ncells
     site = cell_list(kcell)%site
@@ -1006,6 +1007,7 @@ subroutine Treatment(radiation_dose)
 real(REAL_KIND) :: radiation_dose
 integer :: i, idrug, ichemo, ichemo_metab
 
+write(*,*) 'Treatment'
 radiation_dose = 0
 do i = 1,protocol(0)%n
 	if (t_simulation >= protocol(0)%tstart(i) .and. .not.protocol(0)%started(i)) then
@@ -1032,7 +1034,11 @@ do idrug = 1,2
 			chemo(ichemo)%bdry_conc = protocol(idrug)%conc(i)
 			protocol(idrug)%started(i) = .true.
 			protocol(idrug)%ended(i) = .false.
-!			write(*,*) 'Started DRUG_A: ',chemo(ichemo)%bdry_conc
+			chemo(ichemo)%present = .true.
+			if (chemo(ichemo_metab)%used) then
+				chemo(ichemo_metab)%present = .true.
+			endif
+			write(nflog,*) 'Started DRUG_A: ',chemo(ichemo)%bdry_conc, i
 			exit
 		endif
 	enddo
@@ -1041,7 +1047,9 @@ do idrug = 1,2
 			chemo(ichemo)%bdry_conc = 0
 			chemo(ichemo_metab)%bdry_conc = 0
 			protocol(idrug)%ended(i) = .true.
-!			write(*,*) 'Ended DRUG_A'
+			chemo(ichemo)%present = .false.
+			chemo(ichemo_metab)%present = .false.
+			write(nflog,*) 'Ended DRUG_A: ',i
 			exit
 		endif
 	enddo
