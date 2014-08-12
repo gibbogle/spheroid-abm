@@ -13,12 +13,10 @@
 
 using namespace std;
 
-//#ifdef __DISPLAY768
-//#include "ui_spheroid_GUI-768.h"
-//#else
 #include "ui_spheroid_GUI.h"
-//#endif
 #include <qwt_plot_curve.h>
+#include <qwt_plot_marker.h>
+#include <qwt_symbol.h>
 #include "params.h"
 #include "qmylabel.h"
 #include "qmycheckbox.h"
@@ -80,6 +78,8 @@ protected:
 private slots:
     void on_action_show_gradient2D_triggered();
     void on_action_show_gradient3D_triggered();
+    void on_action_FACS_triggered();
+    void on_checkBox_FACS_PLOT_toggled(bool checked);
     void newFile();
     void open();
     void about();
@@ -93,6 +93,7 @@ private slots:
     void goToOutputs();
     void goToVTK();
     void goToField();
+    void goToFACS();
     void runServer();
     void pauseServer();
     void stopServer();
@@ -132,9 +133,16 @@ public slots:
 	void displayScene();
 //    void displayFld();
     void showSummary(int);
-    void startRecorder();
-    void stopRecorder();
- //   void on_buttonButton_constituent_clicked();
+//    void startRecorder();
+//    void stopRecorder();
+    void showFACS();
+    void startRecorderVTK();
+    void stopRecorderVTK();
+    void startRecorderFACS();
+    void stopRecorderFACS();
+    bool getVideoFileInfo(int *nframes, QString *itemFormat, QString *itemCodec, QString *videoFileName);
+
+//   void on_buttonButton_constituent_clicked();
     void buttonClick_constituent(QAbstractButton* button);
     void buttonClick_plane(QAbstractButton* button);
     void buttonClick_canvas(QAbstractButton* button);
@@ -150,12 +158,19 @@ public slots:
 //    void on_cbox_drugB_decay_toggled(bool checked);
     void on_cbox_DRUG_B_SIMULATE_METABOLITE_toggled(bool checked);
 //    void on_cbox_drugB_metabolite_decay_toggled(bool checked);
+    void on_cbox_USE_RADIATION_toggled(bool checked);
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
+    void radioButtonChanged(QAbstractButton *b);
+
+signals:
+    void facs_update();
+
 private:
     void createActions();
 	void createLists();
 	void drawDistPlots();
+    void initFACSPlot();
 	void setupParamList();
 	void loadParams();
 	void reloadParams();
@@ -176,11 +191,12 @@ private:
     void disableUseDrugB();
     void enableUseTreatmentFile();
     void disableUseTreatmentFile();
+    void setTreatmentFileUsage();
 
 	void writeout();
 	void execute_para();
 	void init_VTK();
-	void read_cell_positions();
+    void read_cell_positions();
 	void close_sockets();
 	void compareOutputs();
 	void clearAllGraphs();
@@ -234,6 +250,9 @@ private:
 
 	QList<QWidget *> widget_list;
 
+    QwtPlot *qpFACS;
+    QwtPlotCurve *curveFACS;
+
 	int nDistPts;
 	int nTicks;
 	int nParams;
@@ -274,6 +293,7 @@ private:
 	int progress;
 	int nGraphs;		// act, ntot_LN, ncog_PER, ...
 	int nGraphCases;
+//    int recordingVTK;
     QColor comboColour[30];
 
 	RESULT_SET *newR;
@@ -308,7 +328,8 @@ private:
     Field *field;
 	ExecThread *exthread;
 
-    QVideoOutput   * videoOutput;
+    QVideoOutput   * videoVTK;
+    QVideoOutput   * videoFACS;
 
 signals:
     void pause_requested();

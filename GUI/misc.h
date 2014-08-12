@@ -50,13 +50,15 @@ public:
 	void snapshot();
 //    void showfield();
     void saveGradient2D(int k);
+    void getFACS();
 	void pause();
 	void unpause();
 	void stop();
 //    void wait_to_go();
     int ncpu;
 	int nsteps;
-	bool paused;
+    int summary_interval;
+    bool paused;
 	bool stopped;
     QMutex mutex1, mutex2, mutex3;
     QWaitCondition summary_done;
@@ -65,6 +67,7 @@ signals:
     void displayF();
     void summary(int);
     void setupC(int, bool *);
+    void facs_update();
 };
 
 bool quitMessage(QString);

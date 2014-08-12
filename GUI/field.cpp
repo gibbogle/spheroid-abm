@@ -455,10 +455,10 @@ void Field::updateConcPlot()
         cmin = MIN(cmin,y[i]);
         cmax = MAX(cmax,y[i]);
     }
-    if (constituent == OXYGEN) {
-        sprintf(msg,"cmin: %f",cmin);
-        LOG_MSG(msg);
-    }
+//    if (constituent == OXYGEN) {
+//        sprintf(msg,"cmin: %f",cmin);
+//        LOG_MSG(msg);
+//    }
     pGconc->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);
     pGconc->curve[0]->setData(x, y, nc);
     pGconc->replot();

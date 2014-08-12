@@ -18,6 +18,15 @@
 LOG_USE();
 char msg[2048];
 
+class SleeperThread : public QThread
+{
+public:
+    static void msleep(unsigned long msecs)
+    {
+        QThread::msleep(msecs);
+    }
+};
+
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 SocketHandler::SocketHandler(int newport, QObject *parent)
@@ -152,12 +161,14 @@ void ExecThread::run()
     outfile = std_outfile.c_str();
 
 	paused = false;
-	execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
+    LOG_MSG("call execute");
+    execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
+    LOG_MSG("did execute");
     get_dimensions(&NX,&NY,&NZ,&nsteps,&DELTA_T, &MAX_CHEMO, cused, &dfraction);
     emit setupC(MAX_CHEMO, cused);
-    nsumm_interval = (60*60)/DELTA_T;   // number of time steps per hour
-//	sprintf(msg,"exthread: nsteps: %d",nsteps);
-//	LOG_MSG(msg);
+    summary_interval = int(3600./DELTA_T);
+    sprintf(msg,"exthread: nsteps: %d summary_interval: %d",nsteps,summary_interval);
+    LOG_MSG(msg);
 
     conc_nc = 0;
     hour = 0;
@@ -191,18 +202,22 @@ void ExecThread::run()
             break;
         }
 
-        if (i%nsumm_interval == 0) {
+        if (i%summary_interval == 0) {
 			mutex1.lock();
             get_summary(summaryData, &i_hypoxia_cutoff, &i_growth_cutoff);
             get_concdata(&conc_nc, &conc_dx, concData);
             get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
             get_oxyprob(&oxy_nv, &oxy_dv, oxyProb);
+            if (showingFACS || recordingFACS) {
+                getFACS();
+            }
             mutex1.unlock();
-//            goflag = false;
             hour++;
             emit summary(hour);		// Emit signal to update summary plots, at hourly intervals
             summary_done.wait(&mutex3);
-//            wait_to_go();
+            if (showingFACS || recordingFACS) {
+                emit facs_update();
+            }
         }
 
         if (stopped) {
@@ -210,7 +225,7 @@ void ExecThread::run()
             break;
         }
         if (i%nt_vtk == 0) {
-			if (showingVTK != 0) {
+            if (showingVTK || recordingVTK) {
 				snapshot();
                 istep = i;
                 sleep(10);
@@ -250,12 +265,13 @@ void ExecThread::wait_to_go()
 //-----------------------------------------------------------------------------------------
 void ExecThread::snapshot()
 {
+    mutex2.lock();
     get_scene(&ncell_list,cell_list);
     if (ncell_list > MAX_CELLS) {
         LOG_MSG("Error: MAX_CELLS exceeded");
         exit(1);
     }
-//    emit displayF(); // Emit signal to update Field display
+    mutex2.unlock();
     emit display(); // Emit signal to update VTK display
 }
 
@@ -270,6 +286,20 @@ void ExecThread::saveGradient2D(int i)
     paused = false;
     delete sv2D;
 }
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void ExecThread::getFACS()
+{
+    get_nfacs(&nFACS_cells);
+    if (!FACS_data || nFACS_cells*nFACS_vars > nFACS_dim) {
+        if (FACS_data) free(FACS_data);
+        nFACS_dim = 3*nFACS_cells*nFACS_vars;
+        FACS_data = (double *)malloc(nFACS_dim*sizeof(double));
+    }
+    get_facs(FACS_data);
+}
+
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void ExecThread::stop()

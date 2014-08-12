@@ -186,3 +186,37 @@ void Graphs::makeGraphList(int non_ts)
 //        LOG_MSG(msg);
 //    }
 }
+
+/*
+void Graphs::makeGraphList()
+{
+    char msg[128];
+    int k = maxGraphs;
+    int nts = 0;
+    for (int i=0; i<n_tsGraphs; i++) {
+        if (tsGraphs[i].active) {
+            k--;
+            graphList[k] = tsGraphs[i];
+            nts++;
+            if (nts == maxGraphs) break;
+        }
+    }
+    int ndummy = maxGraphs - nts;
+    for (k=0; k<ndummy; k++) {
+        graphList[k].active = false;
+        graphList[k].ts = true;
+        graphList[k].tag = "dummy";
+        graphList[k].scaling = 1;
+        graphList[k].title = "";
+        graphList[k].yAxisTitle = "";
+    }
+    nGraphs = maxGraphs;
+//    sprintf(msg,"nGraphs: %d",nGraphs);
+//    LOG_MSG(msg);
+//    for (k=0; k<nGraphs; k++) {
+//        LOG_QMSG(graphList[k].tag);
+//        sprintf(msg,"k: %d  active: %d  ts: %d",k,graphList[k].active,graphList[k].ts);
+//        LOG_MSG(msg);
+//    }
+}
+*/

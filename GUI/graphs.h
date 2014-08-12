@@ -1,7 +1,7 @@
 #ifndef GRAPHS_H
 #define GRAPHS_H
 
-#define maxGraphs 9
+#define maxGraphs 12
 
 struct graph_set {
 	QString tag;
@@ -40,6 +40,7 @@ public:
     bool isTimeseries(int);
 	void set_maxValue(int, double);
     void makeGraphList(int);
+//    void makeGraphList();
 
 };
 

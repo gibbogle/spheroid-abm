@@ -15,6 +15,9 @@ void get_summary(int *, int *, int *);
 void get_concdata(int *, double *, double *);
 void get_volprob(int *, double *, double *, double*);
 void get_oxyprob(int *, double *, double*);
+void get_nfacs(int *);
+void get_facs(double *);
+
 //
 //
 #ifdef __cplusplus
