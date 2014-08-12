@@ -116,11 +116,19 @@ MyVTK::MyVTK(QWidget *page, QWidget *key_page)
     DCfade = false;
 	playing = false;
 	paused = false;
-    opacity = 1.0;
+    opacity[1] = 1.0;
+    opacity[2] = 1.0;
     display_celltype[1] = true;
     display_celltype[2] = true;
     TCpos_list.clear();
     ren->GetActiveCamera()->Zoom(zoomlevel);		// try zooming OUT
+
+    // Depth peeling
+//    renWin->SetAlphaBitPlanes(1);
+//    renWin->SetMultiSamples(0);
+//    ren->SetUseDepthPeeling(1);
+//    ren->SetMaximumNumberOfPeels(100);
+//    ren->SetOcclusionRatio(0.1);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -133,6 +141,7 @@ MyVTK::~MyVTK()
 //-----------------------------------------------------------------------------------------
 void MyVTK::key_canvas(QWidget *key_page)
 {
+    return;
 //    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 280));
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, 130, 310));
     QBrush brush;
@@ -212,19 +221,7 @@ void MyVTK::createMappers()
 
     TcellMapper->SetInputConnection(Tcell->GetOutputPort());
 
-//	vtkSphereSource *Dcell = vtkSphereSource::New();
-//	Dcell->SetThetaResolution(12);
-//	Dcell->SetPhiResolution(12);
-//	Dcell->SetRadius(1.0);
-//	DcellMapper = vtkPolyDataMapper::New();
-//	DcellMapper->SetInputConnection(Dcell->GetOutputPort());
-//	vtkCylinderSource *bond = vtkCylinderSource::New();
-//	bond->SetResolution(12);
-//	bond->SetRadius(0.15);
-//	bond->SetHeight(1);
-//	bondMapper = vtkPolyDataMapper::New();
-//	bondMapper->SetInputConnection(bond->GetOutputPort());
-
+    /*
 	double rSphere0 = 0.5;
 	double rSphere1 = 0.3;
 	double rCylinder = 0.2;
@@ -288,16 +285,13 @@ void MyVTK::createMappers()
 	append2->AddInput(dumbell2);
 	append2->AddInput(dumbell3);
 
-	// Rendering objects.
-//	FDcellMapper = vtkPolyDataMapper::New();
-//	FDcellMapper->SetInput(append2->GetOutput());
-
 	// Is this OK?
 	sphere0->Delete();
 	sphere1->Delete();
 	sphere2->Delete();
 	append1->Delete();
 	append2->Delete();
+    */
 }
 
 
@@ -308,23 +302,18 @@ void MyVTK::createMappers()
 //-----------------------------------------------------------------------------------------
 void MyVTK::get_cell_positions(bool fast)
 {
-    int ninfo = 6;
 //    LOG_QMSG("get_cell_positions");
-	double BC_diam = 0.9;
-//	double DC_diam = 1.8;
     TCpos_list.clear();
-//	DCpos_list.clear();
-//	bondpos_list.clear();
     for (int i=0; i<ncell_list; i++) {
-        int j = ninfo*i;
+        int j = N_CELLINFO*i;
 		CELL_POS cp;
         cp.tag = cell_list[j];
         cp.x = cell_list[j+1];
         cp.y = cell_list[j+2];
         cp.z = cell_list[j+3];
         cp.state = cell_list[j+4];
-        cp.highlight = cell_list[j+5];
-        cp.diameter = BC_diam;
+        cp.diameter = cell_list[j+5]/10.0;
+        cp.highlight = cell_list[j+6];
         TCpos_list.append(cp);
 //        double r, g, b;
 //        if (cp.state > 0) {
@@ -335,98 +324,6 @@ void MyVTK::get_cell_positions(bool fast)
 //        sprintf(msg,"B cell: %d: tag: %d pos: %d %d %d state: %d %lf %lf %lf",i,cp.tag,cp.x,cp.y,cp.z,cp.state,r,g,b);
 //        LOG_MSG(msg);
 	}
-//	for (int i=0; i<nDC_list; i++) {
-//		int j = 5*i;
-//		CELL_POS cp;
-//		cp.tag = DC_list[j];
-//		cp.x = DC_list[j+1];
-//		cp.y = DC_list[j+2];
-//		cp.z = DC_list[j+3];
-//        cp.state = DC_list[j+4];
-//		cp.diameter = DC_diam;
-//		DCpos_list.append(cp);
-//	}
-//	for (int i=0; i<nbond_list; i++) {
-//		int j = 2*i;
-//		BOND_POS cp;
-//		cp.BCtag = bond_list[j];
-//		cp.DCtag = bond_list[j+1];
-//		bondpos_list.append(cp);
-//	}
-}
-
-//-----------------------------------------------------------------------------------------
-// Reading cell positions from a file.  Out of date.
-// NOT USED
-//-----------------------------------------------------------------------------------------
-void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool savepos)
-{	
-    TCpos_list.clear();
-//    DCpos_list.clear();
-//    bondpos_list.clear();
-	QString line, saveline;
-	QTextStream *out = NULL;
-	QFile *vtkdata = NULL;
-	if (savepos) {
-		vtkdata = new QFile(outfileName);
-		if (!vtkdata->open(QFile::Append )) {
-			LOG_MSG("Open failure on vtk file");
-			return;
-		}
-		out = new QTextStream(vtkdata);
-	}
-	QFile posdata(infileName);
-	if (posdata.open(QFile::ReadOnly)) {
-		QTextStream in(&posdata);
-		do {
-			line = in.readLine();
-			if (line.length() > 0) {
-				if (savepos) {
-					*out << line << "\n";
-					out->flush();
-				}
-				saveline = line;
-				QStringList s = line.split(" ",QString::SkipEmptyParts);
-				if (s[0].compare("T") == 0) {
-					CELL_POS cp;
-					cp.tag = s[1].toInt();
-					cp.x = s[2].toInt();
-					cp.y = s[3].toInt();
-					cp.z = s[4].toInt();
-					cp.diameter = s[5].toDouble();
-					cp.state = s[6].toDouble();
-                    TCpos_list.append(cp);
-//				}
-//                else if (s[0].compare("D") == 0) {
-//					CELL_POS cp;
-//					cp.tag = s[1].toInt();
-//					cp.x = s[2].toInt();
-//					cp.y = s[3].toInt();
-//					cp.z = s[4].toInt();
-//					cp.diameter = s[5].toDouble();
-//					cp.state = s[6].toDouble();
-//					DCpos_list.append(cp);
-//				} else if (s[0].compare("B") == 0) {
-//					BOND_POS cp;
-//					cp.BCtag = s[1].toInt();
-//					cp.DCtag = s[2].toInt();
-//					bondpos_list.append(cp);
-				} else if (s[0].compare("E") == 0) {
-					break;
-				} 
-			}
-		} while (!line.isNull());
-	}
-	posdata.close();
-	if (savepos) {
-		delete out;
-		vtkdata->close();
-		delete vtkdata;
-	}
-
-	if (QFile::exists(infileName)) {
-		QFile::rename(infileName,"TO_REMOVE");
-	}
 }
 
 //---------------------------------------------------------------------------------------------
@@ -434,8 +331,6 @@ void MyVTK::read_cell_positions(QString infileName, QString outfileName, bool sa
 void MyVTK::init()
 {
     T_Actor_list.clear();
-//	D_Actor_list.clear();
-//	Bnd_Actor_list.clear();
 }
 
 //---------------------------------------------------------------------------------------------
@@ -443,7 +338,6 @@ void MyVTK::init()
 void MyVTK::cleanup()
 {
 	int i;
-//	vtkActor *actor;
     ACTOR_TYPE a;
 
 	LOG_MSG("VTK cleanup");
@@ -451,17 +345,7 @@ void MyVTK::cleanup()
         a = T_Actor_list[i];
         ren->RemoveActor(a.actor);
 	}
-//	for (i = 0; i<D_Actor_list.length(); i++) {
-//        a = D_Actor_list[i];
-//        ren->RemoveActor(a.actor);
-//	}
-//	for (i = 0; i<Bnd_Actor_list.length(); i++) {
-//		actor = Bnd_Actor_list[i];
-//        ren->RemoveActor(actor);
-//	}
     T_Actor_list.clear();
-//	D_Actor_list.clear();
-//	Bnd_Actor_list.clear();
 	first_VTK = true;	
 }
 
@@ -470,13 +354,14 @@ void MyVTK::cleanup()
 void MyVTK::renderCells(bool redo, bool zzz)
 {
     process_Tcells();
-//    process_Dcells();
-//    process_bonds();
 	if (first_VTK) {
 		LOG_MSG("Initializing the renderer");
 		ren->ResetCamera();
 	}
 	iren->Render();
+//    int depthPeelingWasUsed=ren->GetLastRenderingUsedDepthPeeling();
+//    sprintf(msg,"Was depth peeling used? %d\n",depthPeelingWasUsed);
+//    LOG_MSG(msg);
     first_VTK = false;
 //    if (record) {
 //        recorder();
@@ -516,6 +401,26 @@ void MyVTK::unpack(int x, double *rr, double *gg, double *bb)
 }
 
 //---------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------
+void MyVTK::setOpacity(int position)
+{
+    if (position == 100) {
+        opacity[1] = 0.001;
+        opacity[2] = 0.001;
+    } else {
+        opacity[1] = (100. - position)/100;
+        opacity[2] = (100. - position)/100;
+    }
+    sprintf(msg,"opacity: %d %f",1,opacity[1]);
+    LOG_MSG(msg);
+    if (paused) {
+        LOG_QMSG("renderCells");
+        renderCells(true,true);
+    }
+}
+
+
+//---------------------------------------------------------------------------------------------
 // This improved, simpler method assumes only that the cell tag (cp.tag) is unique.
 // This tag is the index into T_Actor_list[], which grows as the maximum tag increases.
 // T_Actor_list now includes the field .active, which is maintained in sync with the
@@ -531,20 +436,15 @@ void MyVTK::process_Tcells()
     int i, tag, maxtag;
     double r, g, b;
 	CELL_POS cp;
-//	vtkActor *actor;
 	int axis_centre = -2;	// identifies the ellipsoid centre
 	int axis_end    = -3;	// identifies the ellipsoid extent in 5 directions
 	int axis_bottom = -4;	// identifies the ellipsoid extent in the -Y direction, i.e. bottom surface
-//    double TCColor[] = {0.0, 0.0, 1.0};
     bool dbug = false;
     ACTOR_TYPE a;
     ACTOR_TYPE *ap;
     QColor qcolor;
-//    COLOUR_TYPE colour[10];
 
  //   LOG_QMSG("process_Tcells");
-//    set_celltype_colour(&colour[1],celltype_colour[1]);
-//    set_celltype_colour(&colour[2],celltype_colour[2]);
     int np = TCpos_list.length();
     if (np == 0) return;
     int na = T_Actor_list.length();
@@ -575,6 +475,9 @@ void MyVTK::process_Tcells()
     in_pos_list = new bool[na];
     for (tag=0; tag<na; tag++)
         in_pos_list[tag] = false;
+
+    // This is the render loop.  Here we need to traverse the list in order of distance (z), maximum first.
+    // We need order[] such that cp = TCpos_list[order[i]]
     for (i=0; i<np; i++) {
         cp = TCpos_list[i];
         tag = cp.tag;
@@ -619,15 +522,14 @@ void MyVTK::process_Tcells()
                 r = qcolor.red()/255.;
                 g = qcolor.green()/255.;
                 b = qcolor.blue()/255.;
-//                sprintf(msg,"celltype: %d  r,g,b: %f %f %f",cp.state,r,g,b);
-//                LOG_MSG(msg);
             } else {
                 unpack(cp.state, &r, &g, &b);
             }
 		}
         ap->actor->GetProperty()->SetColor(r, g, b);
-        if (cp.highlight == 0)
-            ap->actor->GetProperty()->SetOpacity(opacity);
+//        if (cp.highlight == 0) {
+        ap->actor->GetProperty()->SetOpacity(opacity[cp.state]);
+//        }
         ap->actor->SetPosition(cp.x, cp.y, cp.z);
 	}
     for (int k=0; k<T_Actor_list.length(); k++) {
@@ -709,20 +611,6 @@ bool MyVTK::nextFrame()
 				cp.diameter = s[5].toDouble();
 				cp.state = s[6].toDouble();
                 TCpos_list.append(cp);
-//			} else if (s[0].compare("D") == 0) {
-//				CELL_POS cp;
-//				cp.tag = s[1].toInt();
-//				cp.x = s[2].toInt();
-//				cp.y = s[3].toInt();
-//				cp.z = s[4].toInt();
-//				cp.diameter = s[5].toDouble();
-//				cp.state = s[6].toDouble();
-//				DCpos_list.append(cp);
-//			} else if (s[0].compare("B") == 0) {
-//				BOND_POS cp;
-//				cp.BCtag = s[1].toInt();
-//				cp.DCtag = s[2].toInt();
-//				bondpos_list.append(cp);
 			} else if (s[0].compare("E") == 0) {
 				break;
 			}
@@ -750,6 +638,7 @@ bool MyVTK::nextFrame()
 void MyVTK::pause()
 {
     paused = true;
+    LOG_QMSG("paused");
 }
 
 //-----------------------------------------------------------------------------------------

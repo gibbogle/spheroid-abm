@@ -76,11 +76,11 @@ integer :: kcell, site(3), iv, kpar=0
 real(REAL_KIND) :: C_O2, OER_alpha_d, OER_beta_d, expon, kill_prob, R
 
 ok = .true.
-LQ%OER_am = 2.5
-LQ%OER_bm = 3.0
-LQ%alpha_H = 0.0473
-LQ%beta_H = 0.0017
-LQ%K_ms = 4.3e-3	! mM
+!LQ%OER_am = 2.5
+!LQ%OER_bm = 3.0
+!LQ%alpha_H = 0.0473
+!LQ%beta_H = 0.0017
+!LQ%K_ms = 4.3e-3	! mM
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	if (cell_list(kcell)%radiation_tag) cycle	! we do not tag twice (yet)
@@ -198,7 +198,7 @@ do kcell = 1,nlist
 			endif
 		endif
 	endif
-	if (use_SN30000) then
+	if (use_SN30000 .and. .not.cell_list(kcell)%drug_tag) then
 		ict = cell_list(kcell)%celltype
 		Kd = SN30K%Kd(ict)
 	    kmet = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + C_O2))*SN30K%Kmet0(ict)
@@ -214,6 +214,7 @@ do kcell = 1,nlist
 	    if (par_uni(kpar) < pdeath) then
             cell_list(kcell)%drug_tag = .true.
             Ndrug_tag = Ndrug_tag + 1
+            write(nflog,'(a,2i6,2f8.4)') 'tagged: ',kcell,ict,cell_list(kcell)%conc(DRUG_A),dMdt
 		endif
 	endif
 enddo
@@ -276,9 +277,9 @@ V = cell_list(kcell)%volume*Vcell_cm3
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	chemo(ichemo)%medium_M = chemo(ichemo)%medium_M + V*Cin(ichemo) + (Vsite_cm3 - V)*Cex(ichemo)
-	if (ichemo == DRUG_A) then
-		write(*,*) 'AddToMedium: ',chemo(ichemo)%medium_M
-	endif
+!	if (ichemo == DRUG_A) then
+!		write(*,*) 'AddToMedium: ',chemo(ichemo)%medium_M
+!	endif
 enddo
 end subroutine
 
@@ -290,9 +291,9 @@ integer :: ichemo
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	chemo(ichemo)%medium_M = chemo(ichemo)%medium_M - Vsite_cm3*chemo(ichemo)%medium_Cbnd
-	if (ichemo == DRUG_A) then
-		write(*,*) 'RemoveFromMedium: ',chemo(ichemo)%medium_M
-	endif
+!	if (ichemo == DRUG_A) then
+!		write(*,*) 'RemoveFromMedium: ',chemo(ichemo)%medium_M
+!	endif
 enddo
 end subroutine
 
@@ -485,6 +486,7 @@ integer :: kpar=0
 integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, nfree, bestsite(3)
 integer :: npath, path(3,200)
 real(REAL_KIND) :: tnow, R, v, vmax, V0, Cex(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_CHEMO), alpha(MAX_CHEMO)
+real(REAL_KIND) :: cfse0
 logical :: freesite(27,3)
 type (boundary_type), pointer :: bdry
 
@@ -497,6 +499,9 @@ tnow = istep*DELTA_T
 cell_list(kcell0)%t_divide_last = tnow
 V0 = cell_list(kcell0)%volume
 cell_list(kcell0)%volume = V0/2
+cfse0 = cell_list(kcell0)%CFSE
+cell_list(kcell0)%CFSE = generate_CFSE(cfse0/2)
+
 R = par_uni(kpar)
 cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 cell_list(kcell0)%M = cell_list(kcell0)%M/2
@@ -533,7 +538,7 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 		if (.not.ok) then
 			call logger('Error: CloneCell: vacant site')
 		endif
-
+		cell_list(kcell1)%CFSE = cfse0 - cell_list(kcell0)%CFSE
 		Nreuse = Nreuse + 1
 		return
 	endif
@@ -618,7 +623,13 @@ endif
 !write(*,*) 'added cell at: ',site01
 
 call GetPathMass(site0,site01,path,npath,M1)
-alpha = M0/M1	! scaling for concentrations on the path
+do ichemo = 1,MAX_CHEMO
+	if (M1(ichemo) >= 0) then
+		alpha(ichemo) = M0(ichemo)/M1(ichemo)	! scaling for concentrations on the path
+	else
+		alpha(ichemo) = 1
+	endif
+enddo
 call ScalePathConcentrations(site0,site01,path,npath,alpha)
 
 !if (npath > 0) then
@@ -737,6 +748,8 @@ integer :: site0(3),site01(3),path(3,200),npath
 real(REAL_KIND) :: alpha(:)
 integer :: k, site(3), kcell, ic
 
+!write(*,*) 'ScalePathConcentrations - returning!!!!!!!!!!'
+!return
 do ic = 1,MAX_CHEMO
 	if (.not.chemo(ic)%used) cycle
 	occupancy(site0(1),site0(2),site0(3))%C(ic) = alpha(ic)*occupancy(site0(1),site0(2),site0(3))%C(ic)
@@ -754,6 +767,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! The extracellular concentrations along the path are adjusted sequentially, starting from
 ! the last-but-one site and working backwards to the first, site01
+! NOT USED
 !-----------------------------------------------------------------------------------------
 subroutine FixPathConcentrations1(path,npath)
 integer :: path(3,200),npath
@@ -1051,6 +1065,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! The daughter cell kcell1 is given the same characteristics as kcell0 and placed at site1.
 ! Random variation is introduced into %divide_volume.
+! The concentrations of constituents must be halved.
 !-----------------------------------------------------------------------------------------
 subroutine CloneCell(kcell0,kcell1,site1,ok)
 integer :: kcell0, kcell1, site1(3)
@@ -1087,6 +1102,8 @@ cell_list(kcell1)%volume = cell_list(kcell0)%volume
 R = par_uni(kpar)
 cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 cell_list(kcell1)%t_hypoxic = 0
+cell_list(kcell0)%conc = cell_list(kcell0)%conc/2
+cell_list(kcell0)%M = cell_list(kcell0)%M/2
 cell_list(kcell1)%conc = cell_list(kcell0)%conc
 cell_list(kcell1)%M = cell_list(kcell0)%M
 !cell_list(kcell1)%oxygen = cell_list(kcell0)%oxygen

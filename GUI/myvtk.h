@@ -82,8 +82,7 @@ public:
 
     void key_canvas(QWidget *);
     void createMappers();
-	void read_cell_positions(QString, QString, bool);
-	void get_cell_positions(bool fast);
+    void get_cell_positions(bool fast);
 	void init();
 	void cleanup();
 	void unpack(int x, double *, double *, double *);
@@ -101,15 +100,10 @@ public:
     void recorder();
     void stop();
     void set_celltype_colour(COLOUR_TYPE *, QString str);
+    void setOpacity(int position);
 
     QList<CELL_POS > TCpos_list;
-//	QList<CELL_POS > DCpos_list;
-//	QList<BOND_POS > bondpos_list;
-//	QList<vtkActor *> B_Actor_list;
     QList<ACTOR_TYPE> T_Actor_list;
-//  QList<vtkActor *> D_Actor_list;
-//  QList<ACTOR_TYPE> D_Actor_list;
-//    QList<vtkActor *> Bnd_Actor_list;
 
     QWidget *page_VTK;
 	QVTKWidget* qvtkWidget;
@@ -117,9 +111,6 @@ public:
 	vtkRenderer* ren;
 	vtkRenderWindowInteractor * iren;
     vtkPolyDataMapper *TcellMapper;
-//	vtkPolyDataMapper *DcellMapper;
-//	vtkPolyDataMapper *bondMapper;
-//	vtkPolyDataMapper *FDcellMapper;
 //	vtkMPEG2Writer *mpg;
 //	vtkSmartPointer<vtkPNGWriter> writer;
 //	vtkSmartPointer<vtkBMPWriter> writer;
@@ -134,7 +125,6 @@ public:
 
 	char msg[2048];
 	double zoomlevel;
-    double opacity;
 	double Pi;
 	bool DCmotion;
 	bool DCfade;
@@ -143,7 +133,7 @@ public:
 	bool paused;
 	bool save_image;
     bool display_celltype[10];
-//    QString celltype_colour[10];
+    double opacity[10];
     QColor celltype_colour[10];
     QString casename;
 	int framenum;

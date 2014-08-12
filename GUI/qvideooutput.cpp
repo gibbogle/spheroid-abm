@@ -31,7 +31,7 @@ LOG_USE();
 //! @param[in] parent : A parent object.
 //!
 ////////////////////////////////////////////////////////////////////////////////
-QVideoOutput::QVideoOutput(QObject *parent, vtkRenderWindow *VTKrenWin)
+QVideoOutput::QVideoOutput(QObject *parent, int imageSource, vtkRenderWindow *VTKrenWin, QwtPlot *qwtplot)
 : QObject(parent)
 , swsContext(0x0)
 , formatContext(0x0)
@@ -47,8 +47,17 @@ QVideoOutput::QVideoOutput(QObject *parent, vtkRenderWindow *VTKrenWin)
 , w2i(0x0)
 , openedMediaFile(false)
 {
-   // Set renWin
-   renWin = VTKrenWin;
+   source = imageSource;
+   if (source == VTK_SOURCE) {
+       // Set renWin
+       renWin = VTKrenWin;
+       LOG_MSG("created videoVTK");
+   } else if (source == QWT_SOURCE) {
+       qp = qwtplot;
+       LOG_MSG("created videoFACS");
+   }
+   record_it = 0;
+   record = false;
    // Init FFmpeg
    av_register_all();
 }
@@ -170,6 +179,8 @@ bool QVideoOutput::openVideo(AVCodec *codec, AVStream *stream)
     ret = avcodec_open2(c, codec, NULL);
     if (ret < 0)
     {
+       sprintf(msg, "Could not open video codec: %s\n", av_err2str(ret));
+       LOG_MSG(msg);
        fprintf(stderr, "Could not open video codec: %s\n", av_err2str(ret));
        return false;
     }
@@ -177,6 +188,8 @@ bool QVideoOutput::openVideo(AVCodec *codec, AVStream *stream)
     frame = avcodec_alloc_frame();
     if (!frame)
     {
+       sprintf(msg, "Could not allocate video frame\n");
+       LOG_MSG(msg);
        fprintf(stderr, "Could not allocate video frame\n");
        return false;
     }
@@ -184,6 +197,8 @@ bool QVideoOutput::openVideo(AVCodec *codec, AVStream *stream)
     ret = avpicture_alloc(&dstPicture, c->pix_fmt, c->width, c->height);
     if (ret < 0)
     {
+        sprintf(msg, "Could not allocate picture: %s\n", av_err2str(ret));
+        LOG_MSG(msg);
         fprintf(stderr, "Could not allocate picture: %s\n", av_err2str(ret));
         return false;
     }
@@ -309,6 +324,8 @@ bool QVideoOutput::openMediaFile(int imwidth, int imheight, const QString & file
     openedMediaFile = false;
     width = imwidth;
     height = imheight;
+    sprintf(msg,"width: %d  height: %d",width,height);
+    LOG_MSG(msg);
     // allocate the output media context
     if (record_codec.contains("h264")) {
         avformat_alloc_output_context2(&formatContext, NULL, "h264", filename.toAscii().data());
@@ -333,6 +350,9 @@ bool QVideoOutput::openMediaFile(int imwidth, int imheight, const QString & file
    // and initialize the codecs.
    sprintf(msg,"outputFormat: %s %d",outputFormat->name,outputFormat->video_codec);
    LOG_MSG(msg);
+//   if (videoStream) {
+//       free(videoStream);
+//   }
    videoStream = NULL;
    if (outputFormat->video_codec != AV_CODEC_ID_NONE)
    {
@@ -383,17 +403,53 @@ bool QVideoOutput::openMediaFile(int imwidth, int imheight, const QString & file
 ////////////////////////////////////////////////////////////////////////////////
 //  QVideoOutput::newFrame
 //!
-//! @brief Adds new frame to ouput stream
+//! @brief Adds new frame to output stream
 //!
 //! @param[in]  image :
 //!
+
+/*
+// To create a QImage of the QwtPlot:
+
+virtual void YourPlot::drawCanvas( QPainter *painter )
+{
+    QImage image( canvas()->size(), QImage::QImage::Format_RGB32 );
+    image.fill( QColor( Qt::white ).rgb() ); // guess you don't need this line
+
+    QPainter p( &image );
+    QwtPlot::drawCanvas( &p );
+    painter->drawImage( 0, 0, image );
+}
+
+// but ... look at plot::mousePressEvent(), which uses QPixmap:
+    int w = this->width();
+    int h = this->height();
+    QPixmap pixmap(w, h);
+    pixmap.fill(Qt::white);
+    QwtPlotPrintFilter filter;
+    int options = QwtPlotPrintFilter::PrintAll;
+    options &= ~QwtPlotPrintFilter::PrintBackground;
+    options |= QwtPlotPrintFilter::PrintFrameWithScales;
+    filter.setOptions(options);
+    this->print(pixmap, filter);
+
+// In QPixmap class there is a method QImage QPixmap::toImage()
+// to convert a pixmap to image
+
+// For individual points (flow cytometry data, CFSE):
+    QwtPlotMarker* m = new QwtPlotMarker();
+    m->setSymbol( QwtSymbol( QwtSymbol::Diamond, Qt::red, Qt::NoPen, QSize( 10, 10 ) ) );
+    m->setValue( QPointF( 1.5, 2.2 ) );
+    m->attach( plot );
+*/
+
 ////////////////////////////////////////////////////////////////////////////////
 bool QVideoOutput::newFrame(const QImage & image)
 {
 //    LOG_QMSG("newFrame");
    const int width  = image.width();
    const int height = image.height();
-   // write video frames
+   // write video frame
    for (int y = 0; y < height; y++)
    {
       const uint8_t * scanline = image.scanLine(y);
@@ -546,11 +602,11 @@ bool QVideoOutput::flushVideo(AVStream *stream)
 //-----------------------------------------------------------------------------------------
 void QVideoOutput::startRecorder(QString videoFileName, QString fileFormat, QString codec, int nframes)
 {
-    if (w2i == 0) {
-        w2i = vtkWindowToImageFilter::New();
-        w2i->SetInput(renWin);	//the render window
-//        pngwriter = vtkSmartPointer<vtkPNGWriter>::New();
-//        pngwriter->SetInputConnection(w2i->GetOutputPort());
+    if (source == VTK_SOURCE) {
+        if (w2i == 0) {
+            w2i = vtkWindowToImageFilter::New();
+            w2i->SetInput(renWin);	//the render window
+        }
     }
     record = true;
     record_fileName = videoFileName;
@@ -558,9 +614,6 @@ void QVideoOutput::startRecorder(QString videoFileName, QString fileFormat, QStr
     record_codec = codec;
     record_nframes = nframes;
     record_it = 0;
-    //    framenum = 0;
-    //    LOG_MSG("set up pngwriter");
-    //    record_basename = "movie/frame";
 
     LOG_MSG("Started recording");
 }
@@ -571,25 +624,36 @@ void QVideoOutput::startRecorder(QString videoFileName, QString fileFormat, QStr
 //-----------------------------------------------------------------------------------------
 void QVideoOutput::recorder()
 {
-//    char numstr[5];
-//    char filename[512];
+    int imwidth, imheight;
+    vtkImageData *id;
+    QImage im;
 
-//    sprintf(msg,"recorder: record_it: %d",record_it);
-//    LOG_MSG(msg);
-    if (record_it > record_nframes) {
-        record = false;
-        stopRecorder();
-        return;
-    }
-    vtkImageData *id = vtkImageData::New();
-    id = w2i->GetOutput();
-    w2i->Modified();	//important
-    id->Update();
-    int imwidth = id->GetDimensions()[0];
-    int imheight = id->GetDimensions()[1];
-    if (imwidth == 0) {
-        LOG_QMSG("ERROR: recorder: vtkImageData dimension = 0");
-        exit(1);
+    sprintf(msg,"recorder: record_it: %d",record_it);
+    LOG_MSG(msg);
+    if (!record) return;
+    if (source == VTK_SOURCE) {
+        id = vtkImageData::New();
+        id = w2i->GetOutput();
+        w2i->Modified();	//important
+        id->Update();
+        imwidth = id->GetDimensions()[0];
+        imheight = id->GetDimensions()[1];
+        if (imwidth == 0) {
+            LOG_QMSG("ERROR: recorder: vtkImageData dimension = 0");
+            exit(1);
+        }
+    } else if (source == QWT_SOURCE) {
+        // Create an image
+//        QImage image( qp->canvas()->size(), QImage::Format_RGB32 );
+        QImage image( qp->size(), QImage::Format_RGB32 );
+        image.fill( QColor( Qt::white ).rgb() ); // guess you don't need this line
+//        QPainter p( &image );
+//        qp->drawCanvas( &p );
+//        p.drawImage( 0, 0, image );
+        qp->print(image);
+        im = image;
+        imwidth = im.width();
+        imheight = im.height();
     }
     record_it++;
     if (!isOpen()) {
@@ -599,7 +663,7 @@ void QVideoOutput::recorder()
         {
            // Open media file and prepare for recording
            QString fileName = tempFile->fileName();
-            bool recording = openMediaFile(imwidth, imheight, fileName.toAscii().data());
+           bool recording = openMediaFile(imwidth, imheight, fileName.toAscii().data());
             if (!recording) {
                 LOG_QMSG("ERROR: openMediaFile failed");
                 record = false;
@@ -607,20 +671,26 @@ void QVideoOutput::recorder()
             }
         }
     }
-    bool success = newVtkFrame(id);
-    if (!success) {
-        LOG_QMSG("ERROR: newVtkFrame failed");
-        record = false;
-        exit(1);
+    bool success;
+    if (source == VTK_SOURCE) {
+        success = newVtkFrame(id);
+        if (!success) {
+            LOG_QMSG("ERROR: newVtkFrame failed");
+            record = false;
+            exit(1);
+        }
+    } else if (source == QWT_SOURCE) {
+        success = newFrame(im);
+        if (!success) {
+            LOG_QMSG("ERROR: newFrame failed for QWT_SOURCE");
+            record = false;
+            exit(1);
+        }
     }
-//    sprintf(numstr,"%05d",framenum);
-//    strcpy(filename ,(record_basename + numstr + ".png").toStdString().c_str());
-//    pngwriter->SetFileName(filename);
-//    pngwriter->Write();
-//    sprintf(msg,"recorder: it: %d frame: %d filename: %s  id dimensions: %d %d",record_it,framenum,filename,id->GetDimensions()[0],id->GetDimensions()[1]);
-//    LOG_MSG(msg);
-//    framenum++;
-//    record_it++;
+    if (record_it == record_nframes) {
+        stopRecorder();
+        return;
+    }
 }
 
 //-----------------------------------------------------------------------------------------
@@ -629,9 +699,9 @@ void QVideoOutput::recorder()
 void QVideoOutput::stopRecorder()
 {
     LOG_QMSG("stopRecorder");
+    if (!record) return;
     record = false;
     closeMediaFile();
-    LOG_QMSG("Closed media file");
     QString fileName = record_fileName;
     LOG_QMSG(fileName);
 //  if (record_fileName.contains(".mov") && record_codec.contains("h264")) {
@@ -650,3 +720,13 @@ void QVideoOutput::stopRecorder()
     LOG_MSG("Stopped recording");
 }
 
+void QVideoOutput::cleanup()
+{
+//    av_free(swsContext); // Q: is av_free all i need here?
+//    av_free_packet(&packet); // Q: is this necessary (av_read_frame has returned < 0)?
+//    av_free(rgbframe);
+//    av_free(rgbdata);
+//    av_free(frame); // Q: i can just do this once at end, instead of in loop above, right?
+    avcodec_close(videoStream->codec); // Q: do i need av_free(codec)?
+//    av_close_input_file(formatContext); // Q: do i need av_free(format)?
+}

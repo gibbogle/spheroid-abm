@@ -342,7 +342,7 @@ enddo
 
 nchemo = 0
 do ichemo = 1,MAX_CHEMO
-	if (chemo(ichemo)%used .and. chemo(ichemo)%present) then
+	if (chemo(ichemo)%used) then
 		nchemo = nchemo + 1
 		chemomap(nchemo) = ichemo
 	endif
@@ -456,7 +456,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine InitialiseDrug(ichemo)
-
+integer :: ichemo
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -690,6 +690,22 @@ call logger(logmsg)
 !call logger(logmsg)
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine check_allstate(msg)
+character*(*) :: msg
+integer :: i
+
+if (chemo(DRUG_A)%present) return
+do i = 1,MAX_VARS
+	if (allstate(i,DRUG_A) /= 0) then
+		write(*,*) 'check_allstate: ',msg
+		stop
+	endif
+enddo
+end subroutine
+
+
 !----------------------------------------------------------------------------------
 ! In this version the diffusion/decay of each constituent is solved by a separate
 ! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
@@ -736,11 +752,6 @@ endif
 allocate(state(ntvars,MAX_CHEMO))
 state(:,:) = allstate(1:ntvars,1:MAX_CHEMO)
 
-!if (it == 1) then
-!	call showresults(state(:,DRUG_A))
-!	call showresults(state(:,DRUG_METAB_A))
-!endif
-
 info(1) = 1
 info(2) = 1		! = 1 => use spcrad() to estimate spectral radius, != 1 => let rkc do it
 info(3) = 1
@@ -751,7 +762,7 @@ atol = rtol
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	if (relax .and. ichemo == OXYGEN) cycle
-	if (ichemo == DRUG_A) write(*,*) 'Solver: ',DRUG_A
+	
 	idid = 0
 	t = tstart
 	tend = t + dt
@@ -775,10 +786,6 @@ if (relax) then
 	endif
 !enddo
 endif
-
-!if (use_medium_flux .and. medium_volume > 0) then
-!	call UpdateMedium1(ntvars,state,dt)
-!endif
 
 allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 ! Note: some time we need to copy the state values to the cell_list() array.
@@ -1377,7 +1384,7 @@ do ichemo = 1,MAX_CHEMO
 		stop
 	endif
 	if (ichemo == DRUG_A) then
-		write(*,*) 'UpdateCbnd: ',chemo(DRUG_A)%medium_Cbnd, R1, R2, chemo(ichemo)%medium_dlayer
+		write(*,*) 'UpdateCbnd: ',chemo(ichemo)%medium_Cbnd
 	endif
 enddo
 end subroutine
@@ -1421,8 +1428,8 @@ do i = 1,ntvars
 		endif
 	enddo
 	if (.not.bnd) cycle
-	do k = 1,7
-		if (ODEdiff%icoef(i,k) < 0) then	! boundary with medium ????????????????????????????????????????????????????????????????????
+!	do k = 1,7
+!		if (ODEdiff%icoef(i,k) < 0) then	! boundary with medium ????????????????????????????????????????????????????????????????????
 			Nbnd = Nbnd + 1
 			do ichemo = 1,MAX_CHEMO
 !				if (.not.chemo(ichemo)%used) cycle
@@ -1434,13 +1441,10 @@ do i = 1,ntvars
 					tracer_N = tracer_N + 1
 				endif
 			enddo
-		endif
-	enddo
+!		endif
+!	enddo
 enddo
 U = (dA*chemo(:)%diff_coef/DELTA_X)*(Nbnd*chemo(:)%medium_Cbnd - Csum(:))
-
-ichemo = DRUG_A
-write(*,*) 'UpdateMedium: ',U(ichemo),chemo(ichemo)%medium_Cbnd,Csum(ichemo)	! Csum=0
 
 do ichemo = 1,MAX_CHEMO
 !	if (.not.chemo(ichemo)%used) cycle
@@ -1454,24 +1458,11 @@ do ichemo = 1,MAX_CHEMO
 !		endif
 		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)) &
 			*(R1*R1*(3*R2 - 2*R1)/R2 - R2*R2))/(V0 - 4*PI*R2*R2*R2/3.)
-		if (ichemo == DRUG_A) then
-			write(*,*) 'UpdateMedium: ',chemo(ichemo)%medium_M,U(ichemo),chemo(ichemo)%medium_diff_coef
-		endif
 	endif
 enddo	
 U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
 chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
 chemo(:)%medium_U = U(:)
-!do ichemo = 1,MAX_CHEMO
-!	R2 = Rlayer(ichemo)
-!	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (U(ichemo)/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
-!	chemo(ichemo)%medium_U = U(ichemo)
-!	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd < 0) then
-!		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateMedium: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
-!		call logger(logmsg)
-!		stop
-!	endif
-!enddo
 
 end subroutine
 

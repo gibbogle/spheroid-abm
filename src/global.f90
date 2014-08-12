@@ -62,6 +62,7 @@ logical, parameter :: use_Cex_Cin = .true.		! assume equilibrium to derive Cin f
 logical, parameter :: suppress_growth = .false.
 
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
+real(REAL_KIND), parameter :: CFSE_std = 0.05
 
 type occupancy_type
 	integer :: indx(2)
@@ -77,6 +78,7 @@ type cell_type
 	logical :: active
 	integer :: state
 	real(REAL_KIND) :: conc(MAX_CHEMO)
+	real(REAL_KIND) :: CFSE
 	real(REAL_KIND) :: dVdt
 	real(REAL_KIND) :: volume			! fractional volume (fraction of nominal cell volume Vcell_cm3)
 	real(REAL_KIND) :: divide_volume
@@ -515,6 +517,27 @@ real(REAL_KIND) :: b, prob
 b = (log(a) - p1)/p2
 prob = 0.5 + 0.5*erf(b/sqrt(2.0))
 cum_prob_lognormal = prob
+end function
+
+!-----------------------------------------------------------------------------------------
+! Generate a random value for CFSE from a distribution with mean = average
+! In the simplest case we can allow a uniform distribution about the average.
+! Multiplying factor in the range (1-a, 1+a)
+! Better to make it a Gaussian distribution: 
+!  = average*(1+s*R)
+! where R = N(0,1), s = std deviation
+!-----------------------------------------------------------------------------------------
+real(REAL_KIND) function generate_CFSE(average)
+real(REAL_KIND) :: average, std
+integer :: kpar = 0
+real(REAL_KIND) :: R
+
+! Uniform distribution
+!R = par_uni(kpar)
+!generate_CFSE = (1 - a + 2*a*R)*average
+! Gaussian distribution
+R = par_rnor(kpar)	! N(0,1)
+generate_CFSE = (1 + CFSE_std*R)*average
 end function
 
 !--------------------------------------------------------------------------------------

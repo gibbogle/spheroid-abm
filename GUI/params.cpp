@@ -395,6 +395,26 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Drug B metabolite decay",
  "Drug B metabolite conc decays with the specified half-life"},
 
+{"RADIATION_ALPHA_H", 0.0473, 0, 0,
+"Alpha (hypoxia)",
+"alpha for irradiation of cells under anoxia (zero oxygen)"},
+
+{"RADIATION_BETA_H", 0.0017, 0, 0,
+"Beta (hypoxia)",
+"beta for irradiation of cells under anoxia (zero oxygen)"},
+
+{"RADIATION_OER_ALPHA", 2.5, 0, 0,
+"OER alpha",
+"Maximum oxygen enhancement ratio for alpha component of radiosensitivity "},
+
+{"RADIATION_OER_BETA", 3.0, 0, 0,
+"OER beta",
+"Maximum oxygen enhancement ratio for beta component of radiosensitivity"},
+
+{"RADIATION_KM", 4.3e-3, 0, 0,
+"Km for radiosensitivity",
+"Oxygen concentration for half maximal radiosensitivity relative to hypoxic cell exposure"},
+
 {"HYPOXIA_1", 0.1, 0, 0,
 "Hypoxia threshold 1",
 "Hypoxia threshold 1"},
@@ -438,6 +458,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"USE_TREATMENT_FILE", 0, 0, 1,
 "Use treatment file?",
 "Treatment programme is specified in the treatment file"},
+
+{"USE_RADIATION", 0, 0, 1,
+"Use radiation treatment",
+"Use radiation treatment"},
 
 {"TREATMENT_FILE", 0, 0, 0,
 "treatment.data",

@@ -33,6 +33,12 @@ extern "C" {
 #include <vtkWindowToImageFilter.h>
 #include <vtkImageData.h>
 #include <vtkPNGWriter.h>
+#include <qwt_plot.h>
+#include <qwt_painter.h>
+#include <qwt_plot_canvas.h>
+
+#define VTK_SOURCE 0
+#define QWT_SOURCE 1
 
 ////////////////////////////////////////////////////////////////////////////////
 //! @class : QVideoOutput
@@ -44,7 +50,7 @@ extern "C" {
 class QVideoOutput : public QObject
 {
 public:
-   QVideoOutput(QObject * parent=0, vtkRenderWindow *VTKrenWin=0);
+   QVideoOutput(QObject * parent=0, int source=0, vtkRenderWindow *VTKrenWin=0, QwtPlot *qwtplot=0);
    virtual ~QVideoOutput();
    bool openMediaFile(int width,
                       int height,
@@ -54,6 +60,7 @@ public:
    bool newVtkFrame(vtkImageData * imageData);
    bool isOpen();
    void recorder();
+   void cleanup();
    bool record;
 public slots:
    bool newFrame(const QImage & image);
@@ -87,12 +94,15 @@ protected:
    int width;
    int height;
    int frameCount;
+   int source;  // 0 = VTK, 1 = FACS
 
 //   QWidget *dlgWidget;
    bool openedMediaFile;
    vtkSmartPointer<vtkPNGWriter> pngwriter;
    vtkRenderWindow *renWin;
    vtkSmartPointer<vtkWindowToImageFilter> w2i;
+   QwtPlot *qp;
+
    QTemporaryFile *tempFile;
    int record_nframes, record_it, framenum;
    QString record_basename;

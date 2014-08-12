@@ -22,7 +22,7 @@ integer :: ncpu
 character*(*) :: infile, outfile
 logical :: ok
 character*(64) :: msg
-integer :: error
+integer :: ichemo, error
 
 ok = .true.
 initialized = .false.
@@ -96,11 +96,16 @@ call CreateBdryList
 !	call TestODEDiffusion
 !	call TestSolver
 !endif
+istep = 0
 call SetupODEdiff
 allocate(allstate(MAX_VARS,MAX_CHEMO))
 allocate(work_rkc(8+5*MAX_VARS))
-call InitConcs
-call SetupMedium
+do ichemo = 1,TRACER
+	if (chemo(ichemo)%used) then
+		call InitConcs(ichemo)
+		call SetupMedium(ichemo)
+	endif
+enddo
 call AdjustMM
 Nradiation_tag = 0
 Ndrug_tag = 0
@@ -109,7 +114,6 @@ Nradiation_dead = 0
 Ndrug_dead = 0
 Nanoxia_dead = 0
 t_simulation = 0
-istep = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
@@ -118,7 +122,33 @@ end subroutine
 !----------------------------------------------------------------------------------------- 
 ! Initialise medium concentrations, etc.
 !-----------------------------------------------------------------------------------------
-subroutine SetupMedium
+subroutine SetupMedium(ichemo)
+integer :: ichemo
+real(REAL_KIND) :: V, V0, R1
+
+if (chemo(ichemo)%present) then
+	call SetRadius(Nsites)
+	R1 = Radius*DELTA_X			! cm
+	V0 = medium_volume0			! cm3
+	V = V0 - (4./3.)*PI*R1**3	! cm3
+	!write(*,'(a,3f10.3)') 'SetupMedium: ',R1,V0,V
+	chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_M = V*chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_U = 0
+else
+	chemo(ichemo)%medium_Cext = 0
+	chemo(ichemo)%medium_Cbnd = 0
+	chemo(ichemo)%medium_M = 0
+	chemo(ichemo)%medium_U = 0
+endif
+write(*,'(a,i4,2e12.4)') 'SetupMedium: ',ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
+end subroutine
+
+!----------------------------------------------------------------------------------------- 
+! Initialise medium concentrations, etc.
+!-----------------------------------------------------------------------------------------
+subroutine SetupMedium1
 integer :: ichemo
 real(REAL_KIND) :: V, V0, R1
 
@@ -476,6 +506,11 @@ do i = 1,2			! currently allowing for just two different drugs
 		chemo(imetab)%decay_rate = 0
 	endif
 enddo
+read(nfcell,*) LQ%alpha_H
+read(nfcell,*) LQ%beta_H
+read(nfcell,*) LQ%OER_am
+read(nfcell,*) LQ%OER_bm
+read(nfcell,*) LQ%K_ms
 read(nfcell,*) O2cutoff(1)
 read(nfcell,*) O2cutoff(2)
 read(nfcell,*) O2cutoff(3)
@@ -884,6 +919,7 @@ cell_list(k)%conc = 0
 cell_list(k)%conc(OXYGEN) = chemo(OXYGEN)%bdry_conc
 cell_list(k)%conc(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
 cell_list(k)%conc(TRACER) = chemo(TRACER)%bdry_conc
+cell_list(k)%CFSE = generate_CFSE(1.d0)
 cell_list(k)%M = 0
 occupancy(site(1),site(2),site(3))%indx(1) = k
 end subroutine
@@ -979,7 +1015,7 @@ end subroutine
 
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
-subroutine InitConcs
+subroutine InitConcs1
 integer :: nextra, ic, ichemo, kcell, site(3), ntvars
 
 write(logmsg,*) 'InitConcs: ',nchemo
@@ -989,7 +1025,7 @@ do kcell = 1,Ncells
     site = cell_list(kcell)%site
     do ic = 1,nchemo
 	    ichemo = chemomap(ic)
-        occupancy(site(1),site(2),site(3))%C(ic) = chemo(ichemo)%bdry_conc
+        occupancy(site(1),site(2),site(3))%C(ichemo) = chemo(ichemo)%bdry_conc
     enddo
 enddo
 ntvars = ODEdiff%nextra + ODEdiff%nintra
@@ -1000,6 +1036,39 @@ enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine InitConcs(ichemo)
+integer :: ichemo
+integer :: i, kcell, site(3), ntvars
+real(REAL_KIND) :: c0
+
+ntvars = ODEdiff%nextra + ODEdiff%nintra
+write(logmsg,*) 'InitConcs: ',ichemo,ntvars
+call logger(logmsg)
+
+if (istep == 0) then
+	if (ichemo == OXYGEN .or. ichemo == GLUCOSE .or. ichemo == TRACER) then
+		c0 = chemo(ichemo)%bdry_conc
+	else	! drug or metabolite
+		c0 = 0
+	endif
+	do kcell = 1,Ncells
+		site = cell_list(kcell)%site
+		occupancy(site(1),site(2),site(3))%C(ichemo) = c0
+	enddo
+	!allstate(1:ntvars,ichemo) = c0
+	allstate(:,ichemo) = c0
+else	! drug or metabolite
+	do i = 1,ODEdiff%nvars
+		site = ODEdiff%varsite(i,:)
+		if (ODEdiff%vartype(i) == EXTRA) then
+			occupancy(site(1),site(2),site(3))%C(ichemo) = 0
+		endif
+	enddo
+endif
+end subroutine
+
+!----------------------------------------------------------------------------------
 ! Radiation treatment is stored in protocol(0)
 ! 
 !----------------------------------------------------------------------------------
@@ -1007,7 +1076,6 @@ subroutine Treatment(radiation_dose)
 real(REAL_KIND) :: radiation_dose
 integer :: i, idrug, ichemo, ichemo_metab
 
-write(*,*) 'Treatment'
 radiation_dose = 0
 do i = 1,protocol(0)%n
 	if (t_simulation >= protocol(0)%tstart(i) .and. .not.protocol(0)%started(i)) then
@@ -1035,10 +1103,15 @@ do idrug = 1,2
 			protocol(idrug)%started(i) = .true.
 			protocol(idrug)%ended(i) = .false.
 			chemo(ichemo)%present = .true.
+			call InitConcs(ichemo)
+			call SetupMedium(ichemo)
 			if (chemo(ichemo_metab)%used) then
 				chemo(ichemo_metab)%present = .true.
+				call InitConcs(ichemo_metab)
+				call SetupMedium(ichemo_metab)
 			endif
-			write(nflog,*) 'Started DRUG_A: ',chemo(ichemo)%bdry_conc, i
+			write(nflog,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
+			write(*,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
 			exit
 		endif
 	enddo
@@ -1048,13 +1121,21 @@ do idrug = 1,2
 			chemo(ichemo_metab)%bdry_conc = 0
 			protocol(idrug)%ended(i) = .true.
 			chemo(ichemo)%present = .false.
-			chemo(ichemo_metab)%present = .false.
-			write(nflog,*) 'Ended DRUG_A: ',i
+			call InitConcs(ichemo)
+			call SetupMedium(ichemo)
+			if (chemo(ichemo_metab)%used) then
+				chemo(ichemo_metab)%present = .false.
+				call InitConcs(ichemo_metab)
+				call SetupMedium(ichemo_metab)
+			endif
+			write(nflog,*) 'Ended DRUG: ',chemo(ichemo)%name,i
+			write(*,*) 'Ended DRUG: ',chemo(ichemo)%name,i
 			exit
 		endif
 	enddo
 enddo	
 end subroutine
+
 
 !-----------------------------------------------------------------------------------------
 ! Advance simulation through one big time step (DELTA_T)
@@ -1105,6 +1186,12 @@ if (mod(istep,nthour) == 0) then
 endif
 istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds
+call GrowCells(radiation_dose,DELTA_T,ok)
+if (.not.ok) then
+	res = 3
+	return
+endif
+
 if (use_treatment) then
 	call treatment(radiation_dose)
 	if (radiation_dose > 0) then
@@ -1112,27 +1199,26 @@ if (use_treatment) then
 		call logger(logmsg)
 	endif
 endif
-call GrowCells(radiation_dose,DELTA_T,ok)
-if (.not.ok) then
-	res = 3
-	return
-endif
 
 ! Update Cbnd using current M, R1 and previous U, Cext
 call UpdateCbnd
 
 call SetupODEdiff
+
+!call check_allstate('before SiteCellToState')
 call SiteCellToState
+!call check_allstate('after SiteCellToState')
+
 do it_solve = 1,NT_CONC
 	tstart = (it_solve-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
 	call Solver(it_solve,tstart,dt,Ncells)
 enddo
-if (idbug /= 0) then
-	i = cell_list(idbug)%iv
-	write(nfout,'(i6,2f10.4)') istep,allstate(i-1,OXYGEN),allstate(i,OXYGEN)
-endif
+!call check_allstate('after Solver')
+
 call StateToSiteCell
+!call check_allstate('after StateToSiteCell')
+
 res = 0
 
 ! Compute U and update M, Cext, Cbnd
@@ -1169,7 +1255,7 @@ logical :: ok, highlighting
 integer, parameter :: axis_centre = -2	! identifies the spheroid centre
 integer, parameter :: axis_end    = -3	! identifies the spheroid extent in 5 directions
 integer, parameter :: axis_bottom = -4	! identifies the spheroid extent in the -Y direction, i.e. bottom surface
-integer, parameter :: ninfo = 6			! the size of the info package for a cell (number of integers)
+integer, parameter :: ninfo = 7			! the size of the info package for a cell (number of integers)
 integer, parameter :: nax = 6			! number of points used to delineate the spheroid
 
 highlighting = (show_progeny /= 0)
@@ -1177,7 +1263,7 @@ nTC_list = 0
 
 k = 0
 last_id1 = 0
-if (1 == 0) then
+if (.false.) then
 	! Need some markers to delineate the follicle extent.  These nax "cells" are used to convey (the follicle centre
 	! and) the approximate ellipsoidal blob limits in the 3 axis directions.
 	do k = 1,nax
@@ -1264,7 +1350,8 @@ do kcell = 1,nlist
 		TC_list(j+1) = kcell + last_id1
 		TC_list(j+2:j+4) = site
 		TC_list(j+5) = colour
-		TC_list(j+6) = highlight
+		TC_list(j+6) = (cell_list(kcell)%volume)**(1./3.)	! diameter: 0.928 - 1.17
+		TC_list(j+7) = highlight
 		last_id2 = kcell + last_id1
 		nlive = nlive + 1
 	endif
@@ -1662,6 +1749,45 @@ do kcell = 1,nlist
 	n = n+1
 enddo
 prob(1:nv) = prob(1:nv)/n
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Get number of live cells
+!-----------------------------------------------------------------------------------------
+subroutine get_nFACS(n) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_nfacs
+use, intrinsic :: iso_c_binding
+integer(c_int) :: n
+integer :: k, kcell
+
+n = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	n = n+1
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_FACS(facs_data) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_facs
+use, intrinsic :: iso_c_binding
+real(c_double) :: facs_data(*)
+integer :: k, kcell
+
+k = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	k = k+1
+	facs_data(k) = cell_list(kcell)%CFSE
+	k = k+1
+	facs_data(k) = cell_list(kcell)%dVdt
+	k = k+1
+	facs_data(k) = cell_list(kcell)%conc(OXYGEN)
+	if (cell_list(kcell)%conc(OXYGEN) <= 0.00001 .or. cell_list(kcell)%dVdt < 2.0e-6) then
+		write(nflog,'(2i6,2e12.3)') istep,kcell,cell_list(kcell)%dVdt,cell_list(kcell)%conc(OXYGEN)
+	endif
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
