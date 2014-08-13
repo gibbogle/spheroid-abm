@@ -2,6 +2,7 @@
 #define QMYLABEL_H
 
 #include <qlabel.h>
+#include <QMouseEvent>
 #include "log.h"
 LOG_USE();
 
