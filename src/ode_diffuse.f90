@@ -419,32 +419,31 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine SiteCellToState
 integer :: i, site(3), kcell, ichemo
+logical :: ZERO_CONCS = .false.
 
 !write(*,*) 'SiteCellToState: ',ODEdiff%nvars
 do i = 1,ODEdiff%nvars
     site = ODEdiff%varsite(i,:)
     if (ODEdiff%vartype(i) == EXTRA) then
-		do ichemo = 1,MAX_CHEMO
-			if (chemo(ichemo)%used) then
-				if (chemo(ichemo)%present) then
-					allstate(i,ichemo) = occupancy(site(1),site(2),site(3))%C(ichemo)
+		if (ZERO_CONCS) then
+			do ichemo = 1,MAX_CHEMO
+				if (chemo(ichemo)%used) then
+					if (chemo(ichemo)%present) then
+						allstate(i,ichemo) = occupancy(site(1),site(2),site(3))%C(ichemo)
+					else
+						allstate(i,ichemo) = 0
+					endif
 				else
 					allstate(i,ichemo) = 0
 				endif
-		    else
-				allstate(i,ichemo) = 0
-		    endif
-		enddo
-!        if (i == 10) then
-!	        write(*,'(a,i6,4e12.3)') 'SiteCellToState: EXTRA: ',i,allstate(i,1:4)
-!	    endif
+			enddo
+		else
+			allstate(i,:) = occupancy(site(1),site(2),site(3))%C(:)
+		endif
     else
 !        kcell = occupancy(site(1),site(2),site(3))%indx(1)
         kcell = ODEdiff%cell_index(i)
         allstate(i,:) = cell_list(kcell)%conc(:)
-!        if (i == 10) then
-!	        write(*,'(a,2i6,4e12.3)') 'SiteCellToState: INTRA: ',i,kcell,allstate(i,1:4)
-!	    endif
     endif
 enddo
 end subroutine
