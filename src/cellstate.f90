@@ -210,7 +210,7 @@ do kcell = 1,nlist
 	    elseif (SN30K%kill_model(ict) == 3) then
 		    pdeath = Kd*dMdt**2*dt
 		endif
-!	    write(*,'(4f10.5)') kmet,cell_list(kcell)%conc(DRUG_A),dMdt,pdeath
+!	    write(*,'(a,i6,4f10.5)') 'CellDeath: ',kcell,cell_list(kcell)%conc(DRUG_A),kmet,dMdt,pdeath
 	    if (par_uni(kpar) < pdeath) then
             cell_list(kcell)%drug_tag = .true.
             Ndrug_tag = Ndrug_tag + 1
@@ -624,7 +624,7 @@ endif
 
 call GetPathMass(site0,site01,path,npath,M1)
 do ichemo = 1,MAX_CHEMO
-	if (M1(ichemo) >= 0) then
+	if (M0(ichemo) >= 0 .and. M1(ichemo) > 0) then
 		alpha(ichemo) = M0(ichemo)/M1(ichemo)	! scaling for concentrations on the path
 	else
 		alpha(ichemo) = 1
@@ -759,6 +759,9 @@ do ic = 1,MAX_CHEMO
 		do k = 1, npath
 			site = path(:,k)
 			occupancy(site01(1),site01(2),site01(3))%C(ic) = alpha(ic)*occupancy(site01(1),site01(2),site01(3))%C(ic)
+			if (isnan(occupancy(site01(1),site01(2),site01(3))%C(ic))) then
+				write(*,*) 'ScalePathConcentrations: isnan: ic,site: ',ic,site01,alpha(ic)
+			endif
 		enddo
 	endif
 enddo
@@ -1074,7 +1077,7 @@ integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
 
 ok = .true.
-!write(*,*) 'CloneCell'
+!write(*,*) 'CloneCell: ',kcell0,kcell1
 tnow = istep*DELTA_T
 !lastID = lastID + 1
 nlist = nlist + 1

@@ -111,7 +111,7 @@ do ichemo = 1,MAX_CHEMO
 	if (chemo(ichemo)%used) then
 		chemo(ichemo)%medium_dlayer = d_layer	! for now, using the same unstirred layer thickness for all constituents
 		if (ichemo == OXYGEN .or. ichemo == GLUCOSE .or. ichemo == TRACER) then
-			chemo(OXYGEN)%present = .true.
+			chemo(ichemo)%present = .true.
 		endif
 	endif
 enddo

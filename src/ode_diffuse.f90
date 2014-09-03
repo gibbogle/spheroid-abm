@@ -342,7 +342,8 @@ enddo
 
 nchemo = 0
 do ichemo = 1,MAX_CHEMO
-	if (chemo(ichemo)%used) then
+!	if (chemo(ichemo)%used) then
+	if (chemo(ichemo)%present) then
 		nchemo = nchemo + 1
 		chemomap(nchemo) = ichemo
 	endif
@@ -417,19 +418,33 @@ end subroutine
 ! Copy site and cell concentrations to allstate(:,:)
 !----------------------------------------------------------------------------------
 subroutine SiteCellToState
-integer :: i, site(3), kcell
+integer :: i, site(3), kcell, ichemo
 
 !write(*,*) 'SiteCellToState: ',ODEdiff%nvars
 do i = 1,ODEdiff%nvars
     site = ODEdiff%varsite(i,:)
     if (ODEdiff%vartype(i) == EXTRA) then
-        allstate(i,:) = occupancy(site(1),site(2),site(3))%C(:)
-!        write(*,'(a,4i4,4f8.3)') 'EXTRA: ',i,site,allstate(i,1:nchemo)
+		do ichemo = 1,MAX_CHEMO
+			if (chemo(ichemo)%used) then
+				if (chemo(ichemo)%present) then
+					allstate(i,ichemo) = occupancy(site(1),site(2),site(3))%C(ichemo)
+				else
+					allstate(i,ichemo) = 0
+				endif
+		    else
+				allstate(i,ichemo) = 0
+		    endif
+		enddo
+!        if (i == 10) then
+!	        write(*,'(a,i6,4e12.3)') 'SiteCellToState: EXTRA: ',i,allstate(i,1:4)
+!	    endif
     else
 !        kcell = occupancy(site(1),site(2),site(3))%indx(1)
         kcell = ODEdiff%cell_index(i)
         allstate(i,:) = cell_list(kcell)%conc(:)
-!        write(*,'(a,5i4,4f8.3)') 'INTRA: ',i,site,kcell,allstate(i,1:nchemo)
+!        if (i == 10) then
+!	        write(*,'(a,2i6,4e12.3)') 'SiteCellToState: INTRA: ',i,kcell,allstate(i,1:4)
+!	    endif
     endif
 enddo
 end subroutine
@@ -522,6 +537,10 @@ cbnd = BdryConc(ichemo,t_simulation)
                           kcell, ict, metabolised, membrane_flux) default(shared) schedule(static)
 do i = 1,neqn
 	yy = y(i)
+	if (isnan(yy)) then
+		write(*,*) 'f_rkc: isnan: ',i,ichemo,yy
+		stop
+	endif
     if (ODEdiff%vartype(i) == EXTRA) then
         intracellular = .false.
 		vol_cm3 = Vsite_cm3
@@ -553,6 +572,11 @@ do i = 1,neqn
 	    Cin(ichemo) = yy
 	    ict = cell_list(kcell)%celltype
 	    metabolised = (SN30K%Kmet0(ict) > 0)	! only valid for SN30K !!!!!
+!	    if (ichemo == DRUG_A .and. i == 10) write(*,*) 'i,kcell: ',i,kcell
+!	    if (ichemo == DRUG_A .and. kcell == 1) then
+!			write(*,'(a,2i4,2e12.3)') 'f_rkc(1): ',i,kcell,y(i),Cex
+!			if (isnan(Cex) .or. isnan(yy)) stop
+!		endif
 	endif
 	if (.not.intracellular) then
 		! Need to check diffusion eqtn. when Vextra_cm3 < Vsite_cm3 = DX^3 !!!!!!!!!!!!!!!!!!!!!!
@@ -571,6 +595,9 @@ do i = 1,neqn
 		    else
 			    val = y(kv)
 		    endif
+!	    	if (ichemo == DRUG_A .and. i == 10) then
+!	    		write(*,'(a,3i4,e12.3)') 'template: ',i,k,kv,val
+!	    	endif
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
@@ -579,6 +606,9 @@ do i = 1,neqn
 		    membrane_flux = 0
 		endif
     	dydt(i) = dCsum - membrane_flux/vol_cm3
+!    	if (ichemo == DRUG_A .and. i == 10) then
+!    		write(*,'(a,i4,3e12.3)') 'EXTRA: ',i,dCsum,membrane_flux,vol_cm3
+!    	endif
 	else
 		C = Cin(ichemo)
 		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vsite_cm3		! just a scaling.  We should account for change in surface area
@@ -608,6 +638,10 @@ do i = 1,neqn
 			dCreact = dCreact + membrane_flux/vol_cm3
 		endif
 	    dydt(i) = dCreact - yy*decay_rate
+!	    if (ichemo == DRUG_A .and. kcell == 1) then
+!			write(*,'(a,2i4,4e12.3)') 'f_rkc(2): ',i,kcell,C,dCreact,membrane_flux,dydt(i)
+!			if (isnan(dydt(i))) stop
+!		endif
 	endif
 enddo
 !$omp end parallel do
@@ -1382,9 +1416,6 @@ do ichemo = 1,MAX_CHEMO
 		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateCbnd: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
 		call logger(logmsg)
 		stop
-	endif
-	if (ichemo == DRUG_A) then
-		write(*,*) 'UpdateCbnd: ',chemo(ichemo)%medium_Cbnd
 	endif
 enddo
 end subroutine
