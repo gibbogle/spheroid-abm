@@ -459,10 +459,6 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Use treatment file?",
 "Treatment programme is specified in the treatment file"},
 
-{"USE_RADIATION", 0, 0, 1,
-"Use radiation treatment",
-"Use radiation treatment"},
-
 {"TREATMENT_FILE", 0, 0, 0,
 "treatment.data",
 "The treatment file contains data describing the drug and radiation dosing schedule"},

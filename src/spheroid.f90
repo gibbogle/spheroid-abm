@@ -12,7 +12,7 @@ IMPLICIT NONE
 contains 
 
 !-----------------------------------------------------------------------------------------
-! This subroutine is called to initialize a simulation run.
+! This subroutine is called to initialize a simulation run. 
 ! ncpu = the number of processors to use 
 ! infile = file with the input data
 ! outfile = file to hold the output
@@ -522,7 +522,9 @@ read(nfcell,*) iuse_extra
 read(nfcell,*) iuse_relax
 read(nfcell,*) iuse_par_relax
 read(nfcell,*) itreatment
+write(*,*) itreatment
 read(nfcell,*) treatmentfile						! file with treatment programme
+write(*,*) treatmentfile
 read(nfcell,*) iuse_drop
 read(nfcell,*) Ndrop
 read(nfcell,*) alpha_shape
@@ -1161,9 +1163,6 @@ if (Ncells == 0) then
 endif
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
-!if (istep == 0) then
-!    call SetupODEdiff
-!endif
 		
 !call CheckBdryList('simulate_step')
 
@@ -1186,12 +1185,12 @@ if (mod(istep,nthour) == 0) then
 endif
 istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds
+
 call GrowCells(radiation_dose,DELTA_T,ok)
 if (.not.ok) then
 	res = 3
 	return
 endif
-
 if (use_treatment) then
 	call treatment(radiation_dose)
 	if (radiation_dose > 0) then
