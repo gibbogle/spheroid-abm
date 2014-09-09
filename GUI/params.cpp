@@ -163,6 +163,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Boundary concentration",
  "Constituent concentration in the medium"},
 
+{"OXYGEN_CONSTANT", 0, 0, 1,
+ "Constant concentration",
+ "Extracellular concentration to be held constant everywhere at the specified boundary value"},
+
 {"OXYGEN_CONSUMPTION", 2.3e-16, 0, 0,
  "Max consumption rate",
  "Maximum rate of consumption of the constituent"},
@@ -194,6 +198,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"GLUCOSE_BDRY_CONC", 9.0, 0, 0,
  "Boundary concentration",
  "GLUCOSE boundary concentration"},
+
+{"GLUCOSE_CONSTANT", 0, 0, 1,
+ "Constant concentration",
+ "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
 {"GLUCOSE_CONSUMPTION", 3.8e-17, 0, 0,
  "Max consumption rate",
@@ -227,6 +235,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Boundary concentration",
  "TRACER boundary concentration"},
 
+{"TRACER_CONSTANT", 1, 0, 1,
+ "Constant concentration",
+ "Extracellular concentration to be held constant everywhere at the specified boundary value"},
+
 {"TRACER_CONSUMPTION", 0, 0, 0,
  "Consumption rate",
  "TRACER consumption rate"},
@@ -250,6 +262,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"DRUG_A_BDRY_CONC", 0.0, 0, 0,
  "Boundary concentration",
  "Drug concentration in the medium"},
+
+{"DRUG_A_CONSTANT", 0, 0, 1,
+ "Constant concentration",
+ "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
 {"DRUG_A_DECAY", 0, 0, 0,
  "Decaying",
@@ -307,9 +323,14 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion    ",
  "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
 
-{"SN30K_KILL_MODEL_1", 1, 1, 3,
+{"SN30K_KD_1", 0, 0, 0,
+ "Kd",
+ "Kd is the death rate coefficient in the selected kill model.\n\
+  The value can be entered directly, or computed from the kill experiment data."},
+
+{"SN30K_KILL_MODEL_1", 0, 0, 0,
  "Kill model",
- "Model of SN30000 killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+ "Model of SN30000 killing: 0 = K x metabolism, 1 = K x Ci x metabolism, 2 = K x metabolism^2"},
 
 {"SN30K_KILL_O2_CONC_1", 0.0, 0, 0,
  "O2 conc",
@@ -351,9 +372,14 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion",
  "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
 
-{"SN30K_KILL_MODEL_2", 1, 1, 3,
+{"SN30K_KD_2", 0, 0, 0,
+ "Kd",
+ "Kd is the death rate coefficient in the selected kill model.\n\
+  The value can be entered directly, or computed from the kill experiment data."},
+
+{"SN30K_KILL_MODEL_2", 0, 0, 0,
  "Kill model",
- "Model of SN30000 killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+ "Model of SN30000 killing: 0 = K x metabolism, 1 = K x Ci x metabolism, 2 = K x metabolism^2"},
 
 {"SN30K_KILL_O2_CONC_2", 0.0, 0, 0,
  "O2 conc",
@@ -382,6 +408,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"DRUG_B_BDRY_CONC", 0.0, 0, 0,
  "DRUG_B boundary concentration",
  "DRUG_B boundary concentration"},
+
+{"DRUG_B_CONSTANT", 0, 0, 1,
+ "Constant concentration",
+ "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
 {"DRUG_B_DECAY", 0, 0, 0,
  "DRUG_B decay",

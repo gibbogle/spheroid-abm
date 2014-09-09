@@ -109,6 +109,7 @@ private slots:
 	void playVTK();
 	void setVTKSpeed();
 	void saveSnapshot();
+    void saveProfileData();
     void showGradient3D();
     void showGradient2D();
     void setSavePosStart();
@@ -131,10 +132,7 @@ public slots:
 	void timer_update();
 	void errorPopup(QString);
 	void displayScene();
-//    void displayFld();
     void showSummary(int);
-//    void startRecorder();
-//    void stopRecorder();
     void showFACS();
     void startRecorderVTK();
     void stopRecorderVTK();
@@ -142,7 +140,6 @@ public slots:
     void stopRecorderFACS();
     bool getVideoFileInfo(int *nframes, QString *itemFormat, QString *itemCodec, QString *videoFileName);
 
-//   void on_buttonButton_constituent_clicked();
     void buttonClick_constituent(QAbstractButton* button);
     void buttonClick_plane(QAbstractButton* button);
     void buttonClick_canvas(QAbstractButton* button);
@@ -151,16 +148,14 @@ public slots:
     void setupConc(int nc, bool *used);
 
     void on_cbox_USE_DRUG_A_toggled(bool checked);
-//    void on_cbox_drugA_decay_toggled(bool checked);
     void on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked);
-//    void on_cbox_drugA_metabolite_decay_toggled(bool checked);
     void on_cbox_USE_DRUG_B_toggled(bool checked);
-//    void on_cbox_drugB_decay_toggled(bool checked);
     void on_cbox_DRUG_B_SIMULATE_METABOLITE_toggled(bool checked);
-//    void on_cbox_drugB_metabolite_decay_toggled(bool checked);
     void on_cbox_USE_RADIATION_toggled(bool checked);
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
+    void on_pushButton_SN30K_Kd_1_clicked();
+    void on_pushButton_SN30K_Kd_2_clicked();
     void radioButtonChanged(QAbstractButton *b);
 
 signals:
@@ -274,10 +269,7 @@ private:
 	int currentDescription;
 	QString defaultInputFile;
 	QString inputFile;
-//	QString stopfile;
-//	QString pausefile;
 	QString cellfile;
-//	QString dll_path;
 	QString vtkfile;
 	QTextBrowser *box_outputData;
 	SocketHandler *sthread0;
@@ -293,7 +285,6 @@ private:
 	int progress;
 	int nGraphs;		// act, ntot_LN, ncog_PER, ...
 	int nGraphCases;
-//    int recordingVTK;
     QColor comboColour[30];
 
 	RESULT_SET *newR;
@@ -328,8 +319,8 @@ private:
     Field *field;
 	ExecThread *exthread;
 
-    QVideoOutput   * videoVTK;
-    QVideoOutput   * videoFACS;
+    QVideoOutput   *videoVTK;
+    QVideoOutput   *videoFACS;
 
 signals:
     void pause_requested();
@@ -359,7 +350,5 @@ public:
 		return Acceptable;
 	}
 };
-
-//static const double DELTA_T = 0.25;
 
 #endif

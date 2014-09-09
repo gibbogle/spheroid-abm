@@ -371,8 +371,8 @@ subroutine ReadCellParams(ok)
 logical :: ok
 integer :: i, idrug, imetab, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
 integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
-integer :: ictype, idisplay
-integer :: iuse_drop
+integer :: ictype, idisplay, isconstant
+integer :: iuse_drop, iconstant
 real(REAL_KIND) :: days, bdry_conc, percent
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
@@ -419,6 +419,8 @@ read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%medium_diff_coef
 read(nfcell,*) chemo(OXYGEN)%membrane_diff
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
+read(nfcell,*) iconstant
+chemo(OXYGEN)%constant = (iconstant == 1)
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
 read(nfcell,*) chemo(OXYGEN)%MM_C0
 read(nfcell,*) chemo(OXYGEN)%Hill_N
@@ -427,6 +429,8 @@ read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%medium_diff_coef
 read(nfcell,*) chemo(GLUCOSE)%membrane_diff
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
+read(nfcell,*) iconstant
+chemo(GLUCOSE)%constant = (iconstant == 1)
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
 read(nfcell,*) chemo(GLUCOSE)%MM_C0
 read(nfcell,*) chemo(GLUCOSE)%Hill_N
@@ -435,6 +439,8 @@ read(nfcell,*) chemo(TRACER)%diff_coef
 read(nfcell,*) chemo(TRACER)%medium_diff_coef
 read(nfcell,*) chemo(TRACER)%membrane_diff
 read(nfcell,*) chemo(TRACER)%bdry_conc
+read(nfcell,*) iconstant
+chemo(TRACER)%constant = (iconstant == 1)
 read(nfcell,*) chemo(TRACER)%max_cell_rate
 read(nfcell,*) chemo(TRACER)%MM_C0
 read(nfcell,*) chemo(TRACER)%Hill_N
@@ -443,6 +449,7 @@ do i = 1,2			! currently allowing for just two different drugs
 	read(nfcell,*) iuse_drug
 	read(nfcell,'(a12)') drug_name
 	read(nfcell,*) bdry_conc
+	read(nfcell,*) iconstant
 	read(nfcell,*) idrug_decay
 	read(nfcell,*) iuse_metab
 	read(nfcell,*) imetab_decay
@@ -457,6 +464,7 @@ do i = 1,2			! currently allowing for just two different drugs
 	if (idrug == 0) cycle
 	chemo(idrug)%used = (iuse_drug == 1)
 	chemo(idrug)%bdry_conc = bdry_conc
+	chemo(idrug)%constant = (iconstant == 1)
 	chemo(idrug)%decay = (idrug_decay == 1)
 	if (chemo(idrug)%used) then
 		chemo(imetab)%used = (iuse_metab == 1)
@@ -485,11 +493,13 @@ do i = 1,2			! currently allowing for just two different drugs
 			read(nfcell,*) SN30K%KO2(ictype)
 			read(nfcell,*) SN30K%gamma(ictype)
 			read(nfcell,*) SN30K%Klesion(ictype)
+			read(nfcell,*) SN30K%Kd(ictype)
 			read(nfcell,*) SN30K%kill_model(ictype)
 			read(nfcell,*) SN30K%kill_O2(ictype)
 			read(nfcell,*) SN30K%kill_drug(ictype)
 			read(nfcell,*) SN30K%kill_duration(ictype)
 			read(nfcell,*) SN30K%kill_fraction(ictype)
+			SN30K%Kmet0(ictype) = SN30K%Kmet0(ictype)/60					! /min -> /sec
 			SN30K%KO2(ictype) = 1.0e-3*SN30K%KO2(ictype)                    ! um -> mM
 			SN30K%kill_duration(ictype) = 60*SN30K%kill_duration(ictype)    ! minutes -> seconds
 		enddo
@@ -1163,8 +1173,6 @@ if (Ncells == 0) then
 endif
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
-		
-!call CheckBdryList('simulate_step')
 
 if (use_dropper .and. Ncells >= Ndrop .and. .not.is_dropped) then
     call shaper
