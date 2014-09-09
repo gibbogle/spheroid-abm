@@ -23,6 +23,7 @@ type chemokine_type
 	logical :: used
 	logical :: present
 	logical :: use_secretion
+	logical :: constant
 	real(REAL_KIND) :: bdry_rate
 	real(REAL_KIND) :: bdry_conc
 	real(REAL_KIND) :: diff_coef

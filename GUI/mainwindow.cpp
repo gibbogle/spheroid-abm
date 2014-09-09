@@ -164,7 +164,8 @@ void MainWindow::createActions()
     action_pause->setEnabled(false);
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(false);
-	action_save_snapshot->setEnabled(false);
+    action_save_3D_snapshot->setEnabled(false);
+    action_save_profile_data->setEnabled(false);
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
     action_field->setEnabled(false);
@@ -213,7 +214,8 @@ void MainWindow::createActions()
 //    connect(action_add_graph, SIGNAL(triggered()), this, SLOT(addGraph()));
 //    connect(action_remove_graph, SIGNAL(triggered()), this, SLOT(removeGraph()));
 //    connect(action_remove_all, SIGNAL(triggered()), this, SLOT(removeAllGraphs()));
-    connect(action_save_snapshot, SIGNAL(triggered()), this, SLOT(saveSnapshot()));
+    connect(action_save_3D_snapshot, SIGNAL(triggered()), this, SLOT(saveSnapshot()));
+    connect(action_save_profile_data, SIGNAL(triggered()), this, SLOT(saveProfileData()));
     connect(actionStart_recording_VTK, SIGNAL(triggered()), this, SLOT(startRecorderVTK()));
     connect(actionStop_recording_VTK, SIGNAL(triggered()), this, SLOT(stopRecorderVTK()));
     connect(actionStart_recording_FACS, SIGNAL(triggered()), this, SLOT(startRecorderFACS()));
@@ -223,6 +225,8 @@ void MainWindow::createActions()
 //    connect(action_show_gradient2D, SIGNAL(triggered()), this, SLOT(showGradient2D()));
     connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
     connect(buttonGroup_plane, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_plane(QAbstractButton*)));
+    connect(buttonGroup_SN30K_killmodel_1, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
+    connect(buttonGroup_SN30K_killmodel_2, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
 //	  connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
 	connect(lineEdit_fraction, SIGNAL(textEdited(QString)), this, SLOT(textEdited_fraction(QString)));
@@ -578,8 +582,9 @@ void MainWindow::loadParams()
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
-				parse_rbutton(wtag,&rbutton_case);
-			}
+//				parse_rbutton(wtag,&rbutton_case);
+                wtag = parse_rbutton(qsname,&rbutton_case);
+            }
             // Find corresponding data in workingParameterList
             bool found = false;
 			for (int k=0; k<nParams; k++) {
@@ -785,7 +790,7 @@ void MainWindow::loadParams()
 						*/
 					} else if (qsname.startsWith("rbut_")) {
 						QRadioButton *w_rb = (QRadioButton *)w;
-						if (int(p.value) == 1) {
+                        if (int(p.value) == rbutton_case) {
 							w_rb->setChecked(true);
 							LOG_QMSG("loadParams: setChecked true")
 						} else {
@@ -903,16 +908,31 @@ void MainWindow::loadParams()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-QString MainWindow::parse_rbutton(QString wtag, int *rbutton_case)
+//QString MainWindow::parse_rbutton(QString wtag, int *rbutton_case)
+//{
+//	// parse wtag into part before '_' and part after '_'
+//	int j = wtag.indexOf('_');
+//	QString suffix = wtag.mid(j+1);
+//	// the prefix becomes wtag, the suffix becomes rbutton_case, an integer 0,1,2,...
+//	wtag = wtag.mid(0,j);
+//	bool ok;
+//	*rbutton_case = suffix.toInt(&ok);
+//	return wtag;
+//}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+QString MainWindow::parse_rbutton(QString qsname, int *rbutton_case)
 {
-	// parse wtag into part before '_' and part after '_'
-	int j = wtag.indexOf('_');
-	QString suffix = wtag.mid(j+1);
-	// the prefix becomes wtag, the suffix becomes rbutton_case, an integer 0,1,2,...
-	wtag = wtag.mid(0,j);
-	bool ok;
-	*rbutton_case = suffix.toInt(&ok);
-	return wtag;
+    // parse wtag into part before '_' and part after '_'
+    QString wtag = qsname.mid(5);   // strips off "rbut_"
+    int j = wtag.lastIndexOf('_');  // position of last '_'
+    QString suffix = wtag.mid(j+1);
+    // the prefix becomes wtag0, the suffix becomes rbutton_case, an integer 0,1,2,...
+    QString wtag0 = wtag.mid(0,j);
+    bool ok;
+    *rbutton_case = suffix.toInt(&ok);
+    return wtag0;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -972,8 +992,9 @@ void MainWindow::reloadParams()
 			QString wtag = qsname.mid(5);
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
-				parse_rbutton(wtag,&rbutton_case);
-			}
+//				parse_rbutton(wtag,&rbutton_case);
+                wtag = parse_rbutton(qsname,&rbutton_case);
+            }
             // Find corresponding data in workingParameterList
             bool found = false;
 			for (int k=0; k<nParams; k++) {
@@ -1168,14 +1189,20 @@ void MainWindow::reloadParams()
 						}
 						*/
 					} else if (qsname.startsWith("rbut_")) {
-						QRadioButton *w_rb = (QRadioButton *)w;
-						int val = int(p.value);
-						LOG_QMSG(qsname);
-						LOG_QMSG(w_rb->objectName());
-						sprintf(msg,"val: %d",val);
-						LOG_MSG(msg);
-						setBdryRadioButton(w_rb,val);
-						setLineEditVisibility(qsname,val);
+                        QRadioButton *w_rb = (QRadioButton *)w;
+                        if (p.value == rbutton_case) {
+                            w_rb->setChecked(true);
+                        } else {
+                            w_rb->setChecked(false);
+                        }
+//						QRadioButton *w_rb = (QRadioButton *)w;
+//						int val = int(p.value);
+//						LOG_QMSG(qsname);
+//						LOG_QMSG(w_rb->objectName());
+//						sprintf(msg,"val: %d",val);
+//						LOG_MSG(msg);
+//						setBdryRadioButton(w_rb,val);
+//						setLineEditVisibility(qsname,val);
 					}
 				}
 			}
@@ -1210,16 +1237,8 @@ void MainWindow::showMore(QString moreText)
 	LOG_MSG("label clicked!");
 	LOG_QMSG(moreText);
 	
-//    long i = reinterpret_cast<long>(sender());
-//    if (i != currentDescription) {
-        text_more->setEnabled(true); // self.ui.text_description.setEnabled(1) #show()
-        text_more->setText(moreText); // text_description
-//        currentDescription = i;
-//    } else {
-//        text_more->clear(); // text_description
-//        text_more->setEnabled(false); // hide()#text_description
-//        currentDescription = 0;
-//	}
+    text_more->setEnabled(true);
+    text_more->setText(moreText); // text_description
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1238,7 +1257,7 @@ void MainWindow::writeout()
     }
     QTextStream out(&file);
 	for (int k=0; k<parm->nParams; k++) {
-		PARAM_SET p = parm->get_param(k);
+        PARAM_SET p = parm->get_param(k);
 		double val = p.value;
         if (p.tag.compare("TREATMENT_FILE") == 0)
 			line = p.label;
@@ -1261,7 +1280,7 @@ void MainWindow::writeout()
         line += "\n";
 		out << line;
 	}
-
+    file.close();
     paramSaved = true;
 	LOG_MSG("Input data saved");
 }
@@ -1613,6 +1632,53 @@ void MainWindow::saveSnapshot()
 }
 
 //--------------------------------------------------------------------------------------------------------
+// Note that constituent data is currently hard-wired!!
+// The names are in field->const_name[]
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::saveProfileData()
+{
+    int i, ichemo;
+    double x, c;
+    QString line;
+
+    LOG_MSG("saveProfileData");
+    QString dataFile = QFileDialog::getSaveFileName(this, tr("Select profile data file"), ".", tr("Data files (*.txt *.dat)"));
+    if (dataFile.compare("") == 0) {
+        return;
+    }
+    QFile file(dataFile);
+    if (!file.open(QFile::WriteOnly | QFile::Text)) {
+        QMessageBox::warning(this, tr("saveProfileData"),
+                             tr("Cannot write data file %1:\n%2.")
+                             .arg(dataFile)
+                             .arg(file.errorString()));
+        LOG_MSG("Profile data file open failed");
+        return;
+    }
+    QTextStream out(&file);
+    for (ichemo=0; ichemo<MAX_CHEMO+1; ichemo++) {
+//        if (!field->const_used[ichemo]) continue;
+        out << field->const_name[ichemo];
+        out << "\n";
+    }
+    out << "\n";
+    for (i=0; i<conc_nc; i++) {
+        x = i*conc_dx*1.0e4;
+        line = QString::number(x,'g',4);
+        line += " ";
+        for (ichemo=0; ichemo<MAX_CHEMO+1; ichemo++) {
+//            if (!field->const_used[ichemo]) continue;
+            c = concData[i*(MAX_CHEMO+1)+ichemo];
+            line += QString::number(c,'g',4);
+            line += " ";
+        }
+        line += "\n";
+        out << line;
+    }
+    file.close();
+}
+
+//--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showGradient2D()
 {
@@ -1656,7 +1722,8 @@ void MainWindow::runServer()
         action_run->setEnabled(false);
         action_pause->setEnabled(true);
         action_stop->setEnabled(true);
-		action_save_snapshot->setEnabled(false);
+        action_save_3D_snapshot->setEnabled(false);
+        action_save_profile_data->setEnabled(false);
         action_show_gradient3D->setEnabled(false);
         action_show_gradient2D->setEnabled(false);
 //        if (!action_field->isEnabled())
@@ -1719,7 +1786,8 @@ void MainWindow::runServer()
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
     action_FACS->setEnabled(true);
-    action_save_snapshot->setEnabled(false);
+    action_save_3D_snapshot->setEnabled(false);
+    action_save_profile_data->setEnabled(false);
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
     action_field->setEnabled(true);
@@ -2166,7 +2234,8 @@ void MainWindow::postConnection()
     action_run->setEnabled(true);
     action_pause->setEnabled(false);
     action_stop->setEnabled(false);
-	action_save_snapshot->setEnabled(true);
+    action_save_3D_snapshot->setEnabled(true);
+    action_save_profile_data->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
     action_field->setEnabled(true);
@@ -2224,7 +2293,8 @@ void MainWindow::pauseServer()
 	action_run->setEnabled(true); 
 	action_pause->setEnabled(false);
 	action_stop->setEnabled(true);
-	action_save_snapshot->setEnabled(true);
+    action_save_3D_snapshot->setEnabled(true);
+    action_save_profile_data->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
     action_field->setEnabled(true);
@@ -2259,7 +2329,8 @@ void MainWindow::stopServer()
     action_run->setEnabled(true); 
     action_pause->setEnabled(false);
     action_stop->setEnabled(false);
-	action_save_snapshot->setEnabled(true);
+    action_save_3D_snapshot->setEnabled(true);
+    action_save_profile_data->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
     action_field->setEnabled(true);
@@ -2664,43 +2735,32 @@ void MainWindow::changeParam()
 				}
 			}
 		} else if (wname.contains("rbut_")) {
-//			LOG_QMSG("changeParam: rbut");
-//			LOG_QMSG(wname);
-			QString wtag = wname.mid(5);
 			QRadioButton *radioButton = (QRadioButton *)w;
-			for (int k=0; k<parm->nParams; k++) {
-				PARAM_SET p = parm->get_param(k);
-				if (wtag.compare(p.tag) == 0) {
-					int val;
-					if (radioButton->isChecked())
-						val = 1;
-					else
-						val = 0;
-					parm->set_value(k,val);
-					setLineEditVisibility(wname,val);
-
-//					LOG_QMSG("changeParam: set_value")
-//					LOG_QMSG(wname);
-					break;
-				}
-			}
-			/*
-			if (radioButton->isChecked()) {
-				QString wtag = wname.mid(5);
-				int rbutton_case;
-//				wtag = parse_rbutton(wtag,&rbutton_case);
-				parse_rbutton(wtag,&rbutton_case);
-				for (int k=0; k<parm->nParams; k++) {
-					PARAM_SET p = parm->get_param(k);
-					if (wtag.compare(p.tag) == 0) {
-						parm->set_value(k,rbutton_case);
-						LOG_QMSG("changeParam: set_value")
-						LOG_QMSG(wtag);
-						break;
-					}
-				}
-			}
-			*/
+            QString wtag = wname.mid(5);
+            for (int k=0; k<parm->nParams; k++) {
+                PARAM_SET p = parm->get_param(k);
+                if (wtag.compare(p.tag) == 0) {
+                    if (radioButton->isChecked()) {
+                        parm->set_value(k,1);
+                    } else {
+                        parm->set_value(k,0);
+                    }
+                    break;
+                }
+            }
+//			for (int k=0; k<parm->nParams; k++) {
+//				PARAM_SET p = parm->get_param(k);
+//				if (wtag.compare(p.tag) == 0) {
+//					int val;
+//					if (radioButton->isChecked())
+//						val = 1;
+//					else
+//						val = 0;
+//					parm->set_value(k,val);
+//					setLineEditVisibility(wname,val);
+//					break;
+//				}
+//			}
 		}
 	}
 }
@@ -3672,6 +3732,68 @@ void MainWindow::on_action_FACS_triggered()
     action_VTK->setEnabled(true);
     action_FACS->setEnabled(false);
     showingFACS = true;
+}
+
+//------------------------------------------------------------------------------------------------------
+// Need to convert Kmet0 from /min to /sec, and kill_duration from mins to secs.
+//------------------------------------------------------------------------------------------------------
+void MainWindow::on_pushButton_SN30K_Kd_1_clicked()
+{
+//    kmet = (SN30K%C1(i) + SN30K%C2(i)*SN30K%KO2(i)/(SN30K%KO2(i) + SN30K%kill_O2(i)))*SN30K%Kmet0(i)
+//	if (SN30K%kill_model(i) == 1) then
+//		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i))
+//	elseif (SN30K%kill_model(i) == 2) then
+//		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i)**2)
+//	elseif (SN30K%kill_model(i) == 3) then
+//		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*(kmet*SN30K%kill_drug(i))**2)
+//	endif
+    double Kd;
+    double C1 = line_SN30K_C1_1->text().toDouble();
+    double C2 = line_SN30K_C2_1->text().toDouble();
+    double KO2 = line_SN30K_KO2_1->text().toDouble();
+    double Kmet0 = line_SN30K_KMET0_1->text().toDouble();
+    double kill_O2 = line_SN30K_KILL_O2_CONC_1->text().toDouble();
+    double kill_drug = line_SN30K_KILL_DRUG_CONC_1->text().toDouble();
+    double kill_duration = line_SN30K_KILL_DURATION_1->text().toDouble();
+    double kill_fraction = line_SN30K_KILL_FRACTION_1->text().toDouble();
+    double kmet = (C1 + C2*KO2/(KO2 + kill_O2))*Kmet0;
+    Kmet0 /= 60;            // /min -> /sec
+    kill_duration *= 60;    // min -> sec
+    if (rbut_SN30K_KILL_MODEL_1_0->isChecked()) {
+        Kd = -log(1-kill_fraction)/(kill_duration*kmet*kill_drug);
+    } else if (rbut_SN30K_KILL_MODEL_1_1->isChecked()) {
+        Kd = -log(1-kill_fraction)/(kill_duration*kmet*pow(kill_drug,2));
+    } else if (rbut_SN30K_KILL_MODEL_1_2->isChecked()) {
+        Kd = -log(1-kill_fraction)/(kill_duration*pow(kmet*kill_drug,2));
+    }
+    line_SN30K_KD_1->setText(QString::number(Kd,'g',4));
+}
+
+//------------------------------------------------------------------------------------------------------
+// Need to convert Kmet0 from /min to /sec, and kill_duration from mins to secs.
+//------------------------------------------------------------------------------------------------------
+void MainWindow::on_pushButton_SN30K_Kd_2_clicked()
+{
+    double Kd;
+    double C1 = line_SN30K_C1_2->text().toDouble();
+    double C2 = line_SN30K_C2_2->text().toDouble();
+    double KO2 = line_SN30K_KO2_2->text().toDouble();
+    double Kmet0 = line_SN30K_KMET0_2->text().toDouble();
+    double kill_O2 = line_SN30K_KILL_O2_CONC_2->text().toDouble();
+    double kill_drug = line_SN30K_KILL_DRUG_CONC_2->text().toDouble();
+    double kill_duration = line_SN30K_KILL_DURATION_2->text().toDouble();
+    double kill_fraction = line_SN30K_KILL_FRACTION_2->text().toDouble();
+    double kmet = (C1 + C2*KO2/(KO2 + kill_O2))*Kmet0;
+    Kmet0 /= 60;            // /min -> /sec
+    kill_duration *= 60;    // min -> sec
+    if (rbut_SN30K_KILL_MODEL_2_0->isChecked()) {
+        Kd = -log(1-kill_fraction)/(kill_duration*kmet*kill_drug);
+    } else if (rbut_SN30K_KILL_MODEL_2_1->isChecked()) {
+        Kd = -log(1-kill_fraction)/(kill_duration*kmet*pow(kill_drug,2));
+    } else if (rbut_SN30K_KILL_MODEL_2_2->isChecked()) {
+        Kd = -log(1-kill_fraction)/(kill_duration*pow(kmet*kill_drug,2));
+    }
+    line_SN30K_KD_2->setText(QString::number(Kd,'g',4));
 }
 
 //------------------------------------------------------------------------------------------------------

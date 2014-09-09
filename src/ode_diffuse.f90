@@ -795,6 +795,7 @@ atol = rtol
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	if (relax .and. ichemo == OXYGEN) cycle
+	if (chemo(ichemo)%constant) cycle
 	
 	idid = 0
 	t = tstart
@@ -808,16 +809,13 @@ do ic = 1,nchemo
 	endif
 enddo
 
-if (relax) then
-	ichemo = OXYGEN
-!do ic = 1,nchemo
-!	ichemo = chemomap(ic)
+ichemo = OXYGEN
+if (relax .and. .not.chemo(ichemo)%constant) then
 	if (use_parallel) then
 	    call ParRelaxSolver(ichemo,state(:,ichemo))
 	else
 	    call RelaxSolver(ichemo,state(:,ichemo))
 	endif
-!enddo
 endif
 
 allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
@@ -1406,11 +1404,15 @@ call SetRadius(Nsites)
 R1 = Radius*DELTA_X		! cm
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%present) cycle
-	R2 = R1 + chemo(ichemo)%medium_dlayer
-	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (chemo(ichemo)%medium_U/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
-!	if (ichemo == TRACER) then
-!		write(*,'(a,3e12.4,i8)') 'Cbnd,Cext,U,Nsites: ',chemo(ichemo)%medium_Cbnd, chemo(ichemo)%medium_Cext, chemo(ichemo)%medium_U,Nsites
-!	endif
+	if (chemo(ichemo)%constant) then
+		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
+	else
+		R2 = R1 + chemo(ichemo)%medium_dlayer
+		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (chemo(ichemo)%medium_U/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
+!		if (ichemo == TRACER) then
+!			write(*,'(a,3e12.4,i8)') 'Cbnd,Cext,U,Nsites: ',chemo(ichemo)%medium_Cbnd, chemo(ichemo)%medium_Cext, chemo(ichemo)%medium_U,Nsites
+!		endif
+	endif
 	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd < 0) then
 		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateCbnd: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
 		call logger(logmsg)
@@ -1479,61 +1481,25 @@ U = (dA*chemo(:)%diff_coef/DELTA_X)*(Nbnd*chemo(:)%medium_Cbnd - Csum(:))
 do ichemo = 1,MAX_CHEMO
 !	if (.not.chemo(ichemo)%used) cycle
 	if (.not.chemo(ichemo)%present) cycle
-	R2 = Rlayer(ichemo)
-	if (ichemo /= OXYGEN) then
-		chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
-!		if (ichemo == TRACER) then
-!			write(*,'(a,4e12.4)') 'M, decay, U*dt, Cave: ',chemo(ichemo)%medium_M,(1 - chemo(ichemo)%decay_rate*dt), U(ichemo)*dt, tracer_C/tracer_N
-!			write(*,*) 'R1,R2,V0,Vfactor: ',R1,R2,V0,((R1*R1*(3*R2 - 2*R1)/R2 - R2*R2)),(V0 - 4*PI*R2*R2*R2/3.)
-!		endif
-		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)) &
-			*(R1*R1*(3*R2 - 2*R1)/R2 - R2*R2))/(V0 - 4*PI*R2*R2*R2/3.)
+	if (chemo(ichemo)%constant) then
+		chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
+	else
+		R2 = Rlayer(ichemo)
+		if (ichemo /= OXYGEN) then
+			chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
+!			if (ichemo == TRACER) then
+!				write(*,'(a,4e12.4)') 'M, decay, U*dt, Cave: ',chemo(ichemo)%medium_M,(1 - chemo(ichemo)%decay_rate*dt), U(ichemo)*dt, tracer_C/tracer_N
+!				write(*,*) 'R1,R2,V0,Vfactor: ',R1,R2,V0,((R1*R1*(3*R2 - 2*R1)/R2 - R2*R2)),(V0 - 4*PI*R2*R2*R2/3.)
+!			endif
+			chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)) &
+				*(R1*R1*(3*R2 - 2*R1)/R2 - R2*R2))/(V0 - 4*PI*R2*R2*R2/3.)
+		endif
 	endif
 enddo	
 U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
 chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
 chemo(:)%medium_U = U(:)
 
-end subroutine
-
-!----------------------------------------------------------------------------------
-! The medium concentrations are updated explicitly, assuming a sphere with boundary
-! concentrations equal to the mean extracellular concentrations of boundary sites.
-! Note that concentrations of O2 and glucose are not varied.
-!----------------------------------------------------------------------------------
-subroutine UpdateMedium1(ntvars,state,dt)
-integer :: ntvars
-real(REAL_KIND) :: dt, state(:,:)
-integer :: nb, i, k
-real(REAL_KIND) :: Csurface(MAX_CHEMO), F(MAX_CHEMO), area, C_A
-logical :: bnd
-
-if (.not.chemo(DRUG_A)%used .and. .not.chemo(DRUG_B)%used) return
-! First need the spheroid radius
-call SetRadius(Nsites)
-! Now compute the mean boundary site concentrations Cbnd(:)
-nb = 0
-Csurface = 0
-do i = 1,ntvars
-	if (ODEdiff%vartype(i) /= EXTRA) cycle
-	bnd = .false.
-	do k = 1,7
-		if (ODEdiff%icoef(i,k) < 0) then
-			bnd = .true.
-			exit
-		endif
-	enddo
-	if (bnd) then
-		nb = nb + 1
-		Csurface = Csurface + state(i,:)
-	endif
-enddo
-Csurface = Csurface/nb
-area = 4*PI*Radius*Radius*DELTA_X*DELTA_X
-F(:) = area*chemo(:)%diff_coef*(Csurface(:) - chemo(:)%bdry_conc)/DELTA_X
-C_A = chemo(DRUG_A)%bdry_conc
-chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
-chemo(DRUG_A:MAX_CHEMO)%bdry_conc = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*(1 - dt*chemo(DRUG_A:MAX_CHEMO)%decay_rate)
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1552,26 +1518,6 @@ smin = 1.0e10
 smax = -smin
 do i = 1,ODEdiff%nvars
 	state(i) = chemo(ichemo)%bdry_conc
-enddo
-end subroutine
-
-!----------------------------------------------------------------------------------
-! Initialise the state vector to the current concentrations
-! NOT USED
-!----------------------------------------------------------------------------------
-subroutine InitStates(ichemo,n,allstate)
-integer :: ichemo,n
-real(REAL_KIND) :: allstate(n,*)
-integer :: x, y, z, i, site(3), nz
-real(REAL_KIND) :: smin, smax
-
-write(logmsg,*) 'InitState: ',chemo(ichemo)%name
-call logger(logmsg)
-smin = 1.0e10
-smax = -smin
-do i = 1,ODEdiff%nextra
-	site = ODEdiff%varsite(i,:)
-	allstate(i,ichemo) = chemo(ichemo)%conc(site(1),site(2),site(3))
 enddo
 end subroutine
 
@@ -2379,6 +2325,66 @@ do ichemo = 1,MAX_CHEMO
     csum(ichemo) = csum(ichemo) + (6-nb)*BdryConc(ichemo,t_simulation)
 enddo
 allstate(n,:) = csum/6
+end subroutine
+
+!----------------------------------------------------------------------------------
+! The medium concentrations are updated explicitly, assuming a sphere with boundary
+! concentrations equal to the mean extracellular concentrations of boundary sites.
+! Note that concentrations of O2 and glucose are not varied.
+!----------------------------------------------------------------------------------
+subroutine UpdateMedium1(ntvars,state,dt)
+integer :: ntvars
+real(REAL_KIND) :: dt, state(:,:)
+integer :: nb, i, k
+real(REAL_KIND) :: Csurface(MAX_CHEMO), F(MAX_CHEMO), area, C_A
+logical :: bnd
+
+if (.not.chemo(DRUG_A)%used .and. .not.chemo(DRUG_B)%used) return
+! First need the spheroid radius
+call SetRadius(Nsites)
+! Now compute the mean boundary site concentrations Cbnd(:)
+nb = 0
+Csurface = 0
+do i = 1,ntvars
+	if (ODEdiff%vartype(i) /= EXTRA) cycle
+	bnd = .false.
+	do k = 1,7
+		if (ODEdiff%icoef(i,k) < 0) then
+			bnd = .true.
+			exit
+		endif
+	enddo
+	if (bnd) then
+		nb = nb + 1
+		Csurface = Csurface + state(i,:)
+	endif
+enddo
+Csurface = Csurface/nb
+area = 4*PI*Radius*Radius*DELTA_X*DELTA_X
+F(:) = area*chemo(:)%diff_coef*(Csurface(:) - chemo(:)%bdry_conc)/DELTA_X
+C_A = chemo(DRUG_A)%bdry_conc
+chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
+chemo(DRUG_A:MAX_CHEMO)%bdry_conc = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*(1 - dt*chemo(DRUG_A:MAX_CHEMO)%decay_rate)
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Initialise the state vector to the current concentrations
+! NOT USED
+!----------------------------------------------------------------------------------
+subroutine InitStates(ichemo,n,allstate)
+integer :: ichemo,n
+real(REAL_KIND) :: allstate(n,*)
+integer :: x, y, z, i, site(3), nz
+real(REAL_KIND) :: smin, smax
+
+write(logmsg,*) 'InitState: ',chemo(ichemo)%name
+call logger(logmsg)
+smin = 1.0e10
+smax = -smin
+do i = 1,ODEdiff%nextra
+	site = ODEdiff%varsite(i,:)
+	allstate(i,ichemo) = chemo(ichemo)%conc(site(1),site(2),site(3))
+enddo
 end subroutine
 
 end module

@@ -290,10 +290,8 @@ integer :: ichemo
 
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
+	if (chemo(ichemo)%constant) cycle
 	chemo(ichemo)%medium_M = chemo(ichemo)%medium_M - Vsite_cm3*chemo(ichemo)%medium_Cbnd
-!	if (ichemo == DRUG_A) then
-!		write(*,*) 'RemoveFromMedium: ',chemo(ichemo)%medium_M
-!	endif
 enddo
 end subroutine
 
@@ -742,26 +740,35 @@ enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! NOTE: This is not satisfactory, because it can create a concentration increase -
+! but it is not clear what should be done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !-----------------------------------------------------------------------------------------
 subroutine ScalePathConcentrations(site0,site01,path,npath,alpha)
 integer :: site0(3),site01(3),path(3,200),npath
 real(REAL_KIND) :: alpha(:)
-integer :: k, site(3), kcell, ic
+integer :: k, site(3), kcell, ichemo
 
 !write(*,*) 'ScalePathConcentrations - returning!!!!!!!!!!'
 !return
-do ic = 1,MAX_CHEMO
-	if (.not.chemo(ic)%used) cycle
-	occupancy(site0(1),site0(2),site0(3))%C(ic) = alpha(ic)*occupancy(site0(1),site0(2),site0(3))%C(ic)
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	if (chemo(ichemo)%constant) cycle
+	occupancy(site0(1),site0(2),site0(3))%C(ichemo) = alpha(ichemo)*occupancy(site0(1),site0(2),site0(3))%C(ichemo)
 	if (npath == 0) then
-		occupancy(site01(1),site01(2),site01(3))%C(ic) = alpha(ic)*occupancy(site01(1),site01(2),site01(3))%C(ic)
+		occupancy(site01(1),site01(2),site01(3))%C(ichemo) = alpha(ichemo)*occupancy(site01(1),site01(2),site01(3))%C(ichemo)
 	else
 		do k = 1, npath
-			site = path(:,k)
-			occupancy(site01(1),site01(2),site01(3))%C(ic) = alpha(ic)*occupancy(site01(1),site01(2),site01(3))%C(ic)
-			if (isnan(occupancy(site01(1),site01(2),site01(3))%C(ic))) then
-				write(*,*) 'ScalePathConcentrations: isnan: ic,site: ',ic,site01,alpha(ic)
+			site01 = path(:,k)
+			occupancy(site01(1),site01(2),site01(3))%C(ichemo) = alpha(ichemo)*occupancy(site01(1),site01(2),site01(3))%C(ichemo)
+			if (isnan(occupancy(site01(1),site01(2),site01(3))%C(ichemo))) then
+				write(*,*) 'ScalePathConcentrations: isnan: ichemo,site: ',ichemo,site01,alpha(ichemo)
 			endif
+			if (chemo(ichemo)%constant .and. occupancy(site01(1),site01(2),site01(3))%C(ichemo) /= chemo(ichemo)%bdry_conc) then
+				write(*,*) 'ScalePathConcentrations: constant but C != bdry_conc: ', &
+					ichemo,occupancy(site01(1),site01(2),site01(3))%C(ichemo),chemo(ichemo)%bdry_conc
+				stop
+			endif
+			
 		enddo
 	endif
 enddo
