@@ -444,7 +444,6 @@ chemo(TRACER)%constant = (iconstant == 1)
 read(nfcell,*) chemo(TRACER)%max_cell_rate
 read(nfcell,*) chemo(TRACER)%MM_C0
 read(nfcell,*) chemo(TRACER)%Hill_N
-
 do i = 1,2			! currently allowing for just two different drugs
 	read(nfcell,*) iuse_drug
 	read(nfcell,'(a12)') drug_name
@@ -493,12 +492,13 @@ do i = 1,2			! currently allowing for just two different drugs
 			read(nfcell,*) SN30K%KO2(ictype)
 			read(nfcell,*) SN30K%gamma(ictype)
 			read(nfcell,*) SN30K%Klesion(ictype)
-			read(nfcell,*) SN30K%Kd(ictype)
+!			read(nfcell,*) SN30K%Kd(ictype)
 			read(nfcell,*) SN30K%kill_model(ictype)
 			read(nfcell,*) SN30K%kill_O2(ictype)
 			read(nfcell,*) SN30K%kill_drug(ictype)
 			read(nfcell,*) SN30K%kill_duration(ictype)
 			read(nfcell,*) SN30K%kill_fraction(ictype)
+			SN30K%kill_model(ictype) = SN30K%kill_model(ictype) + 1			! convert from GUI numbering to universal numbering
 			SN30K%Kmet0(ictype) = SN30K%Kmet0(ictype)/60					! /min -> /sec
 			SN30K%KO2(ictype) = 1.0e-3*SN30K%KO2(ictype)                    ! um -> mM
 			SN30K%kill_duration(ictype) = 60*SN30K%kill_duration(ictype)    ! minutes -> seconds
@@ -643,7 +643,7 @@ Nsteps = days*24*60*60/DELTA_T		! DELTA_T in seconds
 write(logmsg,'(a,2i6,f6.0)') 'nsteps, NT_CONC, DELTA_T: ',nsteps,NT_CONC,DELTA_T
 call logger(logmsg)
 
-call DetermineKd
+call DetermineKd	! Kd is now set or computed in the GUI
 ok = .true.
 
 end subroutine
@@ -796,8 +796,8 @@ ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! CT model
-! --------
+! SN30000 CT model
+! ----------------
 ! The rate of cell killing, which becomes a cell death probability rate, is inferred from
 ! the cell kill experiment.
 ! The basic assumption is that the rate of killing depends on the drug metabolism rate.
@@ -823,18 +823,20 @@ end subroutine
 !   c = Kd.(F(CkillO2).kmet0.Ckill)^2 => Kd = -log(1-f)/(T.(F(CkillO2).kmet0.Ckill)^2)
 !-----------------------------------------------------------------------------------------
 subroutine DetermineKd
-real(REAL_KIND) :: kmet
+real(REAL_KIND) :: kmet, Kd
 integer :: i
 
 do i = 1,Ncelltypes
 	kmet = (SN30K%C1(i) + SN30K%C2(i)*SN30K%KO2(i)/(SN30K%KO2(i) + SN30K%kill_O2(i)))*SN30K%Kmet0(i)
 	if (SN30K%kill_model(i) == 1) then
-		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i))
+		Kd = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i))
 	elseif (SN30K%kill_model(i) == 2) then
-		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i)**2)
+		Kd = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i)**2)
 	elseif (SN30K%kill_model(i) == 3) then
-		SN30K%Kd(i) = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*(kmet*SN30K%kill_drug(i))**2)
+		Kd = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*(kmet*SN30K%kill_drug(i))**2)
 	endif
+!	write(nfout,'(a,2i4,2e12.3)') 'DetermineKd: i,kill model, passed and computed: ',i,SN30K%kill_model(i),SN30K%Kd(i),Kd
+	SN30K%Kd(i) = Kd
 enddo
 end subroutine
 
