@@ -225,14 +225,16 @@ void MainWindow::createActions()
 //    connect(action_show_gradient2D, SIGNAL(triggered()), this, SLOT(showGradient2D()));
     connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
     connect(buttonGroup_plane, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_plane(QAbstractButton*)));
-    connect(buttonGroup_SN30K_killmodel_1, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
-    connect(buttonGroup_SN30K_killmodel_2, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
 //	  connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
 	connect(lineEdit_fraction, SIGNAL(textEdited(QString)), this, SLOT(textEdited_fraction(QString)));
     connect(action_select_constituent, SIGNAL(triggered()), SLOT(onSelectConstituent()));
     connect(line_CELLPERCENT_1, SIGNAL(textEdited(QString)), this, SLOT(on_line_CELLPERCENT_1_textEdited(QString)));
     connect(line_CELLPERCENT_2, SIGNAL(textEdited(QString)), this, SLOT(on_line_CELLPERCENT_2_textEdited(QString)));
+
+// For Kd computed in the GUI
+//    connect(buttonGroup_SN30K_killmodel_1, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
+//    connect(buttonGroup_SN30K_killmodel_2, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3734,6 +3736,7 @@ void MainWindow::on_action_FACS_triggered()
     showingFACS = true;
 }
 
+/*
 //------------------------------------------------------------------------------------------------------
 // Need to convert Kmet0 from /min to /sec, and kill_duration from mins to secs.
 //------------------------------------------------------------------------------------------------------
@@ -3756,15 +3759,16 @@ void MainWindow::on_pushButton_SN30K_Kd_1_clicked()
     double kill_drug = line_SN30K_KILL_DRUG_CONC_1->text().toDouble();
     double kill_duration = line_SN30K_KILL_DURATION_1->text().toDouble();
     double kill_fraction = line_SN30K_KILL_FRACTION_1->text().toDouble();
-    double kmet = (C1 + C2*KO2/(KO2 + kill_O2))*Kmet0;
     Kmet0 /= 60;            // /min -> /sec
     kill_duration *= 60;    // min -> sec
+    KO2 *= 1.0e-3;          // um -> mM
+    double kmet = (C1 + C2*KO2/(KO2 + kill_O2))*Kmet0;
     if (rbut_SN30K_KILL_MODEL_1_0->isChecked()) {
         Kd = -log(1-kill_fraction)/(kill_duration*kmet*kill_drug);
     } else if (rbut_SN30K_KILL_MODEL_1_1->isChecked()) {
-        Kd = -log(1-kill_fraction)/(kill_duration*kmet*pow(kill_drug,2));
+        Kd = -log(1-kill_fraction)/(kill_duration*kmet*qPow(kill_drug,2));
     } else if (rbut_SN30K_KILL_MODEL_1_2->isChecked()) {
-        Kd = -log(1-kill_fraction)/(kill_duration*pow(kmet*kill_drug,2));
+        Kd = -log(1-kill_fraction)/(kill_duration*qPow(kmet*kill_drug,2));
     }
     line_SN30K_KD_1->setText(QString::number(Kd,'g',4));
 }
@@ -3783,18 +3787,20 @@ void MainWindow::on_pushButton_SN30K_Kd_2_clicked()
     double kill_drug = line_SN30K_KILL_DRUG_CONC_2->text().toDouble();
     double kill_duration = line_SN30K_KILL_DURATION_2->text().toDouble();
     double kill_fraction = line_SN30K_KILL_FRACTION_2->text().toDouble();
-    double kmet = (C1 + C2*KO2/(KO2 + kill_O2))*Kmet0;
     Kmet0 /= 60;            // /min -> /sec
     kill_duration *= 60;    // min -> sec
+    KO2 *= 1.0e-3;          // um -> mM
+    double kmet = (C1 + C2*KO2/(KO2 + kill_O2))*Kmet0;
     if (rbut_SN30K_KILL_MODEL_2_0->isChecked()) {
         Kd = -log(1-kill_fraction)/(kill_duration*kmet*kill_drug);
     } else if (rbut_SN30K_KILL_MODEL_2_1->isChecked()) {
-        Kd = -log(1-kill_fraction)/(kill_duration*kmet*pow(kill_drug,2));
+        Kd = -log(1-kill_fraction)/(kill_duration*kmet*qPow(kill_drug,2));
     } else if (rbut_SN30K_KILL_MODEL_2_2->isChecked()) {
-        Kd = -log(1-kill_fraction)/(kill_duration*pow(kmet*kill_drug,2));
+        Kd = -log(1-kill_fraction)/(kill_duration*qPow(kmet*kill_drug,2));
     }
     line_SN30K_KD_2->setText(QString::number(Kd,'g',4));
 }
+*/
 
 //------------------------------------------------------------------------------------------------------
 // This should be used for any radioButtonGroups

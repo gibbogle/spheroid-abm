@@ -323,10 +323,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion    ",
  "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
 
-{"SN30K_KD_1", 0, 0, 0,
- "Kd",
- "Kd is the death rate coefficient in the selected kill model.\n\
-  The value can be entered directly, or computed from the kill experiment data."},
+//{"SN30K_KD_1", 0, 0, 0,
+// "Kd",
+// "Kd is the death rate coefficient in the selected kill model.\n\
+//  The value can be entered directly, or computed from the kill experiment data."},
 
 {"SN30K_KILL_MODEL_1", 0, 0, 0,
  "Kill model",
@@ -372,10 +372,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion",
  "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
 
-{"SN30K_KD_2", 0, 0, 0,
- "Kd",
- "Kd is the death rate coefficient in the selected kill model.\n\
-  The value can be entered directly, or computed from the kill experiment data."},
+//{"SN30K_KD_2", 0, 0, 0,
+// "Kd",
+// "Kd is the death rate coefficient in the selected kill model.\n\
+//  The value can be entered directly, or computed from the kill experiment data."},
 
 {"SN30K_KILL_MODEL_2", 0, 0, 0,
  "Kill model",

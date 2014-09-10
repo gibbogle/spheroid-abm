@@ -154,9 +154,10 @@ public slots:
     void on_cbox_USE_RADIATION_toggled(bool checked);
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
-    void on_pushButton_SN30K_Kd_1_clicked();
-    void on_pushButton_SN30K_Kd_2_clicked();
     void radioButtonChanged(QAbstractButton *b);
+// For Kd computed in the GUI
+//    void on_pushButton_SN30K_Kd_1_clicked();
+//    void on_pushButton_SN30K_Kd_2_clicked();
 
 signals:
     void facs_update();
