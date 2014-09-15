@@ -186,6 +186,12 @@ do kcell = 1,nlist
 !			call logger('cell dies')
 			call CellDies(kcell)
 			Nanoxia_dead = Nanoxia_dead + 1
+			if (cell_list(kcell)%drug_tag) then
+				Ndrug_tag = Ndrug_tag - 1
+			endif
+			if (cell_list(kcell)%radiation_tag) then
+				Nradiation_tag = Nradiation_tag - 1
+			endif
 			cycle
 		endif
 	else
@@ -453,12 +459,24 @@ do kcell = 1,nlist0
 		if (cell_list(kcell)%radiation_tag) then
 			call CellDies(kcell)
 			Nradiation_dead = Nradiation_dead + 1
+			if (cell_list(kcell)%drug_tag) then
+				Ndrug_tag = Ndrug_tag - 1
+			endif
+			if (cell_list(kcell)%anoxia_tag) then
+				Nanoxia_tag = Nanoxia_tag - 1
+			endif
 !			write(*,*) 'Cell died: ',kcell,
 			cycle
 		endif
 		if (cell_list(kcell)%drug_tag) then
 			call CellDies(kcell)
 			Ndrug_dead = Ndrug_dead + 1
+			if (cell_list(kcell)%anoxia_tag) then
+				Nanoxia_tag = Nanoxia_tag - 1
+			endif
+			if (cell_list(kcell)%radiation_tag) then
+				Nradiation_tag = Nradiation_tag - 1
+			endif
 			cycle
 		endif
 	    ndivide = ndivide + 1

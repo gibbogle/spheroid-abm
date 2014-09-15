@@ -328,9 +328,9 @@ The shape value must be greater than 1, and values close to 1 give distributions
 // "Kd is the death rate coefficient in the selected kill model.\n\
 //  The value can be entered directly, or computed from the kill experiment data."},
 
-{"SN30K_KILL_MODEL_1", 0, 0, 0,
+{"SN30K_KILL_MODEL_1", 1, 0, 0,
  "Kill model",
- "Model of SN30000 killing: 0 = K x metabolism, 1 = K x Ci x metabolism, 2 = K x metabolism^2"},
+ "Model of SN30000 killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
 
 {"SN30K_KILL_O2_CONC_1", 0.0, 0, 0,
  "O2 conc",
@@ -377,9 +377,9 @@ The shape value must be greater than 1, and values close to 1 give distributions
 // "Kd is the death rate coefficient in the selected kill model.\n\
 //  The value can be entered directly, or computed from the kill experiment data."},
 
-{"SN30K_KILL_MODEL_2", 0, 0, 0,
+{"SN30K_KILL_MODEL_2", 1, 0, 0,
  "Kill model",
- "Model of SN30000 killing: 0 = K x metabolism, 1 = K x Ci x metabolism, 2 = K x metabolism^2"},
+ "Model of SN30000 killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
 
 {"SN30K_KILL_O2_CONC_2", 0.0, 0, 0,
  "O2 conc",

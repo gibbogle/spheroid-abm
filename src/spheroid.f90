@@ -498,7 +498,8 @@ do i = 1,2			! currently allowing for just two different drugs
 			read(nfcell,*) SN30K%kill_drug(ictype)
 			read(nfcell,*) SN30K%kill_duration(ictype)
 			read(nfcell,*) SN30K%kill_fraction(ictype)
-			SN30K%kill_model(ictype) = SN30K%kill_model(ictype) + 1			! convert from GUI numbering to universal numbering
+! Go back to 1-based numbering 
+!			SN30K%kill_model(ictype) = SN30K%kill_model(ictype) + 1			! convert from GUI numbering to universal numbering
 			SN30K%Kmet0(ictype) = SN30K%Kmet0(ictype)/60					! /min -> /sec
 			SN30K%KO2(ictype) = 1.0e-3*SN30K%KO2(ictype)                    ! um -> mM
 			SN30K%kill_duration(ictype) = 60*SN30K%kill_duration(ictype)    ! minutes -> seconds
@@ -1134,11 +1135,11 @@ do idrug = 1,2
 			chemo(ichemo)%bdry_conc = 0
 			chemo(ichemo_metab)%bdry_conc = 0
 			protocol(idrug)%ended(i) = .true.
-			chemo(ichemo)%present = .false.
+!			chemo(ichemo)%present = .false.
 			call InitConcs(ichemo)
 			call SetupMedium(ichemo)
 			if (chemo(ichemo_metab)%used) then
-				chemo(ichemo_metab)%present = .false.
+!				chemo(ichemo_metab)%present = .false.
 				call InitConcs(ichemo_metab)
 				call SetupMedium(ichemo_metab)
 			endif
