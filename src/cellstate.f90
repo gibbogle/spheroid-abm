@@ -76,6 +76,7 @@ integer :: kcell, site(3), iv, kpar=0
 real(REAL_KIND) :: C_O2, OER_alpha_d, OER_beta_d, expon, kill_prob, R
 
 ok = .true.
+call logger('Irradiation')
 !LQ%OER_am = 2.5
 !LQ%OER_bm = 3.0
 !LQ%alpha_H = 0.0473
@@ -168,7 +169,8 @@ logical :: use_SN30000
 
 !call logger('CellDeath')
 ok = .true.
-if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
+!if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
+if (chemo(SN30000)%used) then
     use_SN30000 = .true.
 else
     use_SN30000 = .false.
@@ -208,11 +210,13 @@ do kcell = 1,nlist
 		ict = cell_list(kcell)%celltype
 		Kd = SN30K%Kd(ict)
 	    kmet = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + C_O2))*SN30K%Kmet0(ict)
-	    dMdt = kmet*cell_list(kcell)%conc(DRUG_A)
+!	    dMdt = kmet*cell_list(kcell)%conc(DRUG_A)
+	    dMdt = kmet*cell_list(kcell)%conc(SN30000)
 	    if (SN30K%kill_model(ict) == 1) then
 		    pdeath = Kd*dMdt*dt
 	    elseif (SN30K%kill_model(ict) == 2) then
-		    pdeath = Kd*dMdt*cell_list(kcell)%conc(DRUG_A)*dt
+!		    pdeath = Kd*dMdt*cell_list(kcell)%conc(DRUG_A)*dt
+		    pdeath = Kd*dMdt*cell_list(kcell)%conc(SN30000)*dt
 	    elseif (SN30K%kill_model(ict) == 3) then
 		    pdeath = Kd*dMdt**2*dt
 		endif
@@ -220,7 +224,7 @@ do kcell = 1,nlist
 	    if (par_uni(kpar) < pdeath) then
             cell_list(kcell)%drug_tag = .true.
             Ndrug_tag = Ndrug_tag + 1
-            write(nflog,'(a,2i6,2f8.4)') 'tagged: ',kcell,ict,cell_list(kcell)%conc(DRUG_A),dMdt
+            write(nflog,'(a,2i6,2f8.4)') 'tagged: ',kcell,ict,cell_list(kcell)%conc(SN30000),dMdt
 		endif
 	endif
 enddo

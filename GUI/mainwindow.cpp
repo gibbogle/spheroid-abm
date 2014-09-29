@@ -186,7 +186,10 @@ void MainWindow::createActions()
     connect(action_stop, SIGNAL(triggered()), SLOT(stopServer()));
     connect(action_play_VTK, SIGNAL(triggered()), SLOT(playVTK()));
     connect(action_set_speed, SIGNAL(triggered()), SLOT(setVTKSpeed()));
-    connect(buttonGroup_FACS_PLOT, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
+    connect(buttonGroup_FACS_PLOT_x, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
+    connect(buttonGroup_FACS_PLOT_y, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
+    connect(checkBox_FACS_log_x, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
+    connect(checkBox_FACS_log_y, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
 
     connect(this,SIGNAL(pause_requested()),SLOT(pauseServer()));
 
@@ -485,16 +488,19 @@ void MainWindow:: initFACSPlot()
 }
 
 //--------------------------------------------------------------------------------------------------------
-// Possible variables to plot against CFSE:
+// Possible variables to plot:
+//   CFSE
 //   dVdt
 //   oxygen
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showFACS()
 {
-    double xmin, xmax, ymin, ymax, cfse, cvar, x, y;
+    double xmin, xmax, ymin, ymax, cfse, cvar, x, y, scale_x, scale_y;
     int i, k;
-    int kvar;
-    QString ylabel;
+    int kvar_x, kvar_y;
+    bool x_logscale, y_logscale;
+    QString xlabel, ylabel;
+    enum VAR {CFSE_VAR, OXYGEN_VAR, DVDT_VAR};
 
 //    LOG_MSG("showFACS");
 //    if (showingFACS) LOG_MSG("showingFACS");
@@ -504,28 +510,59 @@ void MainWindow::showFACS()
     qpFACS->clear();
     qpFACS->setTitle("FACS");
     QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
-    xmin = 1.0e10;
-    xmax = -1.0e10;
-    ymin = 1.0e10;
-    ymax = -1.0e10;
-    if (radioButton_FACS_dVdt->isChecked()) {
-        kvar = 1;
+
+//    kvar_x = 0;
+//    scale_x = 1000;
+    if (radioButton_FACS_CFSE_x->isChecked()) {
+        kvar_x = 0;
+        scale_x = 1000;
+        xlabel = "CFSE";
+        xmin = 0.1;
+        xmax = 1500;
+    } else if (radioButton_FACS_dVdt_x->isChecked()) {
+        kvar_x = 1;
+        scale_x = 1;
+        xlabel = "dVdt";
+        xmin = 1.0e-7;
+        xmax = 1.0e-5;
+    } else if (radioButton_FACS_oxygen_x->isChecked()) {
+        kvar_x = 2;
+        scale_x = 1;
+        xlabel = "Oxygen";
+        xmin = 1.0e-4;
+        xmax = 1.0;
+    }
+
+    if (radioButton_FACS_CFSE_y->isChecked()) {
+        kvar_y = 0;
+        scale_y = 1000;
+        ylabel = "CFSE";
+        ymin = 0.1;
+        ymax = 1500;
+    } else if (radioButton_FACS_dVdt_y->isChecked()) {
+        kvar_y = 1;
+        scale_y = 1;
         ylabel = "dVdt";
         ymin = 1.0e-7;
         ymax = 1.0e-5;
-    } else if (radioButton_FACS_oxygen->isChecked()) {
-        kvar = 2;
+    } else if (radioButton_FACS_oxygen_y->isChecked()) {
+        kvar_y = 2;
+        scale_y = 1;
         ylabel = "Oxygen";
         ymin = 1.0e-4;
         ymax = 1.0;
     }
-    xmin = 0.1;
-    xmax = 1500;
+
+    x_logscale = checkBox_FACS_log_x->isChecked();
+    y_logscale = checkBox_FACS_log_y->isChecked();
+//    xmin = 0.1;
+//    xmax = 1500;
     for (i=0; i<nFACS_cells; i++) {
-        cfse = FACS_data[N_FACS_VARS*i];
-        cvar = FACS_data[N_FACS_VARS*i+kvar];
-        x = 1000*cfse;
-        y = max(cvar,1.01*ymin);
+        x = FACS_data[N_FACS_VARS*i+kvar_x];
+        y = FACS_data[N_FACS_VARS*i+kvar_y];
+        x = scale_x*x;
+        y = scale_y*y;
+        y = max(y,1.01*ymin);
 //        ymax = max(y,ymax);
         if (x >= xmin) {
             QwtPlotMarker* m = new QwtPlotMarker();
@@ -535,15 +572,25 @@ void MainWindow::showFACS()
         }
     }
     qpFACS->setAxisScale(QwtPlot::yLeft, ymin, ymax, 0);
-    qpFACS->setAxisTitle(QwtPlot::yLeft, ylabel);
-    qpFACS->setAxisScaleEngine(QwtPlot::yLeft, new QwtLog10ScaleEngine);
+    qpFACS->setAxisTitle(QwtPlot::yLeft, ylabel);   
+    if (y_logscale) {
+        qpFACS->setAxisScaleEngine(QwtPlot::yLeft, new QwtLog10ScaleEngine);
+    } else {
+        qpFACS->setAxisScaleEngine(QwtPlot::yLeft, new QwtLinearScaleEngine);
+    }
     qpFACS->setAxisMaxMinor(QwtPlot::yLeft, 10);
     qpFACS->setAxisMaxMajor(QwtPlot::yLeft, 5);
+
     qpFACS->setAxisScale(QwtPlot::xBottom, xmin, xmax, 0);
-    qpFACS->setAxisTitle(QwtPlot::xBottom, "CFSE");
-    qpFACS->setAxisScaleEngine(QwtPlot::xBottom, new QwtLog10ScaleEngine);
+    qpFACS->setAxisTitle(QwtPlot::xBottom, xlabel);
+    if (x_logscale) {
+        qpFACS->setAxisScaleEngine(QwtPlot::xBottom, new QwtLog10ScaleEngine);
+    } else {
+        qpFACS->setAxisScaleEngine(QwtPlot::xBottom, new QwtLinearScaleEngine);
+    }
     qpFACS->setAxisMaxMinor(QwtPlot::xBottom, 10);
     qpFACS->setAxisMaxMajor(QwtPlot::xBottom, 5);
+
     qpFACS->replot();
 //    sprintf(msg,"x range: %f %f  y range: %f %f",xmin,xmax,ymin,ymax);
 //    LOG_MSG(msg);
@@ -1267,6 +1314,8 @@ void MainWindow::writeout()
             line = p.label;
         else if (p.tag.compare("DRUG_B_NAME") == 0)
             line = p.label;
+        else if (p.tag.compare("SAVE_PROFILE_DATA_FILE") == 0)
+            line = p.label;
         else if (val == int(val)) 	// whole number, write as integer
 			line = QString::number(int(val));
 		else
@@ -1840,7 +1889,7 @@ void MainWindow::runServer()
 	connect(exthread, SIGNAL(display()), this, SLOT(displayScene()));
 //    connect(exthread, SIGNAL(displayF()), this, SLOT(displayFld()));
     connect(exthread, SIGNAL(summary(int)), this, SLOT(showSummary(int)));
-    connect(exthread, SIGNAL(action_VTK()), this, SLOT(goToVTK()));
+//    connect(exthread, SIGNAL(action_VTK()), this, SLOT(goToVTK()));
     connect(exthread, SIGNAL(facs_update()), this, SLOT(showFACS()));
     connect(this, SIGNAL(facs_update()), this, SLOT(showFACS()));
     connect(exthread, SIGNAL(setupC(int,bool *)), this, SLOT(setupConc(int, bool *)));
@@ -2968,6 +3017,15 @@ void MainWindow::disableUseTreatmentFile()
     cbox_USE_TREATMENT_FILE->setChecked(false);
 }
 
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: on_cbox_SAVE_PROFILE_DATA_toggled(bool checked)
+{
+    text_SAVE_PROFILE_DATA_FILE->setEnabled(checked);
+    line_SAVE_PROFILE_DATA_INTERVAL->setEnabled(checked);
+    line_SAVE_PROFILE_DATA_NUMBER->setEnabled(checked);
+}
+
 /*
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -3577,9 +3635,12 @@ void MainWindow::setupCellColours()
 //    comboBox_CELLCOLOUR_2->addItem("blue");
 //    comboBox_CELLCOLOUR_2->addItem("purple");
 //    comboBox_CELLCOLOUR_2->addItem("brown");
-    comboBox_CELLCOLOUR_1->setCurrentIndex(1);
-    comboBox_CELLCOLOUR_1->setCurrentIndex(0);
-    comboBox_CELLCOLOUR_2->setCurrentIndex(1);
+    int k1 = 0;
+    comboBox_CELLCOLOUR_1->setCurrentIndex(k1);
+    vtk->celltype_colour[1] = comboColour[k1];
+    int k2 = 1;
+    comboBox_CELLCOLOUR_2->setCurrentIndex(k2);
+    vtk->celltype_colour[2] = comboColour[k2];
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3653,17 +3714,10 @@ void MainWindow::on_cbox_USE_DRUG_A_toggled(bool checked)
 {
     LOG_MSG("cbox_use_drugA toggled");
     QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_A_BDRY_CONC");
-    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_A_DECAY");
+//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_A_DECAY");
     QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_SIMULATE_METABOLITE");
-    if (checked) {
-        cbm->setEnabled(true);
-        cbd->setEnabled(true);
-        leb->setEnabled(true);
-    } else {
-        cbm->setEnabled(false);
-        cbd->setEnabled(false);
-        leb->setEnabled(false);
-    }
+    leb->setEnabled(checked);
+    cbm->setEnabled(checked);
     setTreatmentFileUsage();
 }
 
@@ -3843,15 +3897,10 @@ void MainWindow::on_cbox_drugA_decay_toggled(bool checked)
 void MainWindow::on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked)
 {
 //    LOG_MSG("cbox_use_drugA_metabolite toggled");
-    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_METABOLITE_DECAY");
-    if (checked) {
-        rbm->setEnabled(true);
-        cbm->setEnabled(true);
-    } else {
-        rbm->setEnabled(false);
-        cbm->setEnabled(false);
-    }
+//    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
+//    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_METABOLITE_DECAY");
+//    rbm->setEnabled(checked);
+//    cbm->setEnabled(checked);
 }
 
 /*
@@ -3875,17 +3924,10 @@ void MainWindow::on_cbox_USE_DRUG_B_toggled(bool checked)
 {
 //    LOG_MSG("cbox_use_drugB toggled");
     QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_B_BDRY_CONC");
-    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_B_DECAY");
+//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_B_DECAY");
     QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_SIMULATE_METABOLITE");
-    if (checked) {
-        cbm->setEnabled(true);
-        cbd->setEnabled(true);
-        leb->setEnabled(true);
-    } else {
-        cbm->setEnabled(false);
-        cbd->setEnabled(false);
-        leb->setEnabled(false);
-    }
+    leb->setEnabled(checked);
+    cbm->setEnabled(checked);
     setTreatmentFileUsage();
 }
 

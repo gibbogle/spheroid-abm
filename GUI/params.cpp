@@ -267,17 +267,17 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Constant concentration",
  "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
-{"DRUG_A_DECAY", 0, 0, 0,
- "Decaying",
- "Drug conc decays with the specified half-life"},
+//{"DRUG_A_DECAY", 0, 0, 0,
+// "Decaying",
+// "Drug conc decays with the specified half-life"},
 
 {"DRUG_A_SIMULATE_METABOLITE", 0, 0, 0,
  "Simulate metabolite",
  "Simulate drug metabolite"},
 
-{"DRUG_A_METABOLITE_DECAY", 0, 0, 0,
- "Metabolite decaying",
- "Drug metabolite conc decays with the specified half-life"},
+//{"DRUG_A_METABOLITE_DECAY", 0, 0, 0,
+// "Metabolite decaying",
+// "Drug metabolite conc decays with the specified half-life"},
 
 {"SN30K_DIFF_COEF", 6.0e-7, 0, 0,
  "Spheroid diffusion coeff",
@@ -413,17 +413,17 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Constant concentration",
  "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
-{"DRUG_B_DECAY", 0, 0, 0,
- "DRUG_B decay",
- "DRUG_B boundary conc decays with the specified half-life"},
+//{"DRUG_B_DECAY", 0, 0, 0,
+// "DRUG_B decay",
+// "DRUG_B boundary conc decays with the specified half-life"},
 
 {"DRUG_B_SIMULATE_METABOLITE", 0, 0, 0,
  "DRUG_B metabolite",
  "DRUG_B simulate metabolite"},
 
-{"DRUG_B_METABOLITE_DECAY", 0, 0, 0,
- "Drug B metabolite decay",
- "Drug B metabolite conc decays with the specified half-life"},
+//{"DRUG_B_METABOLITE_DECAY", 0, 0, 0,
+// "Drug B metabolite decay",
+// "Drug B metabolite conc decays with the specified half-life"},
 
 {"RADIATION_ALPHA_H", 0.0473, 0, 0,
 "Alpha (hypoxia)",
@@ -508,6 +508,22 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"DROP_BETA", 0.6, 0, 0,
 "Height/diameter",
 "Drop parameter beta = initial (blob height)/(blob diameter).  Must be < 1."},
+
+    {"SAVE_PROFILE_DATA",0,0,1,
+     "Save profile data",
+     "Save data for profile plots as a specified interval"},
+
+    {"SAVE_PROFILE_DATA_FILE",0,0,0,
+     "profile_data",
+     "Base file name for saving profile data"},
+
+    {"SAVE_PROFILE_DATA_INTERVAL",0,0,0,
+     "Interval",
+     "Time interval for saving profile data"},
+
+    {"SAVE_PROFILE_DATA_NUMBER",1,0,0,
+     "Number",
+     "Number of times to save profile data"},
 
 
 // Entries after this point are QMyLabel dummies, to enable display of explanatory info  - no input data is transmitted

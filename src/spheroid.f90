@@ -114,6 +114,7 @@ Nradiation_dead = 0
 Ndrug_dead = 0
 Nanoxia_dead = 0
 t_simulation = 0
+it_saveprofiledata = 1
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
@@ -369,10 +370,12 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine ReadCellParams(ok)
 logical :: ok
-integer :: i, idrug, imetab, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
-integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, idrug_decay, imetab_decay, iV_depend, iV_random
+integer :: i, idrug, imetab, nmetab, im, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
+integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, iV_depend, iV_random
+!integer ::  idrug_decay, imetab_decay
 integer :: ictype, idisplay, isconstant
-integer :: iuse_drop, iconstant
+integer :: iuse_drop, iconstant, isaveprofiledata
+logical :: use_metabolites
 real(REAL_KIND) :: days, bdry_conc, percent
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
@@ -449,11 +452,11 @@ do i = 1,2			! currently allowing for just two different drugs
 	read(nfcell,'(a12)') drug_name
 	read(nfcell,*) bdry_conc
 	read(nfcell,*) iconstant
-	read(nfcell,*) idrug_decay
+!	read(nfcell,*) idrug_decay
 	read(nfcell,*) iuse_metab
-	read(nfcell,*) imetab_decay
+!	read(nfcell,*) imetab_decay
 !	if (iuse_drug == 0) cycle
-	call getIndices(drug_name, idrug, imetab)
+	call getIndices(drug_name, idrug, nmetab)
 	if (idrug < 0 .and. iuse_drug /= 0) then
 		write(logmsg,*) 'Unrecognized drug name: ',drug_name
 		call logger(logmsg)
@@ -464,19 +467,23 @@ do i = 1,2			! currently allowing for just two different drugs
 	chemo(idrug)%used = (iuse_drug == 1)
 	chemo(idrug)%bdry_conc = bdry_conc
 	chemo(idrug)%constant = (iconstant == 1)
-	chemo(idrug)%decay = (idrug_decay == 1)
+!	chemo(idrug)%decay = (idrug_decay == 1)
 	if (chemo(idrug)%used) then
-		chemo(imetab)%used = (iuse_metab == 1)
+!		chemo(imetab)%used = (iuse_metab == 1)
+		use_metabolites = (iuse_metab == 1)
 	else
-		chemo(imetab)%used = .false.
+!		chemo(imetab)%used = .false.
+		use_metabolites = .false.
 	endif
-	chemo(imetab)%decay = (imetab_decay == 1)
+!	chemo(imetab)%decay = (imetab_decay == 1)
 	if (idrug == SN30000) then
+		SN30K%nmetabolites = nmetab
 		read(nfcell,*) SN30K%diff_coef
 		read(nfcell,*) SN30K%medium_diff_coef
 		read(nfcell,*) SN30K%membrane_diff
 		read(nfcell,*) SN30K%halflife
 		read(nfcell,*) SN30K%metabolite_halflife
+		imetab = idrug + 1
 		chemo(idrug)%halflife = SN30K%halflife
 		chemo(imetab)%halflife = SN30K%metabolite_halflife
 		chemo(idrug)%diff_coef = SN30K%diff_coef		! Note that metabolite is given the same diff_coef
@@ -485,6 +492,7 @@ do i = 1,2			! currently allowing for just two different drugs
 		chemo(imetab)%medium_diff_coef = SN30K%medium_diff_coef
 		chemo(idrug)%membrane_diff = SN30K%membrane_diff
 		chemo(imetab)%membrane_diff = SN30K%membrane_diff
+		chemo(imetab)%decay = (SN30K%metabolite_halflife > 0)
 		do ictype = 1,Ncelltypes
 			read(nfcell,*) SN30K%Kmet0(ictype)
 			read(nfcell,*) SN30K%C1(ictype)
@@ -504,8 +512,17 @@ do i = 1,2			! currently allowing for just two different drugs
 			SN30K%KO2(ictype) = 1.0e-3*SN30K%KO2(ictype)                    ! um -> mM
 			SN30K%kill_duration(ictype) = 60*SN30K%kill_duration(ictype)    ! minutes -> seconds
 		enddo
-		
+
+	elseif (idrug == PR104A) then
+		PR104%nmetabolites = nmetab
+		do im = 0,nmetab
+			read(nfcell,*) PR104%diff_coef(im)
+			read(nfcell,*) PR104%medium_diff_coef(im)
+			read(nfcell,*) PR104%membrane_diff(im)
+			read(nfcell,*) PR104%halflife(im)
+		enddo
 	endif
+	chemo(idrug)%decay = (chemo(idrug)%halflife > 0)
 	if (chemo(idrug)%used .and. chemo(idrug)%decay) then
 		chemo(idrug)%decay_rate = DecayRate(chemo(idrug)%halflife)
 	else
@@ -540,6 +557,10 @@ read(nfcell,*) iuse_drop
 read(nfcell,*) Ndrop
 read(nfcell,*) alpha_shape
 read(nfcell,*) beta_shape
+read(nfcell,*) isaveprofiledata
+read(nfcell,*) profiledatafilebase
+read(nfcell,*) dt_saveprofiledata
+read(nfcell,*) nt_saveprofiledata
 close(nfcell)
 
 if (chemo(OXYGEN)%Hill_N /= 1 .and. chemo(OXYGEN)%Hill_N /= 2) then
@@ -594,6 +615,8 @@ call logger(logmsg)
 write(logmsg,'(a,4e12.4)') 'Volumes: site, extra, cell (average, base): ',Vsite_cm3, Vextra_cm3, Vsite_cm3-Vextra_cm3, Vcell_cm3
 call logger(logmsg)
 
+saveprofiledata = (isaveprofiledata == 1)
+dt_saveprofiledata = 60*dt_saveprofiledata			! mins -> seconds
 if (itreatment == 1) then
 	use_treatment = .true.
 	call ReadTreatment(ok)
@@ -651,27 +674,30 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine getIndices(drug_name, idrug, imetab)
+subroutine getIndices(drug_name, idrug, nmetab)
 character*(12) :: drug_name
-integer :: idrug, imetab
+integer :: idrug, nmetab
 
 !if (drug_name == ' ') then
 !	idrug = 0
 !	imetab = 0
 if (drug_name == 'SN30000') then
 	idrug = SN30000
-	imetab = SN30000_METAB
+	nmetab = 1
+else if (drug_name == 'PR104A') then
+	idrug = PR104A
+	nmetab = 1
 else
 	idrug = 0
-	imetab = 0
+	nmetab = 0
 endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! This overrides the drug usage specified by USE_DRUG_A etc
 ! RADIATION -> 0
-! DRUG_A -> 1
-! DRUG_B -> 2
+! SN30000 -> 1
+! PR104A  -> 2
 ! By default this assumes two drugs.
 ! Times are hours
 ! Drug concs are mM
@@ -680,7 +706,8 @@ end subroutine
 subroutine ReadTreatment(ok)
 logical :: ok
 character*(64) :: line
-integer :: ichemo, idrug, nmax, i
+character*(12) :: drug_name
+integer :: ichemo, idrug, nmax, i, nmetab
 real(REAL_KIND) :: tstart,tend,conc,dose
 logical :: use_it(0:2)
 allocate(protocol(0:2))
@@ -694,18 +721,24 @@ nmax = 0
 do
 	read(nftreatment,'(a)',end=99) line
 	if (line(1:3) == 'END' .or. line(1:3) == 'end') exit
-	if (line(1:6) == 'DRUG_A') then
-		ichemo = DRUG_A
+!	if (line(1:6) == 'DRUG_A') then
+!		ichemo = DRUG_A
+!	elseif (line(1:6) == 'DRUG_B') then
+!		ichemo = DRUG_B
+	if (trim(line) == 'SN30000') then
+		ichemo = SN30000
+		chemo(ichemo)%name = 'SN30000'
 		idrug = 1
-	elseif (line(1:6) == 'DRUG_B') then
-		ichemo = DRUG_B
+	elseif (trim(line) == 'PR104A') then
+		ichemo = PR104A
+		chemo(ichemo)%name = 'PR104A'
 		idrug = 2
 	elseif (line(1:9) == 'RADIATION') then
 		ichemo = 0
 		idrug = 0
 	endif
 	if (ichemo > 0) then
-		read(nftreatment,'(a)') chemo(ichemo)%name
+!		read(nftreatment,'(a)') chemo(ichemo)%name
 		read(nftreatment,*) protocol(idrug)%n
 		nmax = max(nmax,protocol(idrug)%n)
 		if (protocol(idrug)%n > 0) then
@@ -744,18 +777,25 @@ enddo
 do
 	read(nftreatment,'(a)',end=199) line
 	if (line(1:3) == 'END' .or. line(1:3) == 'end') exit
-	if (line(1:6) == 'DRUG_A') then
-		ichemo = DRUG_A
+!	if (line(1:6) == 'DRUG_A') then
+!		ichemo = DRUG_A
+!		idrug = 1
+!	elseif (line(1:6) == 'DRUG_B') then
+!		ichemo = DRUG_B
+!		idrug = 2
+	if (trim(line) == 'SN30000') then
+		ichemo = SN30000
 		idrug = 1
-	elseif (line(1:6) == 'DRUG_B') then
-		ichemo = DRUG_B
+	elseif (trim(line) == 'PR104A') then
+		ichemo = PR104A
 		idrug = 2
 	elseif (line(1:9) == 'RADIATION') then
 		ichemo = 0
 		idrug = 0
 	endif
 	if (ichemo > 0) then
-		read(nftreatment,'(a)') chemo(ichemo)%name
+!		read(nftreatment,'(a)') chemo(ichemo)%name
+		protocol(idrug)%ichemo = ichemo
 		read(nftreatment,*) protocol(idrug)%n
 		if (protocol(idrug)%n > 0) then
 			chemo(ichemo)%used = .true.
@@ -770,6 +810,7 @@ do
 			enddo
 		endif
 	else
+		protocol(idrug)%ichemo = 0
 		read(nftreatment,*) protocol(idrug)%n
 		if (protocol(idrug)%n > 0) then
 			do i = 1,protocol(idrug)%n
@@ -1089,7 +1130,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine Treatment(radiation_dose)
 real(REAL_KIND) :: radiation_dose
-integer :: i, idrug, ichemo, ichemo_metab
+integer :: i, idrug, ichemo, nmetab, im	!, ichemo_metab
 
 radiation_dose = 0
 do i = 1,protocol(0)%n
@@ -1097,20 +1138,26 @@ do i = 1,protocol(0)%n
 		radiation_dose = protocol(0)%dose(i)
 		protocol(0)%started(i) = .true.
 		protocol(0)%ended(i) = .true.
+		write(nflog,*) 'Radiation started: dose: ',radiation_dose
 		exit
 	endif
 enddo
 do idrug = 1,2
-	ichemo = idrug + TRACER
+!	ichemo = idrug + TRACER		!!!!!!!!!!!!!!!!!! wrong
+	ichemo = protocol(idrug)%ichemo
 	if (idrug == 1) then
-		ichemo_metab = DRUG_A_METAB
+!		ichemo_metab = DRUG_A_METAB
+		nmetab = 1
 	elseif (idrug == 2) then
-		ichemo_metab = DRUG_B_METAB
+!		ichemo_metab = DRUG_B_METAB
+		nmetab = 2
 	endif
 	do i = 1,protocol(idrug)%n
 		if (i == 1 .and. t_simulation < protocol(idrug)%tstart(i)) then
 			chemo(ichemo)%bdry_conc = 0
-			chemo(ichemo_metab)%bdry_conc = 0
+			do im = 1,nmetab
+				chemo(ichemo + im)%bdry_conc = 0
+			enddo
 			exit
 		endif
 		if (t_simulation >= protocol(idrug)%tstart(i) .and. .not.protocol(idrug)%started(i)) then
@@ -1120,11 +1167,13 @@ do idrug = 1,2
 			chemo(ichemo)%present = .true.
 			call InitConcs(ichemo)
 			call SetupMedium(ichemo)
-			if (chemo(ichemo_metab)%used) then
-				chemo(ichemo_metab)%present = .true.
-				call InitConcs(ichemo_metab)
-				call SetupMedium(ichemo_metab)
-			endif
+			do im = 1,nmetab
+				if (chemo(ichemo + im)%used) then
+					chemo(ichemo + im)%present = .true.
+					call InitConcs(ichemo + im)
+					call SetupMedium(ichemo + im)
+				endif
+			enddo
 			write(nflog,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
 			write(*,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
 			exit
@@ -1133,16 +1182,18 @@ do idrug = 1,2
 	do i = 1,protocol(idrug)%n
 		if (t_simulation >= protocol(idrug)%tend(i) .and. .not.protocol(idrug)%ended(i)) then
 			chemo(ichemo)%bdry_conc = 0
-			chemo(ichemo_metab)%bdry_conc = 0
 			protocol(idrug)%ended(i) = .true.
 !			chemo(ichemo)%present = .false.
 			call InitConcs(ichemo)
 			call SetupMedium(ichemo)
-			if (chemo(ichemo_metab)%used) then
-!				chemo(ichemo_metab)%present = .false.
-				call InitConcs(ichemo_metab)
-				call SetupMedium(ichemo_metab)
-			endif
+			do im = 1,nmetab
+				chemo(ichemo + im)%bdry_conc = 0
+				if (chemo(ichemo + im)%used) then
+	!				chemo(ichemo_metab)%present = .false.
+					call InitConcs(ichemo + im)
+					call SetupMedium(ichemo + im)
+				endif
+			enddo
 			write(nflog,*) 'Ended DRUG: ',chemo(ichemo)%name,i
 			write(*,*) 'Ended DRUG: ',chemo(ichemo)%name,i
 			exit
@@ -1197,17 +1248,17 @@ endif
 istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds
 
-call GrowCells(radiation_dose,DELTA_T,ok)
-if (.not.ok) then
-	res = 3
-	return
-endif
 if (use_treatment) then
 	call treatment(radiation_dose)
 	if (radiation_dose > 0) then
 		write(logmsg,'(a,f6.1)') 'Radiation dose: ',radiation_dose
 		call logger(logmsg)
 	endif
+endif
+call GrowCells(radiation_dose,DELTA_T,ok)
+if (.not.ok) then
+	res = 3
+	return
 endif
 
 ! Update Cbnd using current M, R1 and previous U, Cext
@@ -1247,6 +1298,15 @@ if (mod(istep,60) == -1) then
 	call check_bdry
 endif
 !call test_CellDivision
+if (saveprofiledata) then
+	if (istep*DELTA_T >= it_saveprofiledata*dt_saveprofiledata) then
+		call WriteProfileData
+		it_saveprofiledata = it_saveprofiledata + 1
+		if (it_saveprofiledata > nt_saveprofiledata) then
+			saveprofiledata = .false.
+		endif
+	endif
+endif
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1628,7 +1688,7 @@ use, intrinsic :: iso_c_binding
 integer(c_int) :: ns
 real(c_double) :: dx, ex_conc(*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
-integer rng(3,2), i, k, ichemo, kcell, x, y, z
+integer :: rng(3,2), i, k, ichemo, kcell, x, y, z
 
 !call logger('get_concdata')
 dx = DELTA_X
@@ -1800,6 +1860,78 @@ do kcell = 1,nlist
 enddo
 end subroutine
 
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine WriteProfileData
+integer :: ns
+real(REAL_KIND) :: dx
+real(REAL_KIND), allocatable :: ex_conc(:,:)
+real(REAL_KIND) :: cbnd, cmin = 1.0e-6
+integer :: rng(3,2), i, k, ichemo, kcell, x, y, z, ic, nc, kmax
+character*(16) :: title(MAX_CHEMO+1)
+character*(128) :: filename
+character*(6) :: mintag
+
+dx = DELTA_X
+rng(:,1) = Centre(:) - (adrop*Radius + 2)
+rng(:,2) = Centre(:) + (adrop*Radius + 2)
+kmax = rng(1,2)-rng(1,1)+ 3
+allocate(ex_conc(MAX_CHEMO+1,kmax))
+y = Centre(2) + 0.5
+z = Centre(3) + 0.5
+ic = 0
+do ichemo = 1,MAX_CHEMO+1
+	if (ichemo <= MAX_CHEMO) then
+		if (.not.chemo(ichemo)%used) cycle
+		ic = ic + 1
+		title(ic) = chemo(ichemo)%name
+	    cbnd = BdryConc(ichemo,t_simulation)
+	else
+		ic = ic + 1
+		title(ic) = 'Growth_rate'
+		cbnd = 0
+	endif
+	k = 1
+    ex_conc(ic,k) = cbnd
+	do x = rng(1,1),rng(1,2)
+		kcell = occupancy(x,y,z)%indx(1)
+		if (kcell <= OUTSIDE_TAG) cycle
+		i = ODEdiff%ivar(x,y,z)
+		k = k+1
+		if (ichemo <= MAX_CHEMO) then
+			if (i > 0) then
+				ex_conc(ic,k) = allstate(i,ichemo)
+			else
+				ex_conc(ic,k) = 0
+			endif
+		elseif (ichemo == MAX_CHEMO+1) then	! growth rate
+			if (kcell > 0) then
+				ex_conc(ic,k) = cell_list(kcell)%dVdt
+			else
+				ex_conc(ic,k) = 0
+			endif
+		endif
+	enddo
+	k = k+1
+    ex_conc(ic,k) = cbnd	! Add concentration at the boundary  
+enddo
+ns = k
+nc = ic
+write(mintag,'(i6)') int(istep*DELTA_T/60)
+filename = profiledatafilebase
+filename = trim(filename)//'_'
+filename = trim(filename)//trim(adjustl(mintag))
+filename = trim(filename)//'min.dat'
+open(nfprofile,file=filename,status='replace')
+write(nfprofile,'(i6,a)') int(istep*DELTA_T/60),' minutes'
+write(nfprofile,'(i6,a)') ns,' sites'
+write(nfprofile,'(32a16)') title(1:nc)
+do k = 1,ns
+	write(nfprofile,'(32(e12.3,4x))') ex_conc(1:nc,k)
+enddo
+close(nfprofile)
+deallocate(ex_conc)
+end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine Execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen) BIND(C)

@@ -9,7 +9,7 @@
 #include "myqgraphicsview.h"
 
 #define CANVAS_WIDTH 696
-#define MAX_CONC 7
+#define MAX_CONC 7  // must = MAX_CHEMO in DLL
 
 struct field_data {
     int site[3];
