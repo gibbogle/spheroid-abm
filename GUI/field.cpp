@@ -103,6 +103,11 @@ void Field::selectConstituent()
 
     LOG_MSG("selectConstituent");
     get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, &res);
+    if (nconst != MAX_CONC) {
+        sprintf(msg,"Error: selectConstituent: get_fieldinfo: MAX_CONC != MAX_CHEMO: %d %d",MAX_CONC,MAX_CHEMO);
+        LOG_MSG(msg);
+        exit(1);
+    }
     for (iconst=0; iconst<MAX_CONC+1; iconst++) {
         if (iconst == constituent) continue;
         if (const_used[iconst] == 1) {
@@ -233,6 +238,11 @@ void Field::displayField(int hr, int *res)
 	if (slice_changed) {
         get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, res);
         if (*res != 0) return;
+        if (nconst != MAX_CONC) {
+            sprintf(msg,"Error: displayField: get_fieldinfo: MAX_CONC != MAX_CHEMO: %d %d",MAX_CONC,MAX_CHEMO);
+            LOG_MSG(msg);
+            exit(1);
+        }
         this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
         get_fielddata(&axis, &fraction, &nsites, &nconst, this->data, res);
         if (*res != 0) return;

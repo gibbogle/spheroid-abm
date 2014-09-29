@@ -515,9 +515,6 @@ void MyVTK::process_Tcells()
 //                r = 0.5;
 //                g = 0.5;
 //                b = 0.0;
-//                r = colour[cp.state].r;
-//                g = colour[cp.state].g;
-//                b = colour[cp.state].b;
                 qcolor = celltype_colour[cp.state];
                 r = qcolor.red()/255.;
                 g = qcolor.green()/255.;

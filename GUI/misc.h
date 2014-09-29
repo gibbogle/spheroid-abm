@@ -64,7 +64,7 @@ public:
     QWaitCondition summary_done;
 signals:
     void display();
-    void displayF();
+//    void displayF();
     void summary(int);
     void setupC(int, bool *);
     void facs_update();

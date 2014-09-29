@@ -125,6 +125,8 @@ private slots:
     void on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index);
     void on_comboBox_CELLCOLOUR_2_currentIndexChanged(int index);
 
+    void on_cbox_SAVE_PROFILE_DATA_toggled(bool checked);
+
 public slots:
 	void preConnection();
 	void outputData(QString);

@@ -30,21 +30,23 @@ integer, parameter :: DIVIDE_ALWAYS_PUSH  = 1
 integer, parameter :: DIVIDE_USE_CLEAR_SITE  = 2
 integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 
-integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16
+integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16, nfprofile=17
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
-integer, parameter :: MAX_CHEMO = 7
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: TRACER = 3
 integer, parameter :: DRUG_A = 4
-integer, parameter :: DRUG_A_METAB = DRUG_A + 1
-integer, parameter :: DRUG_B = 6
-integer, parameter :: DRUG_B_METAB = DRUG_B + 1
+integer, parameter :: SN30000 = DRUG_A
+integer, parameter :: SN30000_METAB = DRUG_A + 1
+integer, parameter :: DRUG_B = DRUG_A + 2
+integer, parameter :: PR104A = DRUG_B
+integer, parameter :: PR104A_METAB_1 = PR104A + 1
+integer, parameter :: PR104A_METAB_2 = PR104A + 2
+integer, parameter :: MAX_CHEMO = PR104A_METAB_2
+
 integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
-integer, parameter :: SN30000 = DRUG_A
-integer, parameter :: SN30000_METAB = DRUG_A_METAB
 integer, parameter :: MAX_CELLTYPES = 4
 integer, parameter :: max_nlist = 500000
 
@@ -91,6 +93,7 @@ type cell_type
 end type
 
 type SN30K_type
+	integer :: nmetabolites
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: medium_diff_coef
 	real(REAL_KIND) :: membrane_diff
@@ -108,6 +111,15 @@ type SN30K_type
 	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES)
 	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES)
 	real(REAL_KIND) :: Kd(MAX_CELLTYPES)
+end type
+
+
+type PR104_type
+	integer :: nmetabolites
+	real(REAL_KIND) :: diff_coef(0:2)
+	real(REAL_KIND) :: medium_diff_coef(0:2)
+	real(REAL_KIND) :: membrane_diff(0:2)
+	real(REAL_KIND) :: halflife(0:2)
 end type
 
 type boundary_type
@@ -129,8 +141,9 @@ type, bind(C) :: field_data
 end type
 
 type treatment_type
+	integer :: ichemo
 	integer :: n
-	character*(16) :: name
+!	character*(16) :: name
 	real(REAL_KIND), allocatable :: tstart(:)
 	real(REAL_KIND), allocatable :: tend(:)
 	real(REAL_KIND), allocatable :: conc(:)
@@ -171,22 +184,25 @@ integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes, ncpu_input
+integer :: nt_saveprofiledata, it_saveprofiledata
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3
 real(REAL_KIND) :: medium_volume0, medium_volume, cell_radius, d_layer
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
-real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean
+real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean, dt_saveprofiledata
 real(REAL_KIND) :: t_simulation, execute_t1
 real(REAL_KIND) :: O2cutoff(3)
 real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
 type(SN30K_type) :: SN30K
+type(PR104_type) :: PR104
 logical :: bdry_changed
 type(LQ_type) :: LQ
 character*(128) :: inputfile
 character*(128) :: treatmentfile
 character*(128) :: outputfile
+character*(128) :: profiledatafilebase
 character*(2048) :: logmsg
 logical :: test_case(4)
 
@@ -201,6 +217,7 @@ logical :: use_V_dependence
 logical :: randomise_initial_volume
 logical :: relax
 logical :: use_parallel
+logical :: saveprofiledata
 logical :: dbug = .false.
 
 real(REAL_KIND) :: ysave(100000),dCreactsave(100000)
