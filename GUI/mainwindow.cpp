@@ -15,7 +15,8 @@
 #include "transfer.h"
 
 #include "dialog.h"
-//#include "colours.h"
+
+#include "global.h"
 
 #ifdef linux
 #include <QTcpServer>
@@ -27,30 +28,24 @@ LOG_USE();
 
 Params *parm;	// I don't believe this is the right way, but it works
 Graphs *grph;
-//Colours *pal;
 
-bool showingVTK;
-bool recordingVTK;
-bool showingFACS;
-bool recordingFACS;
+//bool showingVTK;
+//bool recordingVTK;
+//bool showingFACS;
+//bool recordingFACS;
 
-int VTKbuffer[100];
-int cell_list[N_CELLINFO*MAX_CELLS];
-int ncell_list;
-int istep;
+//int VTKbuffer[100];
+//int cell_list[N_CELLINFO*MAX_CELLS];
+//int ncell_list;
+//int istep;
 
-int summaryData[100];
-int nt_vtk;
-bool leftb;
-double DELTA_T;
-int i_hypoxia_cutoff;
-int i_growth_cutoff;
-int ndistplots = 1;
-
-double *FACS_data=NULL;
-int nFACS_vars=5;   // CFSE, CD69, S1PR1, avidity, stimulation
-int nFACS_cells=0;
-int nFACS_dim=0;
+//int summaryData[100];
+//int nt_vtk;
+//bool leftb;
+//double DELTA_T;
+//int i_hypoxia_cutoff;
+//int i_growth_cutoff;
+//int ndistplots = 1;
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -63,10 +58,14 @@ MainWindow::MainWindow(QWidget *parent)
     showMaximized();
 
     // Some initializations
+    Global::data1 = 123;
+    Global::data2 = 456;
+
     nDistPts = 200;
 	nTicks = 1000;
 	tickVTK = 100;	// timer tick for VTK in milliseconds
-	paramSaved = false;
+    ndistplots = 1;
+    paramSaved = false;
 	paused = false;
 	posdata = false;
     DCmotion = false;
@@ -75,10 +74,11 @@ MainWindow::MainWindow(QWidget *parent)
 	started = false;
     firstVTK = true;
     exthread = NULL;
-    recordingVTK = false;
-    showingVTK = false;
-    recordingFACS = false;
-    showingFACS = false;
+    histogram = NULL;
+    Global::recordingVTK = false;
+    Global::showingVTK = false;
+    Global::recordingFACS = false;
+    Global::showingFACS = false;
     nGraphCases = 0;
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
@@ -98,6 +98,15 @@ MainWindow::MainWindow(QWidget *parent)
     field = new Field(page_2D);
     grph = new Graphs();
 //    pal = new Colours();
+    histo_rb_list = NULL;
+    vbox_histo = NULL;
+    buttonGroup_histo = new QButtonGroup;
+    FACS_x_vars_rb_list = NULL;
+    vbox_FACS_x_vars = NULL;
+    buttonGroup_FACS_x_vars = new QButtonGroup;
+    FACS_y_vars_rb_list = NULL;
+    vbox_FACS_y_vars = NULL;
+    buttonGroup_FACS_y_vars = new QButtonGroup;
 
     setupGraphSelector();
     setGraphsActive();
@@ -114,6 +123,8 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_QMSG("did drawDistPlots");
     initFACSPlot();
     LOG_QMSG("did initFACSPlot");
+    initHistoPlot();
+    LOG_QMSG("did initHistoPlot");
     loadParams();
     LOG_QMSG("Did loadparams");
 	writeout();
@@ -153,7 +164,140 @@ MainWindow::MainWindow(QWidget *parent)
 
     videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
     videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
+
+    initDrugComboBoxes();
+//    makeHistoPlot();
+//    test_histo();
     goToInputs();
+}
+
+void MainWindow::test_histo()
+{
+    int numValues = 20;
+    double width = 10;
+    QwtArray<double> values(numValues);
+    for (int i=0; i<numValues; i++) {
+        values[i] = rand() %100;
+    }
+    makeHistoPlot(numValues,width,values);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::makeHistoPlot(int numValues, double width,  QwtArray<double> values)
+{
+    QwtPlot *plot = qpHisto;
+    plot->clear();
+    plot->setCanvasBackground(QColor(Qt::white));
+    plot->setTitle("Histogram");
+
+    QwtPlotGrid *grid = new QwtPlotGrid;
+    grid->enableXMin(true);
+    grid->enableYMin(true);
+    grid->setMajPen(QPen(Qt::black, 0, Qt::DotLine));
+    grid->setMinPen(QPen(Qt::gray, 0 , Qt::DotLine));
+    grid->attach(plot);
+
+    if (histogram) {
+        histogram->detach();
+    } else {
+        histogram = new HistogramItem();
+    }
+    histogram->setColor(Qt::darkCyan);
+
+    QwtArray<QwtDoubleInterval> intervals(numValues);
+
+    double pos = 0.0;
+    for ( int i = 0; i < numValues; i++ )
+    {
+        intervals[i] = QwtDoubleInterval(pos, pos + width);
+        pos += width;
+    }
+
+    histogram->setData(QwtIntervalData(intervals, values));
+    histogram->attach(plot);
+
+    plot->setAxisScale(QwtPlot::yLeft, 0.0, 100.0);
+    plot->setAxisScale(QwtPlot::xBottom, 0.0, pos);
+    plot->replot();
+//    plot->resize(600,400);
+    plot->show();
+
+}
+
+/*
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::test_makeHistoPlot()
+{
+    QwtPlot *plot = qpHisto;
+//    plot.setCanvasBackground(QColor(Qt::white));
+//    plot.setTitle("Histogram");
+    plot->setCanvasBackground(QColor(Qt::white));
+    plot->setTitle("Histogram");
+
+    QwtPlotGrid *grid = new QwtPlotGrid;
+    grid->enableXMin(true);
+    grid->enableYMin(true);
+    grid->setMajPen(QPen(Qt::black, 0, Qt::DotLine));
+    grid->setMinPen(QPen(Qt::gray, 0 , Qt::DotLine));
+    grid->attach(plot);
+
+    HistogramItem *histogram = new HistogramItem();
+    histogram->setColor(Qt::darkCyan);
+
+    const int numValues = 20;
+
+    QwtArray<QwtDoubleInterval> intervals(numValues);
+    QwtArray<double> values(numValues);
+
+    double pos = 0.0;
+    for ( int i = 0; i < (int)intervals.size(); i++ )
+    {
+//        const int width = 5 + rand() % 15;
+        const int width = 10;
+        const int value = rand() % 100;
+
+        intervals[i] = QwtDoubleInterval(pos, pos + double(width));
+        values[i] = value;
+
+        pos += width;
+    }
+
+    histogram->setData(QwtIntervalData(intervals, values));
+//    histogram->attach(&plot);
+    histogram->attach(plot);
+
+//    plot.setAxisScale(QwtPlot::yLeft, 0.0, 100.0);
+//    plot.setAxisScale(QwtPlot::xBottom, 0.0, pos);
+//    plot.replot();
+    plot->setAxisScale(QwtPlot::yLeft, 0.0, 100.0);
+    plot->setAxisScale(QwtPlot::xBottom, 0.0, pos);
+    plot->replot();
+
+#if QT_VERSION < 0x040000
+//    a.setMainWidget(&plot);
+#endif
+
+//    plot.resize(600,400);
+//    plot->resize(600,400);
+//    plot.show();
+    plot->show();
+
+}
+*/
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::initDrugComboBoxes()
+{
+    comb_TPZ->addItem("SN30000");
+    comb_TPZ->addItem("TPZ");
+    comb_TPZ->addItem("Drug3");
+    comb_DNB->addItem("DNB1");
+    comb_DNB->addItem("DNB2");
+    comb_DNB->addItem("DNB3");
+    comb_DNB->addItem("DNB4");
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -186,10 +330,13 @@ void MainWindow::createActions()
     connect(action_stop, SIGNAL(triggered()), SLOT(stopServer()));
     connect(action_play_VTK, SIGNAL(triggered()), SLOT(playVTK()));
     connect(action_set_speed, SIGNAL(triggered()), SLOT(setVTKSpeed()));
-    connect(buttonGroup_FACS_PLOT_x, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
-    connect(buttonGroup_FACS_PLOT_y, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
+//    connect(buttonGroup_FACS_PLOT_x, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
+//    connect(buttonGroup_FACS_PLOT_y, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
+    connect(buttonGroup_FACS_x_vars, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
+    connect(buttonGroup_FACS_y_vars, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(facs_update()));
     connect(checkBox_FACS_log_x, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
     connect(checkBox_FACS_log_y, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
+    connect(buttonGroup_histo, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(histo_update()));
 
     connect(this,SIGNAL(pause_requested()),SLOT(pauseServer()));
 
@@ -226,7 +373,7 @@ void MainWindow::createActions()
 
 //    connect(action_show_gradient3D, SIGNAL(triggered()), this, SLOT(showGradient3D()));
 //    connect(action_show_gradient2D, SIGNAL(triggered()), this, SLOT(showGradient2D()));
-    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
+    connect(field->buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
     connect(buttonGroup_plane, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_plane(QAbstractButton*)));
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
 //	  connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
@@ -368,7 +515,7 @@ void MainWindow:: startRecorderVTK()
     videoVTK->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
     actionStart_recording_VTK->setEnabled(false);
     actionStop_recording_VTK->setEnabled(true);
-    recordingVTK = true;
+    Global::recordingVTK = true;
     started = true;
 }
 
@@ -379,7 +526,7 @@ void MainWindow:: stopRecorderVTK()
     videoVTK->stopRecorder();
     actionStart_recording_VTK->setEnabled(true);
     actionStop_recording_VTK->setEnabled(false);
-    recordingVTK = false;
+    Global::recordingVTK = false;
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -396,7 +543,7 @@ void MainWindow:: startRecorderFACS()
     videoFACS->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
     actionStart_recording_FACS->setEnabled(false);
     actionStop_recording_FACS->setEnabled(true);
-    recordingFACS = true;
+    Global::recordingFACS = true;
     LOG_QMSG("startRecorderFACS");
     LOG_QMSG(videoFileName);
 }
@@ -408,7 +555,7 @@ void MainWindow:: stopRecorderFACS()
     videoFACS->stopRecorder();
     actionStart_recording_FACS->setEnabled(true);
     actionStop_recording_FACS->setEnabled(false);
-    recordingFACS = false;
+    Global::recordingFACS = false;
     LOG_QMSG("stopRecorderFACS");
 }
 
@@ -479,6 +626,7 @@ void MainWindow:: drawDistPlots()
 }
 
 //--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 void MainWindow:: initFACSPlot()
 {
     qpFACS = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_FACS");
@@ -488,19 +636,69 @@ void MainWindow:: initFACSPlot()
 }
 
 //--------------------------------------------------------------------------------------------------------
-// Possible variables to plot:
-//   CFSE
-//   dVdt
-//   oxygen
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: initHistoPlot()
+{
+    qpHisto = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_Histo");
+    qpHisto->setTitle("Histogram");
+//    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+    qpHisto->replot();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_buttonGroup_celltype_buttonClicked(QAbstractButton* button)
+{
+    if (button->text() == "Cell type 1") {
+        Global::histo_celltype = 1;
+    } else if (button->text() == "Cell type 2") {
+        Global::histo_celltype = 2;
+    } else {
+        Global::histo_celltype = 0; // both cell types
+    }
+    showHisto();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: showHisto()
+{
+    int ivar, k, k0, numValues;
+    QRadioButton *rb;
+    QString xlabel;
+    double width;
+
+    numValues = Global::nhisto_boxes;
+    QwtArray<double> values(numValues);
+
+    // Determine which button is checked:
+    for (ivar=0; ivar<Global::nvars_used; ivar++) {
+        rb = histo_rb_list[ivar];
+        if (rb->isChecked()) {
+            break;
+        }
+    }
+    xlabel = Global::var_string[ivar];
+    k0 = Global::histo_celltype*numValues*Global::nvars_used;
+    for (int i=0; i<numValues; i++) {
+        k = k0 + ivar*numValues + i;
+        values[i] = Global::histo_data[k];
+    }
+    width = Global::histo_vmax[ivar]/numValues;
+    makeHistoPlot(numValues,width,values);
+}
+
+//--------------------------------------------------------------------------------------------------------
+// Possible variables to plot are Global::vars_used[]
+// Use this to trigger histogram plot.
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showFACS()
 {
-    double xmin, xmax, ymin, ymax, cfse, cvar, x, y, scale_x, scale_y;
-    int i, k;
-    int kvar_x, kvar_y;
+    double xmin, xmax, ymin, ymax, x, y, xscale, yscale;
+    int i, ivar, kvar_x, kvar_y, ichemo;
     bool x_logscale, y_logscale;
     QString xlabel, ylabel;
-    enum VAR {CFSE_VAR, OXYGEN_VAR, DVDT_VAR};
+    QRadioButton *rb;
 
 //    LOG_MSG("showFACS");
 //    if (showingFACS) LOG_MSG("showingFACS");
@@ -511,6 +709,105 @@ void MainWindow::showFACS()
     qpFACS->setTitle("FACS");
     QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
 
+    // Determine which button is checked:
+    for (ivar=0; ivar<Global::nvars_used; ivar++) {
+        rb = FACS_x_vars_rb_list[ivar];
+        if (rb->isChecked()) {
+            ichemo = Global::GUI_to_DLL_index[ivar];
+            break;
+        }
+    }
+    kvar_x = ivar;
+    switch(ichemo) {
+    case CFSE:
+        xscale = 1000;
+        xlabel = "CFSE";
+        xmin = 0.1;
+        xmax = 1500;
+        break;
+    case OXYGEN:
+        xscale = 1;
+        xlabel = "Oxygen";
+        xmin = 1.0e-4;
+        xmax = 1.0;
+        break;
+    case GLUCOSE:
+        xscale = 1;
+        xlabel = "Glucose";
+        xmin = 1.0e-3;
+        xmax = 10.0;
+        break;
+    case TRACER:
+        break;
+    case DRUG_A:
+        break;
+    case DRUG_A_METAB_1:
+        break;
+    case DRUG_A_METAB_2:
+        break;
+    case DRUG_B:
+        break;
+    case DRUG_B_METAB_1:
+        break;
+    case DRUG_B_METAB_2:
+        break;
+    case GROWTH_RATE:
+        xscale = 1;
+        xlabel = "Growth rate";
+        xmin = 1.0e-7;
+        xmax = 1.0e-5;
+        break;
+    }
+    for (ivar=0; ivar<Global::nvars_used; ivar++) {
+        rb = FACS_y_vars_rb_list[ivar];
+        if (rb->isChecked()) {
+            ichemo = Global::GUI_to_DLL_index[ivar];
+            break;
+        }
+    }
+    kvar_y = ivar;
+    switch(ichemo) {
+    case CFSE:
+        yscale = 1000;
+        ylabel = "CFSE";
+        ymin = 0.1;
+        ymax = 1500;
+        break;
+    case OXYGEN:
+        yscale = 1;
+        ylabel = "Oxygen";
+        ymin = 1.0e-4;
+        ymax = 1.0;
+        break;
+    case GLUCOSE:
+        yscale = 1;
+        ylabel = "Glucose";
+        ymin = 1.0e-3;
+        ymax = 10.0;
+        break;
+    case TRACER:
+        break;
+    case DRUG_A:
+        break;
+    case DRUG_A_METAB_1:
+        break;
+    case DRUG_A_METAB_2:
+        break;
+    case DRUG_B:
+        break;
+    case DRUG_B_METAB_1:
+        break;
+    case DRUG_B_METAB_2:
+        break;
+    case GROWTH_RATE:
+        yscale = 1;
+        ylabel = "Growth rate";
+        ymin = 1.0e-7;
+        ymax = 1.0e-5;
+        break;
+    }
+
+    /*
 //    kvar_x = 0;
 //    scale_x = 1000;
     if (radioButton_FACS_CFSE_x->isChecked()) {
@@ -552,16 +849,16 @@ void MainWindow::showFACS()
         ymin = 1.0e-4;
         ymax = 1.0;
     }
-
+*/
     x_logscale = checkBox_FACS_log_x->isChecked();
     y_logscale = checkBox_FACS_log_y->isChecked();
 //    xmin = 0.1;
 //    xmax = 1500;
-    for (i=0; i<nFACS_cells; i++) {
-        x = FACS_data[N_FACS_VARS*i+kvar_x];
-        y = FACS_data[N_FACS_VARS*i+kvar_y];
-        x = scale_x*x;
-        y = scale_y*y;
+    for (i=0; i<Global::nFACS_cells; i++) {
+        x = Global::FACS_data[Global::nvars_used*i+kvar_x];
+        y = Global::FACS_data[Global::nvars_used*i+kvar_y];
+        x = xscale*x;
+        y = yscale*y;
         y = max(y,1.01*ymin);
 //        ymax = max(y,ymax);
         if (x >= xmin) {
@@ -603,6 +900,7 @@ void MainWindow::showFACS()
         actionStart_recording_FACS->setEnabled(true);
         actionStop_recording_FACS->setEnabled(false);
     }
+//    showHisto();
 }
 
 //-------------------------------------------------------------
@@ -668,7 +966,7 @@ void MainWindow::loadParams()
 						if (qsname.contains("NCPU")) {
 							ncpu = p.value;
 						}
-					} else if (qsname.startsWith("comb_")) {
+                    } else if (qsname.startsWith("comb_")) {
                         int val = p.value - 1;	//0-based indexing
 						QComboBox *w_c = (QComboBox *)w;
                         w_c->setCurrentIndex(val);
@@ -1515,8 +1813,8 @@ double MainWindow::getMaximum(RESULT_SET *R, double *x)
 void MainWindow::goToInputs()
 {
     stackedWidget->setCurrentIndex(0);
-    showingVTK = false;
-    showingFACS = false;
+    Global::showingVTK = false;
+    Global::showingFACS = false;
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(true);
     action_VTK->setEnabled(true);
@@ -1530,8 +1828,8 @@ void MainWindow::goToInputs()
 void MainWindow::goToOutputs()
 {
     stackedWidget->setCurrentIndex(1);    
-    showingVTK = false;
-    showingFACS = false;
+    Global::showingVTK = false;
+    Global::showingFACS = false;
     action_outputs->setEnabled(false);
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
@@ -1550,8 +1848,8 @@ void MainWindow::goToVTK()
     action_field->setEnabled(true);
     action_VTK->setEnabled(false);
     action_FACS->setEnabled(true);
-    showingVTK = true;
-    showingFACS = false;
+    Global::showingVTK = true;
+    Global::showingFACS = false;
 }
 
 //-------------------------------------------------------------
@@ -1565,8 +1863,8 @@ void MainWindow::goToFACS()
     action_field->setEnabled(true);
     action_VTK->setEnabled(true);
     action_FACS->setEnabled(false);
-    showingVTK = false;
-    showingFACS = true;
+    Global::showingVTK = false;
+    Global::showingFACS = true;
 }
 
 //-------------------------------------------------------------
@@ -1580,8 +1878,8 @@ void MainWindow::goToField()
     action_field->setEnabled(false);
     action_VTK->setEnabled(true);
     action_FACS->setEnabled(true);
-    showingVTK = false;
-    showingFACS = false;
+    Global::showingVTK = false;
+    Global::showingFACS = false;
     LOG_MSG("goToField");
 //    field->displayField(hour,&res);
 //    if (res != 0) {
@@ -1707,19 +2005,19 @@ void MainWindow::saveProfileData()
         return;
     }
     QTextStream out(&file);
-    for (ichemo=0; ichemo<MAX_CHEMO+1; ichemo++) {
+    for (ichemo=0; ichemo<Global::MAX_CHEMO+1; ichemo++) {
 //        if (!field->const_used[ichemo]) continue;
         out << field->const_name[ichemo];
         out << "\n";
     }
     out << "\n";
-    for (i=0; i<conc_nc; i++) {
-        x = i*conc_dx*1.0e4;
+    for (i=0; i<Global::conc_nc; i++) {
+        x = i*Global::conc_dx*1.0e4;
         line = QString::number(x,'g',4);
         line += " ";
-        for (ichemo=0; ichemo<MAX_CHEMO+1; ichemo++) {
+        for (ichemo=0; ichemo<Global::MAX_CHEMO+1; ichemo++) {
 //            if (!field->const_used[ichemo]) continue;
-            c = concData[i*(MAX_CHEMO+1)+ichemo];
+            c = Global::concData[i*(Global::MAX_CHEMO+1)+ichemo];
             line += QString::number(c,'g',4);
             line += " ";
         }
@@ -1787,17 +2085,17 @@ void MainWindow::runServer()
         field->setSaveImages(checkBox_record2D->isChecked());
         field->setUseLogScale(checkBox_O2logscale->isChecked());
         if (radioButton_hypoxia_1->isChecked())
-            i_hypoxia_cutoff = 1;
+            Global::i_hypoxia_cutoff = 1;
         else if (radioButton_hypoxia_2->isChecked())
-            i_hypoxia_cutoff = 2;
+            Global::i_hypoxia_cutoff = 2;
         else if (radioButton_hypoxia_3->isChecked())
-            i_hypoxia_cutoff = 3;
+            Global::i_hypoxia_cutoff = 3;
         if (radioButton_growthfraction_1->isChecked())
-            i_growth_cutoff = 1;
+            Global::i_growth_cutoff = 1;
         else if (radioButton_growthfraction_2->isChecked())
-            i_growth_cutoff = 2;
+            Global::i_growth_cutoff = 2;
         else if (radioButton_growthfraction_3->isChecked())
-            i_growth_cutoff = 3;
+            Global::i_growth_cutoff = 3;
     }
 //    field->setSliceChanged();
 
@@ -1823,9 +2121,9 @@ void MainWindow::runServer()
 	}
 	
     // Display the outputs screen
-    if (showingVTK) {
+    if (Global::showingVTK) {
         goToVTK();
-    } else if(showingFACS) {
+    } else if(Global::showingFACS) {
         goToFACS();
     } else {
         goToOutputs();
@@ -1874,14 +2172,14 @@ void MainWindow::runServer()
     sleep(100);
 
 	hours = 0;
-	nt_vtk = 0;
+    Global::nt_vtk = 0;
 	for (int k=0; k<parm->nParams; k++) {
 		PARAM_SET p = parm->get_param(k);
 		if (p.tag.compare("NDAYS") == 0) {
 			hours = p.value*24;
 		}
 		if (p.tag.compare("NT_ANIMATION") == 0) {
-			nt_vtk = p.value;
+            Global::nt_vtk = p.value;
 		}
 	}
 	started = true;
@@ -1892,13 +2190,17 @@ void MainWindow::runServer()
 //    connect(exthread, SIGNAL(action_VTK()), this, SLOT(goToVTK()));
     connect(exthread, SIGNAL(facs_update()), this, SLOT(showFACS()));
     connect(this, SIGNAL(facs_update()), this, SLOT(showFACS()));
-    connect(exthread, SIGNAL(setupC(int,bool *)), this, SLOT(setupConc(int, bool *)));
+    connect(exthread, SIGNAL(histo_update()), this, SLOT(showHisto()));
+    connect(this, SIGNAL(histo_update()), this, SLOT(showHisto()));
+    connect(exthread, SIGNAL(setupC()), this, SLOT(setupConstituents()));
+//    connect(exthread, SIGNAL(run_tester()), this, SLOT(tester()));
     exthread->ncpu = ncpu;
-	exthread->nsteps = int(hours*60/DELTA_T);
+    exthread->nsteps = int(hours*60/Global::DELTA_T);
 	exthread->paused = false;
 	exthread->stopped = false;
     exthread->start();
 }
+
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -2185,7 +2487,7 @@ void MainWindow::showSummary(int hr)
         if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
 		int k = grph->get_dataIndex(i);
-        val = summaryData[k];
+        val = Global::summaryData[k];
         newR->pData[i][step] = val*grph->get_scaling(i);
 	}
 
@@ -2223,7 +2525,7 @@ void MainWindow::outputData(QString qdata)
 //		}
 //		vtk->read_cell_positions(cellfile, vtkfile, savepos);
 		started = true;
-        if (showingVTK || firstVTK) {
+        if (Global::showingVTK || firstVTK) {
 			firstVTK = false;
 			bool redo = false;
 //            if (showingVTK ) {
@@ -3545,16 +3847,81 @@ void MainWindow::on_action_show_gradient2D_triggered()
     showGradient2D();
 }
 
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::setupConc(int nc, bool *cused)
+//-----------------------------------------------------------------------------------------
+// Shows how to fetch active constituent names and use them to initialise a radiobutton
+// group, and also to record their DLL index values (ichemo):
+// 0 CFSE
+// 1 Oxygen
+// 2 Glucose
+// 3 Tracer
+// 4 TPZ drug
+// 5 TPZ drug metabolite 1
+// 6 TPZ drug metabolite 2
+// 7 DNB drug
+// 8 DNB drug metabolite 1
+// 9 DNB drug metabolite 2
+// ...
+//
+// GUI_to_DLL_index[ivar], ivar=0,..,nvars_used-1 = base DLL index (0,MAX_CHEMO+NEXTRA)
+// DLL_to_GUI_index[ichemo],ichemo=0,..,MAX_CHEMO+NEXTRA = index in list of variables in use (0,nvars_used-1)
+//-----------------------------------------------------------------------------------------
+void MainWindow::setupConstituents()
+{
+    int nvarlen, narraylen;
+    char *name_array;
+    char name[25];
+    QString str, tag;
+    int ivar, ichemo;
+
+    narraylen = 1000;
+    name_array = (char *)malloc(narraylen*sizeof(char));
+    get_constituents(&Global::nvars_used, Global::GUI_to_DLL_index, &nvarlen, name_array, &narraylen);
+    for (ichemo=0; ichemo<32; ichemo++)
+        Global::DLL_to_GUI_index[ichemo] = -1;
+    for (ivar=0; ivar<Global::nvars_used; ivar++)
+        Global::DLL_to_GUI_index[Global::GUI_to_DLL_index[ivar]] = ivar;
+    int k = 0;
+    for (ivar=0; ivar<Global::nvars_used; ivar++) {
+        for (int i=0; i<nvarlen; i++) {
+            name[i] = name_array[k];
+            k++;
+        }
+        name[nvarlen] = NULL;
+        str = name;
+        Global::var_string[ivar] = str.trimmed();
+        LOG_QMSG(name);
+    }
+    free(name_array);
+    LOG_MSG("set up Global");
+    tag = "field";
+    field->setConstituentButtons(groupBox_constituent,field->buttonGroup_constituent,&field->vbox_constituent,&field->constituent_rb_list,tag);
+    LOG_MSG("did setConstituentButtons: field");
+    tag = "histo";
+    field->setConstituentButtons(groupBox_Histo_y_vars,buttonGroup_histo,&vbox_histo,&histo_rb_list,tag);
+    LOG_MSG("did setConstituentButtons: histo");
+    tag = "FACS_x";
+    field->setConstituentButtons(groupBox_FACS_x_vars,buttonGroup_FACS_x_vars,&vbox_FACS_x_vars,&FACS_x_vars_rb_list,tag);
+    FACS_x_vars_rb_list[0]->setChecked(true);
+    LOG_MSG("did setConstituentButtons: FACS_x");
+    tag = "FACS_y";
+    field->setConstituentButtons(groupBox_FACS_y_vars,buttonGroup_FACS_y_vars,&vbox_FACS_y_vars,&FACS_y_vars_rb_list,tag);
+    LOG_MSG("did setConstituentButtons: FACS_y");
+}
+
+/* Old code
 {
     int ichemo;
     QString rbText;
-
+    return;
     LOG_MSG("setupConc");
+//    if (nc != MAX_CONC) {
+//        LOG_MSG("Error: setupConc: nc != MAX_CONC");
+//        exit(1);
+//    }
     for (ichemo=0; ichemo<nc; ichemo++) {
-        if (ichemo == OXYGEN)
+        if (ichemo == CFSE)
+            rbText = "radioButton_cfse";
+        else if (ichemo == OXYGEN)
             rbText = "radioButton_oxygen";
         else if (ichemo == GLUCOSE)
             rbText = "radioButton_glucose";
@@ -3562,20 +3929,27 @@ void MainWindow::setupConc(int nc, bool *cused)
             rbText = "radioButton_tracer";
         else if (ichemo == DRUG_A)
             rbText = "radioButton_drugA";
-        else if (ichemo == DRUG_A_METAB)
-            rbText = "radioButton_drugA_metabolite";
+        else if (ichemo == DRUG_A_METAB_1)
+            rbText = "radioButton_drugA_metabolite_1";
+        else if (ichemo == DRUG_A_METAB_2)
+            rbText = "radioButton_drugA_metabolite_2";
         else if (ichemo == DRUG_B)
             rbText = "radioButton_drugB";
-        else if (ichemo == DRUG_B_METAB)
-            rbText = "radioButton_drugB_metabolite";
+        else if (ichemo == DRUG_B_METAB_1)
+            rbText = "radioButton_drugB_metabolite_1";
+        else if (ichemo == DRUG_B_METAB_2)
+            rbText = "radioButton_drugB_metabolite_2";
+        LOG_QMSG(rbText);
         QRadioButton *rb = findChild<QRadioButton*>(rbText);
         if (cused[ichemo])
             rb->setEnabled(true);
         else
             rb->setEnabled(false);
+        LOG_MSG("rb set");
     }
     LOG_MSG("did setupConc");
 }
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -3710,6 +4084,20 @@ void MainWindow::setGraphsActive()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
+void MainWindow::on_comb_TPZ_currentIndexChanged(int index)
+{
+    text_DRUG_A_NAME->setText(comb_TPZ->currentText());
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_comb_DNB_currentIndexChanged(int index)
+{
+    text_DRUG_B_NAME->setText(comb_DNB->currentText());
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_USE_DRUG_A_toggled(bool checked)
 {
     LOG_MSG("cbox_use_drugA toggled");
@@ -3719,6 +4107,54 @@ void MainWindow::on_cbox_USE_DRUG_A_toggled(bool checked)
     leb->setEnabled(checked);
     cbm->setEnabled(checked);
     setTreatmentFileUsage();
+    comb_TPZ->setEnabled(checked);
+    text_DRUG_A_NAME->setEnabled(checked);
+    text_DRUG_A_NAME->setText(comb_TPZ->currentText());
+    int indexTPZ = comb_TPZ->currentIndex();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_cbox_USE_DRUG_B_toggled(bool checked)
+{
+//    LOG_MSG("cbox_use_drugB toggled");
+    QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_B_BDRY_CONC");
+//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_B_DECAY");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_SIMULATE_METABOLITE");
+    leb->setEnabled(checked);
+    cbm->setEnabled(checked);
+    setTreatmentFileUsage();
+    comb_DNB->setEnabled(checked);
+    text_DRUG_B_NAME->setEnabled(checked);
+    text_DRUG_B_NAME->setText(comb_DNB->currentText());
+    int indexDNB = comb_DNB->currentIndex();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked)
+{
+//    LOG_MSG("cbox_use_drugA_metabolite toggled");
+//    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
+//    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_METABOLITE_DECAY");
+//    rbm->setEnabled(checked);
+//    cbm->setEnabled(checked);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_cbox_DRUG_B_SIMULATE_METABOLITE_toggled(bool checked)
+{
+//    LOG_MSG("cbox_use_drugB_metabolite toggled");
+//    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
+//    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_METABOLITE_DECAY");
+//    if (checked) {
+//        rbm->setEnabled(true);
+//        cbm->setEnabled(true);
+//    } else {
+//        rbm->setEnabled(false);
+//        cbm->setEnabled(false);
+//    }
 }
 
 //-----------------------------------------------------------------------------------------
@@ -3787,7 +4223,7 @@ void MainWindow::on_action_FACS_triggered()
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
     action_FACS->setEnabled(false);
-    showingFACS = true;
+    Global::showingFACS = true;
 }
 
 /*
@@ -3857,7 +4293,7 @@ void MainWindow::on_pushButton_SN30K_Kd_2_clicked()
 */
 
 //------------------------------------------------------------------------------------------------------
-// This should be used for any radioButtonGroups
+// This should be used for any radioButtonGroups for model input parameters
 //------------------------------------------------------------------------------------------------------
 void MainWindow::radioButtonChanged(QAbstractButton *b)
 {
@@ -3890,18 +4326,6 @@ void MainWindow::on_cbox_drugA_decay_toggled(bool checked)
         leh->setEnabled(false);
     }
 }
-*/
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked)
-{
-//    LOG_MSG("cbox_use_drugA_metabolite toggled");
-//    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
-//    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_METABOLITE_DECAY");
-//    rbm->setEnabled(checked);
-//    cbm->setEnabled(checked);
-}
 
 /*
 //--------------------------------------------------------------------------------------------------------
@@ -3917,19 +4341,6 @@ void MainWindow::on_cbox_drugA_metabolite_decay_toggled(bool checked)
     }
 }
 */
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_USE_DRUG_B_toggled(bool checked)
-{
-//    LOG_MSG("cbox_use_drugB toggled");
-    QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_B_BDRY_CONC");
-//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_B_DECAY");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_SIMULATE_METABOLITE");
-    leb->setEnabled(checked);
-    cbm->setEnabled(checked);
-    setTreatmentFileUsage();
-}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -3963,22 +4374,6 @@ void MainWindow::on_cbox_drugB_decay_toggled(bool checked)
     }
 }
 */
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_DRUG_B_SIMULATE_METABOLITE_toggled(bool checked)
-{
-//    LOG_MSG("cbox_use_drugB_metabolite toggled");
-    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_METABOLITE_DECAY");
-    if (checked) {
-        rbm->setEnabled(true);
-        cbm->setEnabled(true);
-    } else {
-        rbm->setEnabled(false);
-        cbm->setEnabled(false);
-    }
-}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -4226,7 +4621,6 @@ QString MainWindow::strippedName(const QString &fullFileName)
 {
     return QFileInfo(fullFileName).fileName();
 }
-*/
 
 void MainWindow::on_radioButton_oxygen_clicked()
 {
@@ -4237,6 +4631,7 @@ void MainWindow::on_radioButton_glucose_clicked(bool checked)
 {
 
 }
+*/
 
 void MainWindow::buttonClick_constituent(QAbstractButton* button)
 {

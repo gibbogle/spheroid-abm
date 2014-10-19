@@ -55,6 +55,8 @@ public:
 	void unpause();
 	void stop();
 //    void wait_to_go();
+    void tester();
+
     int ncpu;
 	int nsteps;
     int summary_interval;
@@ -66,8 +68,10 @@ signals:
     void display();
 //    void displayF();
     void summary(int);
-    void setupC(int, bool *);
+    void setupC();
     void facs_update();
+    void histo_update();
+    void run_tester();
 };
 
 bool quitMessage(QString);

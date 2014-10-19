@@ -15,6 +15,8 @@
 
 #include "libspheroid.h"
 
+#include "global.h"
+
 LOG_USE();
 char msg[2048];
 
@@ -137,7 +139,6 @@ ExecThread::ExecThread(QString infile)
 	inputFile = infile;
 }
 
-
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void ExecThread::run()
@@ -148,7 +149,7 @@ void ExecThread::run()
 	const char *infile, *outfile;
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
-    bool cused[16];
+    bool cused[32];
 
 	infile_path = inputFile;
 	QString casename = QFileInfo(inputFile).baseName();
@@ -164,17 +165,24 @@ void ExecThread::run()
     LOG_MSG("call execute");
     execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
     LOG_MSG("did execute");
-    get_dimensions(&NX,&NY,&NZ,&nsteps,&DELTA_T, &MAX_CHEMO, cused, &dfraction);
-    emit setupC(MAX_CHEMO, cused);
-    summary_interval = int(3600./DELTA_T);
+    get_dimensions(&Global::NX,&Global::NY,&Global::NZ,&nsteps,&Global::DELTA_T, &Global::MAX_CHEMO, cused, &Global::dfraction);
+    summary_interval = int(3600./Global::DELTA_T);
     sprintf(msg,"exthread: nsteps: %d summary_interval: %d",nsteps,summary_interval);
     LOG_MSG(msg);
-
-    conc_nc = 0;
+    Global::conc_nc = 0;
     hour = 0;
 
     mutex1.lock();
-    get_summary(summaryData, &i_hypoxia_cutoff, &i_growth_cutoff);
+    emit setupC();
+    mutex1.unlock();
+
+//    LOG_MSG("call tester");
+//    tester();
+//    LOG_MSG("did tester");
+//    emit run_tester();
+
+    mutex1.lock();
+    get_summary(Global::summaryData, &Global::i_hypoxia_cutoff, &Global::i_growth_cutoff);
     mutex1.unlock();
     emit summary(hour);		// Emit signal to initialise summary plots
     summary_done.wait(&mutex3);
@@ -188,7 +196,7 @@ void ExecThread::run()
             LOG_MSG(msg);
             updated = true;
 		}
-		while(paused || leftb) {
+        while(paused || Global::leftb) {
             sleep(100);
 		}
         if (stopped) {
@@ -204,19 +212,20 @@ void ExecThread::run()
 
         if (i%summary_interval == 0) {
 			mutex1.lock();
-            get_summary(summaryData, &i_hypoxia_cutoff, &i_growth_cutoff);
-            get_concdata(&conc_nc, &conc_dx, concData);
-            get_volprob(&vol_nv, &vol_v0, &vol_dv, volProb);
-            get_oxyprob(&oxy_nv, &oxy_dv, oxyProb);
-            if (showingFACS || recordingFACS) {
+            get_summary(Global::summaryData, &Global::i_hypoxia_cutoff, &Global::i_growth_cutoff);
+            get_concdata(&Global::conc_nc, &Global::conc_dx, Global::concData);
+            get_volprob(&Global::vol_nv, &Global::vol_v0, &Global::vol_dv, Global::volProb);
+            get_oxyprob(&Global::oxy_nv, &Global::oxy_dv, Global::oxyProb);
+            if (Global::showingFACS || Global::recordingFACS) {
                 getFACS();
             }
             mutex1.unlock();
             hour++;
             emit summary(hour);		// Emit signal to update summary plots, at hourly intervals
             summary_done.wait(&mutex3);
-            if (showingFACS || recordingFACS) {
+            if (Global::showingFACS || Global::recordingFACS) {
                 emit facs_update();
+                emit histo_update();
             }
         }
 
@@ -224,10 +233,10 @@ void ExecThread::run()
             res = -1;
             break;
         }
-        if (i%nt_vtk == 0) {
-            if (showingVTK || recordingVTK) {
+        if (i%Global::nt_vtk == 0) {
+            if (Global::showingVTK || Global::recordingVTK) {
 				snapshot();
-                istep = i;
+                Global::istep = i;
                 sleep(10);
 			}
 		}
@@ -266,8 +275,8 @@ void ExecThread::wait_to_go()
 void ExecThread::snapshot()
 {
     mutex2.lock();
-    get_scene(&ncell_list,cell_list);
-    if (ncell_list > MAX_CELLS) {
+    get_scene(&Global::ncell_list,Global::cell_list);
+    if (Global::ncell_list > MAX_CELLS) {
         LOG_MSG("Error: MAX_CELLS exceeded");
         exit(1);
     }
@@ -288,16 +297,23 @@ void ExecThread::saveGradient2D(int i)
 }
 
 //-----------------------------------------------------------------------------------------
+// Get FACS data and histogram data
 //-----------------------------------------------------------------------------------------
 void ExecThread::getFACS()
 {
-    get_nfacs(&nFACS_cells);
-    if (!FACS_data || nFACS_cells*nFACS_vars > nFACS_dim) {
-        if (FACS_data) free(FACS_data);
-        nFACS_dim = 3*nFACS_cells*nFACS_vars;
-        FACS_data = (double *)malloc(nFACS_dim*sizeof(double));
+    get_nfacs(&Global::nFACS_cells);
+    if (!Global::FACS_data || Global::nFACS_cells*Global::nvars_used > Global::nFACS_dim) {
+        if (Global::FACS_data) free(Global::FACS_data);
+        Global::nFACS_dim = 3*Global::nFACS_cells*Global::nvars_used;   // 3* to avoid excessive malloc/free
+        Global::FACS_data = (double *)malloc(Global::nFACS_dim*sizeof(double));
     }
-    get_facs(FACS_data);
+    get_facs(Global::FACS_data);
+    if (!Global::histo_data || Global::nhisto_boxes*Global::nvars_used > Global::nhisto_dim) {
+        if (Global::histo_data) free(Global::histo_data);
+        Global::nhisto_dim = 6*Global::nhisto_boxes*Global::nvars_used;   // 2*3 to avoid excessive malloc/free (only 3* used)
+        Global::histo_data = (double *)malloc(Global::nhisto_dim*sizeof(double));
+    }
+    get_histo(Global::nhisto_boxes, Global::histo_data, Global::histo_vmax);
 }
 
 //-----------------------------------------------------------------------------------------

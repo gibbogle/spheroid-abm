@@ -2262,3 +2262,115 @@ if (want_jac) then
 !	write(*,'(a,i4,4e12.3)') 'jac: ',ichemo,jac
 endif		
 end subroutine
+
+!----------------------------------------------------------------------------------
+! Intracellular reactions, membrane diffusion, and decay.
+! The number of variables, neqn = 2*nchemo, and the constituents are given by
+! chemomap(:).  The first nchemo constituents are extracellular, the last intracellular.
+! icase = i, the allstate variable index, for access to cell parameters
+! NOT USED
+!----------------------------------------------------------------------------------
+subroutine f_rkc_intra(neqn,t,y,dydt,icase)
+integer :: neqn, icase
+real(REAL_KIND) :: t, y(neqn), dydt(neqn)
+integer :: i, k, ic, ichemo, kcell, ict
+real(REAL_KIND) :: decay_rate, membrane_diff, dCreact, Vc
+real(REAL_KIND) :: Cin(MAX_CHEMO), Cex(MAX_CHEMO), C, Cox, Csn
+logical :: bnd, metabolised
+real(REAL_KIND) :: metab, dMdt
+
+Vc = Vsite_cm3 - Vextra_cm3
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
+	Cex(ic) = y(ic)
+	Cin(ic) = y(ic+nchemo)
+	if (ichemo == OXYGEN) then
+		Cox = Cin(ic)
+	elseif (ichemo == SN30000) then
+		Csn = Cin(ic)
+	endif
+enddo
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
+	decay_rate = chemo(ichemo)%decay_rate
+!	decay_rate = 0
+	membrane_diff = chemo(ichemo)%membrane_diff
+!	membrane_diff = 0
+	! extracellular
+	dydt(ic) = -membrane_diff*(Cex(ic) - Cin(ic)) - decay_rate*Cex(ic)
+	! intracellular
+    kcell = ODEdiff%cell_index(icase)	! for access to cell-specific parameters
+    ict = cell_list(kcell)%celltype
+    metabolised = (SN30K%Kmet0(ict) > 0)
+	C = Cin(ic)
+	dCreact = 0
+	if (ichemo == OXYGEN) then
+		if (C > ODEdiff%C1_soft) then
+			metab = (C-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C - ODEdiff%deltaC_soft)
+		elseif (C > 0) then
+			metab = ODEdiff%k_soft*C*C
+		else
+			metab = 0
+			write(*,*) 'metab = 0'
+			stop
+		endif
+		metab = 0.001*metab
+		dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vc	! convert mass rate (mol/s) to concentration rate (mM/s)
+	elseif (ichemo == GLUCOSE) then
+		metab = C/(chemo(GLUCOSE)%MM_C0 + C)
+		dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/Vc	! convert mass rate (mol/s) to concentration rate (mM/s)
+	elseif (ichemo == TRACER) then
+		dCreact = 0
+	elseif (ichemo == SN30000) then
+	    if (metabolised .and. C > 0) then
+			dCreact = -(1 - SN30K%C2(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cox))*SN30K%Kmet0(ict)*C
+		endif
+	elseif (ichemo == SN30000_METAB) then
+		if (metabolised .and. Csn > 0) then
+			dCreact = (1 - SN30K%C2(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cox))*SN30K%Kmet0(ict)*Csn
+		endif
+	endif
+	dCreact = dCreact + membrane_diff*(Cex(ic) - Cin(ic))	
+    dydt(ic+nchemo) = dCreact - Cin(ic)*decay_rate
+enddo
+if (icase == -1) then
+	write(*,'(4e12.3)') dydt(1:4)
+endif
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Reactions here + cross-membrane diffusion
+! Should metab depend on cell volume, stage in cell cycle?
+! NOT USED now
+!----------------------------------------------------------------------------------
+subroutine IntraReact(ichemo,Cin,Cex,vol,dCreact)
+integer :: ichemo
+real(REAL_KIND) :: Cin(:), Cex, vol, dCreact
+real(REAL_KIND) :: metab, C, Kex, dCex
+integer :: ict=1
+
+C = Cin(ichemo)
+dCreact = 0
+if (ichemo == OXYGEN) then
+    if (C > ODEdiff%C1_soft) then
+	    metab = (C-ODEdiff%deltaC_soft)/(chemo(OXYGEN)%MM_C0 + C - ODEdiff%deltaC_soft)
+    elseif (C > 0) then
+	    metab = ODEdiff%k_soft*C*C
+    else
+	    metab = 0
+	    write(*,*) 'metab = 0'
+    endif
+    dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+elseif (ichemo == GLUCOSE) then
+	metab = C/(chemo(GLUCOSE)%MM_C0 + C)
+    dCreact = -metab*chemo(ichemo)%max_cell_rate*1.0e6/vol	! convert mass rate (mol/s) to concentration rate (mM/s)
+elseif (ichemo == TRACER) then
+	dCreact = 0
+elseif (ichemo == SN30000) then
+    dCreact = -(1 - SN30K%C2(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*C
+elseif (ichemo == SN30000_METAB) then
+    dCreact = (1 - SN30K%C2(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + Cin(OXYGEN)))*SN30K%Kmet0(ict)*Cin(SN30000)
+endif
+dCreact = dCreact + chemo(ichemo)%membrane_diff*(Cex - C)*Vsite_cm3
+end subroutine
+

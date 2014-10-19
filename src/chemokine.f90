@@ -19,7 +19,7 @@ implicit none
 !type(receptor_type), target :: receptor(MAX_RECEPTOR)
 
 type chemokine_type
-	character(16) :: name
+	character(24) :: name
 	logical :: used
 	logical :: present
 	logical :: use_secretion
@@ -105,8 +105,8 @@ chemo(OXYGEN)%decay_rate = 0
 chemo(GLUCOSE)%decay_rate = 0
 chemo(TRACER)%decay_rate = 0
 
-chemo(DRUG_A)%name = 'Drug_A'
-chemo(DRUG_B)%name = 'Drug_B'
+!chemo(DRUG_A)%name = 'Drug_A'
+!chemo(DRUG_B)%name = 'Drug_B'
 do ichemo = 1,MAX_CHEMO
 	chemo(ichemo)%present = .false.
 	if (chemo(ichemo)%used) then

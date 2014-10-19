@@ -4,10 +4,6 @@
 
 LOG_USE();
 
-//summaryData(1:13) = (/ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, &
-//    Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
-//	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10 /)
-
 Graphs::Graphs()
 {
 GRAPH_SET tsGraphSet[] = {

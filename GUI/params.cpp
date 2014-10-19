@@ -252,12 +252,12 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Tracer uptake rate Hill function N"},
 
 {"USE_DRUG_A", 0, 0, 1,
-"Use SN30000?",
-"SN30000 is simulated"},
+"Use TPZ-type?",
+"TPZ-type drug is simulated"},
 
 {"DRUG_A_NAME", 0, 0, 0,
 "SN30000",
-"Name of drug A"},
+"Name of TPZ-type drug"},
 
 {"DRUG_A_BDRY_CONC", 0.0, 0, 0,
  "Boundary concentration",
@@ -267,163 +267,276 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Constant concentration",
  "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
-//{"DRUG_A_DECAY", 0, 0, 0,
-// "Decaying",
-// "Drug conc decays with the specified half-life"},
-
 {"DRUG_A_SIMULATE_METABOLITE", 0, 0, 0,
- "Simulate metabolite",
- "Simulate drug metabolite"},
+ "Simulate metabolites",
+ "Simulate drug metabolites"},
 
-//{"DRUG_A_METABOLITE_DECAY", 0, 0, 0,
-// "Metabolite decaying",
-// "Drug metabolite conc decays with the specified half-life"},
-
-{"SN30K_DIFF_COEF", 6.0e-7, 0, 0,
+{"TPZ_DIFF_COEF", 6.0e-7, 0, 0,
  "Spheroid diffusion coeff",
- "SN30000 diffusion coefficient in the spheroid (also used for metabolite)"},
+ "TPZ-type drug diffusion coefficient in the spheroid"},
 
-{"SN30K_MEDIUM_DIFF", 6.0e-6, 0, 0,
+{"TPZ_MEDIUM_DIFF", 6.0e-6, 0, 0,
  "Medium diffusion coeff",
- "SN30000 diffusion coefficient in the medium (also used for metabolite)"},
+ "TPZ-type drug diffusion coefficient in the medium"},
 
-{"SN30K_CELL_DIFF", 5, 0, 0,
+{"TPZ_CELL_DIFF", 5, 0, 0,
  "Membrane diff constant",
- "Cell membrane diffusion constant Kd (also used for metabolite)"},
+ "TPZ-type drug cell membrane diffusion constant Kd"},
 
-{"SN30K_HALFLIFE", 2.0, 0, 0,
+{"TPZ_HALFLIFE", 2.0, 0, 0,
  "Half-life",
- "SN30000 half-life (hours)"},
+ "TPZ-type drug half-life (hours)"},
 
-{"SN30K_METABOLITE_HALFLIFE", 2.0, 0, 0,
- "Metabolite half-life",
- "SN30000 metabolite half-life (hours)"},
+{"TPZ_DIFF_COEF_MET1", 6.0e-7, 0, 0,
+ "Spheroid diffusion coeff",
+ "TPZ-type drug metabolite #1 diffusion coefficient in the spheroid"},
 
-{"SN30K_KMET0_1", 1.54, 0, 0,
+{"TPZ_MEDIUM_DIFF_MET1", 6.0e-6, 0, 0,
+ "Medium diffusion coeff",
+ "TPZ-type drug metabolite #1 diffusion coefficient in the medium"},
+
+{"TPZ_CELL_DIFF_MET1", 5, 0, 0,
+ "Membrane diff constant",
+ "TPZ-type drug metabolite #1 cell membrane diffusion constant Kd"},
+
+{"TPZ_HALFLIFE_MET1", 2.0, 0, 0,
+ "Half-life",
+ "TPZ-type drug metabolite #1 half-life (hours)"},
+
+{"TPZ_DIFF_COEF_MET2", 6.0e-7, 0, 0,
+ "Spheroid diffusion coeff",
+ "TPZ-type drug metabolite #2 diffusion coefficient in the spheroid"},
+
+{"TPZ_MEDIUM_DIFF_MET2", 6.0e-6, 0, 0,
+ "Medium diffusion coeff",
+ "TPZ-type drug metabolite #2 diffusion coefficient in the medium"},
+
+{"TPZ_CELL_DIFF_MET2", 5, 0, 0,
+ "Membrane diff constant",
+ "TPZ-type drug metabolite #2 cell membrane diffusion constant Kd"},
+
+{"TPZ_HALFLIFE_MET2", 2.0, 0, 0,
+ "Half-life",
+ "TPZ-type drug metabolite #2 half-life (hours)"},
+
+// Cell type 1 metabolism parameters
+
+// Parent
+{"TPZ_KMET0_CELL1", 1.54, 0, 0,
  "Kmet0",
- "SN30000 max value of 1st order rate constant for metabolism under zero oxygen"},
+ "TPZ-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
 
-{"SN30K_C1_1", 0.0, 0, 0,
- "C1",
- "SN30000 C1 in function for oxygen-dependence of rate of metabolism"},
-
-{"SN30K_C2_1", 1.0, 0, 0,
+{"TPZ_C2_CELL1", 1.0, 0, 0,
  "C2",
- "SN30000 C2 in function for oxygen-dependence of rate of metabolism"},
+ "TPZ-type drug C2 in function for oxygen-dependence of rate of metabolism"},
 
-{"SN30K_KO2_1", 1.14, 0, 0,
+{"TPZ_KO2_CELL1", 1.14, 0, 0,
  "KO2",
- "SN30000 KO2 in function for oxygen-dependence of rate of metabolism"},
+ "TPZ-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
 
-{"SN30K_GAMMA_1", 1.0, 0, 0,
- "gamma",
- "SN30000 gamma"},
+{"TPZ_VMAX_CELL1", 0, 0, 0,
+ "Vmax",
+ "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
 
-{"SN30K_KLESION_1", 0.001, 0, 0,
+{"TPZ_KM_CELL1", 1, 0, 0,
+ "Km",
+ "TPZ-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KLESION_CELL1", 0.001, 0, 0,
  "Klesion    ",
- "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
+ "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
 
-//{"SN30K_KD_1", 0, 0, 0,
-// "Kd",
-// "Kd is the death rate coefficient in the selected kill model.\n\
-//  The value can be entered directly, or computed from the kill experiment data."},
-
-{"SN30K_KILL_MODEL_1", 1, 0, 0,
- "Kill model",
- "Model of SN30000 killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
-
-{"SN30K_KILL_O2_CONC_1", 0.0, 0, 0,
- "O2 conc",
- "SN30000 constant O2 concentration in kill experiment"},
-
-{"SN30K_KILL_DRUG_CONC_1", 0.01, 0, 0,
- "Drug conc",
- "SN30000 constant drug concentration in kill experiment"},
-
-{"SN30K_KILL_DURATION_1", 60, 0, 0,
- "Duration",
- "SN30000 duration of kill experiment"},
-
-{"SN30K_KILL_FRACTION_1", 0.9, 0, 0,
- "Kill fraction",
- "SN30000 fraction of cells killed in the experiment"},
-
-{"SN30K_KMET0_2", 1.54, 0, 0,
+// Metabolite 1
+{"TPZ_KMET0_CELL1_MET1", 0.5, 0, 0,
  "Kmet0",
- "SN30000 max value of 1st order rate constant for metabolism under zero oxygen"},
+ "TPZ-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
 
-{"SN30K_C1_2", 0.0, 0, 0,
- "C1",
- "SN30000 C1 in function for oxygen-dependence of rate of metabolism"},
-
-{"SN30K_C2_2", 1.0, 0, 0,
+{"TPZ_C2_CELL1_MET1", 0, 0, 0,
  "C2",
- "SN30000 C2 in function for oxygen-dependence of rate of metabolism"},
+ "TPZ-type drug C2 in function for oxygen-dependence of rate of metabolism"},
 
-{"SN30K_KO2_2", 1.14, 0, 0,
+{"TPZ_KO2_CELL1_MET1", 1, 0, 0,
  "KO2",
- "SN30000 KO2 in function for oxygen-dependence of rate of metabolism"},
+ "TPZ-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
 
-{"SN30K_GAMMA_2", 1.0, 0, 0,
- "gamma",
- "SN30000 gamma"},
+{"TPZ_VMAX_CELL1_MET1", 0, 0, 0,
+ "Vmax",
+ "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
 
-{"SN30K_KLESION_2", 0.001, 0, 0,
- "Klesion",
- "SN30000 Klesion is the parameter that converts total metabolite into lesion level"},
+{"TPZ_KM_CELL1_MET1", 1, 0, 0,
+ "Km",
+ "TPZ-type drug Km in function for oxygen-dependence of rate of metabolism"},
 
-//{"SN30K_KD_2", 0, 0, 0,
-// "Kd",
-// "Kd is the death rate coefficient in the selected kill model.\n\
-//  The value can be entered directly, or computed from the kill experiment data."},
+{"TPZ_KLESION_CELL1_MET1", 0.001, 0, 0,
+ "Klesion  ",
+ "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
 
-{"SN30K_KILL_MODEL_2", 1, 0, 0,
+// Metabolite 2
+{"TPZ_KMET0_CELL1_MET2", 0.5, 0, 0,
+ "Kmet0",
+ "TPZ-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"TPZ_C2_CELL1_MET2", 0, 0, 0,
+ "C2",
+ "TPZ-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KO2_CELL1_MET2", 1, 0, 0,
+ "KO2",
+ "TPZ-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_VMAX_CELL1_MET2", 0, 0, 0,
+ "Vmax",
+ "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KM_CELL1_MET2", 1, 0, 0,
+ "Km",
+ "TPZ-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KLESION_CELL1_MET2", 0.001, 0, 0,
+ "Klesion  ",
+ "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+// Cell type 1 kill experiment parameters
+
+{"TPZ_KILL_MODEL_CELL1", 1, 0, 0,
  "Kill model",
- "Model of SN30000 killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+ "Model of TPZ-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
 
-{"SN30K_KILL_O2_CONC_2", 0.0, 0, 0,
+{"TPZ_KILL_O2_CONC_CELL1", 0.0, 0, 0,
  "O2 conc",
- "SN30000 constant O2 concentration in kill experiment"},
+ "TPZ-type drug constant O2 concentration in kill experiment"},
 
-{"SN30K_KILL_DRUG_CONC_2", 0.01, 0, 0,
+{"TPZ_KILL_DRUG_CONC_CELL1", 0.01, 0, 0,
  "Drug conc",
- "SN30000 constant drug concentration in kill experiment"},
+ "TPZ-type drug constant drug concentration in kill experiment"},
 
-{"SN30K_KILL_DURATION_2", 60, 0, 0,
+{"TPZ_KILL_DURATION_CELL1", 60, 0, 0,
  "Duration",
- "SN30000 duration of kill experiment"},
+ "TPZ-type drug duration of kill experiment"},
 
-{"SN30K_KILL_FRACTION_2", 0.9, 0, 0,
+{"TPZ_KILL_FRACTION_CELL1", 0.9, 0, 0,
  "Kill fraction",
- "SN30000 fraction of cells killed in the experiment"},
+ "TPZ-type drug fraction of cells killed in the experiment"},
+
+// Cell type 2 metabolism parameters
+
+// Parent
+{"TPZ_KMET0_CELL2", 1.54, 0, 0,
+ "Kmet0",
+ "TPZ-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"TPZ_C2_CELL2", 1.0, 0, 0,
+ "C2",
+ "TPZ-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KO2_CELL2", 1.14, 0, 0,
+ "KO2",
+ "TPZ-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_VMAX_CELL2", 0, 0, 0,
+ "Vmax",
+ "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KM_CELL2", 1, 0, 0,
+ "Km",
+ "TPZ-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KLESION_CELL2", 0.001, 0, 0,
+ "Klesion    ",
+ "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+// Metabolite 1
+{"TPZ_KMET0_CELL2_MET1", 0.5, 0, 0,
+ "Kmet0",
+ "TPZ-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"TPZ_C2_CELL2_MET1", 0, 0, 0,
+ "C2",
+ "TPZ-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KO2_CELL2_MET1", 1, 0, 0,
+ "KO2",
+ "TPZ-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_VMAX_CELL2_MET1", 0, 0, 0,
+ "Vmax",
+ "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KM_CELL2_MET1", 1, 0, 0,
+ "Km",
+ "TPZ-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KLESION_CELL2_MET1", 0.001, 0, 0,
+ "Klesion  ",
+ "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+// Metabolite 2
+{"TPZ_KMET0_CELL2_MET2", 0.5, 0, 0,
+ "Kmet0",
+ "TPZ-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"TPZ_C2_CELL2_MET2", 0, 0, 0,
+ "C2",
+ "TPZ-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KO2_CELL2_MET2", 1, 0, 0,
+ "KO2",
+ "TPZ-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_VMAX_CELL2_MET2", 0, 0, 0,
+ "Vmax",
+ "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KM_CELL2_MET2", 1, 0, 0,
+ "Km",
+ "TPZ-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"TPZ_KLESION_CELL2_MET2", 0.001, 0, 0,
+ "Klesion  ",
+ "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+// Cell type 2 kill experiment parameters
+
+{"TPZ_KILL_MODEL_CELL2", 1, 0, 0,
+ "Kill model",
+ "Model of TPZ-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+{"TPZ_KILL_O2_CONC_CELL2", 0.0, 0, 0,
+ "O2 conc",
+ "TPZ-type drug constant O2 concentration in kill experiment"},
+
+{"TPZ_KILL_DRUG_CONC_CELL2", 0.01, 0, 0,
+ "Drug conc",
+ "TPZ-type drug constant drug concentration in kill experiment"},
+
+{"TPZ_KILL_DURATION_CELL2", 60, 0, 0,
+ "Duration",
+ "TPZ-type drug duration of kill experiment"},
+
+{"TPZ_KILL_FRACTION_CELL2", 0.9, 0, 0,
+ "Kill fraction",
+ "TPZ-type drug fraction of cells killed in the experiment"},
+
 
 {"USE_DRUG_B", 0, 0, 1,
 "Use Drug B?",
-"Drug B is simulated"},
+"DNB-type drug is simulated"},
 
 {"DRUG_B_NAME", 0, 0, 0,
-"DRUG_B",
-"Name of drug B"},
+"DNB1",
+"Name of DNB-type drug"},
 
 {"DRUG_B_BDRY_CONC", 0.0, 0, 0,
- "DRUG_B boundary concentration",
- "DRUG_B boundary concentration"},
+ "Drug boundary concentration",
+ "Drug concentration in the medium"},
 
 {"DRUG_B_CONSTANT", 0, 0, 1,
  "Constant concentration",
  "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
-//{"DRUG_B_DECAY", 0, 0, 0,
-// "DRUG_B decay",
-// "DRUG_B boundary conc decays with the specified half-life"},
-
 {"DRUG_B_SIMULATE_METABOLITE", 0, 0, 0,
- "DRUG_B metabolite",
- "DRUG_B simulate metabolite"},
-
-//{"DRUG_B_METABOLITE_DECAY", 0, 0, 0,
-// "Drug B metabolite decay",
-// "Drug B metabolite conc decays with the specified half-life"},
+ "Simulate metabolites",
+ "Simulate drug metabolites"},
 
 {"RADIATION_ALPHA_H", 0.0473, 0, 0,
 "Alpha (hypoxia)",

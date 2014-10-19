@@ -14,7 +14,7 @@
 #include <qwt_scale_draw.h>
 #include <qwt_math.h>
 #include <qwt_scale_engine.h>
-#include "result_set.h"
+//#include "result_set.h"
 
 using namespace std;
 

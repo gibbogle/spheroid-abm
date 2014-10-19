@@ -30,6 +30,11 @@ using namespace std;
 #include "SimpleView2DUI.h"
 #include "qvideooutput.h"
 
+#include <qwt_plot.h>
+#include <qwt_plot_grid.h>
+#include <qwt_interval_data.h>
+#include "histogram_item.h"
+
 QT_BEGIN_NAMESPACE
 class QAction;
 class QMenu;
@@ -114,8 +119,8 @@ private slots:
     void showGradient2D();
     void setSavePosStart();
 
-    void on_radioButton_oxygen_clicked();
-    void on_radioButton_glucose_clicked(bool checked);
+//    void on_radioButton_oxygen_clicked();
+//    void on_radioButton_glucose_clicked(bool checked);
 
     void onSelectConstituent();
 
@@ -136,6 +141,7 @@ public slots:
 	void displayScene();
     void showSummary(int);
     void showFACS();
+    void showHisto();
     void startRecorderVTK();
     void stopRecorderVTK();
     void startRecorderFACS();
@@ -147,7 +153,7 @@ public slots:
     void buttonClick_canvas(QAbstractButton* button);
     void textChanged_fraction(QString text);
 	void textEdited_fraction(QString text);
-    void setupConc(int nc, bool *used);
+    void setupConstituents();
 
     void on_cbox_USE_DRUG_A_toggled(bool checked);
     void on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked);
@@ -157,19 +163,25 @@ public slots:
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
     void radioButtonChanged(QAbstractButton *b);
+    void on_buttonGroup_celltype_buttonClicked(QAbstractButton* button);
+
+    void on_comb_TPZ_currentIndexChanged(int);
+    void on_comb_DNB_currentIndexChanged(int);
 // For Kd computed in the GUI
 //    void on_pushButton_SN30K_Kd_1_clicked();
 //    void on_pushButton_SN30K_Kd_2_clicked();
 
 signals:
     void facs_update();
+    void histo_update();
 
 private:
     void createActions();
 	void createLists();
 	void drawDistPlots();
     void initFACSPlot();
-	void setupParamList();
+    void initHistoPlot();
+    void setupParamList();
 	void loadParams();
 	void reloadParams();
 
@@ -205,7 +217,9 @@ private:
     void setupCellColours();
     void setupGraphSelector();
     void setGraphsActive();
-
+    void initDrugComboBoxes();
+    void test_histo();
+    void makeHistoPlot(int numValues, double width, QVector<double> values);
     void showBool(QString, bool);
 
 	double erf(double z);
@@ -250,11 +264,14 @@ private:
 
     QwtPlot *qpFACS;
     QwtPlotCurve *curveFACS;
+    QwtPlot *qpHisto;
+    HistogramItem *histogram;
 
 	int nDistPts;
 	int nTicks;
 	int nParams;
-	int nSliders;
+    int ndistplots;
+    int nSliders;
 	int nWidgets;
 	int nLabels;
     int nCheckBoxes;
@@ -308,6 +325,16 @@ private:
     QMyCheckBox *checkBox_vol;
     QMyCheckBox *checkBox_oxy;
     QMyCheckBox **cbox_ts;
+
+    QButtonGroup *buttonGroup_histo;
+    QVBoxLayout *vbox_histo;
+    QRadioButton **histo_rb_list;
+    QButtonGroup *buttonGroup_FACS_x_vars;
+    QVBoxLayout *vbox_FACS_x_vars;
+    QRadioButton **FACS_x_vars_rb_list;
+    QButtonGroup *buttonGroup_FACS_y_vars;
+    QVBoxLayout *vbox_FACS_y_vars;
+    QRadioButton **FACS_y_vars_rb_list;
 
 	QString graphCaseName[Plot::ncmax];
 	RESULT_SET *graphResultSet[Plot::ncmax];

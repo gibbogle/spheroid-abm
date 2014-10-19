@@ -11,6 +11,8 @@
 #include "log.h"
 #include "transfer.h"
 
+#include "global.h"
+
 LOG_USE();
 
 // Define interaction style
@@ -22,7 +24,7 @@ class MouseInteractorStyle4 : public vtkInteractorStyleTrackballCamera
 
 	virtual void OnLeftButtonDown()
 	{
-	  leftb = true;
+      Global::leftb = true;
 	  // Forward events
 	  vtkInteractorStyleTrackballCamera::OnLeftButtonDown();
 	}
@@ -45,7 +47,7 @@ class MouseInteractorStyle4 : public vtkInteractorStyleTrackballCamera
 	{
 //	  std::cout << "Released left mouse button." << std::endl;
 //	  LOG_QMSG("Released left mouse button.");
-	  leftb = false;
+      Global::leftb = false;
 	  // Forward events
 	  vtkInteractorStyleTrackballCamera::OnLeftButtonUp();
 	}
@@ -78,7 +80,7 @@ MyVTK::MyVTK(QWidget *page, QWidget *key_page)
 
 	Pi = 4*atan(1.0);
     page_VTK = page;
-	leftb = false;
+    Global::leftb = false;
     key_canvas(key_page);
     qvtkWidget = new QVTKWidget(page,QFlag(0));
 	LOG_MSG("Created a new QVTKWidget");
@@ -304,16 +306,16 @@ void MyVTK::get_cell_positions(bool fast)
 {
 //    LOG_QMSG("get_cell_positions");
     TCpos_list.clear();
-    for (int i=0; i<ncell_list; i++) {
+    for (int i=0; i<Global::ncell_list; i++) {
         int j = N_CELLINFO*i;
 		CELL_POS cp;
-        cp.tag = cell_list[j];
-        cp.x = cell_list[j+1];
-        cp.y = cell_list[j+2];
-        cp.z = cell_list[j+3];
-        cp.state = cell_list[j+4];
-        cp.diameter = cell_list[j+5]/10.0;
-        cp.highlight = cell_list[j+6];
+        cp.tag = Global::cell_list[j];
+        cp.x = Global::cell_list[j+1];
+        cp.y = Global::cell_list[j+2];
+        cp.z = Global::cell_list[j+3];
+        cp.state = Global::cell_list[j+4];
+        cp.diameter = Global::cell_list[j+5]/10.0;
+        cp.highlight = Global::cell_list[j+6];
         TCpos_list.append(cp);
 //        double r, g, b;
 //        if (cp.state > 0) {
@@ -448,7 +450,7 @@ void MyVTK::process_Tcells()
     int np = TCpos_list.length();
     if (np == 0) return;
     int na = T_Actor_list.length();
-    if (istep < 0) {
+    if (Global::istep < 0) {
         sprintf(msg,"na: %d np: %d",na,np);
         LOG_MSG(msg);
         dbug = true;
