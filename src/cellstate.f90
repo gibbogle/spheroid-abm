@@ -165,15 +165,15 @@ real(REAL_KIND) :: dt
 logical :: ok
 integer :: kcell, ict, nlist0, site(3), i, kpar=0 
 real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, pdeath, tnow
-logical :: use_SN30000
+logical :: use_TPZ_DRUG
 
 !call logger('CellDeath')
 ok = .true.
 !if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
-if (chemo(SN30000)%used) then
-    use_SN30000 = .true.
+if (chemo(TPZ_DRUG)%used) then
+    use_TPZ_DRUG = .true.
 else
-    use_SN30000 = .false.
+    use_TPZ_DRUG = .false.
 endif
 tnow = istep*DELTA_T	! seconds
 nlist0 = nlist
@@ -206,25 +206,29 @@ do kcell = 1,nlist
 			endif
 		endif
 	endif
-	if (use_SN30000 .and. .not.cell_list(kcell)%drug_tag) then
+	if (use_TPZ_DRUG .and. .not.cell_list(kcell)%drug_tag) then
 		ict = cell_list(kcell)%celltype
-		Kd = SN30K%Kd(ict)
-	    kmet = (SN30K%C1(ict) + SN30K%C2(ict)*SN30K%KO2(ict)/(SN30K%KO2(ict) + C_O2))*SN30K%Kmet0(ict)
+		Kd = TPZ%Kd(ict)
+	    kmet = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + C_O2))*TPZ%Kmet0(ict,0)
 !	    dMdt = kmet*cell_list(kcell)%conc(DRUG_A)
-	    dMdt = kmet*cell_list(kcell)%conc(SN30000)
-	    if (SN30K%kill_model(ict) == 1) then
+	    dMdt = kmet*cell_list(kcell)%conc(TPZ_DRUG)
+	    if (TPZ%kill_model(ict) == 1) then
 		    pdeath = Kd*dMdt*dt
-	    elseif (SN30K%kill_model(ict) == 2) then
+	    elseif (TPZ%kill_model(ict) == 2) then
 !		    pdeath = Kd*dMdt*cell_list(kcell)%conc(DRUG_A)*dt
-		    pdeath = Kd*dMdt*cell_list(kcell)%conc(SN30000)*dt
-	    elseif (SN30K%kill_model(ict) == 3) then
+		    pdeath = Kd*dMdt*cell_list(kcell)%conc(TPZ_DRUG)*dt
+	    elseif (TPZ%kill_model(ict) == 3) then
 		    pdeath = Kd*dMdt**2*dt
+	    elseif (TPZ%kill_model(ict) == 4) then
+		    pdeath = Kd*cell_list(kcell)%conc(TPZ_DRUG)*dt
+	    elseif (TPZ%kill_model(ict) == 5) then
+		    pdeath = Kd*cell_list(kcell)%conc(TPZ_DRUG)**2*dt
 		endif
 !	    write(*,'(a,i6,4f10.5)') 'CellDeath: ',kcell,cell_list(kcell)%conc(DRUG_A),kmet,dMdt,pdeath
 	    if (par_uni(kpar) < pdeath) then
             cell_list(kcell)%drug_tag = .true.
             Ndrug_tag = Ndrug_tag + 1
-            write(nflog,'(a,2i6,2f8.4)') 'tagged: ',kcell,ict,cell_list(kcell)%conc(SN30000),dMdt
+            write(nflog,'(a,2i6,2f8.4)') 'tagged: ',kcell,ict,cell_list(kcell)%conc(TPZ_DRUG),dMdt
 		endif
 	endif
 enddo
@@ -506,7 +510,7 @@ integer :: kpar=0
 integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, nfree, bestsite(3)
 integer :: npath, path(3,200)
 real(REAL_KIND) :: tnow, R, v, vmax, V0, Cex(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_CHEMO), alpha(MAX_CHEMO)
-real(REAL_KIND) :: cfse0
+real(REAL_KIND) :: cfse0, cfse1
 logical :: freesite(27,3)
 type (boundary_type), pointer :: bdry
 
@@ -521,6 +525,7 @@ V0 = cell_list(kcell0)%volume
 cell_list(kcell0)%volume = V0/2
 cfse0 = cell_list(kcell0)%CFSE
 cell_list(kcell0)%CFSE = generate_CFSE(cfse0/2)
+cfse1 = cfse0 - cell_list(kcell0)%CFSE
 
 R = par_uni(kpar)
 cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
@@ -558,7 +563,7 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 		if (.not.ok) then
 			call logger('Error: CloneCell: vacant site')
 		endif
-		cell_list(kcell1)%CFSE = cfse0 - cell_list(kcell0)%CFSE
+		cell_list(kcell1)%CFSE = cfse1
 		Nreuse = Nreuse + 1
 		return
 	endif
@@ -640,6 +645,7 @@ if (.not.ok) then
 	call logger('Error: CloneCell: pushed site')
 	return
 endif
+cell_list(kcell1)%CFSE = cfse1
 !write(*,*) 'added cell at: ',site01
 
 call GetPathMass(site0,site01,path,npath,M1)

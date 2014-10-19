@@ -9,14 +9,13 @@
 #include "myqgraphicsview.h"
 
 #define CANVAS_WIDTH 696
-#define MAX_CONC 7  // must = MAX_CHEMO in DLL
+#define MAX_CONC 9  // must = MAX_CHEMO in DLL
 
 struct field_data {
     int site[3];
     int state;
-    double dVdt;
     double volume;
-    double conc[MAX_CONC+1];
+    double conc[MAX_CONC+2];    // added CFSE and dVdt
 };
 
 typedef field_data FIELD_DATA;
@@ -24,16 +23,6 @@ typedef field_data FIELD_DATA;
 #define X_AXIS 1
 #define Y_AXIS 2
 #define Z_AXIS 3
-
-// Note that in the Fortran DLL the constituent numbering starts at 1
-#define OXYGEN 0
-#define GLUCOSE 1
-#define TRACER 2
-#define DRUG_A 3
-#define DRUG_A_METAB 4
-#define DRUG_B 5
-#define DRUG_B_METAB 6
-#define GROWTH_RATE 7      // we pretend that this is a concentration
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -54,7 +43,7 @@ public:
     void setSliceChanged();
     void chooseFieldColor(double c, double cmin, double cmax, bool use_log, int rgbcol[]);
     void chooseRateColor(double fr, int rgbcol[]);
-    void getTitle(QString *);
+    void getTitle(int iconst, QString *title);
     bool isConcPlot();
     void setConcPlot(bool);
     void makeConcPlot(QMdiArea *);
@@ -71,6 +60,8 @@ public:
     void setExecuting(bool);
     void setSaveImages(bool);
     void setUseLogScale(bool);
+    void setConstUsage(int, int *);
+    void setConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QRadioButton ***rb_list, QString tag);
 
     QWidget *field_page;
     bool save_images;
@@ -82,6 +73,8 @@ public:
     int hour;
     int ifield;
     int nsites, nconst, const_used[16];
+    int nvars_used;
+    int cvar_index[32];
     QString const_name[16];
     QString constituentText;
     int constituent;
@@ -94,6 +87,10 @@ public:
     Plot *pGconc, *pGvol, *pGoxy;
     bool executing;
     char msg[1024];
+
+    QButtonGroup *buttonGroup_constituent;
+    QVBoxLayout *vbox_constituent;
+    QRadioButton **constituent_rb_list;
 
     void setConstituent(QAbstractButton* button);
     void setPlane(QAbstractButton* button);

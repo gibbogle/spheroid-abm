@@ -447,16 +447,13 @@ chemo(TRACER)%constant = (iconstant == 1)
 read(nfcell,*) chemo(TRACER)%max_cell_rate
 read(nfcell,*) chemo(TRACER)%MM_C0
 read(nfcell,*) chemo(TRACER)%Hill_N
-do i = 1,2			! currently allowing for just two different drugs
+do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 = DNB-type
 	read(nfcell,*) iuse_drug
 	read(nfcell,'(a12)') drug_name
 	read(nfcell,*) bdry_conc
 	read(nfcell,*) iconstant
-!	read(nfcell,*) idrug_decay
 	read(nfcell,*) iuse_metab
-!	read(nfcell,*) imetab_decay
-!	if (iuse_drug == 0) cycle
-	call getIndices(drug_name, idrug, nmetab)
+	call getIndices(i, drug_name, idrug, nmetab)
 	if (idrug < 0 .and. iuse_drug /= 0) then
 		write(logmsg,*) 'Unrecognized drug name: ',drug_name
 		call logger(logmsg)
@@ -464,6 +461,7 @@ do i = 1,2			! currently allowing for just two different drugs
 		return
 	endif
 	if (idrug == 0) cycle
+	chemo(idrug)%name = drug_name
 	chemo(idrug)%used = (iuse_drug == 1)
 	chemo(idrug)%bdry_conc = bdry_conc
 	chemo(idrug)%constant = (iconstant == 1)
@@ -471,68 +469,88 @@ do i = 1,2			! currently allowing for just two different drugs
 	if (chemo(idrug)%used) then
 !		chemo(imetab)%used = (iuse_metab == 1)
 		use_metabolites = (iuse_metab == 1)
+		write(nflog,*) 'drug: ',idrug,'  name: ',chemo(idrug)%name
 	else
 !		chemo(imetab)%used = .false.
 		use_metabolites = .false.
 	endif
 !	chemo(imetab)%decay = (imetab_decay == 1)
-	if (idrug == SN30000) then
-		SN30K%nmetabolites = nmetab
-		read(nfcell,*) SN30K%diff_coef
-		read(nfcell,*) SN30K%medium_diff_coef
-		read(nfcell,*) SN30K%membrane_diff
-		read(nfcell,*) SN30K%halflife
-		read(nfcell,*) SN30K%metabolite_halflife
-		imetab = idrug + 1
-		chemo(idrug)%halflife = SN30K%halflife
-		chemo(imetab)%halflife = SN30K%metabolite_halflife
-		chemo(idrug)%diff_coef = SN30K%diff_coef		! Note that metabolite is given the same diff_coef
-		chemo(imetab)%diff_coef = SN30K%diff_coef		! and cell_diff as the drug.
-		chemo(idrug)%medium_diff_coef = SN30K%medium_diff_coef
-		chemo(imetab)%medium_diff_coef = SN30K%medium_diff_coef
-		chemo(idrug)%membrane_diff = SN30K%membrane_diff
-		chemo(imetab)%membrane_diff = SN30K%membrane_diff
-		chemo(imetab)%decay = (SN30K%metabolite_halflife > 0)
+	if (idrug == TPZ_DRUG) then
+		TPZ%name = drug_name
+		TPZ%nmetabolites = nmetab
+		do im = 0,nmetab
+			read(nfcell,*) TPZ%diff_coef(im)
+			read(nfcell,*) TPZ%medium_diff_coef(im)
+			read(nfcell,*) TPZ%membrane_diff(im)
+			read(nfcell,*) TPZ%halflife(im)
+			ichemo = idrug + im
+			chemo(ichemo)%diff_coef = TPZ%diff_coef(im)
+			chemo(ichemo)%medium_diff_coef = TPZ%medium_diff_coef(im)
+			chemo(ichemo)%membrane_diff = TPZ%membrane_diff(im)
+			chemo(ichemo)%halflife = TPZ%halflife(im)		
+		enddo
+!		read(nfcell,*) SN30K%diff_coef
+!		read(nfcell,*) SN30K%medium_diff_coef
+!		read(nfcell,*) SN30K%membrane_diff
+!		read(nfcell,*) SN30K%halflife
+!		read(nfcell,*) SN30K%metabolite_halflife
+!		imetab = idrug + 1
+!		chemo(idrug)%halflife = SN30K%halflife
+!		chemo(imetab)%halflife = SN30K%metabolite_halflife
+!		chemo(idrug)%diff_coef = SN30K%diff_coef		! Note that metabolite is given the same diff_coef
+!		chemo(imetab)%diff_coef = SN30K%diff_coef		! and cell_diff as the drug.
+!		chemo(idrug)%medium_diff_coef = SN30K%medium_diff_coef
+!		chemo(imetab)%medium_diff_coef = SN30K%medium_diff_coef
+!		chemo(idrug)%membrane_diff = SN30K%membrane_diff
+!		chemo(imetab)%membrane_diff = SN30K%membrane_diff
+!		chemo(imetab)%decay = (SN30K%metabolite_halflife > 0)
 		do ictype = 1,Ncelltypes
-			read(nfcell,*) SN30K%Kmet0(ictype)
-			read(nfcell,*) SN30K%C1(ictype)
-			read(nfcell,*) SN30K%C2(ictype)
-			read(nfcell,*) SN30K%KO2(ictype)
-			read(nfcell,*) SN30K%gamma(ictype)
-			read(nfcell,*) SN30K%Klesion(ictype)
-!			read(nfcell,*) SN30K%Kd(ictype)
-			read(nfcell,*) SN30K%kill_model(ictype)
-			read(nfcell,*) SN30K%kill_O2(ictype)
-			read(nfcell,*) SN30K%kill_drug(ictype)
-			read(nfcell,*) SN30K%kill_duration(ictype)
-			read(nfcell,*) SN30K%kill_fraction(ictype)
-! Go back to 1-based numbering 
-!			SN30K%kill_model(ictype) = SN30K%kill_model(ictype) + 1			! convert from GUI numbering to universal numbering
-			SN30K%Kmet0(ictype) = SN30K%Kmet0(ictype)/60					! /min -> /sec
-			SN30K%KO2(ictype) = 1.0e-3*SN30K%KO2(ictype)                    ! um -> mM
-			SN30K%kill_duration(ictype) = 60*SN30K%kill_duration(ictype)    ! minutes -> seconds
+			do im = 0,nmetab
+				read(nfcell,*) TPZ%Kmet0(ictype,im)
+				read(nfcell,*) TPZ%C2(ictype,im)
+				read(nfcell,*) TPZ%KO2(ictype,im)
+				read(nfcell,*) TPZ%Vmax(ictype,im)
+				read(nfcell,*) TPZ%Km(ictype,im)
+				read(nfcell,*) TPZ%Klesion(ictype,im)
+			enddo
+			read(nfcell,*) TPZ%kill_model(ictype)
+			read(nfcell,*) TPZ%kill_O2(ictype)
+			read(nfcell,*) TPZ%kill_drug(ictype)
+			read(nfcell,*) TPZ%kill_duration(ictype)
+			read(nfcell,*) TPZ%kill_fraction(ictype)
+			TPZ%Kmet0(ictype,:) = TPZ%Kmet0(ictype,:)/60				! /min -> /sec
+			TPZ%KO2(ictype,:) = 1.0e-3*TPZ%KO2(ictype,:)                ! um -> mM
+			TPZ%kill_duration(ictype) = 60*TPZ%kill_duration(ictype)    ! minutes -> seconds
 		enddo
 
-	elseif (idrug == PR104A) then
-		PR104%nmetabolites = nmetab
+	elseif (.false. .and. idrug == DNB_DRUG) then
+		DNB%nmetabolites = nmetab
 		do im = 0,nmetab
-			read(nfcell,*) PR104%diff_coef(im)
-			read(nfcell,*) PR104%medium_diff_coef(im)
-			read(nfcell,*) PR104%membrane_diff(im)
-			read(nfcell,*) PR104%halflife(im)
+			read(nfcell,*) DNB%diff_coef(im)
+			read(nfcell,*) DNB%medium_diff_coef(im)
+			read(nfcell,*) DNB%membrane_diff(im)
+			read(nfcell,*) DNB%halflife(im)
+			ichemo = idrug + im
+			chemo(ichemo)%diff_coef = DNB%diff_coef(im)
+			chemo(ichemo)%medium_diff_coef = DNB%medium_diff_coef(im)
+			chemo(ichemo)%membrane_diff = DNB%membrane_diff(im)
+			chemo(ichemo)%halflife = DNB%halflife(im)		
 		enddo
 	endif
-	chemo(idrug)%decay = (chemo(idrug)%halflife > 0)
-	if (chemo(idrug)%used .and. chemo(idrug)%decay) then
-		chemo(idrug)%decay_rate = DecayRate(chemo(idrug)%halflife)
-	else
-		chemo(idrug)%decay_rate = 0
-	endif
-	if (chemo(imetab)%used .and. chemo(imetab)%decay) then
-		chemo(imetab)%decay_rate = DecayRate(chemo(imetab)%halflife)
-	else
-		chemo(imetab)%decay_rate = 0
-	endif
+	do im = 0,nmetab
+		ichemo = idrug + im
+		chemo(ichemo)%decay = (chemo(ichemo)%halflife > 0)
+		if (chemo(ichemo)%used .and. chemo(ichemo)%decay) then
+			chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
+		else
+			chemo(ichemo)%decay_rate = 0
+		endif
+!		if (chemo(imetab)%used .and. chemo(imetab)%decay) then
+!			chemo(imetab)%decay_rate = DecayRate(chemo(imetab)%halflife)
+!		else
+!			chemo(imetab)%decay_rate = 0
+!		endif
+	enddo
 enddo
 read(nfcell,*) LQ%alpha_H
 read(nfcell,*) LQ%beta_H
@@ -674,19 +692,22 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine getIndices(drug_name, idrug, nmetab)
+subroutine getIndices(indx, drug_name, idrug, nmetab)
 character*(12) :: drug_name
-integer :: idrug, nmetab
+integer :: indx, idrug, nmetab
 
-!if (drug_name == ' ') then
-!	idrug = 0
-!	imetab = 0
-if (drug_name == 'SN30000') then
-	idrug = SN30000
-	nmetab = 1
-else if (drug_name == 'PR104A') then
-	idrug = PR104A
-	nmetab = 1
+!if (drug_name == 'SN30000') then
+!	idrug = SN30000
+!	nmetab = 1
+!else if (drug_name == 'PR104A') then
+!	idrug = PR104A
+!	nmetab = 1
+if (indx == 1) then
+	idrug = TPZ_DRUG
+	nmetab = 2
+elseif (indx == 2) then
+	idrug = DNB_DRUG
+	nmetab = 2
 else
 	idrug = 0
 	nmetab = 0
@@ -726,16 +747,24 @@ do
 !	elseif (line(1:6) == 'DRUG_B') then
 !		ichemo = DRUG_B
 	if (trim(line) == 'SN30000') then
-		ichemo = SN30000
+		ichemo = TPZ_DRUG
 		chemo(ichemo)%name = 'SN30000'
 		idrug = 1
+	elseif (trim(line) == 'TPZ') then
+		ichemo = TPZ_DRUG
+		chemo(ichemo)%name = 'TPZ'
+		idrug = 1
 	elseif (trim(line) == 'PR104A') then
-		ichemo = PR104A
+		ichemo = DNB_DRUG
 		chemo(ichemo)%name = 'PR104A'
 		idrug = 2
 	elseif (line(1:9) == 'RADIATION') then
 		ichemo = 0
 		idrug = 0
+	else
+		write(logmsg,'(a,a)') 'Error: ReadTreatment: unknown drug: ',trim(line)
+		ok = .false.
+		return
 	endif
 	if (ichemo > 0) then
 !		read(nftreatment,'(a)') chemo(ichemo)%name
@@ -784,10 +813,16 @@ do
 !		ichemo = DRUG_B
 !		idrug = 2
 	if (trim(line) == 'SN30000') then
-		ichemo = SN30000
+		ichemo = TPZ_DRUG
+		chemo(ichemo)%name = 'SN30000'
+		idrug = 1
+	elseif (trim(line) == 'TPZ') then
+		ichemo = TPZ_DRUG
+		chemo(ichemo)%name = 'TPZ'
 		idrug = 1
 	elseif (trim(line) == 'PR104A') then
-		ichemo = PR104A
+		ichemo = DNB_DRUG
+		chemo(ichemo)%name = 'PR104A'
 		idrug = 2
 	elseif (line(1:9) == 'RADIATION') then
 		ichemo = 0
@@ -843,13 +878,17 @@ end subroutine
 ! The rate of cell killing, which becomes a cell death probability rate, is inferred from
 ! the cell kill experiment.
 ! The basic assumption is that the rate of killing depends on the drug metabolism rate.
-! There are three models:
+! There are five models:
 ! kill_model = 1:
 !   killing rate = c = Kd.dM/dt
 ! kill_model = 2:
 !   killing rate = c = Kd.Ci.dM/dt
 ! kill_model = 3:
 !   killing rate = c = Kd.(dM/dt)^2
+! kill_model = 4:
+!   killing rate = c = Kd.Ci
+! kill_model = 5:
+!   killing rate = c = Kd.Ci^2
 ! where dM/dt = F(O2).kmet0.Ci
 ! In the kill experiment both O2 and Ci are held constant:
 ! O2 = CkillO2, Ci = Ckill
@@ -863,23 +902,33 @@ end subroutine
 !   c = Kd.F(CkillO2).kmet0.Ckill^2 => Kd = -log(1-f)/(T.F(CkillO2).kmet0.Ckill^2)
 ! kill_model = 3:
 !   c = Kd.(F(CkillO2).kmet0.Ckill)^2 => Kd = -log(1-f)/(T.(F(CkillO2).kmet0.Ckill)^2)
+! kill_model = 4:
+!   c = Kd.Ckill => Kd = -log(1-f)/(T.Ckill)
+! kill_model = 5:
+!   c = Kd.Ckill^2 => Kd = -log(1-f)/(T.Ckill^2)
 !-----------------------------------------------------------------------------------------
 subroutine DetermineKd
 real(REAL_KIND) :: kmet, Kd
 integer :: i
 
-do i = 1,Ncelltypes
-	kmet = (SN30K%C1(i) + SN30K%C2(i)*SN30K%KO2(i)/(SN30K%KO2(i) + SN30K%kill_O2(i)))*SN30K%Kmet0(i)
-	if (SN30K%kill_model(i) == 1) then
-		Kd = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i))
-	elseif (SN30K%kill_model(i) == 2) then
-		Kd = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*kmet*SN30K%kill_drug(i)**2)
-	elseif (SN30K%kill_model(i) == 3) then
-		Kd = -log(1-SN30K%kill_fraction(i))/(SN30K%kill_duration(i)*(kmet*SN30K%kill_drug(i))**2)
-	endif
-!	write(nfout,'(a,2i4,2e12.3)') 'DetermineKd: i,kill model, passed and computed: ',i,SN30K%kill_model(i),SN30K%Kd(i),Kd
-	SN30K%Kd(i) = Kd
-enddo
+if (chemo(TPZ_DRUG)%used) then
+	do i = 1,Ncelltypes
+		kmet = (1 - TPZ%C2(i,0) + TPZ%C2(i,0)*TPZ%KO2(i,0)/(TPZ%KO2(i,0) + TPZ%kill_O2(i)))*TPZ%Kmet0(i,0)
+		if (TPZ%kill_model(i) == 1) then
+			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*kmet*TPZ%kill_drug(i))
+		elseif (TPZ%kill_model(i) == 2) then
+			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*kmet*TPZ%kill_drug(i)**2)
+		elseif (TPZ%kill_model(i) == 3) then
+			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*(kmet*TPZ%kill_drug(i))**2)
+		elseif (TPZ%kill_model(i) == 4) then
+			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*TPZ%kill_drug(i))
+		elseif (TPZ%kill_model(i) == 5) then
+			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*TPZ%kill_drug(i)**2)
+		endif
+	!	write(nfout,'(a,2i4,2e12.3)') 'DetermineKd: i,kill model, passed and computed: ',i,TPZ%kill_model(i),TPZ%Kd(i),Kd
+		TPZ%Kd(i) = Kd
+	enddo
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1064,8 +1113,10 @@ nsteps_dim = nsteps
 deltat = DELTA_T
 maxchemo = MAX_CHEMO
 do ichemo = 1,MAX_CHEMO
-	cused(ichemo) = chemo(ichemo)%used
+	cused(ichemo+1) = chemo(ichemo)%used
 enddo
+cused(1) = .true.			! CFSE
+cused(MAX_CHEMO+2) = .true.	! Growth rate
 dfraction = 2*cell_radius/DELTA_X
 end subroutine
 
@@ -1569,6 +1620,7 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 ! Note: axis = 0,1,2
+! Now CFSE is first in the list (0)
 !--------------------------------------------------------------------------------
 subroutine get_fieldinfo(nxx, axis, fraction, ns, nc, cused, res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_fieldinfo
@@ -1583,12 +1635,13 @@ nxx = NX
 nc = MAX_CHEMO
 do ichemo = 1,MAX_CHEMO
     if (chemo(ichemo)%used) then
-        cused(ichemo) = 1
+        cused(ichemo+1) = 1
     else
-        cused(ichemo) = 0
+        cused(ichemo+1) = 0
     endif
 enddo
-cused(MAX_CHEMO+1) = 1		! Growth rate
+cused(1) = 1				! CFSE
+cused(MAX_CHEMO+2) = 1		! Growth rate
 rng(:,1) = Centre(:) - (adrop*Radius + 2)
 rng(:,2) = Centre(:) + (adrop*Radius + 2)
 rng(axis,:) = Centre(axis) + fraction*Radius
@@ -1620,7 +1673,7 @@ real(c_double) :: fraction
 integer(c_int) :: axis, nc, nfdata, res
 type(FIELD_DATA) :: fdata(*)
 integer rng(3,2), kcell, x, y, z, i, ns
-real(REAL_KIND) :: growthrate
+real(REAL_KIND) :: growthrate, cfse
 
 !write(logmsg,*) 'get_fielddata: nfdata, nc: ',nfdata, nc, MAX_CHEMO
 !call logger(logmsg)
@@ -1647,14 +1700,16 @@ do z = rng(3,1),rng(3,2)
             fdata(ns)%state = 1
             if (kcell > 0) then
                 fdata(ns)%volume = cell_list(kcell)%volume
-                call getGrowthrate(kcell,growthrate)
+                call getGrowthrate(kcell,growthrate,cfse)
             else
                 fdata(ns)%volume = 0
                 growthrate = 0
+                cfse = 0
             endif
-            fdata(ns)%dVdt = growthrate
+!            fdata(ns)%dVdt = growthrate
+			fdata(ns)%conc(0) = cfse
             fdata(ns)%conc(1:MAX_CHEMO) = allstate(i,1:MAX_CHEMO)	! cell_list(kcell)%conc(1:MAX_CHEMO)
-!            fdata(ns)%conc(MAX_CHEMO+1) = growthrate
+            fdata(ns)%conc(MAX_CHEMO+1) = growthrate
         enddo
     enddo
 enddo
@@ -1671,16 +1726,17 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine getGrowthrate(kcell,growthrate)
+subroutine getGrowthrate(kcell,growthrate,cfse)
 integer :: kcell
-real(REAL_KIND) :: growthrate
+real(REAL_KIND) :: growthrate, cfse
 
 growthrate = cell_list(kcell)%dVdt
+cfse = cell_list(kcell)%CFSE
 end subroutine
 
 !--------------------------------------------------------------------------------
 ! Returns all the extracellular concentrations along a line through the blob centre.
-! Together with the growth rate dVdt
+! Together with CFSE and growth rate (dVdt)
 !--------------------------------------------------------------------------------
 subroutine get_concdata(ns, dx, ex_conc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
@@ -1688,7 +1744,7 @@ use, intrinsic :: iso_c_binding
 integer(c_int) :: ns
 real(c_double) :: dx, ex_conc(*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
-integer :: rng(3,2), i, k, ichemo, kcell, x, y, z
+integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z
 
 !call logger('get_concdata')
 dx = DELTA_X
@@ -1701,57 +1757,69 @@ ns = 1
 do x = rng(1,1),rng(1,2)
     kcell = occupancy(x,y,z)%indx(1)
     if (kcell <= OUTSIDE_TAG) cycle
+	i = ODEdiff%ivar(x,y,z)
     ns = ns + 1
-    do ichemo = 1,MAX_CHEMO+1
-        i = ODEdiff%ivar(x,y,z)
-        k = (ns-1)*(MAX_CHEMO+1) + ichemo
-!        if (istep > 240) then
-!	        write(logmsg,'(7i6)') x,kcell,ichemo,i,k
-!		    call logger(logmsg)
-!		endif
-!if (ichemo == OXYGEN) then
-!	write(nfout,'(i4,f10.6)') x,allstate(i,ichemo)
-!endif
-        if (ichemo <= MAX_CHEMO) then
+    do ic = 1,MAX_CHEMO+NEXTRA
+        k = (ns-1)*(MAX_CHEMO+NEXTRA) + ic
+        if (ic == 1) then	! CFSE
+			if (kcell > 0) then
+				ex_conc(k) = cell_list(kcell)%CFSE
+			else
+				ex_conc(k) = 0
+			endif
+       elseif (ic <= MAX_CHEMO+1) then
+	        ichemo = ic - 1
 			if (chemo(ichemo)%used) then
 				if (i > 0) then
-					ex_conc(k) = allstate(i,ichemo)
+					ex_conc(k) = allstate(i,ichemo)	
 				else
 					ex_conc(k) = 0
 				endif
 			else
 				ex_conc(k) = 0
 			endif
-        elseif (ichemo == MAX_CHEMO+1) then	! growth rate
+        elseif (ic == MAX_CHEMO+2) then	! growth rate
 			if (kcell > 0) then
 				ex_conc(k) = cell_list(kcell)%dVdt
 			else
 				ex_conc(k) = 0
 			endif
+! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
 		endif
     enddo
 enddo
 ! Add concentrations at the two boundaries 
 ! At ns=1, at at ns=ns+1
 ns = ns+1
-do ichemo = 1,MAX_CHEMO
-    if (chemo(ichemo)%used) then
-        cbnd = BdryConc(ichemo,t_simulation)
-        k = ichemo
-        ex_conc(k) = cbnd
-        k = (ns-1)*(MAX_CHEMO+1) + ichemo
-        ex_conc(k) = cbnd
-    else
-        k = ichemo
+do ic = 1,MAX_CHEMO+NEXTRA
+	if (ic == 1) then	! CFSE
+		k = ic	
+		ex_conc(k) = 0
+        k = (ns-1)*(MAX_CHEMO+NEXTRA) + ic
+        ex_conc(k) = 0	
+	elseif (ic <= MAX_CHEMO) then
+		ichemo = ic - 1
+		k = ic
+		if (chemo(ichemo)%used) then
+			ex_conc(k) = BdryConc(ichemo,t_simulation)
+		else
+			ex_conc(k) = 0
+		endif      
+		k = (ns-1)*(MAX_CHEMO+NEXTRA) + ic
+		if (chemo(ichemo)%used) then
+			ex_conc(k) = BdryConc(ichemo,t_simulation)
+		else
+			ex_conc(k) = 0
+		endif      
+    elseif (ic == MAX_CHEMO+NEXTRA) then	! growth rate
+		k = ic
+		ex_conc(k) = 0
+! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,1,i,k,ex_conc(k)
+        k = (ns-1)*(MAX_CHEMO+NEXTRA) + ic
         ex_conc(k) = 0
-        k = (ns-1)*(MAX_CHEMO+1) + ichemo
-        ex_conc(k) = 0
+! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
     endif
 enddo
-!do k = 1,(MAX_CHEMO+1)*ns
-!    conc(k) = max(cmin,conc(k))
-!enddo
-!call logger('did get_concdata')
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1842,22 +1910,147 @@ end subroutine
 subroutine get_FACS(facs_data) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_facs
 use, intrinsic :: iso_c_binding
-real(c_double) :: facs_data(*)
-integer :: k, kcell
+real(c_double) :: val, facs_data(*)
+integer :: k, kcell, ichemo, ivar, nvars, var_index(32)
+
+nvars = 1	! CFSE
+var_index(nvars) = 0
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	nvars = nvars + 1
+	var_index(nvars) = ichemo
+enddo
+nvars = nvars + 1	! Growth rate
+var_index(nvars) = MAX_CHEMO + 1
 
 k = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
-	k = k+1
-	facs_data(k) = cell_list(kcell)%CFSE
-	k = k+1
-	facs_data(k) = cell_list(kcell)%dVdt
-	k = k+1
-	facs_data(k) = cell_list(kcell)%conc(OXYGEN)
-	if (cell_list(kcell)%conc(OXYGEN) <= 0.00001 .or. cell_list(kcell)%dVdt < 2.0e-6) then
-		write(nflog,'(2i6,2e12.3)') istep,kcell,cell_list(kcell)%dVdt,cell_list(kcell)%conc(OXYGEN)
+!	k = k+1
+!	facs_data(k) = cell_list(kcell)%CFSE
+!	k = k+1
+!	facs_data(k) = cell_list(kcell)%dVdt
+!	k = k+1
+!	facs_data(k) = cell_list(kcell)%conc(OXYGEN)
+!	if (cell_list(kcell)%conc(OXYGEN) <= 0.00001 .or. cell_list(kcell)%dVdt < 2.0e-6) then
+!		write(nflog,'(2i6,2e12.3)') istep,kcell,cell_list(kcell)%dVdt,cell_list(kcell)%conc(OXYGEN)
+!	endif
+	do ivar = 1,nvars
+		ichemo = var_index(ivar)
+		if (ichemo == 0) then
+			val = cell_list(kcell)%CFSE
+		elseif (ichemo <= MAX_CHEMO) then
+			val = cell_list(kcell)%conc(ichemo)
+		elseif (ichemo == MAX_CHEMO+1) then
+			val = cell_list(kcell)%dVdt
+		endif
+		k = k+1
+		facs_data(k) = val
+	enddo
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! nhisto is the number of histogram boxes
+! vmax(ivar) is the maximum value for variable ivar
+! Probably need to adjust vmax() to a roundish value
+!
+! Compute 3 distributions: 1 = both cell types
+!                          2 = type 1
+!                          3 = type 2
+! Stack three cases in vmax() and histo_data()
+!-----------------------------------------------------------------------------------------
+subroutine get_histo(nhisto, histo_data, vmax) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_histo
+use, intrinsic :: iso_c_binding
+integer(c_int),value :: nhisto
+real(c_double) :: vmax(*), histo_data(*)
+real(REAL_KIND) :: val
+integer :: n(3), i, ih, k, kcell, ict, ichemo, ivar, nvars, var_index(32)
+integer,allocatable :: cnt(:,:,:)
+real(REAL_KIND),allocatable :: dv(:,:), valmax(:,:)
+
+write(nflog,*) 'get_histo: nhisto: ',nhisto
+
+nvars = 1	! CFSE
+var_index(nvars) = 0
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	nvars = nvars + 1
+	var_index(nvars) = ichemo
+enddo
+nvars = nvars + 1	! Growth rate
+var_index(nvars) = MAX_CHEMO + 1
+
+allocate(cnt(3,nvars,nhisto))
+allocate(dv(3,nvars))
+allocate(valmax(3,nvars))
+cnt = 0
+valmax = 0
+n = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	ict = cell_list(kcell)%celltype
+	do ivar = 1,nvars
+		ichemo = var_index(ivar)
+		if (ichemo == 0) then
+			val = cell_list(kcell)%CFSE
+		elseif (ichemo <= MAX_CHEMO) then
+			val = cell_list(kcell)%conc(ichemo)
+		elseif (ichemo == MAX_CHEMO+1) then
+			val = cell_list(kcell)%dVdt
+		endif
+		valmax(ict+1,ivar) = max(valmax(ict+1,ivar),val)	! cell type 1 or 2
+		valmax(1,ivar) = max(valmax(1,ivar),val)			! both
+	enddo
+	n(ict+1) = n(ict+1) + 1
+	n(1) = n(1) + 1
+enddo
+!if (n == 0) then
+!	vmax(1:nvars) = 0
+!	histo_data(1:nhisto*nvars) = 0
+!	return
+!endif
+dv = valmax/nhisto
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	ict = cell_list(kcell)%celltype
+	do ivar = 1,nvars
+		ichemo = var_index(ivar)
+		if (ichemo == 0) then
+			val = cell_list(kcell)%CFSE
+		elseif (ichemo <= MAX_CHEMO) then
+			val = cell_list(kcell)%conc(ichemo)
+		elseif (ichemo == MAX_CHEMO+1) then
+			val = cell_list(kcell)%dVdt
+		endif
+		k = val/dv(1,ivar) + 1
+		k = min(k,nhisto)
+		cnt(1,ivar,k) = cnt(1,ivar,k) + 1
+		k = val/dv(ict+1,ivar) + 1
+		k = min(k,nhisto)
+		cnt(ict+1,ivar,k) = cnt(ict+1,ivar,k) + 1
+	enddo
+enddo
+write(nflog,*) 'n: ',n
+
+do i = 1,3
+	if (n(i) == 0) then
+		vmax((i-1)*nvars+1:i*nvars) = 0
+		histo_data((i-1)*nvars*nhisto+1:i*nhisto*nvars) = 0
+	else
+		do ivar = 1,nvars
+			vmax((i-1)*nvars+ivar) = valmax(i,ivar)
+			do ih = 1,nhisto
+				k = (i-1)*nvars*nhisto + (ivar-1)*nhisto + ih
+				histo_data(k) = (100.*cnt(i,ivar,ih))/n(i)
+			enddo
+		enddo
 	endif
 enddo
+deallocate(cnt)
+deallocate(dv)
+deallocate(valmax)
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1868,7 +2061,7 @@ real(REAL_KIND) :: dx
 real(REAL_KIND), allocatable :: ex_conc(:,:)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer :: rng(3,2), i, k, ichemo, kcell, x, y, z, ic, nc, kmax
-character*(16) :: title(MAX_CHEMO+1)
+character*(16) :: title(MAX_CHEMO+NEXTRA-1)
 character*(128) :: filename
 character*(6) :: mintag
 
@@ -1876,11 +2069,11 @@ dx = DELTA_X
 rng(:,1) = Centre(:) - (adrop*Radius + 2)
 rng(:,2) = Centre(:) + (adrop*Radius + 2)
 kmax = rng(1,2)-rng(1,1)+ 3
-allocate(ex_conc(MAX_CHEMO+1,kmax))
+allocate(ex_conc(MAX_CHEMO+NEXTRA-1,kmax))
 y = Centre(2) + 0.5
 z = Centre(3) + 0.5
 ic = 0
-do ichemo = 1,MAX_CHEMO+1
+do ichemo = 1,MAX_CHEMO+NEXTRA-1
 	if (ichemo <= MAX_CHEMO) then
 		if (.not.chemo(ichemo)%used) cycle
 		ic = ic + 1
@@ -1932,6 +2125,55 @@ enddo
 close(nfprofile)
 deallocate(ex_conc)
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_constituents(nvars,cvar_index,nvarlen,name_array,narraylen) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_constituents
+use, intrinsic :: iso_c_binding
+character(c_char) :: name_array(*)
+integer(c_int) :: nvars, cvar_index(*), nvarlen, narraylen
+integer :: ivar, k, ichemo
+character*(24) :: name
+character(c_char) :: c
+
+write(nflog,*) 'get_constituents'
+nvarlen = 24
+ivar = 1
+k = (ivar-1)*nvarlen + 1
+cvar_index(ivar) = 0	! CFSE
+name = 'CFSE'
+call copyname(name,name_array(k),nvarlen)
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	ivar = ivar + 1
+	k = (ivar-1)*nvarlen + 1
+	cvar_index(ivar) = ichemo
+	name = chemo(ichemo)%name
+	call copyname(name,name_array(k),nvarlen)
+enddo
+ivar = ivar + 1
+k = (ivar-1)*nvarlen + 1
+cvar_index(ivar) = MAX_CHEMO + 1	! Growth rate
+name = 'Growth rate'
+call copyname(name,name_array(k),nvarlen)
+nvars = ivar
+write(nflog,*) 'did get_constituents'
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine copyname(name,name_array,n)
+character*(*) :: name
+character :: name_array(*)
+integer :: n
+integer :: k
+
+do k = 1,n
+	name_array(k) = name(k:k)
+enddo
+end subroutine
+
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine Execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen) BIND(C)

@@ -4,6 +4,7 @@ struct result_set {
 	QString casename;
 	int nsteps;
  	double *tnow;      // simulation time (mins)
+    /*
     double *nDC;       // number of DCs
     double *act;       // total DC antigen activity level
 	double *ntot_LN;   // total T cell population in the LN
@@ -23,7 +24,7 @@ struct result_set {
 	double max_ndead;     // number of cognate T cells that have died
     double max_teffgen;   // number of activated cognate T cells that have left the LN
 	double max_nbnd;     // number of cognate T cells that are bound to a DC
-
+*/
 	double *pData[16];
 	double maxValue[16];
 };

@@ -33,17 +33,31 @@ integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16, nfprofile=17
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
+integer, parameter :: CFSE = 0	! (not used here, used in the GUI)
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: TRACER = 3
 integer, parameter :: DRUG_A = 4
-integer, parameter :: SN30000 = DRUG_A
-integer, parameter :: SN30000_METAB = DRUG_A + 1
-integer, parameter :: DRUG_B = DRUG_A + 2
-integer, parameter :: PR104A = DRUG_B
-integer, parameter :: PR104A_METAB_1 = PR104A + 1
-integer, parameter :: PR104A_METAB_2 = PR104A + 2
-integer, parameter :: MAX_CHEMO = PR104A_METAB_2
+integer, parameter :: TPZ_DRUG = DRUG_A
+integer, parameter :: TPZ_DRUG_METAB_1 = TPZ_DRUG + 1
+integer, parameter :: TPZ_DRUG_METAB_2 = TPZ_DRUG + 2
+integer, parameter :: DRUG_B = DRUG_A + 3
+integer, parameter :: DNB_DRUG = DRUG_B
+integer, parameter :: DNB_DRUG_METAB_1 = DNB_DRUG + 1
+integer, parameter :: DNB_DRUG_METAB_2 = DNB_DRUG + 2
+integer, parameter :: MAX_CHEMO = DNB_DRUG_METAB_2
+integer, parameter :: GROWTH_RATE = MAX_CHEMO + 1	! (not used here, used in the GUI)
+integer, parameter :: CELL_VOLUME = MAX_CHEMO + 2	! (not used here, used in the GUI)
+
+integer, parameter :: NEXTRA = GROWTH_RATE + 1 - MAX_CHEMO	! = 2 = total # of variables - MAX_CHEMO
+
+!integer, parameter :: SN30000 = DRUG_A
+!integer, parameter :: SN30000_METAB = DRUG_A + 1
+!integer, parameter :: DRUG_B = DRUG_A + 2
+!integer, parameter :: PR104A = DRUG_B
+!integer, parameter :: PR104A_METAB_1 = PR104A + 1
+!integer, parameter :: PR104A_METAB_2 = PR104A + 2
+!integer, parameter :: MAX_CHEMO = PR104A_METAB_2
 
 integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
@@ -100,10 +114,10 @@ type SN30K_type
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: metabolite_halflife
 	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES)
-	real(REAL_KIND) :: C1(MAX_CELLTYPES)
+!	real(REAL_KIND) :: C1(MAX_CELLTYPES)
 	real(REAL_KIND) :: C2(MAX_CELLTYPES)
 	real(REAL_KIND) :: KO2(MAX_CELLTYPES)
-	real(REAL_KIND) :: gamma(MAX_CELLTYPES)
+!	real(REAL_KIND) :: gamma(MAX_CELLTYPES)
 	real(REAL_KIND) :: Klesion(MAX_CELLTYPES)
 	integer         :: kill_model(MAX_CELLTYPES)
 	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES)
@@ -113,8 +127,30 @@ type SN30K_type
 	real(REAL_KIND) :: Kd(MAX_CELLTYPES)
 end type
 
+type TPZ_type
+	character*(16) :: name
+	integer :: nmetabolites
+	real(REAL_KIND) :: diff_coef(0:2)
+	real(REAL_KIND) :: medium_diff_coef(0:2)
+	real(REAL_KIND) :: membrane_diff(0:2)
+	real(REAL_KIND) :: halflife(0:2)
+	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: KO2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Vmax(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Km(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Klesion(MAX_CELLTYPES,0:2)
+	integer         :: kill_model(MAX_CELLTYPES)
+	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES)
+	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES)
+	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES)
+	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES)
+	real(REAL_KIND) :: Kd(MAX_CELLTYPES)
+end type
 
-type PR104_type
+
+type DNB_type
+	character*(16) :: name
 	integer :: nmetabolites
 	real(REAL_KIND) :: diff_coef(0:2)
 	real(REAL_KIND) :: medium_diff_coef(0:2)
@@ -135,9 +171,10 @@ end type
 type, bind(C) :: field_data
 	integer(c_int) :: site(3)
 	integer(c_int) :: state
-	real(c_double) :: dVdt
+!	real(c_double) :: CFSE
+!	real(c_double) :: dVdt
 	real(c_double) :: volume
-	real(c_double) :: conc(MAX_CHEMO+1)	! This needs to agree with the definition in field.h
+	real(c_double) :: conc(0:MAX_CHEMO+NEXTRA-1)	! This needs to agree with the definition in field.h: 0 = CFSE, MAX_CHEMO+1 = dVdt
 end type
 
 type treatment_type
@@ -195,8 +232,11 @@ real(REAL_KIND) :: t_simulation, execute_t1
 real(REAL_KIND) :: O2cutoff(3)
 real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
-type(SN30K_type) :: SN30K
-type(PR104_type) :: PR104
+
+!type(SN30K_type) :: SN30K
+type(TPZ_type) :: TPZ
+type(DNB_type) :: DNB
+
 logical :: bdry_changed
 type(LQ_type) :: LQ
 character*(128) :: inputfile
