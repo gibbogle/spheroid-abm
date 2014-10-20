@@ -186,6 +186,7 @@ void MainWindow::test_histo()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::makeHistoPlot(int numValues, double width,  QwtArray<double> values)
 {
+    LOG_MSG("makeHistoPlot");
     QwtPlot *plot = qpHisto;
     plot->clear();
     plot->setCanvasBackground(QColor(Qt::white));
@@ -649,6 +650,7 @@ void MainWindow:: initHistoPlot()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_buttonGroup_celltype_buttonClicked(QAbstractButton* button)
 {
+    LOG_MSG("on_buttonGroup_celltype_buttonClicked");
     if (button->text() == "Cell type 1") {
         Global::histo_celltype = 1;
     } else if (button->text() == "Cell type 2") {
@@ -680,6 +682,12 @@ void MainWindow:: showHisto()
     }
     xlabel = Global::var_string[ivar];
     k0 = Global::histo_celltype*numValues*Global::nvars_used;
+//    sprintf(msg,"histo_celltype: %d numValues: %d nvars_used: %d k0: %d",Global::histo_celltype,numValues,Global::nvars_used,k0);
+//    LOG_MSG(msg);
+    if (!Global::histo_data) {
+        LOG_MSG("No histo_data");
+        return;
+    }
     for (int i=0; i<numValues; i++) {
         k = k0 + ivar*numValues + i;
         values[i] = Global::histo_data[k];
