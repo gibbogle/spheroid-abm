@@ -534,8 +534,13 @@ dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
 cbnd = BdryConc(ichemo,t_simulation)
 TPZ_metabolised(:,:) = (TPZ%Kmet0(:,:) > 0)	
+!do i = 1,Ncelltypes
+!	do k = 0,2
+!		write(*,*) i,k,TPZ%Kmet0(i,k),TPZ_metabolised(i,k)
+!	enddo
+!enddo
 !$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, &
-                          kcell, ict, TPZ_metabolised, membrane_flux, KmetC) default(shared) schedule(static)
+                          kcell, ict, membrane_flux, KmetC) default(shared) schedule(static)
 do i = 1,neqn
 	yy = y(i)
 	if (isnan(yy)) then
@@ -628,6 +633,7 @@ do i = 1,neqn
 			dCreact = membrane_flux/vol_cm3
 !		elseif (ichemo == TPZ_DRUG) then
 		case (TPZ_DRUG)
+!			if (i == 1000) write(*,'(a,2i6,L3,3e12.3)') 'Kmet0: ',i,ict,TPZ_metabolised(ict,0),TPZ%Kmet0(ict,0),C
 		    if (TPZ_metabolised(ict,0) .and. C > 0) then
 				KmetC = TPZ%Kmet0(ict,0)*C
 				if (TPZ%Vmax(ict,0) > 0) then
