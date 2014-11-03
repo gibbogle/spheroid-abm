@@ -336,7 +336,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 
 {"TPZ_VMAX_CELL1", 0, 0, 0,
  "Vmax",
- "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+    "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism: Kmet0 -> Kmet0(1 + Vmax/(Km + C))"},
 
 {"TPZ_KM_CELL1", 1, 0, 0,
  "Km",
