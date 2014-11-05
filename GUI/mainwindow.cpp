@@ -295,7 +295,7 @@ void MainWindow::initDrugComboBoxes()
     comb_TPZ->addItem("SN30000");
     comb_TPZ->addItem("TPZ");
     comb_TPZ->addItem("Drug3");
-    comb_DNB->addItem("DNB1");
+    comb_DNB->addItem("PR104A");
     comb_DNB->addItem("DNB2");
     comb_DNB->addItem("DNB3");
     comb_DNB->addItem("DNB4");
@@ -747,17 +747,17 @@ void MainWindow::showFACS()
         break;
     case TRACER:
         break;
-    case DRUG_A:
+    case TPZ_DRUG:
         break;
-    case DRUG_A_METAB_1:
+    case TPZ_DRUG_METAB_1:
         break;
-    case DRUG_A_METAB_2:
+    case TPZ_DRUG_METAB_2:
         break;
-    case DRUG_B:
+    case DNB_DRUG:
         break;
-    case DRUG_B_METAB_1:
+    case DNB_DRUG_METAB_1:
         break;
-    case DRUG_B_METAB_2:
+    case DNB_DRUG_METAB_2:
         break;
     case GROWTH_RATE:
         xscale = 1;
@@ -795,17 +795,17 @@ void MainWindow::showFACS()
         break;
     case TRACER:
         break;
-    case DRUG_A:
+    case TPZ_DRUG:
         break;
-    case DRUG_A_METAB_1:
+    case TPZ_DRUG_METAB_1:
         break;
-    case DRUG_A_METAB_2:
+    case TPZ_DRUG_METAB_2:
         break;
-    case DRUG_B:
+    case DNB_DRUG:
         break;
-    case DRUG_B_METAB_1:
+    case DNB_DRUG_METAB_1:
         break;
-    case DRUG_B_METAB_2:
+    case DNB_DRUG_METAB_2:
         break;
     case GROWTH_RATE:
         yscale = 1;
@@ -1011,25 +1011,25 @@ void MainWindow::loadParams()
                             if (use_TRACER)
                                 disableUseTracer();
                         }
-                        bool use_DRUG_A = qsname.contains("USE_DRUG_A");
+                        bool use_TPZ = qsname.contains("USE_TPZ_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-                            if (use_DRUG_A)
-                                enableUseDrugA();
+//                            if (use_TPZ)
+//                                enableUseTPZ();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_DRUG_A)
-                                disableUseDrugA();
+//                            if (use_TPZ)
+//                                disableUseTPZ();
                         }
-                        bool use_DRUG_B = qsname.contains("USE_DRUG_B");
+                        bool use_DNB = qsname.contains("USE_DNB_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-                            if (use_DRUG_B)
-                                enableUseDrugB();
+//                            if (use_DNB)
+//                                enableUseDNB();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_DRUG_B)
-                                disableUseDrugB();
+//                            if (use_DNB)
+//                                disableUseDNB();
                         }
                         bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
                         if (p.value == 1) {
@@ -1411,25 +1411,25 @@ void MainWindow::reloadParams()
                             if (use_TRACER)
                                 disableUseTracer();
                         }
-                        bool use_DRUG_A = qsname.contains("USE_DRUG_A");
+                        bool use_TPZ = qsname.contains("USE_TPZ_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-                            if (use_DRUG_A)
-                                enableUseDrugA();
+//                            if (use_TPZ)
+//                                enableUseTPZ();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_DRUG_A)
-                                disableUseDrugA();
+//                            if (use_TPZ)
+//                                disableUseTPZ();
                         }
-                        bool use_DRUG_B = qsname.contains("USE_DRUG_B");
+                        bool use_DNB = qsname.contains("USE_DNB_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-                            if (use_DRUG_B)
-                                enableUseDrugB();
+//                            if (use_DNB)
+//                                enableUseDNB();
                         } else {
                             w_cb->setChecked(false);
-                            if (use_DRUG_B)
-                                disableUseDrugB();
+//                            if (use_DNB)
+//                                disableUseDNB();
                         }
                         bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
                         if (p.value == 1) {
@@ -1616,9 +1616,9 @@ void MainWindow::writeout()
 		double val = p.value;
         if (p.tag.compare("TREATMENT_FILE") == 0)
 			line = p.label;
-        else if (p.tag.compare("DRUG_A_NAME") == 0)
+        else if (p.tag.compare("TPZ_DRUG_NAME") == 0)
             line = p.label;
-        else if (p.tag.compare("DRUG_B_NAME") == 0)
+        else if (p.tag.compare("DNB_DRUG_NAME") == 0)
             line = p.label;
         else if (p.tag.compare("SAVE_PROFILE_DATA_FILE") == 0)
             line = p.label;
@@ -2965,26 +2965,26 @@ void MainWindow::changeParam()
                     disableUseTracer();
             }
 
-            bool use_DRUG_A = wname.contains("USE_DRUG_A");
+            bool use_TPZ = wname.contains("USE_TPZ_DRUG");
             if (checkBox->isChecked()) {
                 v = 1;
-                if (use_DRUG_A)
-                    enableUseDrugA();
+//                if (use_TPZ)
+//                    enableUseTPZ();
             } else {
                 v = 0;
-                if (use_DRUG_A)
-                    disableUseDrugA();
+//                if (use_TPZ)
+//                    disableUseTPZ();
             }
 
-            bool use_DRUG_B = wname.contains("USE_DRUG_B");
+            bool use_DNB = wname.contains("USE_DNB_DRUG");
             if (checkBox->isChecked()) {
                 v = 1;
-                if (use_DRUG_B)
-                    enableUseDrugB();
+//                if (use_DNB)
+//                    enableUseDNB();
             } else {
                 v = 0;
-                if (use_DRUG_B)
-                    disableUseDrugB();
+//                if (use_DNB)
+//                    disableUseDNB();
             }
 
             bool use_TREATMENT_FILE = wname.contains("USE_TREATMENT_FILE");
@@ -3204,48 +3204,55 @@ void MainWindow::disableUseTracer()
     }
 }
 
+/*
 //--------------------------------------------------------------------------------------------------------
-// Use the name provided for drug A to enable the appropriate lineEdits
+// Use the name provided for TPZ-type drug to enable the appropriate lineEdits
+// Useless now
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::enableUseDrugA()
+void MainWindow::enableUseTPZ()
 {
-    QLineEdit *len = findChild<QLineEdit *>("text_DRUG_A_NAME");
+    QLineEdit *len = findChild<QLineEdit *>("text_TPZ_DRUG_NAME");
     if (len->text().compare("SN30000") == 0) {
         enableUseSN30K();
     }
 }
 
 //--------------------------------------------------------------------------------------------------------
-// Use the name provided for drug B to enable the appropriate lineEdits
+// Use the name provided for DNB-type drug to enable the appropriate lineEdits
+// Useless now
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::enableUseDrugB()
+void MainWindow::enableUseDNB()
 {
-    QLineEdit *len = findChild<QLineEdit *>("text_DRUG_A_NAME");
-    if (len->text().compare("SN30000") == 0) {
-        enableUseSN30K();
-    }
+//    QLineEdit *len = findChild<QLineEdit *>("text_DNB_DRUG_NAME");
+//    if (len->text().compare("SN30000") == 0) {
+//        enableUseSN30K();
+//    }
 }
+
 //--------------------------------------------------------------------------------------------------------
-// Use the name provided for drug A to disable the appropriate lineEdits
+// Use the name provided for TPZ-type drug to disable the appropriate lineEdits
+// Useless now
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::disableUseDrugA()
+void MainWindow::disableUseTPZ()
 {
-    QLineEdit *len = findChild<QLineEdit *>("text_DRUG_B_NAME");
+    QLineEdit *len = findChild<QLineEdit *>("text_TPZ_DRUG_NAME");
     if (len->text().compare("SN30000") == 0)
         disableUseSN30K();
 }
 
 //--------------------------------------------------------------------------------------------------------
-// Use the name provided for drug B to disable the appropriate lineEdits
+// Use the name provided for DNB-type drug to disable the appropriate lineEdits
+// Useless now
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::disableUseDrugB()
+void MainWindow::disableUseDNB()
 {
-    QLineEdit *len = findChild<QLineEdit *>("text_DRUG_B_NAME");
+    QLineEdit *len = findChild<QLineEdit *>("text_DNB_DRUG_NAME");
     if (len->text().compare("SN30000") == 0)
         disableUseSN30K();
 }
 
 //--------------------------------------------------------------------------------------------------------
+// Useless now
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::enableUseSN30K()
 {
@@ -3259,6 +3266,7 @@ void MainWindow::enableUseSN30K()
 }
 
 //--------------------------------------------------------------------------------------------------------
+// Useless now
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::disableUseSN30K()
 {
@@ -3271,32 +3279,6 @@ void MainWindow::disableUseSN30K()
     }
 }
 
-/*
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::enableUseDrugB()
-{
-    for (int i=0; i<lineEdit_list.length(); i++) {
-        QLineEdit *w = lineEdit_list[i];
-        QString wname = w->objectName();
-        if (wname.contains("line_DRUG_B")) {
-            w->setEnabled(true);
-        }
-    }
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::disableUseDrugB()
-{
-    for (int i=0; i<lineEdit_list.length(); i++) {
-        QLineEdit *w = lineEdit_list[i];
-        QString wname = w->objectName();
-        if (wname.contains("line_DRUG_B")) {
-            w->setEnabled(false);
-        }
-    }
-}
 */
 
 //--------------------------------------------------------------------------------------------------------
@@ -4094,53 +4076,53 @@ void MainWindow::setGraphsActive()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_comb_TPZ_currentIndexChanged(int index)
 {
-    text_DRUG_A_NAME->setText(comb_TPZ->currentText());
+    text_TPZ_DRUG_NAME->setText(comb_TPZ->currentText());
 }
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_comb_DNB_currentIndexChanged(int index)
 {
-    text_DRUG_B_NAME->setText(comb_DNB->currentText());
+    text_DNB_DRUG_NAME->setText(comb_DNB->currentText());
 }
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_USE_DRUG_A_toggled(bool checked)
+void MainWindow::on_cbox_USE_TPZ_DRUG_toggled(bool checked)
 {
-    LOG_MSG("cbox_use_drugA toggled");
-    QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_A_BDRY_CONC");
-//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_A_DECAY");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_A_SIMULATE_METABOLITE");
+    LOG_MSG("cbox_use_TPZ_drug toggled");
+    QLineEdit *leb = findChild<QLineEdit *>("line_TPZ_DRUG_BDRY_CONC");
+//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_TPZ_DRUG_DECAY");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_TPZ_DRUG_SIMULATE_METABOLITE");
     leb->setEnabled(checked);
     cbm->setEnabled(checked);
     setTreatmentFileUsage();
     comb_TPZ->setEnabled(checked);
-    text_DRUG_A_NAME->setEnabled(checked);
-    text_DRUG_A_NAME->setText(comb_TPZ->currentText());
+    text_TPZ_DRUG_NAME->setEnabled(checked);
+    text_TPZ_DRUG_NAME->setText(comb_TPZ->currentText());
     int indexTPZ = comb_TPZ->currentIndex();
 }
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_USE_DRUG_B_toggled(bool checked)
+void MainWindow::on_cbox_USE_DNB_DRUG_toggled(bool checked)
 {
-//    LOG_MSG("cbox_use_drugB toggled");
-    QLineEdit *leb = findChild<QLineEdit *>("line_DRUG_B_BDRY_CONC");
-//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DRUG_B_DECAY");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DRUG_B_SIMULATE_METABOLITE");
+//    LOG_MSG("cbox_use_DNB_drug toggled");
+    QLineEdit *leb = findChild<QLineEdit *>("line_DNB_DRUG_BDRY_CONC");
+//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DNB_DRUG_DECAY");
+    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DNB_DRUG_SIMULATE_METABOLITE");
     leb->setEnabled(checked);
     cbm->setEnabled(checked);
     setTreatmentFileUsage();
     comb_DNB->setEnabled(checked);
-    text_DRUG_B_NAME->setEnabled(checked);
-    text_DRUG_B_NAME->setText(comb_DNB->currentText());
+    text_DNB_DRUG_NAME->setEnabled(checked);
+    text_DNB_DRUG_NAME->setText(comb_DNB->currentText());
     int indexDNB = comb_DNB->currentIndex();
 }
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked)
+void MainWindow::on_cbox_TPZ_DRUG_SIMULATE_METABOLITE_toggled(bool checked)
 {
 //    LOG_MSG("cbox_use_drugA_metabolite toggled");
 //    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugA_metabolite");
@@ -4151,7 +4133,7 @@ void MainWindow::on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked)
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_DRUG_B_SIMULATE_METABOLITE_toggled(bool checked)
+void MainWindow::on_cbox_DNB_DRUG_SIMULATE_METABOLITE_toggled(bool checked)
 {
 //    LOG_MSG("cbox_use_drugB_metabolite toggled");
 //    QRadioButton *rbm = findChild<QRadioButton*>("radioButton_drugB_metabolite");
@@ -4361,7 +4343,7 @@ void MainWindow::on_cbox_USE_RADIATION_toggled(bool checked)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setTreatmentFileUsage()
 {
-    if (cbox_USE_DRUG_A->isChecked() || cbox_USE_DRUG_B->isChecked() || cbox_USE_RADIATION->isChecked()) {
+    if (cbox_USE_TPZ_DRUG->isChecked() || cbox_USE_DNB_DRUG->isChecked() || cbox_USE_RADIATION->isChecked()) {
         enableUseTreatmentFile();
     } else {
         disableUseTreatmentFile();

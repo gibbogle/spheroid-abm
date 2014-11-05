@@ -27,7 +27,8 @@ type chemokine_type
 	real(REAL_KIND) :: bdry_rate
 	real(REAL_KIND) :: bdry_conc
 	real(REAL_KIND) :: diff_coef
-	real(REAL_KIND) :: membrane_diff
+	real(REAL_KIND) :: membrane_diff_in
+	real(REAL_KIND) :: membrane_diff_out
 	logical :: decay
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: decay_rate

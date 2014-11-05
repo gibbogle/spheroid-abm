@@ -420,7 +420,8 @@ read(nfcell,*) show_progeny                 ! if != 0, the number of the cell to
 read(nfcell,*) iuse_oxygen		! chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%medium_diff_coef
-read(nfcell,*) chemo(OXYGEN)%membrane_diff
+read(nfcell,*) chemo(OXYGEN)%membrane_diff_in
+chemo(OXYGEN)%membrane_diff_out = chemo(OXYGEN)%membrane_diff_in
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) iconstant
 chemo(OXYGEN)%constant = (iconstant == 1)
@@ -430,7 +431,8 @@ read(nfcell,*) chemo(OXYGEN)%Hill_N
 read(nfcell,*) iuse_glucose		!chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%medium_diff_coef
-read(nfcell,*) chemo(GLUCOSE)%membrane_diff
+read(nfcell,*) chemo(GLUCOSE)%membrane_diff_in
+chemo(GLUCOSE)%membrane_diff_out = chemo(GLUCOSE)%membrane_diff_in
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) iconstant
 chemo(GLUCOSE)%constant = (iconstant == 1)
@@ -440,7 +442,8 @@ read(nfcell,*) chemo(GLUCOSE)%Hill_N
 read(nfcell,*) iuse_tracer		!chemo(TRACER)%used
 read(nfcell,*) chemo(TRACER)%diff_coef
 read(nfcell,*) chemo(TRACER)%medium_diff_coef
-read(nfcell,*) chemo(TRACER)%membrane_diff
+read(nfcell,*) chemo(TRACER)%membrane_diff_in
+chemo(TRACER)%membrane_diff_out = chemo(TRACER)%membrane_diff_in
 read(nfcell,*) chemo(TRACER)%bdry_conc
 read(nfcell,*) iconstant
 chemo(TRACER)%constant = (iconstant == 1)
@@ -481,29 +484,16 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 		do im = 0,nmetab
 			read(nfcell,*) TPZ%diff_coef(im)
 			read(nfcell,*) TPZ%medium_diff_coef(im)
-			read(nfcell,*) TPZ%membrane_diff(im)
+			read(nfcell,*) TPZ%membrane_diff_in(im)
+			read(nfcell,*) TPZ%membrane_diff_out(im)
 			read(nfcell,*) TPZ%halflife(im)
 			ichemo = idrug + im
 			chemo(ichemo)%diff_coef = TPZ%diff_coef(im)
 			chemo(ichemo)%medium_diff_coef = TPZ%medium_diff_coef(im)
-			chemo(ichemo)%membrane_diff = TPZ%membrane_diff(im)
+			chemo(ichemo)%membrane_diff_in = TPZ%membrane_diff_in(im)
+			chemo(ichemo)%membrane_diff_out = TPZ%membrane_diff_out(im)
 			chemo(ichemo)%halflife = TPZ%halflife(im)		
 		enddo
-!		read(nfcell,*) SN30K%diff_coef
-!		read(nfcell,*) SN30K%medium_diff_coef
-!		read(nfcell,*) SN30K%membrane_diff
-!		read(nfcell,*) SN30K%halflife
-!		read(nfcell,*) SN30K%metabolite_halflife
-!		imetab = idrug + 1
-!		chemo(idrug)%halflife = SN30K%halflife
-!		chemo(imetab)%halflife = SN30K%metabolite_halflife
-!		chemo(idrug)%diff_coef = SN30K%diff_coef		! Note that metabolite is given the same diff_coef
-!		chemo(imetab)%diff_coef = SN30K%diff_coef		! and cell_diff as the drug.
-!		chemo(idrug)%medium_diff_coef = SN30K%medium_diff_coef
-!		chemo(imetab)%medium_diff_coef = SN30K%medium_diff_coef
-!		chemo(idrug)%membrane_diff = SN30K%membrane_diff
-!		chemo(imetab)%membrane_diff = SN30K%membrane_diff
-!		chemo(imetab)%decay = (SN30K%metabolite_halflife > 0)
 		do ictype = 1,Ncelltypes
 			do im = 0,nmetab
 				read(nfcell,*) TPZ%Kmet0(ictype,im)
@@ -512,29 +502,52 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 				read(nfcell,*) TPZ%Vmax(ictype,im)
 				read(nfcell,*) TPZ%Km(ictype,im)
 				read(nfcell,*) TPZ%Klesion(ictype,im)
+				if (im == 0) then
+					read(nfcell,*) TPZ%kill_model(ictype)
+					read(nfcell,*) TPZ%kill_O2(ictype)
+					read(nfcell,*) TPZ%kill_drug(ictype)
+					read(nfcell,*) TPZ%kill_duration(ictype)
+					read(nfcell,*) TPZ%kill_fraction(ictype)
+				endif
 			enddo
-			read(nfcell,*) TPZ%kill_model(ictype)
-			read(nfcell,*) TPZ%kill_O2(ictype)
-			read(nfcell,*) TPZ%kill_drug(ictype)
-			read(nfcell,*) TPZ%kill_duration(ictype)
-			read(nfcell,*) TPZ%kill_fraction(ictype)
 			TPZ%Kmet0(ictype,:) = TPZ%Kmet0(ictype,:)/60				! /min -> /sec
 			TPZ%KO2(ictype,:) = 1.0e-3*TPZ%KO2(ictype,:)                ! um -> mM
 			TPZ%kill_duration(ictype) = 60*TPZ%kill_duration(ictype)    ! minutes -> seconds
 		enddo
 
-	elseif (.false. .and. idrug == DNB_DRUG) then
+	elseif (idrug == DNB_DRUG) then
+		DNB%name = drug_name
 		DNB%nmetabolites = nmetab
 		do im = 0,nmetab
 			read(nfcell,*) DNB%diff_coef(im)
 			read(nfcell,*) DNB%medium_diff_coef(im)
-			read(nfcell,*) DNB%membrane_diff(im)
+			read(nfcell,*) DNB%membrane_diff_in(im)
+			read(nfcell,*) DNB%membrane_diff_out(im)
 			read(nfcell,*) DNB%halflife(im)
 			ichemo = idrug + im
 			chemo(ichemo)%diff_coef = DNB%diff_coef(im)
 			chemo(ichemo)%medium_diff_coef = DNB%medium_diff_coef(im)
-			chemo(ichemo)%membrane_diff = DNB%membrane_diff(im)
+			chemo(ichemo)%membrane_diff_in = DNB%membrane_diff_in(im)
+			chemo(ichemo)%membrane_diff_out = DNB%membrane_diff_out(im)
 			chemo(ichemo)%halflife = DNB%halflife(im)		
+		enddo
+		do ictype = 1,Ncelltypes
+			do im = 0,nmetab
+				read(nfcell,*) DNB%Kmet0(ictype,im)
+				read(nfcell,*) DNB%C2(ictype,im)
+				read(nfcell,*) DNB%KO2(ictype,im)
+				read(nfcell,*) DNB%Vmax(ictype,im)
+				read(nfcell,*) DNB%Km(ictype,im)
+				read(nfcell,*) DNB%Klesion(ictype,im)
+				read(nfcell,*) DNB%kill_model(ictype,im)
+				read(nfcell,*) DNB%kill_O2(ictype,im)
+				read(nfcell,*) DNB%kill_drug(ictype,im)
+				read(nfcell,*) DNB%kill_duration(ictype,im)
+				read(nfcell,*) DNB%kill_fraction(ictype,im)
+			enddo
+			DNB%Kmet0(ictype,:) = DNB%Kmet0(ictype,:)/60					! /min -> /sec
+			DNB%KO2(ictype,:) = 1.0e-3*DNB%KO2(ictype,:)					! um -> mM
+			DNB%kill_duration(ictype,:) = 60*DNB%kill_duration(ictype,:)    ! minutes -> seconds
 		enddo
 	endif
 	do im = 0,nmetab
@@ -908,27 +921,74 @@ end subroutine
 !   c = Kd.Ckill^2 => Kd = -log(1-f)/(T.Ckill^2)
 !-----------------------------------------------------------------------------------------
 subroutine DetermineKd
-real(REAL_KIND) :: kmet, Kd
-integer :: i
+real(REAL_KIND) :: C2, KO2, Kmet0, kmet 
+real(REAL_KIND) :: f, T, Ckill, Ckill_O2, Kd
+integer :: idrug, i, im, kill_model
 
-if (chemo(TPZ_DRUG)%used) then
+do idrug = 1,2
+	if (idrug == 1 .and. .not.chemo(TPZ_DRUG)%used) cycle
+	if (idrug == 2 .and. .not.chemo(DNB_DRUG)%used) cycle
 	do i = 1,Ncelltypes
-		kmet = (1 - TPZ%C2(i,0) + TPZ%C2(i,0)*TPZ%KO2(i,0)/(TPZ%KO2(i,0) + TPZ%kill_O2(i)))*TPZ%Kmet0(i,0)
-		if (TPZ%kill_model(i) == 1) then
-			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*kmet*TPZ%kill_drug(i))
-		elseif (TPZ%kill_model(i) == 2) then
-			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*kmet*TPZ%kill_drug(i)**2)
-		elseif (TPZ%kill_model(i) == 3) then
-			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*(kmet*TPZ%kill_drug(i))**2)
-		elseif (TPZ%kill_model(i) == 4) then
-			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*TPZ%kill_drug(i))
-		elseif (TPZ%kill_model(i) == 5) then
-			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*TPZ%kill_drug(i)**2)
-		endif
-	!	write(nfout,'(a,2i4,2e12.3)') 'DetermineKd: i,kill model, passed and computed: ',i,TPZ%kill_model(i),TPZ%Kd(i),Kd
-		TPZ%Kd(i) = Kd
+		do im = 0,2
+			if (idrug == 1) then		! TPZ
+				if (im /= 0) cycle
+				C2 = TPZ%C2(i,im)
+				KO2 = TPZ%KO2(i,im)
+				Kmet0 = TPZ%Kmet0(i,im)
+				kill_model = TPZ%kill_model(i)
+				Ckill_O2 = TPZ%kill_O2(i)
+				f = TPZ%kill_fraction(i)
+				T = TPZ%kill_duration(i)
+				Ckill = TPZ%kill_drug(i)
+			elseif (idrug == 2) then	! DNB
+				C2 = DNB%C2(i,im)
+				KO2 = DNB%KO2(i,im)
+				Kmet0 = TPZ%Kmet0(i,im)
+				kill_model = DNB%kill_model(i,im)
+				Ckill_O2 = DNB%kill_O2(i,im)
+				f = DNB%kill_fraction(i,im)
+				T = DNB%kill_duration(i,im)
+				Ckill = DNB%kill_drug(i,im)
+			endif
+			kmet = (1 - C2 + C2*KO2/(KO2 + Ckill_O2))*Kmet0
+			if (kill_model == 1) then
+				Kd = -log(1-f)/(T*kmet*Ckill)
+			elseif (kill_model == 2) then
+				Kd = -log(1-f)/(T*kmet*Ckill**2)
+			elseif (kill_model == 3) then
+				Kd = -log(1-f)/(T*(kmet*Ckill)**2)
+			elseif (kill_model == 4) then
+				Kd = -log(1-f)/(T*Ckill)
+			elseif (kill_model == 5) then
+				Kd = -log(1-f)/(T*Ckill**2)
+			endif
+			if (idrug == 1) then
+				TPZ%Kd(i) = Kd
+			elseif (idrug == 2) then
+				DNB%Kd(i,im) = Kd
+			endif
+		enddo
 	enddo
-endif
+enddo
+
+!if (chemo(TPZ_DRUG)%used) then
+!	do i = 1,Ncelltypes
+!		kmet = (1 - TPZ%C2(i,0) + TPZ%C2(i,0)*TPZ%KO2(i,0)/(TPZ%KO2(i,0) + TPZ%kill_O2(i)))*TPZ%Kmet0(i,0)
+!		kill_model = TPZ%kill_model(i)
+!		if (kill_model == 1) then
+!			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*kmet*TPZ%kill_drug(i))
+!		elseif (kill_model == 2) then
+!			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*kmet*TPZ%kill_drug(i)**2)
+!		elseif (kill_model == 3) then
+!			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*(kmet*TPZ%kill_drug(i))**2)
+!		elseif (kill_model == 4) then
+!			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*TPZ%kill_drug(i))
+!		elseif (kill_model == 5) then
+!			Kd = -log(1-TPZ%kill_fraction(i))/(TPZ%kill_duration(i)*TPZ%kill_drug(i)**2)
+!		endif
+!		TPZ%Kd(i) = Kd
+!	enddo
+!endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -2150,6 +2210,7 @@ do ichemo = 1,MAX_CHEMO
 	k = (ivar-1)*nvarlen + 1
 	cvar_index(ivar) = ichemo
 	name = chemo(ichemo)%name
+	write(nflog,*) 'get_constituents: ',ichemo,name
 	call copyname(name,name_array(k),nvarlen)
 enddo
 ivar = ivar + 1

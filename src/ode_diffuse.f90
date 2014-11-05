@@ -517,8 +517,9 @@ integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ict, ith, Ng
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol_cm3, val, Cin(MAX_CHEMO), Cex
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_flux
-logical :: bnd, TPZ_metabolised(MAX_CELLTYPES,0:2), dbug
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_kin, membrane_kout, membrane_flux
+logical :: bnd, dbug
+logical :: TPZ_metabolised(MAX_CELLTYPES,0:2), DNB_metabolised(MAX_CELLTYPES,0:2)
 real(REAL_KIND) :: metab, dMdt, KmetC
 logical :: intracellular, cell_exists
 logical :: use_actual_cell_volume = .false.
@@ -533,12 +534,11 @@ decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
 cbnd = BdryConc(ichemo,t_simulation)
+membrane_kin = chemo(ichemo)%membrane_diff_in
+membrane_kout = chemo(ichemo)%membrane_diff_out
 TPZ_metabolised(:,:) = (TPZ%Kmet0(:,:) > 0)	
-!do i = 1,Ncelltypes
-!	do k = 0,2
-!		write(*,*) i,k,TPZ%Kmet0(i,k),TPZ_metabolised(i,k)
-!	enddo
-!enddo
+DNB_metabolised(:,:) = (DNB%Kmet0(:,:) > 0)	
+
 !$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, &
                           kcell, ict, membrane_flux, KmetC) default(shared) schedule(static)
 do i = 1,neqn
@@ -577,11 +577,6 @@ do i = 1,neqn
 	    Cin = allstate(i,:)
 	    Cin(ichemo) = yy
 	    ict = cell_list(kcell)%celltype
-!	    if (ichemo == DRUG_A .and. i == 10) write(*,*) 'i,kcell: ',i,kcell
-!	    if (ichemo == DRUG_A .and. kcell == 1) then
-!			write(*,'(a,2i4,2e12.3)') 'f_rkc(1): ',i,kcell,y(i),Cex
-!			if (isnan(Cex) .or. isnan(yy)) stop
-!		endif
 	endif
 	if (.not.intracellular) then
 		! Need to check diffusion eqtn. when Vextra_cm3 < Vsite_cm3 = DX^3 !!!!!!!!!!!!!!!!!!!!!!
@@ -600,40 +595,30 @@ do i = 1,neqn
 		    else
 			    val = y(kv)
 		    endif
-!	    	if (ichemo == DRUG_A .and. i == 10) then
-!	    		write(*,'(a,3i4,e12.3)') 'template: ',i,k,kv,val
-!	    	endif
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
-			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))*Vsite_cm3	! just a scaling.  We should account for change in surface area
+!			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))*Vsite_cm3	! just a scaling.  We should account for change in surface area
+			membrane_flux = (membrane_kin*Cex - membrane_kout*Cin(ichemo))*Vsite_cm3	! just a scaling.  We should account for change in surface area
 		else
 		    membrane_flux = 0
 		endif
     	dydt(i) = dCsum - membrane_flux/vol_cm3
-!    	if (ichemo == DRUG_A .and. i == 10) then
-!    		write(*,'(a,i4,3e12.3)') 'EXTRA: ',i,dCsum,membrane_flux,vol_cm3
-!    	endif
 	else
 		C = Cin(ichemo)
-		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vsite_cm3		! just a scaling.  We should account for change in surface area
+!		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vsite_cm3		! just a scaling.  We should account for change in surface area
+		membrane_flux = (membrane_kin*Cex - membrane_kout*C)*Vsite_cm3	! just a scaling.  We should account for change in surface area
 		dCreact = 0
 		select case (ichemo)
-!		if (ichemo == OXYGEN) then
 		case (OXYGEN)
 			metab = O2_metab(C)
-!			metab = metabolic_rate(ichemo,C)
 			dCreact = (-metab*chemo(ichemo)%max_cell_rate*1.0e6 + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
-!		elseif (ichemo == GLUCOSE) then
 		case (GLUCOSE)
 			metab = C**Ng/(chemo(ichemo)%MM_C0**Ng + C**Ng)
 			dCreact = (-metab*chemo(ichemo)%max_cell_rate*1.0e6 + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
-!		elseif (ichemo == TRACER) then
 		case (TRACER)
 			dCreact = membrane_flux/vol_cm3
-!		elseif (ichemo == TPZ_DRUG) then
 		case (TPZ_DRUG)
-!			if (i == 1000) write(*,'(a,2i6,L3,3e12.3)') 'Kmet0: ',i,ict,TPZ_metabolised(ict,0),TPZ%Kmet0(ict,0),C
 		    if (TPZ_metabolised(ict,0) .and. C > 0) then
 				KmetC = TPZ%Kmet0(ict,0)*C
 				if (TPZ%Vmax(ict,0) > 0) then
@@ -642,7 +627,6 @@ do i = 1,neqn
 				dCreact = -(1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + Cin(OXYGEN)))*KmetC
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
-!		elseif (ichemo == TPZ_DRUG_METAB_1) then
 		case (TPZ_DRUG_METAB_1)
 			if (TPZ_metabolised(ict,0) .and. Cin(TPZ_DRUG) > 0) then
 				dCreact = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + Cin(OXYGEN)))*TPZ%Kmet0(ict,0)*Cin(TPZ_DRUG)
@@ -651,7 +635,6 @@ do i = 1,neqn
 				dCreact = dCreact - (1 - TPZ%C2(ict,1) + TPZ%C2(ict,1)*TPZ%KO2(ict,1)/(TPZ%KO2(ict,1) + Cin(OXYGEN)))*TPZ%Kmet0(ict,1)*C
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
-!		elseif (ichemo == TPZ_DRUG_METAB_2) then
 		case (TPZ_DRUG_METAB_2)
 			if (TPZ_metabolised(ict,1) .and. Cin(TPZ_DRUG_METAB_1) > 0) then
 				dCreact = (1 - TPZ%C2(ict,1) + TPZ%C2(ict,1)*TPZ%KO2(ict,1)/(TPZ%KO2(ict,1) + Cin(OXYGEN)))*TPZ%Kmet0(ict,1)*Cin(TPZ_DRUG_METAB_1)
@@ -660,13 +643,33 @@ do i = 1,neqn
 				dCreact = dCreact - (1 - TPZ%C2(ict,2) + TPZ%C2(ict,2)*TPZ%KO2(ict,2)/(TPZ%KO2(ict,2) + Cin(OXYGEN)))*TPZ%Kmet0(ict,2)*C
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
-!		endif
+		case (DNB_DRUG)
+		    if (DNB_metabolised(ict,0) .and. C > 0) then
+				KmetC = DNB%Kmet0(ict,0)*C
+				if (DNB%Vmax(ict,0) > 0) then
+					KmetC = KmetC + DNB%Vmax(ict,0)*C/(DNB%Km(ict,0) + C)
+				endif
+				dCreact = -(1 - DNB%C2(ict,0) + DNB%C2(ict,0)*DNB%KO2(ict,0)/(DNB%KO2(ict,0) + Cin(OXYGEN)))*KmetC
+			endif
+			dCreact = dCreact + membrane_flux/vol_cm3
+		case (DNB_DRUG_METAB_1)
+			if (DNB_metabolised(ict,0) .and. Cin(DNB_DRUG) > 0) then
+				dCreact = (1 - DNB%C2(ict,0) + DNB%C2(ict,0)*DNB%KO2(ict,0)/(DNB%KO2(ict,0) + Cin(OXYGEN)))*DNB%Kmet0(ict,0)*Cin(DNB_DRUG)
+			endif
+			if (DNB_metabolised(ict,1) .and. C > 0) then
+				dCreact = dCreact - (1 - DNB%C2(ict,1) + DNB%C2(ict,1)*DNB%KO2(ict,1)/(DNB%KO2(ict,1) + Cin(OXYGEN)))*DNB%Kmet0(ict,1)*C
+			endif
+			dCreact = dCreact + membrane_flux/vol_cm3
+		case (DNB_DRUG_METAB_2)
+			if (DNB_metabolised(ict,1) .and. Cin(DNB_DRUG_METAB_1) > 0) then
+				dCreact = (1 - DNB%C2(ict,1) + DNB%C2(ict,1)*DNB%KO2(ict,1)/(DNB%KO2(ict,1) + Cin(OXYGEN)))*DNB%Kmet0(ict,1)*Cin(DNB_DRUG_METAB_1)
+			endif
+			if (DNB_metabolised(ict,2) .and. C > 0) then
+				dCreact = dCreact - (1 - DNB%C2(ict,2) + DNB%C2(ict,2)*DNB%KO2(ict,2)/(DNB%KO2(ict,2) + Cin(OXYGEN)))*DNB%Kmet0(ict,2)*C
+			endif
+			dCreact = dCreact + membrane_flux/vol_cm3
 		end select
 	    dydt(i) = dCreact - yy*decay_rate
-!	    if (ichemo == DRUG_A .and. kcell == 1) then
-!			write(*,'(a,2i4,4e12.3)') 'f_rkc(2): ',i,kcell,C,dCreact,membrane_flux,dydt(i)
-!			if (isnan(dydt(i))) stop
-!		endif
 	endif
 enddo
 !$omp end parallel do
@@ -791,7 +794,6 @@ do ic = 1,nchemo
 	t = tstart
 	tend = t + dt
 	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:,ichemo),t,tend,rtol,atol,info,work_rkc,idid,ichemo)
-!	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:),t,tend,rtol,atol,info,small_work_rkc(:),idid,ichemo)
 	if (idid /= 1) then
 		write(logmsg,*) ' Failed at t = ',t,' with idid = ',idid
 		call logger(logmsg)
@@ -880,15 +882,6 @@ do ia = 1,ODEdiff%nvars
     endif
 enddo
 ydiff = y0
-!call write_solution('start',y0,nvar)
-!if (it_solve == 2) then
-!	do ie = 1,nvar
-!		if (y0(ie) /= ysave(ie)) then
-!			write(*,'(a,i6,3e12.4)') 'y changed: ',ie,ysave(ie),y0(ie),y0(ie)-ysave(ie)
-!			stop
-!		endif
-!	enddo
-!endif
 ! Set up icoef(:,:)
 do ie = 1,nvar
     ia = all_index(ie)
@@ -908,11 +901,6 @@ enddo
 do k_under = 1,n_under
 
     do ie = 1,nvar
-!		if (k_under == 2 .and. ie == iemin) then
-!			dbug = .true.
-!		else
-!			dbug = .false.
-!		endif
         uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
     enddo
 
@@ -1098,11 +1086,6 @@ enddo
 ! Loop over under-relaxation until convergence
 do k_under = 1,n_under
     do ie = 1,nexvar
-!		if (k_under == 2 .and. ie == iemin) then
-!			dbug = .true.
-!		else
-!			dbug = .false.
-!		endif
         uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of intracellular constituent concentration by reactions
     enddo
     ! Loop over diffusion by over-relaxation until convergence
@@ -1264,8 +1247,8 @@ if (ichemo == OXYGEN) then
     vol = Vextra_cm3	! the current extracellular volume should be used I think !!!!!!!!!!!!!!!
 	if (use_Cex_Cin) then
 		Cin = getCin(ichemo,Cex)
-!		Cin = getCinO2(Cex)
-		flux = chemo(ichemo)%membrane_diff*(Cex - Cin)*Vsite_cm3
+!		flux = chemo(ichemo)%membrane_diff*(Cex - Cin)*Vsite_cm3
+		flux = (chemo(ichemo)%membrane_diff_in*Cex - chemo(ichemo)%membrane_diff_out*Cin)*Vsite_cm3
 	else	! 
 		flux = O2_metab(Cex)*chemo(ichemo)%max_cell_rate*1.0d6
 !		flux = metabolic_rate(ichemo,Cex)*chemo(ichemo)%max_cell_rate*1.0d6
@@ -1284,7 +1267,7 @@ end function
 ! assuming equilibrium, i.e. rate of consumption = rate of membrane transport.
 ! Note that the cell's O2 uptake rate is taken to be independent of any other factors,
 ! e.g. independent of cell size.
-! NOTE: Currently only for OXYGEN
+! NOTE: Currently only for OXYGEN - OK because membrane_diff_in = membrane_diff_out
 !----------------------------------------------------------------------------------
 !real(REAL_KIND) function getCinO2(C)
 real(REAL_KIND) function getCin(ichemo,C)
@@ -1299,7 +1282,7 @@ if (ichemo /= OXYGEN) then
 endif
 !ichemo = OXYGEN
 !K1 = chemo(OXYGEN)%membrane_diff*(Vsite_cm3 - Vextra_cm3)
-K1 = chemo(ichemo)%membrane_diff*Vsite_cm3		! just a scaling
+K1 = chemo(ichemo)%membrane_diff_in*Vsite_cm3		! just a scaling
 K2 = chemo(ichemo)%max_cell_rate*1.0d6
 K2K1 = K2/K1
 C0 = chemo(ichemo)%MM_C0
@@ -1429,7 +1412,7 @@ logical :: bnd
 call SetRadius(Nsites)
 dA = DELTA_X*DELTA_X	! cm2
 R1 = Radius*DELTA_X		! cm
-V0 = medium_volume0		!cm3
+V0 = medium_volume0		! cm3
 Rlayer(:) = R1 + chemo(:)%medium_dlayer
 b = dA*chemo(:)%diff_coef/DELTA_X
 a = (1/Rlayer(:) - 1/R1)/(4*PI*chemo(:)%diff_coef)
@@ -1782,6 +1765,7 @@ end subroutine
 ! Compute the gradient vector for chemokine concentration at (x,y,z).
 ! The gradient determination is 2-sided if possible, 1-sided if only one adjacent
 ! value is available, and the gradient is set to 0 if neither is possible.
+! NOT USED
 !----------------------------------------------------------------------------------
 subroutine ComputeGradient(conc,x,y,z,grad)
 real(REAL_KIND) :: conc(:)
@@ -1894,7 +1878,7 @@ rmax = chemo(OXYGEN)%max_cell_rate
 V = Vsite_cm3 - Vextra_cm3
 r = rmax*1.0e6/V
 Ks = ODEdiff%k_soft
-Kd = chemo(OXYGEN)%membrane_diff
+Kd = chemo(OXYGEN)%membrane_diff_in
 
 write(*,'(a,3e12.4)') 'Cs, dC, MM0: ',Cs,dC,MM0
 write(*,'(a,3e12.4)') 'rmax,V,r: ',rmax,V,r
@@ -2089,6 +2073,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 ! Simple extracellular diffusion of a single constituent
 ! The site volumes should enter into the calculation of dydt
+! NOT USED
 !----------------------------------------------------------------------------------
 subroutine f_rkc_extra(neqn,t,y,dydt,icase)
 integer :: neqn, icase
@@ -2246,6 +2231,7 @@ end subroutine
 ! The medium concentrations are updated explicitly, assuming a sphere with boundary
 ! concentrations equal to the mean extracellular concentrations of boundary sites.
 ! Note that concentrations of O2 and glucose are not varied.
+! NOT USED
 !----------------------------------------------------------------------------------
 subroutine UpdateMedium1(ntvars,state,dt)
 integer :: ntvars

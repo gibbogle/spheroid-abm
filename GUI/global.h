@@ -8,12 +8,12 @@
 #define OXYGEN 1
 #define GLUCOSE 2
 #define TRACER 3
-#define DRUG_A 4
-#define DRUG_A_METAB_1 5
-#define DRUG_A_METAB_2 6
-#define DRUG_B 7
-#define DRUG_B_METAB_1 8
-#define DRUG_B_METAB_2 9
+#define TPZ_DRUG 4
+#define TPZ_DRUG_METAB_1 5
+#define TPZ_DRUG_METAB_2 6
+#define DNB_DRUG 7
+#define DNB_DRUG_METAB_1 8
+#define DNB_DRUG_METAB_2 9
 #define GROWTH_RATE 10      // we pretend that this is a concentration
 #define CELL_VOLUME 11      // we pretend that this is a concentration
 
