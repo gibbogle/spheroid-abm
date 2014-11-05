@@ -339,6 +339,13 @@ void MainWindow::createActions()
     connect(checkBox_FACS_log_y, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
     connect(buttonGroup_histo, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(histo_update()));
 
+    connect(line_TPZ_KILL_MODEL_CELL1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_TPZ_KILL_MODEL_CELL2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_DNB_KILL_MODEL_CELL1_MET1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_DNB_KILL_MODEL_CELL1_MET2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_DNB_KILL_MODEL_CELL2_MET1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_DNB_KILL_MODEL_CELL2_MET2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+
     connect(this,SIGNAL(pause_requested()),SLOT(pauseServer()));
 
 	for (int i=0; i<nLabels; i++) {
@@ -3124,6 +3131,31 @@ void MainWindow::changeParam()
 //			}
 		}
 	}
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::killModelChanged()
+{
+    int model;
+    QString name;
+    QLineEdit *line;
+
+    line = (QLineEdit *)sender();
+    model = line->text().toInt();
+    name = line->objectName();
+    if (name.contains("TPZ")) {
+        if (model > 3) {
+            errorPopup("For TPZ-type drug only kill models 1, 2 and 3 are possible");
+            line->setText("1");
+        }
+     } else if (name.contains("DNB")) {
+        if (model < 4) {
+            errorPopup("For DNB-type drug only kill models 4 and 5 are possible");
+            line->setText("4");
+
+        }
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------

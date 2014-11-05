@@ -3742,6 +3742,9 @@ padding: 8px
               </item>
               <item row="8" column="2">
                <widget class="QLineEdit" name="line_DNB_KILL_O2_CONC_CELL1">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3755,6 +3758,9 @@ padding: 8px
               </item>
               <item row="8" column="3">
                <widget class="QLineEdit" name="line_DNB_KILL_O2_CONC_CELL2">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3788,6 +3794,9 @@ padding: 8px
               </item>
               <item row="9" column="2">
                <widget class="QLineEdit" name="line_DNB_KILL_DRUG_CONC_CELL1">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3801,6 +3810,9 @@ padding: 8px
               </item>
               <item row="9" column="3">
                <widget class="QLineEdit" name="line_DNB_KILL_DRUG_CONC_CELL2">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3834,6 +3846,9 @@ padding: 8px
               </item>
               <item row="10" column="2">
                <widget class="QLineEdit" name="line_DNB_KILL_DURATION_CELL1">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3847,6 +3862,9 @@ padding: 8px
               </item>
               <item row="10" column="3">
                <widget class="QLineEdit" name="line_DNB_KILL_DURATION_CELL2">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3873,6 +3891,9 @@ padding: 8px
               </item>
               <item row="11" column="2">
                <widget class="QLineEdit" name="line_DNB_KILL_FRACTION_CELL1">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3886,6 +3907,9 @@ padding: 8px
               </item>
               <item row="11" column="3">
                <widget class="QLineEdit" name="line_DNB_KILL_FRACTION_CELL2">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3912,6 +3936,9 @@ padding: 8px
               </item>
               <item row="12" column="2">
                <widget class="QLineEdit" name="line_DNB_KILL_MODEL_CELL1">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>
@@ -3925,6 +3952,9 @@ padding: 8px
               </item>
               <item row="12" column="3">
                <widget class="QLineEdit" name="line_DNB_KILL_MODEL_CELL2">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
                 <property name="maximumSize">
                  <size>
                   <width>45</width>

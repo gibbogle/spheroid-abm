@@ -163,6 +163,7 @@ public slots:
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
     void radioButtonChanged(QAbstractButton *b);
+    void killModelChanged();
     void on_buttonGroup_celltype_buttonClicked(QAbstractButton* button);
 
     void on_comb_TPZ_currentIndexChanged(int);
