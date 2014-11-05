@@ -653,23 +653,23 @@ The shape value must be greater than 1, and values close to 1 give distributions
 
     // Cell type 1 DNB drug kill experiment parameters
 
-    {"DNB_KILL_MODEL_CELL1", 4, 0, 0,
+    {"DNB_KILL_MODEL_CELL1", 0, 0, 0,
      "Kill model",
-     "Model of DNB-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+     "Model of DNB-type drug killing: 4 = K x Ci, 5 = K x Ci^2"},
 
-    {"DNB_KILL_O2_CONC_CELL1", 0.0, 0, 0,
+    {"DNB_KILL_O2_CONC_CELL1", 0, 0, 0,
      "O2 conc",
      "DNB-type drug constant O2 concentration in kill experiment"},
 
-    {"DNB_KILL_DRUG_CONC_CELL1", 0.01, 0, 0,
+    {"DNB_KILL_DRUG_CONC_CELL1", 0, 0, 0,
      "Drug conc",
      "DNB-type drug constant drug concentration in kill experiment"},
 
-    {"DNB_KILL_DURATION_CELL1", 60, 0, 0,
+    {"DNB_KILL_DURATION_CELL1", 0, 0, 0,
      "Duration",
      "DNB-type drug duration of kill experiment"},
 
-    {"DNB_KILL_FRACTION_CELL1", 0.9, 0, 0,
+    {"DNB_KILL_FRACTION_CELL1", 0, 0, 0,
      "Kill fraction",
      "DNB-type drug fraction of cells killed in the experiment"},
 
@@ -797,23 +797,23 @@ The shape value must be greater than 1, and values close to 1 give distributions
 
     // Cell type 2 DNB drug kill experiment parameters
 
-    {"DNB_KILL_MODEL_CELL2", 4, 0, 0,
+    {"DNB_KILL_MODEL_CELL2", 0, 0, 0,
      "Kill model",
      "Model of DNB-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
 
-    {"DNB_KILL_O2_CONC_CELL2", 0.0, 0, 0,
+    {"DNB_KILL_O2_CONC_CELL2", 0, 0, 0,
      "O2 conc",
      "DNB-type drug constant O2 concentration in kill experiment"},
 
-    {"DNB_KILL_DRUG_CONC_CELL2", 0.01, 0, 0,
+    {"DNB_KILL_DRUG_CONC_CELL2", 0, 0, 0,
      "Drug conc",
      "DNB-type drug constant drug concentration in kill experiment"},
 
-    {"DNB_KILL_DURATION_CELL2", 60, 0, 0,
+    {"DNB_KILL_DURATION_CELL2", 0, 0, 0,
      "Duration",
      "DNB-type drug duration of kill experiment"},
 
-    {"DNB_KILL_FRACTION_CELL2", 0.9, 0, 0,
+    {"DNB_KILL_FRACTION_CELL2", 0, 0, 0,
      "Kill fraction",
      "DNB-type drug fraction of cells killed in the experiment"},
 
