@@ -251,23 +251,27 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Hill function N",
  "Tracer uptake rate Hill function N"},
 
-{"USE_DRUG_A", 0, 0, 1,
+//==========================
+// TPZ-type drug parameters
+//==========================
+
+{"USE_TPZ_DRUG", 0, 0, 1,
 "Use TPZ-type?",
 "TPZ-type drug is simulated"},
 
-{"DRUG_A_NAME", 0, 0, 0,
+{"TPZ_DRUG_NAME", 0, 0, 0,
 "SN30000",
 "Name of TPZ-type drug"},
 
-{"DRUG_A_BDRY_CONC", 0.0, 0, 0,
+{"TPZ_DRUG_BDRY_CONC", 0.0, 0, 0,
  "Boundary concentration",
  "Drug concentration in the medium"},
 
-{"DRUG_A_CONSTANT", 0, 0, 1,
+{"TPZ_DRUG_CONSTANT", 0, 0, 1,
  "Constant concentration",
  "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
-{"DRUG_A_SIMULATE_METABOLITE", 0, 0, 0,
+{"TPZ_DRUG_SIMULATE_METABOLITE", 0, 0, 0,
  "Simulate metabolites",
  "Simulate drug metabolites"},
 
@@ -279,9 +283,13 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Medium diffusion coeff",
  "TPZ-type drug diffusion coefficient in the medium"},
 
-{"TPZ_CELL_DIFF", 5, 0, 0,
- "Membrane diff constant",
- "TPZ-type drug cell membrane diffusion constant Kd"},
+{"TPZ_CELL_DIFF_IN", 5, 0, 0,
+ "Membrane diff (in)",
+ "TPZ-type drug cell membrane inwards permeability constant Kd"},
+
+{"TPZ_CELL_DIFF_OUT", 5, 0, 0,
+ "Membrane diff (out)",
+ "TPZ-type drug cell membrane outwards permeability constant Kd"},
 
 {"TPZ_HALFLIFE", 2.0, 0, 0,
  "Half-life",
@@ -295,9 +303,13 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Medium diffusion coeff",
  "TPZ-type drug metabolite #1 diffusion coefficient in the medium"},
 
-{"TPZ_CELL_DIFF_MET1", 5, 0, 0,
- "Membrane diff constant",
- "TPZ-type drug metabolite #1 cell membrane diffusion constant Kd"},
+{"TPZ_CELL_DIFF_IN_MET1", 5, 0, 0,
+ "Membrane diff (in)",
+ "TPZ-type drug metabolite #1 cell membrane inwards permeability constant Kd"},
+
+{"TPZ_CELL_DIFF_OUT_MET1", 5, 0, 0,
+ "Membrane diff (out)",
+ "TPZ-type drug metabolite #1 cell membrane outwards permeability constant Kd"},
 
 {"TPZ_HALFLIFE_MET1", 2.0, 0, 0,
  "Half-life",
@@ -311,15 +323,21 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Medium diffusion coeff",
  "TPZ-type drug metabolite #2 diffusion coefficient in the medium"},
 
-{"TPZ_CELL_DIFF_MET2", 5, 0, 0,
- "Membrane diff constant",
- "TPZ-type drug metabolite #2 cell membrane diffusion constant Kd"},
+{"TPZ_CELL_DIFF_IN_MET2", 5, 0, 0,
+ "Membrane diff (in)",
+ "TPZ-type drug metabolite #2 cell membrane inwards permeability constant Kd"},
+
+{"TPZ_CELL_DIFF_OUT_MET2", 5, 0, 0,
+ "Membrane diff (out)",
+ "TPZ-type drug metabolite #2 cell membrane outwards permeability constant Kd"},
 
 {"TPZ_HALFLIFE_MET2", 2.0, 0, 0,
  "Half-life",
  "TPZ-type drug metabolite #2 half-life (hours)"},
 
-// Cell type 1 metabolism parameters
+//------------------------------------------------------
+// Cell type 1 metabolism and kill experiment parameters
+//------------------------------------------------------
 
 // Parent
 {"TPZ_KMET0_CELL1", 1.54, 0, 0,
@@ -345,6 +363,28 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"TPZ_KLESION_CELL1", 0.001, 0, 0,
  "Klesion    ",
  "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+    // Cell type 1 TPZ drug kill experiment parameters
+
+    {"TPZ_KILL_MODEL_CELL1", 1, 0, 0,
+     "Kill model",
+     "Model of TPZ-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+    {"TPZ_KILL_O2_CONC_CELL1", 0.0, 0, 0,
+     "O2 conc",
+     "TPZ-type drug constant O2 concentration in kill experiment"},
+
+    {"TPZ_KILL_DRUG_CONC_CELL1", 0.01, 0, 0,
+     "Drug conc",
+     "TPZ-type drug constant drug concentration in kill experiment"},
+
+    {"TPZ_KILL_DURATION_CELL1", 60, 0, 0,
+     "Duration",
+     "TPZ-type drug duration of kill experiment"},
+
+    {"TPZ_KILL_FRACTION_CELL1", 0.9, 0, 0,
+     "Kill fraction",
+     "TPZ-type drug fraction of cells killed in the experiment"},
 
 // Metabolite 1
 {"TPZ_KMET0_CELL1_MET1", 0.5, 0, 0,
@@ -396,29 +436,9 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion  ",
  "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
 
-// Cell type 1 kill experiment parameters
-
-{"TPZ_KILL_MODEL_CELL1", 1, 0, 0,
- "Kill model",
- "Model of TPZ-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
-
-{"TPZ_KILL_O2_CONC_CELL1", 0.0, 0, 0,
- "O2 conc",
- "TPZ-type drug constant O2 concentration in kill experiment"},
-
-{"TPZ_KILL_DRUG_CONC_CELL1", 0.01, 0, 0,
- "Drug conc",
- "TPZ-type drug constant drug concentration in kill experiment"},
-
-{"TPZ_KILL_DURATION_CELL1", 60, 0, 0,
- "Duration",
- "TPZ-type drug duration of kill experiment"},
-
-{"TPZ_KILL_FRACTION_CELL1", 0.9, 0, 0,
- "Kill fraction",
- "TPZ-type drug fraction of cells killed in the experiment"},
-
-// Cell type 2 metabolism parameters
+//------------------------------------------------------
+// Cell type 2 metabolism and kill experiment parameters
+//------------------------------------------------------
 
 // Parent
 {"TPZ_KMET0_CELL2", 1.54, 0, 0,
@@ -444,6 +464,28 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"TPZ_KLESION_CELL2", 0.001, 0, 0,
  "Klesion    ",
  "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+    // Cell type 2 TPZ drug kill experiment parameters
+
+    {"TPZ_KILL_MODEL_CELL2", 1, 0, 0,
+     "Kill model",
+     "Model of TPZ-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+    {"TPZ_KILL_O2_CONC_CELL2", 0.0, 0, 0,
+     "O2 conc",
+     "TPZ-type drug constant O2 concentration in kill experiment"},
+
+    {"TPZ_KILL_DRUG_CONC_CELL2", 0.01, 0, 0,
+     "Drug conc",
+     "TPZ-type drug constant drug concentration in kill experiment"},
+
+    {"TPZ_KILL_DURATION_CELL2", 60, 0, 0,
+     "Duration",
+     "TPZ-type drug duration of kill experiment"},
+
+    {"TPZ_KILL_FRACTION_CELL2", 0.9, 0, 0,
+     "Kill fraction",
+     "TPZ-type drug fraction of cells killed in the experiment"},
 
 // Metabolite 1
 {"TPZ_KMET0_CELL2_MET1", 0.5, 0, 0,
@@ -495,48 +537,383 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Klesion  ",
  "TPZ-type drug Klesion is the parameter that converts total metabolite into lesion level"},
 
-// Cell type 2 kill experiment parameters
 
-{"TPZ_KILL_MODEL_CELL2", 1, 0, 0,
- "Kill model",
- "Model of TPZ-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+//==========================
+// DNB-type drug parameters
+//==========================
 
-{"TPZ_KILL_O2_CONC_CELL2", 0.0, 0, 0,
- "O2 conc",
- "TPZ-type drug constant O2 concentration in kill experiment"},
-
-{"TPZ_KILL_DRUG_CONC_CELL2", 0.01, 0, 0,
- "Drug conc",
- "TPZ-type drug constant drug concentration in kill experiment"},
-
-{"TPZ_KILL_DURATION_CELL2", 60, 0, 0,
- "Duration",
- "TPZ-type drug duration of kill experiment"},
-
-{"TPZ_KILL_FRACTION_CELL2", 0.9, 0, 0,
- "Kill fraction",
- "TPZ-type drug fraction of cells killed in the experiment"},
-
-
-{"USE_DRUG_B", 0, 0, 1,
-"Use Drug B?",
+{"USE_DNB_DRUG", 0, 0, 1,
+"Use DNB-type drug?",
 "DNB-type drug is simulated"},
 
-{"DRUG_B_NAME", 0, 0, 0,
-"DNB1",
+{"DNB_DRUG_NAME", 0, 0, 0,
+"PR-104A",
 "Name of DNB-type drug"},
 
-{"DRUG_B_BDRY_CONC", 0.0, 0, 0,
+{"DNB_DRUG_BDRY_CONC", 0.0, 0, 0,
  "Drug boundary concentration",
  "Drug concentration in the medium"},
 
-{"DRUG_B_CONSTANT", 0, 0, 1,
+{"DNB_DRUG_CONSTANT", 0, 0, 1,
  "Constant concentration",
  "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
-{"DRUG_B_SIMULATE_METABOLITE", 0, 0, 0,
+{"DNB_DRUG_SIMULATE_METABOLITE", 0, 0, 0,
  "Simulate metabolites",
  "Simulate drug metabolites"},
+
+{"DNB_DIFF_COEF", 6.0e-7, 0, 0,
+ "Spheroid diffusion coeff",
+ "DNB-type drug diffusion coefficient in the spheroid"},
+
+{"DNB_MEDIUM_DIFF", 6.0e-6, 0, 0,
+ "Medium diffusion coeff",
+ "DNB-type drug diffusion coefficient in the medium"},
+
+{"DNB_CELL_DIFF_IN", 5, 0, 0,
+ "Membrane diff (in)",
+ "DNB-type drug cell membrane inwards permeability constant Kd"},
+
+{"DNB_CELL_DIFF_OUT", 5, 0, 0,
+ "Membrane diff (out)",
+ "DNB-type drug cell membrane outwards permeability constant Kd"},
+
+{"DNB_HALFLIFE", 2.0, 0, 0,
+ "Half-life",
+ "DNB-type drug half-life (hours)"},
+
+{"DNB_DIFF_COEF_MET1", 6.0e-7, 0, 0,
+ "Spheroid diffusion coeff",
+ "DNB-type drug metabolite #1 diffusion coefficient in the spheroid"},
+
+{"DNB_MEDIUM_DIFF_MET1", 6.0e-6, 0, 0,
+ "Medium diffusion coeff",
+ "DNB-type drug metabolite #1 diffusion coefficient in the medium"},
+
+{"DNB_CELL_DIFF_IN_MET1", 5, 0, 0,
+ "Membrane diff (in)",
+ "DNB-type drug metabolite #1 cell membrane inwards permeability constant Kd"},
+
+{"DNB_CELL_DIFF_OUT_MET1", 5, 0, 0,
+ "Membrane diff (out)",
+ "DNB-type drug metabolite #1 cell membrane outwards permeability constant Kd"},
+
+{"DNB_HALFLIFE_MET1", 2.0, 0, 0,
+ "Half-life",
+ "DNB-type drug metabolite #1 half-life (hours)"},
+
+{"DNB_DIFF_COEF_MET2", 6.0e-7, 0, 0,
+ "Spheroid diffusion coeff",
+ "DNB-type drug metabolite #2 diffusion coefficient in the spheroid"},
+
+{"DNB_MEDIUM_DIFF_MET2", 6.0e-6, 0, 0,
+ "Medium diffusion coeff",
+ "DNB-type drug metabolite #2 diffusion coefficient in the medium"},
+
+{"DNB_CELL_DIFF_IN_MET2", 5, 0, 0,
+ "Membrane diff (in)",
+ "DNB-type drug metabolite #2 cell membrane inwards permeability constant Kd"},
+
+{"DNB_CELL_DIFF_OUT_MET2", 5, 0, 0,
+ "Membrane diff (out)",
+ "DNB-type drug metabolite #2 cell membrane outwards permeability constant Kd"},
+
+{"DNB_HALFLIFE_MET2", 2.0, 0, 0,
+ "Half-life",
+ "DNB-type drug metabolite #2 half-life (hours)"},
+
+//------------------------------------------------------
+// Cell type 1 metabolism and kill experiment parameters
+//------------------------------------------------------
+
+// Parent
+{"DNB_KMET0_CELL1", 1.54, 0, 0,
+ "Kmet0",
+ "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"DNB_C2_CELL1", 1.0, 0, 0,
+ "C2",
+ "DNB-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KO2_CELL1", 1.14, 0, 0,
+ "KO2",
+ "DNB-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_VMAX_CELL1", 0, 0, 0,
+ "Vmax",
+    "DNB-type drug Vmax in function for oxygen-dependence of rate of metabolism: Kmet0 -> Kmet0(1 + Vmax/(Km + C))"},
+
+{"DNB_KM_CELL1", 1, 0, 0,
+ "Km",
+ "DNB-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KLESION_CELL1", 0.001, 0, 0,
+ "Klesion    ",
+ "DNB-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+    // Cell type 1 DNB drug kill experiment parameters
+
+    {"DNB_KILL_MODEL_CELL1", 4, 0, 0,
+     "Kill model",
+     "Model of DNB-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+    {"DNB_KILL_O2_CONC_CELL1", 0.0, 0, 0,
+     "O2 conc",
+     "DNB-type drug constant O2 concentration in kill experiment"},
+
+    {"DNB_KILL_DRUG_CONC_CELL1", 0.01, 0, 0,
+     "Drug conc",
+     "DNB-type drug constant drug concentration in kill experiment"},
+
+    {"DNB_KILL_DURATION_CELL1", 60, 0, 0,
+     "Duration",
+     "DNB-type drug duration of kill experiment"},
+
+    {"DNB_KILL_FRACTION_CELL1", 0.9, 0, 0,
+     "Kill fraction",
+     "DNB-type drug fraction of cells killed in the experiment"},
+
+// Metabolite 1
+{"DNB_KMET0_CELL1_MET1", 0.5, 0, 0,
+ "Kmet0",
+ "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"DNB_C2_CELL1_MET1", 0, 0, 0,
+ "C2",
+ "DNB-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KO2_CELL1_MET1", 1, 0, 0,
+ "KO2",
+ "DNB-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_VMAX_CELL1_MET1", 0, 0, 0,
+ "Vmax",
+ "DNB-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KM_CELL1_MET1", 1, 0, 0,
+ "Km",
+ "DNB-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KLESION_CELL1_MET1", 0.001, 0, 0,
+ "Klesion  ",
+ "DNB-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+    // Cell type 1 DNB metabolite 1 kill experiment parameters
+
+    {"DNB_KILL_MODEL_CELL1_MET1", 4, 0, 0,
+     "Kill model",
+     "Model of DNB-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+    {"DNB_KILL_O2_CONC_CELL1_MET1", 0.0, 0, 0,
+     "O2 conc",
+     "DNB-type drug constant O2 concentration in kill experiment"},
+
+    {"DNB_KILL_DRUG_CONC_CELL1_MET1", 0.01, 0, 0,
+     "Drug conc",
+     "DNB-type drug constant drug concentration in kill experiment"},
+
+    {"DNB_KILL_DURATION_CELL1_MET1", 60, 0, 0,
+     "Duration",
+     "DNB-type drug duration of kill experiment"},
+
+    {"DNB_KILL_FRACTION_CELL1_MET1", 0.9, 0, 0,
+     "Kill fraction",
+     "DNB-type drug fraction of cells killed in the experiment"},
+
+// Metabolite 2
+{"DNB_KMET0_CELL1_MET2", 0.5, 0, 0,
+ "Kmet0",
+ "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"DNB_C2_CELL1_MET2", 0, 0, 0,
+ "C2",
+ "DNB-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KO2_CELL1_MET2", 1, 0, 0,
+ "KO2",
+ "DNB-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_VMAX_CELL1_MET2", 0, 0, 0,
+ "Vmax",
+ "DNB-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KM_CELL1_MET2", 1, 0, 0,
+ "Km",
+ "DNB-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KLESION_CELL1_MET2", 0.001, 0, 0,
+ "Klesion  ",
+ "DNB-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+
+    {"DNB_KILL_MODEL_CELL1_MET2", 4, 0, 0,
+     "Kill model",
+     "Model of DNB-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+    {"DNB_KILL_O2_CONC_CELL1_MET2", 0.0, 0, 0,
+     "O2 conc",
+     "DNB-type drug constant O2 concentration in kill experiment"},
+
+    {"DNB_KILL_DRUG_CONC_CELL1_MET2", 0.01, 0, 0,
+     "Drug conc",
+     "DNB-type drug constant drug concentration in kill experiment"},
+
+    {"DNB_KILL_DURATION_CELL1_MET2", 60, 0, 0,
+     "Duration",
+     "DNB-type drug duration of kill experiment"},
+
+    {"DNB_KILL_FRACTION_CELL1_MET2", 0.9, 0, 0,
+     "Kill fraction",
+     "DNB-type drug fraction of cells killed in the experiment"},
+
+//------------------------------------------------------
+// Cell type 2 metabolism and kill experiment parameters
+//------------------------------------------------------
+
+// Parent
+{"DNB_KMET0_CELL2", 1.54, 0, 0,
+ "Kmet0",
+ "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"DNB_C2_CELL2", 1.0, 0, 0,
+ "C2",
+ "DNB-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KO2_CELL2", 1.14, 0, 0,
+ "KO2",
+ "DNB-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_VMAX_CELL2", 0, 0, 0,
+ "Vmax",
+ "DNB-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KM_CELL2", 1, 0, 0,
+ "Km",
+ "DNB-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KLESION_CELL2", 0.001, 0, 0,
+ "Klesion    ",
+ "DNB-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+    // Cell type 2 DNB drug kill experiment parameters
+
+    {"DNB_KILL_MODEL_CELL2", 4, 0, 0,
+     "Kill model",
+     "Model of DNB-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+    {"DNB_KILL_O2_CONC_CELL2", 0.0, 0, 0,
+     "O2 conc",
+     "DNB-type drug constant O2 concentration in kill experiment"},
+
+    {"DNB_KILL_DRUG_CONC_CELL2", 0.01, 0, 0,
+     "Drug conc",
+     "DNB-type drug constant drug concentration in kill experiment"},
+
+    {"DNB_KILL_DURATION_CELL2", 60, 0, 0,
+     "Duration",
+     "DNB-type drug duration of kill experiment"},
+
+    {"DNB_KILL_FRACTION_CELL2", 0.9, 0, 0,
+     "Kill fraction",
+     "DNB-type drug fraction of cells killed in the experiment"},
+
+// Metabolite 1
+{"DNB_KMET0_CELL2_MET1", 0.5, 0, 0,
+ "Kmet0",
+ "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"DNB_C2_CELL2_MET1", 0, 0, 0,
+ "C2",
+ "DNB-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KO2_CELL2_MET1", 1, 0, 0,
+ "KO2",
+ "DNB-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_VMAX_CELL2_MET1", 0, 0, 0,
+ "Vmax",
+ "DNB-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KM_CELL2_MET1", 1, 0, 0,
+ "Km",
+ "DNB-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KLESION_CELL2_MET1", 0.001, 0, 0,
+ "Klesion  ",
+ "DNB-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+    // Cell type 2 DNB metabolite 1 kill experiment parameters
+
+    {"DNB_KILL_MODEL_CELL2_MET1", 4, 0, 0,
+     "Kill model",
+     "Model of DNB-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+    {"DNB_KILL_O2_CONC_CELL2_MET1", 0.0, 0, 0,
+     "O2 conc",
+     "DNB-type drug constant O2 concentration in kill experiment"},
+
+    {"DNB_KILL_DRUG_CONC_CELL2_MET1", 0.01, 0, 0,
+     "Drug conc",
+     "DNB-type drug constant drug concentration in kill experiment"},
+
+    {"DNB_KILL_DURATION_CELL2_MET1", 60, 0, 0,
+     "Duration",
+     "DNB-type drug duration of kill experiment"},
+
+    {"DNB_KILL_FRACTION_CELL2_MET1", 0.9, 0, 0,
+     "Kill fraction",
+     "DNB-type drug fraction of cells killed in the experiment"},
+
+// Metabolite 2
+{"DNB_KMET0_CELL2_MET2", 0.5, 0, 0,
+ "Kmet0",
+ "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
+
+{"DNB_C2_CELL2_MET2", 0, 0, 0,
+ "C2",
+ "DNB-type drug C2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KO2_CELL2_MET2", 1, 0, 0,
+ "KO2",
+ "DNB-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_VMAX_CELL2_MET2", 0, 0, 0,
+ "Vmax",
+ "DNB-type drug Vmax in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KM_CELL2_MET2", 1, 0, 0,
+ "Km",
+ "DNB-type drug Km in function for oxygen-dependence of rate of metabolism"},
+
+{"DNB_KLESION_CELL2_MET2", 0.001, 0, 0,
+ "Klesion  ",
+ "DNB-type drug Klesion is the parameter that converts total metabolite into lesion level"},
+
+    // Cell type 2 DNB metabolite 2 kill experiment parameters
+
+    {"DNB_KILL_MODEL_CELL2_MET2", 4, 0, 0,
+     "Kill model",
+     "Model of DNB-type drug killing: 1 = K x metabolism, 2 = K x Ci x metabolism, 3 = K x metabolism^2"},
+
+    {"DNB_KILL_O2_CONC_CELL2_MET2", 0.0, 0, 0,
+     "O2 conc",
+     "DNB-type drug constant O2 concentration in kill experiment"},
+
+    {"DNB_KILL_DRUG_CONC_CELL2_MET2", 0.01, 0, 0,
+     "Drug conc",
+     "DNB-type drug constant drug concentration in kill experiment"},
+
+    {"DNB_KILL_DURATION_CELL2_MET2", 60, 0, 0,
+     "Duration",
+     "DNB-type drug duration of kill experiment"},
+
+    {"DNB_KILL_FRACTION_CELL2_MET2", 0.9, 0, 0,
+     "Kill fraction",
+     "DNB-type drug fraction of cells killed in the experiment"},
+
+//==========================
+// Radiotherapy parameters
+//==========================
 
 {"RADIATION_ALPHA_H", 0.0473, 0, 0,
 "Alpha (hypoxia)",
@@ -557,6 +934,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 {"RADIATION_KM", 4.3e-3, 0, 0,
 "Km for radiosensitivity",
 "Oxygen concentration for half maximal radiosensitivity relative to hypoxic cell exposure"},
+
 
 {"HYPOXIA_1", 0.1, 0, 0,
 "Hypoxia threshold 1",

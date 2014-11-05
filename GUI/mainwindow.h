@@ -155,10 +155,10 @@ public slots:
 	void textEdited_fraction(QString text);
     void setupConstituents();
 
-    void on_cbox_USE_DRUG_A_toggled(bool checked);
-    void on_cbox_DRUG_A_SIMULATE_METABOLITE_toggled(bool checked);
-    void on_cbox_USE_DRUG_B_toggled(bool checked);
-    void on_cbox_DRUG_B_SIMULATE_METABOLITE_toggled(bool checked);
+    void on_cbox_USE_TPZ_DRUG_toggled(bool checked);
+    void on_cbox_TPZ_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
+    void on_cbox_USE_DNB_DRUG_toggled(bool checked);
+    void on_cbox_DNB_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
     void on_cbox_USE_RADIATION_toggled(bool checked);
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
@@ -193,12 +193,12 @@ private:
     void disableUseGlucose();
     void enableUseTracer();
     void disableUseTracer();
-    void enableUseSN30K();
-    void disableUseSN30K();
-    void enableUseDrugA();
-    void disableUseDrugA();
-    void enableUseDrugB();
-    void disableUseDrugB();
+//    void enableUseSN30K();
+//    void disableUseSN30K();
+//    void enableUseTPZ();
+//    void disableUseTPZ();
+//    void enableUseDNB();
+//    void disableUseDNB();
     void enableUseTreatmentFile();
     void disableUseTreatmentFile();
     void setTreatmentFileUsage();

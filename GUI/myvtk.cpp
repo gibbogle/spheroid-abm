@@ -240,14 +240,14 @@ void MyVTK::createMappers()
 	sphere1->SetThetaResolution(18);
 	sphere1->SetPhiResolution(18);
 	sphere1->SetCenter(0.0,-1.0,0.0);
-	vtkPolyData *sData1 = sphere1->GetOutput();
+    vtkPolyData *sData1 = sphere1->GetOutput();     // sphere at (0,-1,0)
 
 	vtkSphereSource *sphere2 = vtkSphereSource::New();
 	sphere2->SetRadius(rSphere1);
 	sphere2->SetThetaResolution(18);
 	sphere2->SetPhiResolution(18);
 	sphere2->SetCenter(0.0,1.0,0.0);
-	vtkPolyData *sData2 = sphere2->GetOutput();
+    vtkPolyData *sData2 = sphere2->GetOutput();     // sphere at (0,1,0)
 
 	// create cylinder geometry
 	vtkCylinderSource *cylinder = vtkCylinderSource::New();
@@ -255,7 +255,7 @@ void MyVTK::createMappers()
 	cylinder->SetRadius(rCylinder);
 	cylinder->SetHeight(2.0);
 	cylinder->SetResolution(18);
-	vtkPolyData *cData = cylinder->GetOutput();
+    vtkPolyData *cData = cylinder->GetOutput();     // cylinder at (0,0,0)
 
 	// Append the data
 	vtkAppendPolyData* append1 = vtkAppendPolyData::New();
@@ -263,7 +263,7 @@ void MyVTK::createMappers()
 	append1->AddInput(sData1);
 	append1->AddInput(sData2);
 
-	vtkPolyData *dumbell1 = append1->GetOutput();
+    vtkPolyData *dumbell1 = append1->GetOutput();   // dumbell oriented along Y-axis
 
 	vtkTransform *t2 = vtkTransform::New();
 	t2->PostMultiply();
@@ -271,7 +271,7 @@ void MyVTK::createMappers()
 	vtkTransformPolyDataFilter *tf2 = vtkTransformPolyDataFilter::New();
 	tf2->SetTransform(t2);
 	tf2->SetInput(dumbell1);
-	vtkPolyData *dumbell2 = tf2->GetOutput();
+    vtkPolyData *dumbell2 = tf2->GetOutput();       // dumbell oriented along X-axis
 
 	vtkTransform *t3 = vtkTransform::New();
 	t3->PostMultiply();
@@ -279,7 +279,7 @@ void MyVTK::createMappers()
 	vtkTransformPolyDataFilter *tf3 = vtkTransformPolyDataFilter::New();
 	tf3->SetTransform(t3);
 	tf3->SetInput(dumbell1);
-	vtkPolyData *dumbell3 = tf3->GetOutput();
+    vtkPolyData *dumbell3 = tf3->GetOutput();      // dumbell oriented along Z-axis
 
 	vtkAppendPolyData* append2 = vtkAppendPolyData::New();
 	append2->AddInput(sData0);

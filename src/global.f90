@@ -132,7 +132,8 @@ type TPZ_type
 	integer :: nmetabolites
 	real(REAL_KIND) :: diff_coef(0:2)
 	real(REAL_KIND) :: medium_diff_coef(0:2)
-	real(REAL_KIND) :: membrane_diff(0:2)
+	real(REAL_KIND) :: membrane_diff_in(0:2)
+	real(REAL_KIND) :: membrane_diff_out(0:2)
 	real(REAL_KIND) :: halflife(0:2)
 	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:2)
@@ -154,8 +155,21 @@ type DNB_type
 	integer :: nmetabolites
 	real(REAL_KIND) :: diff_coef(0:2)
 	real(REAL_KIND) :: medium_diff_coef(0:2)
-	real(REAL_KIND) :: membrane_diff(0:2)
+	real(REAL_KIND) :: membrane_diff_in(0:2)
+	real(REAL_KIND) :: membrane_diff_out(0:2)
 	real(REAL_KIND) :: halflife(0:2)
+	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: KO2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Vmax(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Km(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Klesion(MAX_CELLTYPES,0:2)
+	integer         :: kill_model(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Kd(MAX_CELLTYPES,0:2)
 end type
 
 type boundary_type

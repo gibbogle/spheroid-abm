@@ -163,23 +163,18 @@ end function
 subroutine CellDeath(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
-integer :: kcell, ict, nlist0, site(3), i, kpar=0 
+integer :: kcell, ict, nlist0, site(3), i, im, kpar=0 
 real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, pdeath, tnow
-logical :: use_TPZ_DRUG
+logical :: use_TPZ_DRUG, use_DNB_DRUG
 
 !call logger('CellDeath')
 ok = .true.
-!if (chemo(DRUG_A)%used .and. DRUG_A == SN30000) then
-if (chemo(TPZ_DRUG)%used) then
-    use_TPZ_DRUG = .true.
-else
-    use_TPZ_DRUG = .false.
-endif
+use_TPZ_DRUG = chemo(TPZ_DRUG)%used
+use_DNB_DRUG = chemo(DNB_DRUG)%used
 tnow = istep*DELTA_T	! seconds
 nlist0 = nlist
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
-!	C_O2 = cell_list(kcell)%conc(OXYGEN)
 	call getO2conc(kcell,C_O2)
 	if (cell_list(kcell)%anoxia_tag) then
 !		write(logmsg,*) 'anoxia_tag: ',kcell,cell_list(kcell)%state,tnow,cell_list(kcell)%t_anoxia_die
@@ -210,12 +205,10 @@ do kcell = 1,nlist
 		ict = cell_list(kcell)%celltype
 		Kd = TPZ%Kd(ict)
 	    kmet = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + C_O2))*TPZ%Kmet0(ict,0)
-!	    dMdt = kmet*cell_list(kcell)%conc(DRUG_A)
 	    dMdt = kmet*cell_list(kcell)%conc(TPZ_DRUG)
 	    if (TPZ%kill_model(ict) == 1) then
 		    pdeath = Kd*dMdt*dt
 	    elseif (TPZ%kill_model(ict) == 2) then
-!		    pdeath = Kd*dMdt*cell_list(kcell)%conc(DRUG_A)*dt
 		    pdeath = Kd*dMdt*cell_list(kcell)%conc(TPZ_DRUG)*dt
 	    elseif (TPZ%kill_model(ict) == 3) then
 		    pdeath = Kd*dMdt**2*dt
@@ -228,7 +221,31 @@ do kcell = 1,nlist
 	    if (par_uni(kpar) < pdeath) then
             cell_list(kcell)%drug_tag = .true.
             Ndrug_tag = Ndrug_tag + 1
-            write(nflog,'(a,2i6,2f8.4)') 'tagged: ',kcell,ict,cell_list(kcell)%conc(TPZ_DRUG),dMdt
+            write(nflog,'(a,2i6)') 'TPZ tagged: ',kcell,ict
+		endif
+	endif
+	if (use_DNB_DRUG .and. .not.cell_list(kcell)%drug_tag) then
+		ict = cell_list(kcell)%celltype
+!	    kmet = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + C_O2))*TPZ%Kmet0(ict,0)
+!	    dMdt = kmet*cell_list(kcell)%conc(TPZ_DRUG)
+	    if (DNB%kill_model(ict,1) < 4 .or. DNB%kill_model(ict,2) < 4) then
+			write(logmsg,*) 'Error: CellDeath: DNB kill model must be 4 or 5, not: ',DNB%kill_model(ict,1),DNB%kill_model(ict,2)
+			call logger(logmsg)
+			ok = .false.
+			return
+		endif
+		pdeath = 0
+		do im = 1,2
+			if (DNB%kill_model(ict,im) == 4) then
+				pdeath = pdeath + DNB%Kd(ict,im)*cell_list(kcell)%conc(DNB_DRUG + im)*dt
+			elseif (DNB%kill_model(ict,im) == 5) then
+				pdeath = pdeath + DNB%Kd(ict,im)*(cell_list(kcell)%conc(DNB_DRUG + im)**2)*dt
+			endif
+		enddo
+	    if (par_uni(kpar) < pdeath) then
+            cell_list(kcell)%drug_tag = .true.
+            Ndrug_tag = Ndrug_tag + 1
+            write(nflog,'(a,2i6)') 'DNB tagged: ',kcell,ict
 		endif
 	endif
 enddo
