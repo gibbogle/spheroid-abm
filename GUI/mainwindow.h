@@ -156,9 +156,9 @@ public slots:
     void setupConstituents();
 
     void on_cbox_USE_TPZ_DRUG_toggled(bool checked);
-    void on_cbox_TPZ_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
+//    void on_cbox_TPZ_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
     void on_cbox_USE_DNB_DRUG_toggled(bool checked);
-    void on_cbox_DNB_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
+//    void on_cbox_DNB_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
     void on_cbox_USE_RADIATION_toggled(bool checked);
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);

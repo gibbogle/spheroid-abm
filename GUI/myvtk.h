@@ -82,11 +82,11 @@ public:
 
     void key_canvas(QWidget *);
     void createMappers();
-    void get_cell_positions(bool fast);
+    void get_cell_positions();
 	void init();
 	void cleanup();
 	void unpack(int x, double *, double *, double *);
-	void renderCells(bool,bool);
+    void renderCells();
     void process_Tcells();
 //    void process_Dcells();
 //    void process_bonds();
