@@ -302,7 +302,7 @@ void MyVTK::createMappers()
 // The info is transmitted in the integer arrays cell_list[] and DC_list[]
 // The info is transferred here into TCpos_list and DCpos_list, which are Qlists.
 //-----------------------------------------------------------------------------------------
-void MyVTK::get_cell_positions(bool fast)
+void MyVTK::get_cell_positions()
 {
 //    LOG_QMSG("get_cell_positions");
     TCpos_list.clear();
@@ -353,7 +353,7 @@ void MyVTK::cleanup()
 
 //---------------------------------------------------------------------------------------------
 //---------------------------------------------------------------------------------------------
-void MyVTK::renderCells(bool redo, bool zzz)
+void MyVTK::renderCells()
 {
     process_Tcells();
 	if (first_VTK) {
@@ -378,7 +378,7 @@ void MyVTK::renderCells(bool redo, bool zzz)
 //---------------------------------------------------------------------------------------------
 void MyVTK::unpack(int x, double *rr, double *gg, double *bb)
 {
-	int z, r, g, b;
+    int z, r=0, g=0, b=0;
 
     if (USE_CELLTYPE_COLOUR) {
 
@@ -417,7 +417,7 @@ void MyVTK::setOpacity(int position)
     LOG_MSG(msg);
     if (paused) {
         LOG_QMSG("renderCells");
-        renderCells(true,true);
+        renderCells();
     }
 }
 
@@ -616,11 +616,11 @@ bool MyVTK::nextFrame()
 		}
 	} while (true);
 
-	bool redo = false;
-	if (first_VTK) {
-		redo = true;
-	}
-    renderCells(redo,false);
+//	bool redo = false;
+//	if (first_VTK) {
+//		redo = true;
+//	}
+    renderCells();
 	char numstr[5];
 	sprintf(numstr,"%04d",framenum);
 	if (save_image) {
