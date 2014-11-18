@@ -43,7 +43,7 @@ end function
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-integer function CountOutside result(nout)
+integer function CountOutside() result(nout)
 integer :: kcell
 
 nout = 0

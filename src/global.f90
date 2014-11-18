@@ -635,7 +635,7 @@ if (R2 < Q3) then
 	r(3) = -2*sqrt(QQ)*cos((theta-2*PI)/3) - a/3
 else
 	n = 1
-	AA = -sign(1.,RR)*(abs(RR) + sqrt(R2 - Q3))**(1.d0/3.d0)
+	AA = -sign(1.d0,RR)*(abs(RR) + sqrt(R2 - Q3))**(1.d0/3.d0)
 	if (AA == 0) then
 		BB = 0
 	else
