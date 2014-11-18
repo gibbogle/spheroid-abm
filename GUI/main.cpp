@@ -11,6 +11,7 @@
 
 LOG_DECLARE;
 
+/*
 BOOL CtrlHandler( DWORD fdwCtrlType )
 {
   char msg[1024];
@@ -55,6 +56,8 @@ BOOL CtrlHandler( DWORD fdwCtrlType )
       return FALSE;
   }
 }
+*/
+
 int main(int argc, char *argv[])
 {
     int res;
@@ -62,18 +65,17 @@ int main(int argc, char *argv[])
     //initialize file logger
     LOG_INIT("spheroid_GUI.log");
 
+    /*
     if( SetConsoleCtrlHandler( (PHANDLER_ROUTINE) CtrlHandler, TRUE ) )
     {
         sprintf(msg, "\nThe Control Handler is installed.\n" );
         LOG_MSG(msg);
-      /*
-      printf( "\nThe Control Handler is installed.\n" );
-      printf( "\n -- Now try pressing Ctrl+C or Ctrl+Break, or" );
-      printf( "\n    try logging off or closing the console...\n" );
-      printf( "\n(...waiting in a loop for events...)\n\n" );
+//      printf( "\nThe Control Handler is installed.\n" );
+//      printf( "\n -- Now try pressing Ctrl+C or Ctrl+Break, or" );
+//      printf( "\n    try logging off or closing the console...\n" );
+//      printf( "\n(...waiting in a loop for events...)\n\n" );
 
-      while( 1 ){ }
-      */
+//      while( 1 ){ }
     }
     else
     {
@@ -81,6 +83,7 @@ int main(int argc, char *argv[])
       LOG_MSG(msg);
       return 1;
     }
+    */
 
     QApplication app(argc, argv);
 

@@ -438,7 +438,7 @@ real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean, c_rate
 real(REAL_KIND) :: Vin_0, Vex_0, dV
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
-logical :: C_option = 1
+integer :: C_option = 1
 
 !call logger('CellGrowth')
 ok = .true.
@@ -528,7 +528,7 @@ integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichem
 integer :: npath, path(3,200)
 real(REAL_KIND) :: tnow, R, v, vmax, V0, Cex(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_CHEMO), alpha(MAX_CHEMO)
 real(REAL_KIND) :: cfse0, cfse1
-logical :: freesite(27,3)
+integer :: freesite(27,3)
 type (boundary_type), pointer :: bdry
 
 if (dbug) then
@@ -570,7 +570,7 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 		endif
 	enddo
 	if (nfree > 0) then
-		if (DIVIDE_USE_CLEAR_SITE) then	! use this site for the progeny cell
+		if (divide_option == DIVIDE_USE_CLEAR_SITE) then	! use this site for the progeny cell
 			site01 = bestsite
 		else	! random choice
 			j = random_int(1,nfree,0)

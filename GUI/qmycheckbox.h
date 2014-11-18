@@ -1,7 +1,7 @@
 #ifndef QMYCHECKBOX_H
 #define QMYCHECKBOX_H
 
-#include <qcheckbox>
+#include <qcheckbox.h>
 #include <QMouseEvent>
 #include "log.h"
 LOG_USE();

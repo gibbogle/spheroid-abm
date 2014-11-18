@@ -36,6 +36,7 @@
 #include "windows.h"
 #define sleep(n) Sleep(n)   // milliseconds
 #else
+#include "unistd.h"
 #define sleep(n) usleep(1000*n)
 #endif
 

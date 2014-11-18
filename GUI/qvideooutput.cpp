@@ -21,7 +21,7 @@ LOG_USE();
 ///////////////////////////////////////////////////////////////////////////////
 #undef av_err2str
 #define av_err2str(errnum) \
-        av_make_error_string(reinterpret_cast<char*>(_alloca(AV_ERROR_MAX_STRING_SIZE)),\
+        av_make_error_string(reinterpret_cast<char*>(alloca(AV_ERROR_MAX_STRING_SIZE)),\
                              AV_ERROR_MAX_STRING_SIZE, errnum)
 ////////////////////////////////////////////////////////////////////////////////
 //  QVideoOutput::QVideoOutput
@@ -379,7 +379,7 @@ bool QVideoOutput::openMediaFile(int imwidth, int imheight, const QString & file
        ret = avio_open(&formatContext->pb, filename.toAscii().data(), AVIO_FLAG_WRITE);
        if (ret < 0)
        {
-           fprintf(stderr, "Could not open '%s': %s\n", filename, av_err2str(ret));
+           fprintf(stderr, "Could not open '%s': %s\n", filename.toAscii().data(), av_err2str(ret));
            return false;
        }
        LOG_QMSG("Opened output file");
