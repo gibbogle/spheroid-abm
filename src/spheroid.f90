@@ -371,7 +371,7 @@ end subroutine
 subroutine ReadCellParams(ok)
 logical :: ok
 integer :: i, idrug, imetab, nmetab, im, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
-integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, iV_depend, iV_random
+integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_radiation, iuse_drug, iuse_metab, iV_depend, iV_random
 !integer ::  idrug_decay, imetab_decay
 integer :: ictype, idisplay, isconstant
 integer :: iuse_drop, iconstant, isaveprofiledata
@@ -580,10 +580,9 @@ read(nfcell,*) spcrad_value
 read(nfcell,*) iuse_extra
 read(nfcell,*) iuse_relax
 read(nfcell,*) iuse_par_relax
+read(nfcell,*) iuse_radiation
 read(nfcell,*) itreatment
-write(*,*) itreatment
 read(nfcell,*) treatmentfile						! file with treatment programme
-write(*,*) treatmentfile
 read(nfcell,*) iuse_drop
 read(nfcell,*) Ndrop
 read(nfcell,*) alpha_shape
