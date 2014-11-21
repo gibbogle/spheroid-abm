@@ -980,7 +980,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Use treatment file?",
 "Treatment programme is specified in the treatment file"},
 
-{"TREATMENT_FILE", 0, 0, 0,
+{"TREATMENT_FILE_NAME", 0, 0, 0,
 "treatment.data",
 "The treatment file contains data describing the drug and radiation dosing schedule"},
 
@@ -1004,7 +1004,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
      "Save profile data",
      "Save data for profile plots as a specified interval"},
 
-    {"SAVE_PROFILE_DATA_FILE",0,0,0,
+    {"SAVE_PROFILE_DATA_FILE_NAME",0,0,0,
      "profile_data",
      "Base file name for saving profile data"},
 
