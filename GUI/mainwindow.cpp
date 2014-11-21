@@ -107,9 +107,10 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_QMSG("did initFACSPlot");
     initHistoPlot();
     LOG_QMSG("did initHistoPlot");
+    initDrugComboBoxes();
     loadParams();
     LOG_QMSG("Did loadparams");
-	writeout();
+    writeout();
 
     timer = new QTimer(this);
     vtk = new MyVTK(mdiArea_VTK, widget_key);
@@ -135,7 +136,6 @@ MainWindow::MainWindow(QWidget *parent)
     videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
     videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
 
-    initDrugComboBoxes();
     goToInputs();
 }
 
@@ -786,7 +786,7 @@ void MainWindow::loadParams()
                     // Update the widget (line_, spin_ or comb_) with data from the parameter list
                     // ---LineEdits
 					if (qsname.startsWith("line_")) {
-                       double val = p.value;
+                        double val = p.value;
 						QString val_str = QString::number(val);
 						QLineEdit *w_l = (QLineEdit *)w;
                         w_l->setText(val_str);
@@ -1192,26 +1192,25 @@ void MainWindow::writeout()
 	for (int k=0; k<parm->nParams; k++) {
         PARAM_SET p = parm->get_param(k);
 		double val = p.value;
-        if (p.tag.compare("TREATMENT_FILE") == 0)
-			line = p.label;
-        else if (p.tag.compare("TPZ_DRUG_NAME") == 0)
+        bool is_text = false;
+        if (p.tag.contains("_NAME")) {
+            is_text = true;
             line = p.label;
-        else if (p.tag.compare("DNB_DRUG_NAME") == 0)
-            line = p.label;
-        else if (p.tag.compare("SAVE_PROFILE_DATA_FILE") == 0)
-            line = p.label;
-        else if (val == int(val)) 	// whole number, write as integer
+        } else if (val == int(val)) 	// whole number, write as integer
 			line = QString::number(int(val));
 		else
 			line = QString::number(val);
 		int nch = line.length();
 		for (int i=0; i<max(12-nch,1); i++)
 			line += " ";
-		line += p.tag;
+        line += p.tag;
         nch = line.length();
         for (int i=0; i<max(50-nch,1); i++)
             line += " ";
-        line += p.label;
+        if (is_text)
+            line += p.text;
+        else
+            line += p.label;
         line += "\n";
 		out << line;
 	}
@@ -1221,6 +1220,7 @@ void MainWindow::writeout()
 }
 
 //--------------------------------------------------------------------------------------------------------
+// Note: To be treated as text, a parameter tag must contain "_NAME"
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::readInputFile()
 {
@@ -1244,11 +1244,9 @@ void MainWindow::readInputFile()
 		QStringList data = line.split(" ",QString::SkipEmptyParts);
 		PARAM_SET p = parm->get_param(k);
 		QString ptag = p.tag;
-		if (ptag.compare("INPUT_FILE") == 0) {
-			parm->set_label(k,data[0]);
-		} else if (ptag.compare("DC_INJECTION_FILE") == 0) {
-				parm->set_label(k,data[0]);
-		} else {
+        if (ptag.contains("_NAME")) {
+            parm->set_label(k,data[0]);
+        } else {
 			parm->set_value(k,data[0].toDouble());
 		}
 	}
@@ -2377,8 +2375,8 @@ void MainWindow::changeParam()
     QObject *w = sender(); // Gets the pointer to the object that invoked the changeParam slot.
 	if (w->isWidgetType()) {
 		QString wname = w->objectName();
-//		LOG_QMSG("changeParam:");
-//		LOG_QMSG(wname);
+        LOG_QMSG("changeParam:");
+        LOG_QMSG(wname);
 		if (wname.contains("line_")) {
 			QString wtag = wname.mid(5);
 			QLineEdit *lineEdit = (QLineEdit *)w;
@@ -2668,7 +2666,7 @@ void MainWindow::disableUseTreatmentFile()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow:: on_cbox_SAVE_PROFILE_DATA_toggled(bool checked)
 {
-    text_SAVE_PROFILE_DATA_FILE->setEnabled(checked);
+    text_SAVE_PROFILE_DATA_FILE_NAME->setEnabled(checked);
     line_SAVE_PROFILE_DATA_INTERVAL->setEnabled(checked);
     line_SAVE_PROFILE_DATA_NUMBER->setEnabled(checked);
 }

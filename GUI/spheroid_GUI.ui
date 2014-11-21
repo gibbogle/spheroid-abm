@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>3</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -2961,7 +2961,7 @@ padding: 8px
              <string>Used</string>
             </property>
            </widget>
-           <widget class="QLineEdit" name="text_TREATMENT_FILE">
+           <widget class="QLineEdit" name="text_TREATMENT_FILE_NAME">
             <property name="enabled">
              <bool>false</bool>
             </property>
@@ -4949,7 +4949,7 @@ padding: 8px
              <string>Save profile data?</string>
             </property>
            </widget>
-           <widget class="QLineEdit" name="text_SAVE_PROFILE_DATA_FILE">
+           <widget class="QLineEdit" name="text_SAVE_PROFILE_DATA_FILE_NAME">
             <property name="enabled">
              <bool>false</bool>
             </property>
