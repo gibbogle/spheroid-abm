@@ -78,7 +78,7 @@ GRAPH_SET tsGraphSet[] = {
     "Necrotic Fraction",
     "%",
      "Percentage of the spheroid that is necrotic = (number of vacant sites)/(number of sites taken up by the spheroid)",
-    12, false, 0, 0.1, true}
+    12, true, 0, 0.1, true}
 
 };
 
