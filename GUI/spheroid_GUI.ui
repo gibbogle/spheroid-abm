@@ -7498,7 +7498,7 @@ padding: 8px
   <customwidget>
    <class>QMyCheckBox</class>
    <extends>QCheckBox</extends>
-   <header>qmycheckbox.h</header>
+   <header location="global">qmycheckbox.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

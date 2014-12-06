@@ -379,6 +379,7 @@ logical :: use_metabolites
 real(REAL_KIND) :: days, bdry_conc, percent
 real(REAL_KIND) :: sigma, DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
+character*(1) :: numstr
 
 ok = .true.
 chemo(:)%used = .false.
@@ -456,7 +457,7 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 	read(nfcell,*) bdry_conc
 	read(nfcell,*) iconstant
 	read(nfcell,*) iuse_metab
-	call getIndices(i, drug_name, idrug, nmetab)
+	call getIndices(i, idrug, nmetab)
 	if (idrug < 0 .and. iuse_drug /= 0) then
 		write(logmsg,*) 'Unrecognized drug name: ',drug_name
 		call logger(logmsg)
@@ -470,17 +471,16 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 	chemo(idrug)%constant = (iconstant == 1)
 !	chemo(idrug)%decay = (idrug_decay == 1)
 	if (chemo(idrug)%used) then
-!		chemo(imetab)%used = (iuse_metab == 1)
 		use_metabolites = (iuse_metab == 1)
-		write(nflog,*) 'drug: ',idrug,'  name: ',chemo(idrug)%name
+		write(nflog,*) 'drug: ',idrug,'  name: ',chemo(idrug)%name,' use_metabolites: ',use_metabolites
 	else
-!		chemo(imetab)%used = .false.
 		use_metabolites = .false.
 	endif
 !	chemo(imetab)%decay = (imetab_decay == 1)
 	if (idrug == TPZ_DRUG) then
 		TPZ%name = drug_name
 		TPZ%nmetabolites = nmetab
+		TPZ%use_metabolites = use_metabolites
 		do im = 0,nmetab
 			read(nfcell,*) TPZ%diff_coef(im)
 			read(nfcell,*) TPZ%medium_diff_coef(im)
@@ -488,11 +488,15 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 			read(nfcell,*) TPZ%membrane_diff_out(im)
 			read(nfcell,*) TPZ%halflife(im)
 			ichemo = idrug + im
+			if (im > 0) then
+				write(numstr,'(i1)') im
+				chemo(ichemo)%name = 'TPZ_metab_'//numstr
+			endif
 			chemo(ichemo)%diff_coef = TPZ%diff_coef(im)
 			chemo(ichemo)%medium_diff_coef = TPZ%medium_diff_coef(im)
 			chemo(ichemo)%membrane_diff_in = TPZ%membrane_diff_in(im)
 			chemo(ichemo)%membrane_diff_out = TPZ%membrane_diff_out(im)
-			chemo(ichemo)%halflife = TPZ%halflife(im)		
+			chemo(ichemo)%halflife = TPZ%halflife(im)
 		enddo
 		do ictype = 1,Ncelltypes
 			do im = 0,nmetab
@@ -518,6 +522,7 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 	elseif (idrug == DNB_DRUG) then
 		DNB%name = drug_name
 		DNB%nmetabolites = nmetab
+		DNB%use_metabolites = use_metabolites
 		do im = 0,nmetab
 			read(nfcell,*) DNB%diff_coef(im)
 			read(nfcell,*) DNB%medium_diff_coef(im)
@@ -525,11 +530,15 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 			read(nfcell,*) DNB%membrane_diff_out(im)
 			read(nfcell,*) DNB%halflife(im)
 			ichemo = idrug + im
+			if (im > 0) then
+				write(numstr,'(i1)') im
+				chemo(ichemo)%name = 'DNB_metab_'//numstr
+			endif
 			chemo(ichemo)%diff_coef = DNB%diff_coef(im)
 			chemo(ichemo)%medium_diff_coef = DNB%medium_diff_coef(im)
 			chemo(ichemo)%membrane_diff_in = DNB%membrane_diff_in(im)
 			chemo(ichemo)%membrane_diff_out = DNB%membrane_diff_out(im)
-			chemo(ichemo)%halflife = DNB%halflife(im)		
+			chemo(ichemo)%halflife = DNB%halflife(im)	
 		enddo
 		do ictype = 1,Ncelltypes
 			do im = 0,nmetab
@@ -565,6 +574,7 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 !		endif
 	enddo
 enddo
+
 read(nfcell,*) LQ%alpha_H
 read(nfcell,*) LQ%beta_H
 read(nfcell,*) LQ%OER_am
@@ -624,6 +634,7 @@ write(logmsg,'(a,2e12.4)') 'shape, sigma: ',divide_time_shape,sigma
 call logger(logmsg)
 write(logmsg,'(a,2e12.4)') 'Median, mean divide time: ',divide_time_median/3600,divide_time_mean/3600
 call logger(logmsg)
+
 use_V_dependence = (iV_depend == 1)
 randomise_initial_volume = (iV_random == 1)
 use_extracellular_O2 = (iuse_extra == 1)
@@ -674,14 +685,6 @@ endif
 
 use_dropper = (iuse_drop == 1)
 
-!if (use_metabolites) then
-!	do ichemo = DRUG_A,MAX_CHEMO
-!		if (chemo(ichemo)%used .and. imetabolite(ichemo) == 1) then
-!			chemo(ichemo+1)%used = .true.	! the metabolite is also simulated
-!		endif
-!	enddo
-!endif
-
 ! Setup test_case
 test_case = .false.
 if (itestcase /= 0) then
@@ -704,16 +707,9 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine getIndices(indx, drug_name, idrug, nmetab)
-character*(12) :: drug_name
+subroutine getIndices(indx, idrug, nmetab)
 integer :: indx, idrug, nmetab
 
-!if (drug_name == 'SN30000') then
-!	idrug = SN30000
-!	nmetab = 1
-!else if (drug_name == 'PR104A') then
-!	idrug = PR104A
-!	nmetab = 1
 if (indx == 1) then
 	idrug = TPZ_DRUG
 	nmetab = 2
@@ -740,7 +736,7 @@ subroutine ReadTreatment(ok)
 logical :: ok
 character*(64) :: line
 character*(12) :: drug_name
-integer :: ichemo, idrug, nmax, i, nmetab
+integer :: ichemo, idrug, nmax, i, im
 real(REAL_KIND) :: tstart,tend,conc,dose
 logical :: use_it(0:2)
 allocate(protocol(0:2))
@@ -846,6 +842,16 @@ do
 		read(nftreatment,*) protocol(idrug)%n
 		if (protocol(idrug)%n > 0) then
 			chemo(ichemo)%used = .true.
+			if (ichemo == TPZ_DRUG .and. TPZ%use_metabolites) then
+				do im = 1,TPZ%nmetabolites
+					chemo(ichemo+im)%used = .true.
+				enddo
+			endif
+			if (ichemo == DNB_DRUG .and. DNB%use_metabolites) then
+				do im = 1,DNB%nmetabolites
+					chemo(ichemo+im)%used = .true.
+				enddo
+			endif
 			chemo(ichemo)%bdry_conc = 0
 			do i = 1,protocol(idrug)%n
 				read(nftreatment,*) tstart
@@ -2177,6 +2183,7 @@ filename = trim(filename)//'min.dat'
 open(nfprofile,file=filename,status='replace')
 write(nfprofile,'(i6,a)') int(istep*DELTA_T/60),' minutes'
 write(nfprofile,'(i6,a)') ns,' sites'
+write(nfprofile,'(f6.2,a)') 1000*DELTA_X,' dx (um)'
 write(nfprofile,'(32a16)') title(1:nc)
 do k = 1,ns
 	write(nfprofile,'(32(e12.3,4x))') ex_conc(1:nc,k)

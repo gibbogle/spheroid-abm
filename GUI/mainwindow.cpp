@@ -3074,9 +3074,8 @@ void MainWindow::setupGraphSelector()
     connect((QObject *)checkBox_vol, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
 
     checkBox_oxy = new QMyCheckBox();
-    checkBox_oxy->setChecked(field->isOxyPlot());
-    checkBox_oxy = new QMyCheckBox();
     checkBox_oxy->setText("Cell Oxygen Distribution");
+    checkBox_oxy->setChecked(field->isOxyPlot());
     checkBox_oxy->setObjectName("checkBox_oxy");
     checkBox_oxy->description = "Probability distribution (histogram) of cell oxygen concentration";
     vbox->addWidget(checkBox_oxy);

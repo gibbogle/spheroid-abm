@@ -130,6 +130,7 @@ end type
 type TPZ_type
 	character*(16) :: name
 	integer :: nmetabolites
+	logical :: use_metabolites
 	real(REAL_KIND) :: diff_coef(0:2)
 	real(REAL_KIND) :: medium_diff_coef(0:2)
 	real(REAL_KIND) :: membrane_diff_in(0:2)
@@ -153,6 +154,7 @@ end type
 type DNB_type
 	character*(16) :: name
 	integer :: nmetabolites
+	logical :: use_metabolites
 	real(REAL_KIND) :: diff_coef(0:2)
 	real(REAL_KIND) :: medium_diff_coef(0:2)
 	real(REAL_KIND) :: membrane_diff_in(0:2)

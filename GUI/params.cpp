@@ -547,7 +547,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "DNB-type drug is simulated"},
 
 {"DNB_DRUG_NAME", 0, 0, 0,
-"PR-104A",
+"PR104A",
 "Name of DNB-type drug"},
 
 {"DNB_DRUG_BDRY_CONC", 0.0, 0, 0,
@@ -562,39 +562,39 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Simulate metabolites",
  "Simulate drug metabolites"},
 
-{"DNB_DIFF_COEF", 6.0e-7, 0, 0,
+{"DNB_DIFF_COEF", 4.42e-7, 0, 0,
  "Spheroid diffusion coeff",
  "DNB-type drug diffusion coefficient in the spheroid"},
 
-{"DNB_MEDIUM_DIFF", 6.0e-6, 0, 0,
+{"DNB_MEDIUM_DIFF", 5.0e-6, 0, 0,
  "Medium diffusion coeff",
  "DNB-type drug diffusion coefficient in the medium"},
 
-{"DNB_CELL_DIFF_IN", 5, 0, 0,
+{"DNB_CELL_DIFF_IN", 2, 0, 0,
  "Membrane diff (in)",
  "DNB-type drug cell membrane inwards permeability constant Kd"},
 
-{"DNB_CELL_DIFF_OUT", 5, 0, 0,
+{"DNB_CELL_DIFF_OUT", 2, 0, 0,
  "Membrane diff (out)",
  "DNB-type drug cell membrane outwards permeability constant Kd"},
 
-{"DNB_HALFLIFE", 2.0, 0, 0,
+{"DNB_HALFLIFE", 10.0, 0, 0,
  "Half-life",
  "DNB-type drug half-life (hours)"},
 
-{"DNB_DIFF_COEF_MET1", 6.0e-7, 0, 0,
+{"DNB_DIFF_COEF_MET1", 6.24e-7, 0, 0,
  "Spheroid diffusion coeff",
  "DNB-type drug metabolite #1 diffusion coefficient in the spheroid"},
 
-{"DNB_MEDIUM_DIFF_MET1", 6.0e-6, 0, 0,
+{"DNB_MEDIUM_DIFF_MET1", 5.0e-6, 0, 0,
  "Medium diffusion coeff",
  "DNB-type drug metabolite #1 diffusion coefficient in the medium"},
 
-{"DNB_CELL_DIFF_IN_MET1", 5, 0, 0,
+{"DNB_CELL_DIFF_IN_MET1", 1, 0, 0,
  "Membrane diff (in)",
  "DNB-type drug metabolite #1 cell membrane inwards permeability constant Kd"},
 
-{"DNB_CELL_DIFF_OUT_MET1", 5, 0, 0,
+{"DNB_CELL_DIFF_OUT_MET1", 1, 0, 0,
  "Membrane diff (out)",
  "DNB-type drug metabolite #1 cell membrane outwards permeability constant Kd"},
 
@@ -602,23 +602,23 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Half-life",
  "DNB-type drug metabolite #1 half-life (hours)"},
 
-{"DNB_DIFF_COEF_MET2", 6.0e-7, 0, 0,
+{"DNB_DIFF_COEF_MET2", 4.29e-7, 0, 0,
  "Spheroid diffusion coeff",
  "DNB-type drug metabolite #2 diffusion coefficient in the spheroid"},
 
-{"DNB_MEDIUM_DIFF_MET2", 6.0e-6, 0, 0,
+{"DNB_MEDIUM_DIFF_MET2", 5.0e-6, 0, 0,
  "Medium diffusion coeff",
  "DNB-type drug metabolite #2 diffusion coefficient in the medium"},
 
-{"DNB_CELL_DIFF_IN_MET2", 5, 0, 0,
+{"DNB_CELL_DIFF_IN_MET2", 1, 0, 0,
  "Membrane diff (in)",
  "DNB-type drug metabolite #2 cell membrane inwards permeability constant Kd"},
 
-{"DNB_CELL_DIFF_OUT_MET2", 5, 0, 0,
+{"DNB_CELL_DIFF_OUT_MET2", 1, 0, 0,
  "Membrane diff (out)",
  "DNB-type drug metabolite #2 cell membrane outwards permeability constant Kd"},
 
-{"DNB_HALFLIFE_MET2", 2.0, 0, 0,
+{"DNB_HALFLIFE_MET2", 0.1, 0, 0,
  "Half-life",
  "DNB-type drug metabolite #2 half-life (hours)"},
 
@@ -627,7 +627,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 //------------------------------------------------------
 
 // Parent
-{"DNB_KMET0_CELL1", 1.54, 0, 0,
+{"DNB_KMET0_CELL1", 0.95, 0, 0,
  "Kmet0",
  "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
 
@@ -635,7 +635,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "C2",
  "DNB-type drug C2 in function for oxygen-dependence of rate of metabolism"},
 
-{"DNB_KO2_CELL1", 1.14, 0, 0,
+{"DNB_KO2_CELL1", 0.126, 0, 0,
  "KO2",
  "DNB-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
 
@@ -674,7 +674,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
      "DNB-type drug fraction of cells killed in the experiment"},
 
 // Metabolite 1
-{"DNB_KMET0_CELL1_MET1", 0.5, 0, 0,
+{"DNB_KMET0_CELL1_MET1", 0.313, 0, 0,
  "Kmet0",
  "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
 
@@ -721,7 +721,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
      "DNB-type drug fraction of cells killed in the experiment"},
 
 // Metabolite 2
-{"DNB_KMET0_CELL1_MET2", 0.5, 0, 0,
+{"DNB_KMET0_CELL1_MET2", 0.72, 0, 0,
  "Kmet0",
  "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
 
@@ -771,7 +771,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 //------------------------------------------------------
 
 // Parent
-{"DNB_KMET0_CELL2", 1.54, 0, 0,
+{"DNB_KMET0_CELL2", 0.95, 0, 0,
  "Kmet0",
  "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
 
@@ -779,7 +779,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "C2",
  "DNB-type drug C2 in function for oxygen-dependence of rate of metabolism"},
 
-{"DNB_KO2_CELL2", 1.14, 0, 0,
+{"DNB_KO2_CELL2", 0.126, 0, 0,
  "KO2",
  "DNB-type drug KO2 in function for oxygen-dependence of rate of metabolism"},
 
@@ -818,7 +818,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
      "DNB-type drug fraction of cells killed in the experiment"},
 
 // Metabolite 1
-{"DNB_KMET0_CELL2_MET1", 0.5, 0, 0,
+{"DNB_KMET0_CELL2_MET1", 0.313, 0, 0,
  "Kmet0",
  "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
 
@@ -865,7 +865,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
      "DNB-type drug fraction of cells killed in the experiment"},
 
 // Metabolite 2
-{"DNB_KMET0_CELL2_MET2", 0.5, 0, 0,
+{"DNB_KMET0_CELL2_MET2", 0.72, 0, 0,
  "Kmet0",
  "DNB-type drug max value of 1st order rate constant for metabolism under zero oxygen"},
 
