@@ -41,7 +41,7 @@ Field::Field(QWidget *aParent) : QWidget(aParent)
 //    const_name[GROWTH_RATE] = "Growth rate";
     constituent = OXYGEN;
     slice_changed = true;
-    setConcPlot(true);
+    setConcPlot(false);
     setVolPlot(true);
     setOxyPlot(true);
     pGconc = NULL;

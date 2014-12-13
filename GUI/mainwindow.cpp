@@ -39,10 +39,15 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_MSG("did setupUi");
     showMaximized();
 
-    // Some initializations
-    Global::data1 = 123;
-    Global::data2 = 456;
+    QString currPath = QDir::currentPath();
+    LOG_QMSG("starting path: " + currPath);
+    QString newPath = currPath + "/execution";
+    LOG_QMSG("newPath: " + newPath);
+    QDir::setCurrent(newPath);
+    currPath = QDir::currentPath();
+    LOG_QMSG("current path: " + currPath);
 
+    // Some initializations
     nDistPts = 200;
 	nTicks = 1000;
 	tickVTK = 100;	// timer tick for VTK in milliseconds
@@ -548,6 +553,7 @@ void MainWindow:: showHisto()
     QString xlabel;
     double width;
 
+    LOG_MSG("showHisto");
     numValues = Global::nhisto_boxes;
     QwtArray<double> values(numValues);
 
@@ -572,6 +578,7 @@ void MainWindow:: showHisto()
     }
     width = Global::histo_vmax[ivar]/numValues;
     makeHistoPlot(numValues,width,values);
+    LOG_MSG("did makeHistoPlot");
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1257,6 +1264,7 @@ void MainWindow::readInputFile()
 }
 
 //--------------------------------------------------------------------------------------------------------
+// NOT MAINTAINED
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::loadResultFile()
 {
@@ -1369,12 +1377,17 @@ bool MainWindow::save()
 bool MainWindow::saveAs()
 {
     // show the file dialog
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Select Input File"), ".", tr("Input Files (*.inp)"));    
+    const QString fileName = QFileDialog::getSaveFileName(this, tr("Select Input File"), ".", tr("Input Files (*.inp)"));
 	if (fileName.compare("") != 0) {
 		LOG_MSG("Selected file:");
 		LOG_QMSG(fileName);
 		inputFile = fileName;
         writeout();
+//        QDir dir = QDir(fileName);
+//        QString currPath = dir.absoluteFilePath(fileName);
+        QString currPath = QFileInfo(fileName).absolutePath();
+        QDir::setCurrent(currPath);
+        LOG_QMSG("currPath: " + currPath);
 	}
     // Otherwise if user chooses cancel ...
 	return true;
@@ -1847,7 +1860,7 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     QString title;
     QString yAxisTitle;
     for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isTimeseries(i) && !grph->isProfile(i)) continue;   // ???
         tag = grph->get_tag(i);
         title = grph->get_title(i);
         yAxisTitle = grph->get_yAxisTitle(i);
@@ -1868,7 +1881,7 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     graphResultSet[0] = R;
 
     for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
+        if (!grph->isTimeseries(i) && !grph->isProfile(i)) continue;
         mdiArea->addSubWindow(pGraph[i]);
 		pGraph[i]->show();
     }
@@ -1907,7 +1920,9 @@ void MainWindow::drawGraphs()
                 if (!grph->isActive(i)) continue;
 				int k = grph->get_dataIndex(i);
                 QString tag = grph->get_tag(i);
-                pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename, tag);
+                double yscale = grph->get_yscale(i);
+                pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename, tag, yscale, false);
+//                pGraph[i]->redraw(R->tnow, R->pData[i], R->nsteps, R->casename, tag);
 				if (k == 0) {
 					grph->set_maxValue(i,R->maxValue[i]);
 				} else {
@@ -1988,20 +2003,57 @@ void MainWindow::showSummary(int hr)
         field->updateOxyPlot();
     }
 
+    // TS plots
 	for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
 		int k = grph->get_dataIndex(i);
         val = Global::summaryData[k];
         newR->pData[i][step] = val*grph->get_scaling(i);
-	}
-
-    for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i)) continue;
-        if (!grph->isActive(i)) continue;
         QString tag = grph->get_tag(i);
-        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
+//        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
+        double yscale = grph->get_yscale(i);
+        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag, yscale, false);
     }
+//    LOG_QMSG("did ts graphs");
+
+    // Profile plots
+    for (int i=0; i<nGraphs; i++) {
+        if (!grph->isActive(i)) continue;
+        if (Global::conc_nc > 0 && grph->isProfile(i)) {
+            double x[100], y[100];
+            double xscale, yscale;
+            int n;
+            QString tag = grph->get_tag(i);
+            int k = grph->get_dataIndex(i);
+//            x = profile_x[k];
+//            y = profile_y[k];
+//            n = profile_n[k];
+            n = Global::conc_nc;
+            for (int j=0; j<n; j++) {
+                x[j] = j*Global::conc_dx*1.0e4;
+                y[j] = Global::concData[j*(Global::MAX_CHEMO+2)+k];
+//                sprintf(msg,"%d %f %f",j,x[j],y[j]);
+//                LOG_MSG(msg);
+            }
+            xscale = grph->get_xscale(x[n-1]);
+            double maxval = 0;
+            for (int j=0; j<n; j++) {
+                if (y[j] > maxval) maxval = y[j];
+            }
+            yscale = pGraph[i]->calc_yscale_ts(maxval);
+//            sprintf(msg,"Profile plot: %d k: %d n: %d yscale: %f",i,k,n,yscale);
+//            LOG_MSG(msg);
+            pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
+//            if (k == PROFILE_CFSE){
+//                pGraph[i]->setAxisScale(QwtPlot::xBottom, -20.0, 1.0, 0);
+//            }
+            pGraph[i]->setAxisTitle(QwtPlot::xBottom, tag);
+            pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
+            pGraph[i]->redraw(x, y, n, casename, tag, yscale, true);
+        }
+    }
+//    LOG_QMSG("did profile graphs");
     field->setSliceChanged();
     if (step > 0 && !action_field->isEnabled()) {
         field->displayField(hour,&res);
@@ -2070,8 +2122,11 @@ void MainWindow::outputData(QString qdata)
 	for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
         if (!grph->isActive(i)) continue;
-        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, grph->get_tag(i));
-	}
+        QString tag = grph->get_tag(i);
+        double yscale = grph->get_yscale(i);
+        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag, yscale, true);
+//        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, grph->get_tag(i));
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -2375,8 +2430,7 @@ void MainWindow::changeParam()
     QObject *w = sender(); // Gets the pointer to the object that invoked the changeParam slot.
 	if (w->isWidgetType()) {
 		QString wname = w->objectName();
-        LOG_QMSG("changeParam:");
-        LOG_QMSG(wname);
+//        LOG_QMSG("changeParam:" + wname);
 		if (wname.contains("line_")) {
 			QString wtag = wname.mid(5);
 			QLineEdit *lineEdit = (QLineEdit *)w;
@@ -3056,21 +3110,27 @@ void MainWindow::setupCellColours()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setupGraphSelector()
 {
-    QVBoxLayout *vbox = new QVBoxLayout;
+    QGridLayout *grid = new QGridLayout;
+    int row[3];
+    row[0] = row[1] = row[2] = -1;
+
+/* // superceded by profile plots
     checkBox_conc = new QMyCheckBox();
     checkBox_conc->setText("Concentration Profile");
     checkBox_conc->setChecked(field->isConcPlot());
     checkBox_conc->setObjectName("checkBox_conc");
     checkBox_conc->description = "Concentration along a line through the centre of the blob";
-    vbox->addWidget(checkBox_conc);
+    row[0]++;
+    grid->addWidget(checkBox_conc,row[0],0);
     connect((QObject *)checkBox_conc, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-
+*/
     checkBox_vol = new QMyCheckBox();
     checkBox_vol->setText("Cell Volume Distribution");
     checkBox_vol->setChecked(field->isVolPlot());
     checkBox_vol->setObjectName("checkBox_vol");
     checkBox_vol->description = "Probability distribution (histogram) of cell volume";
-    vbox->addWidget(checkBox_vol);
+    row[0]++;
+    grid->addWidget(checkBox_vol,row[0],0);
     connect((QObject *)checkBox_vol, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
 
     checkBox_oxy = new QMyCheckBox();
@@ -3078,21 +3138,23 @@ void MainWindow::setupGraphSelector()
     checkBox_oxy->setChecked(field->isOxyPlot());
     checkBox_oxy->setObjectName("checkBox_oxy");
     checkBox_oxy->description = "Probability distribution (histogram) of cell oxygen concentration";
-    vbox->addWidget(checkBox_oxy);
+    row[0]++;
+    grid->addWidget(checkBox_oxy,row[0],0);
     connect((QObject *)checkBox_oxy, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
 
     cbox_ts = new QMyCheckBox*[grph->n_tsGraphs];
     for (int i=0; i<grph->n_tsGraphs; i++) {
+        int col = grph->tsGraphs[i].type;
+        row[col]++;
         QString text = grph->tsGraphs[i].title;
         cbox_ts[i] = new QMyCheckBox;
         cbox_ts[i]->setText(text);
-        cbox_ts[i]->setObjectName("checkBox_"+grph->tsGraphs[i].tag);
+        cbox_ts[i]->setObjectName("cbox_"+grph->tsGraphs[i].tag);
         cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
-        cbox_ts[i]->description = grph->tsGraphs[i].description;
-        vbox->addWidget(cbox_ts[i]);
+        grid->addWidget(cbox_ts[i],row[col],col);
         connect((QObject *)cbox_ts[i], SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
     }
-    groupBox_graphselect->setLayout(vbox);
+    groupBox_graphselect->setLayout(grid);
 
     QRect rect = groupBox_graphselect->geometry();
 #ifdef __DISPLAY768

@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>3</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -4866,52 +4866,34 @@ padding: 8px
            <widget class="QGroupBox" name="groupBox_graphselect">
             <property name="geometry">
              <rect>
-              <x>150</x>
-              <y>30</y>
-              <width>171</width>
-              <height>461</height>
+              <x>10</x>
+              <y>40</y>
+              <width>521</width>
+              <height>531</height>
              </rect>
             </property>
             <property name="title">
              <string/>
             </property>
            </widget>
-           <widget class="QLabel" name="alabel_graphs">
-            <property name="geometry">
-             <rect>
-              <x>200</x>
-              <y>10</y>
-              <width>61</width>
-              <height>16</height>
-             </rect>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>13</pointsize>
-             </font>
-            </property>
-            <property name="text">
-             <string>Graphs</string>
-            </property>
-           </widget>
            <widget class="QLabel" name="alabel_summary_interval">
             <property name="geometry">
              <rect>
-              <x>65</x>
-              <y>10</y>
-              <width>51</width>
-              <height>16</height>
+              <x>125</x>
+              <y>0</y>
+              <width>101</width>
+              <height>20</height>
              </rect>
             </property>
             <property name="text">
-             <string>Iinterval:</string>
+             <string>Summary iinterval:</string>
             </property>
            </widget>
            <widget class="QLineEdit" name="lineEdit_summary_interval">
             <property name="geometry">
              <rect>
-              <x>110</x>
-              <y>10</y>
+              <x>220</x>
+              <y>0</y>
               <width>31</width>
               <height>16</height>
              </rect>
@@ -4926,8 +4908,8 @@ padding: 8px
            <widget class="QLabel" name="alabel_mins">
             <property name="geometry">
              <rect>
-              <x>150</x>
-              <y>10</y>
+              <x>260</x>
+              <y>0</y>
               <width>21</width>
               <height>16</height>
              </rect>
@@ -4939,8 +4921,8 @@ padding: 8px
            <widget class="QMyCheckBox" name="cbox_SAVE_PROFILE_DATA">
             <property name="geometry">
              <rect>
-              <x>490</x>
-              <y>10</y>
+              <x>600</x>
+              <y>20</y>
               <width>111</width>
               <height>18</height>
              </rect>
@@ -4955,8 +4937,8 @@ padding: 8px
             </property>
             <property name="geometry">
              <rect>
-              <x>530</x>
-              <y>30</y>
+              <x>640</x>
+              <y>40</y>
               <width>71</width>
               <height>20</height>
              </rect>
@@ -4968,8 +4950,8 @@ padding: 8px
            <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_FILE">
             <property name="geometry">
              <rect>
-              <x>455</x>
-              <y>30</y>
+              <x>565</x>
+              <y>40</y>
               <width>71</width>
               <height>20</height>
              </rect>
@@ -4984,8 +4966,8 @@ padding: 8px
             </property>
             <property name="geometry">
              <rect>
-              <x>530</x>
-              <y>60</y>
+              <x>640</x>
+              <y>70</y>
               <width>31</width>
               <height>20</height>
              </rect>
@@ -4994,8 +4976,8 @@ padding: 8px
            <widget class="QLabel" name="alabel_mins_2">
             <property name="geometry">
              <rect>
-              <x>570</x>
-              <y>60</y>
+              <x>680</x>
+              <y>70</y>
               <width>21</width>
               <height>16</height>
              </rect>
@@ -5010,8 +4992,8 @@ padding: 8px
             </property>
             <property name="geometry">
              <rect>
-              <x>530</x>
-              <y>90</y>
+              <x>640</x>
+              <y>100</y>
               <width>31</width>
               <height>20</height>
              </rect>
@@ -5020,8 +5002,8 @@ padding: 8px
            <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_INTERVAL">
             <property name="geometry">
              <rect>
-              <x>480</x>
-              <y>60</y>
+              <x>590</x>
+              <y>70</y>
               <width>51</width>
               <height>21</height>
              </rect>
@@ -5033,14 +5015,54 @@ padding: 8px
            <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_NUMBER">
             <property name="geometry">
              <rect>
-              <x>480</x>
-              <y>90</y>
+              <x>590</x>
+              <y>100</y>
               <width>51</width>
               <height>21</height>
              </rect>
             </property>
             <property name="text">
              <string>Number</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_timeseries">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>20</y>
+              <width>161</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Time-series Plots</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="label_profile">
+            <property name="geometry">
+             <rect>
+              <x>270</x>
+              <y>20</y>
+              <width>111</width>
+              <height>16</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>10</pointsize>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Profile Plots</string>
             </property>
            </widget>
           </widget>

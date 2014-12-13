@@ -326,6 +326,7 @@ private:
     QMyCheckBox *checkBox_vol;
     QMyCheckBox *checkBox_oxy;
     QMyCheckBox **cbox_ts;
+//    QCheckBox **cbox_ts;  // GRAPHS_CHANGE
 
     QButtonGroup *buttonGroup_histo;
     QVBoxLayout *vbox_histo;

@@ -30,12 +30,13 @@ public:
 	void addCurve(QString);
 	void removeCurve(QString);
 	void removeAllCurves();
-    void redraw(double *, double *, int, QString, QString);
+    void redraw(double *, double *, int, QString, QString, double, bool);
 //    void redraw2(double *, double *, double *, int);
 	void redraw2(double *, double *, double *, double *, int, int);
 	void draw2(double *, double *, double *, double *, int, int);
 	void setYScale(double);
 	double calc_yscale(double);
+    double calc_yscale_ts(double);
 
 	QString name;
 	static const int ncmax = 8;
