@@ -50,6 +50,7 @@ public:
 	void snapshot();
 //    void showfield();
     void saveGradient2D(int k);
+    void getProfiles();
     void getFACS();
 	void pause();
 	void unpause();

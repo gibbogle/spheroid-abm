@@ -2,9 +2,6 @@
 
 namespace Global
 {
-    int data1=0;
-    int data2;
-
     int MAX_CHEMO;
     int NX, NY, NZ;
     double DELTA_T;
@@ -46,6 +43,10 @@ namespace Global
 
     int cell_list[N_CELLINFO*MAX_CELLS];
     int ncell_list;
+
+//    double *profile_x[20];
+//    double *profile_y[20];
+//    int profile_n[20];
 
     bool showingVTK;
     bool recordingVTK;

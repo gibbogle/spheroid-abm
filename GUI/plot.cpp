@@ -147,6 +147,52 @@ double Plot::calc_yscale(double yval)
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
+void Plot::redraw(double *x, double *y, int n, QString name, QString tag, double fixed_yscale, bool profile)
+{
+    QwtLegend *legend;
+        if (USE_LEGEND){
+            legend = this->legend();
+            if (legend == NULL) {
+                legend = new QwtLegend();
+                this->insertLegend(legend, QwtPlot::RightLegend);
+            }
+        }
+    // Note: Number of pen colors should match ncmax
+    QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
+    QPen *pen = new QPen();
+    for (int k=0; k<ncmax; k++) {
+        if (curve[k] == 0) continue;
+        if (profile) LOG_QMSG("profile redraw "+name);
+        if (name.compare(curve[k]->title().text()) == 0) {
+//            LOG_QMSG("redraw " + tag);
+            // Just in case someone set ncmax > # of pen colors (currently = 6)
+            if (k < 6) {
+                pen->setColor(pencolor[k]);
+            } else {
+                pen->setColor(pencolor[0]);
+            }
+            curve[k]->setPen(*pen);
+            curve[k]->setData(x, y, n);
+                if (fixed_yscale == 0) {
+                    double ylast = y[n-1];
+                    if (ylast > yscale) {
+                        yscale = max(yscale,calc_yscale_ts(ylast));
+//                        sprintf(msg,"ylast: %f yscale: %f",ylast,yscale);
+//                        LOG_MSG(msg);
+                    }
+                } else {
+                    yscale = fixed_yscale;
+                }
+                setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
+            replot();
+        }
+    }
+    delete pen;
+}
+
+/*
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
 void Plot::redraw(double *x, double *y, int n, QString name, QString tag)
 {
     QwtLegend *legend;
@@ -187,6 +233,30 @@ void Plot::redraw(double *x, double *y, int n, QString name, QString tag)
         }
 	}
 	delete pen;
+}
+*/
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+double Plot::calc_yscale_ts(double yval)
+{
+    int v;
+    double yscale;
+    if (yval > 10) {
+        v = int(1.3*yval);
+        yscale = double(v);
+    } else if (yval > 1) {
+        v = int(13.*yval);
+        yscale = v/10.;
+    } else if (yval > 0.1) {
+        v = int(130.*yval);
+        yscale = v/100.;
+    } else {
+        yscale = 0.1;
+    }
+    sprintf(msg,"calc_yscale_ts: yval: %f v: %d yscale: %f",yval,v,yscale);
+    LOG_MSG(msg);
+    return yscale;
 }
 
 /*

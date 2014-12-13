@@ -1,7 +1,12 @@
 #ifndef GRAPHS_H
 #define GRAPHS_H
 
+#include "profile.h"
+
 #define maxGraphs 12
+#define TS_TYPE 0
+#define PROF_TYPE 1
+#define DIST_TYPE 2
 
 struct graph_set {
 	QString tag;
@@ -12,7 +17,9 @@ struct graph_set {
 	bool active;		// false for dummy graphs
 	double maxValue;
 	double scaling;		// multiplying factor for scaling of summary_data
-    bool ts;
+    double yscale;
+//    bool ts;
+    int type;           // 0 = time-series, 1 = profile, 2 = distribution
 };
 
 typedef graph_set GRAPH_SET;
@@ -36,9 +43,14 @@ public:
     QString get_description(int);
 	double get_maxValue(int);
 	double get_scaling(int);
+    double get_xscale(double);
+    double get_yscale(int);
+    int get_type(int);
 	bool isActive(int);
     bool isTimeseries(int);
-	void set_maxValue(int, double);
+    bool isProfile(int);
+    bool isDistribution(int);
+    void set_maxValue(int, double);
     void makeGraphList(int);
 //    void makeGraphList();
 

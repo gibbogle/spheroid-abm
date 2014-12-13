@@ -6,6 +6,10 @@
 #include <qwt_scale_map.h>
 #include "histogram_item.h"
 
+#include "log.h"
+
+LOG_USE();
+
 class HistogramItem::PrivateData
 {
 public:
@@ -178,7 +182,7 @@ void HistogramItem::draw(QPainter *painter, const QwtScaleMap &xMap,
             drawBar(painter, Qt::Horizontal,
                 QRect(x0, y1, x2 - x0, y2 - y1));
         }
-        else
+        else    // this is used
         {
             const int y2 = yMap.transform(iData.value(i));
             if ( y2 == y0 )

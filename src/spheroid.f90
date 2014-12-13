@@ -143,7 +143,7 @@ else
 	chemo(ichemo)%medium_M = 0
 	chemo(ichemo)%medium_U = 0
 endif
-write(*,'(a,i4,2e12.4)') 'SetupMedium: ',ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
+!write(*,'(a,i4,2e12.4)') 'SetupMedium: ',ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
 end subroutine
 
 !----------------------------------------------------------------------------------------- 
@@ -1291,7 +1291,7 @@ do idrug = 1,2
 				endif
 			enddo
 			write(nflog,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
-			write(*,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
+!			write(*,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
 			exit
 		endif
 	enddo
@@ -1311,7 +1311,7 @@ do idrug = 1,2
 				endif
 			enddo
 			write(nflog,*) 'Ended DRUG: ',chemo(ichemo)%name,i
-			write(*,*) 'Ended DRUG: ',chemo(ichemo)%name,i
+!			write(*,*) 'Ended DRUG: ',chemo(ichemo)%name,i
 			exit
 		endif
 	enddo

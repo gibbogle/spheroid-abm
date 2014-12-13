@@ -1200,7 +1200,7 @@ do kcell = 1,nlist
 		endif
 	endif
 enddo
-write(*,'(a,2(f7.1,3i4,2x))') 'rmin, rmax: ',rmin,minv,rmax,maxv
+!write(*,'(a,2(f7.1,3i4,2x))') 'rmin, rmax: ',rmin,minv,rmax,maxv
 end subroutine
 
 !-----------------------------------------------------------------------------------------

@@ -1031,6 +1031,33 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Growth fraction",
 "Select the threshold fraction of average growth rate (i.e. with no nutrient limits) used to count slow-growing cells"},
 
+// Time-series plots
+    {"nlive",                     0, 0,1,"","Number of live cells"},
+    {"nanoxiadead",               1, 0,1,"",""},
+    {"ndrugdead",                 1, 0,1,"",""},
+    {"nradiationdead",            1, 0,1,"",""},
+    {"nanoxiatagged",             1, 0,1,"",""},
+    {"ndrugtagged",               0, 0,1,"",""},
+    {"nradiationtagged",          0, 0,1,"",""},
+    {"diameter",                  1, 0,1,"",""},
+    {"volume",                    1, 0,1,"",""},
+    {"hypoxiafraction",           1, 0,1,"",""},
+    {"growthfraction",            1, 0,1,"",""},
+    {"necroticfraction",          1, 0,1,"",""},
+// Profile plots
+    {"CFSE",                      0, 0,1,"","Extracellular CFSE concentration on a line through the blob centre"},
+    {"Oxygen",                    1, 0,1,"","Extracellular oxygen concentration on a line through the blob centre"},
+    {"Glucose",                   0, 0,1,"","Extracellular glucose concentration on a line through the blob centre"},
+    {"Tracer",                    0, 0,1,"","Extracellular tracer concentration on a line through the blob centre"},
+    {"TPZdrug",                   0, 0,1,"","Extracellular TPZ drug concentration on a line through the blob centre"},
+    {"TPZmetab1",                 0, 0,1,"","Extracellular TPZ metabolite 1 concentration on a line through the blob centre"},
+    {"TPZmetab2",                 0, 0,1,"","Extracellular TPZ metabolite 2 concentration on a line through the blob centre"},
+    {"DNBdrug",                   0, 0,1,"","Extracellular DNB drug concentration on a line through the blob centre"},
+    {"DNBmetab1",                 0, 0,1,"","Extracellular DNB metabolite 1 concentration on a line through the blob centre"},
+    {"DNBmetab2",                 0, 0,1,"","Extracellular DNB metabolite 2 concentration on a line through the blob centre"},
+    {"growthrate",                0, 0,1,"","Cell growth rate on a line through the blob centre"},
+    {"cellvolume",                0, 0,1,"","Cell volume fraction on a line through the blob centre"}
+
 };
 	nParams = sizeof(params)/sizeof(PARAM_SET);
 	workingParameterList = new PARAM_SET[nParams];
