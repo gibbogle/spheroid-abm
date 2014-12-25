@@ -155,7 +155,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Medium diffusion coeff",
  "Constituent diffusion coefficient in the medium"},
 
-{"OXYGEN_CELL_DIFF", 10, 0, 0,
+{"OXYGEN_CELL_DIFF", 600, 0, 0,
  "Membrane diff constant",
  "Cell membrane diffusion constant Kd"},
 
@@ -191,7 +191,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Medium diffusion coeff",
  "Constituent diffusion coefficient in the medium"},
 
-{"GLUCOSE_CELL_DIFF", 20, 0, 0,
+{"GLUCOSE_CELL_DIFF", 1200, 0, 0,
  "Membrane diff constant",
  "Cell membrane diffusion coefficient Kd"},
 
@@ -354,7 +354,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 
 {"TPZ_VMAX_CELL1", 0, 0, 0,
  "Vmax",
-    "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism: Kmet0 -> Kmet0(1 + Vmax/(Km + C))"},
+    "TPZ-type drug Vmax in function for oxygen-dependence of rate of metabolism: Kmet0 -> Kmet0 + Vmax/(Km + C)"},
 
 {"TPZ_KM_CELL1", 1, 0, 0,
  "Km",
@@ -641,7 +641,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 
 {"DNB_VMAX_CELL1", 0, 0, 0,
  "Vmax",
-    "DNB-type drug Vmax in function for oxygen-dependence of rate of metabolism: Kmet0 -> Kmet0(1 + Vmax/(Km + C))"},
+    "DNB-type drug Vmax in function for oxygen-dependence of rate of metabolism: Kmet0 -> Kmet0 + Vmax/(Km + C)"},
 
 {"DNB_KM_CELL1", 1, 0, 0,
  "Km",
@@ -1032,21 +1032,22 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Select the threshold fraction of average growth rate (i.e. with no nutrient limits) used to count slow-growing cells"},
 
 // Time-series plots
-    {"nlive",                     0, 0,1,"","Number of live cells"},
-    {"nanoxiadead",               1, 0,1,"",""},
-    {"ndrugdead",                 1, 0,1,"",""},
-    {"nradiationdead",            1, 0,1,"",""},
-    {"nanoxiatagged",             1, 0,1,"",""},
-    {"ndrugtagged",               0, 0,1,"",""},
-    {"nradiationtagged",          0, 0,1,"",""},
-    {"diameter",                  1, 0,1,"",""},
-    {"volume",                    1, 0,1,"",""},
-    {"hypoxiafraction",           1, 0,1,"",""},
-    {"growthfraction",            1, 0,1,"",""},
-    {"necroticfraction",          1, 0,1,"",""},
+    {"nlive",                     1, 0,1,"","Number of live cells"},
+    {"nanoxiadead",               1, 0,1,"","Total number of cells that have been killed by anoxia"},
+    {"ndrugdead",                 1, 0,1,"","Total number of cells that have been killed by drug"},
+    {"nradiationdead",            1, 0,1,"","Total number of cells that have been killed by radiation"},
+    {"nanoxiatagged",             1, 0,1,"","Current number of cells tagged to die by anoxia"},
+    {"ndrugtagged",               0, 0,1,"","Current number of cells tagged to die by drug"},
+    {"nradiationtagged",          0, 0,1,"","Current number of cells tagged to die by radiation"},
+    {"diameter",                  1, 0,1,"","Spheroid diameter (um)"},
+    {"volume",                    1, 0,1,"","Spheroid volume (mm3)"},
+    {"hypoxiafraction",           1, 0,1,"","Fraction of cells with oxygen level below the specified threshold for hypoxia"},
+    {"growthfraction",            1, 0,1,"","Percentage of cells that are growing at a rate less than the specified fraction of the mean growth rate with no nutrient limits"},
+    {"necroticfraction",          0, 0,1,"","Percentage of the spheroid that is necrotic = (number of vacant sites)/(number of sites taken up by the spheroid)"},
 // Profile plots
+    {"MULTI",                     1, 0,1,"","Selected constituent on a line through the blob centre"},
     {"CFSE",                      0, 0,1,"","Extracellular CFSE concentration on a line through the blob centre"},
-    {"Oxygen",                    1, 0,1,"","Extracellular oxygen concentration on a line through the blob centre"},
+    {"Oxygen",                    0, 0,1,"","Extracellular oxygen concentration on a line through the blob centre"},
     {"Glucose",                   0, 0,1,"","Extracellular glucose concentration on a line through the blob centre"},
     {"Tracer",                    0, 0,1,"","Extracellular tracer concentration on a line through the blob centre"},
     {"TPZdrug",                   0, 0,1,"","Extracellular TPZ drug concentration on a line through the blob centre"},
@@ -1055,8 +1056,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
     {"DNBdrug",                   0, 0,1,"","Extracellular DNB drug concentration on a line through the blob centre"},
     {"DNBmetab1",                 0, 0,1,"","Extracellular DNB metabolite 1 concentration on a line through the blob centre"},
     {"DNBmetab2",                 0, 0,1,"","Extracellular DNB metabolite 2 concentration on a line through the blob centre"},
-    {"growthrate",                0, 0,1,"","Cell growth rate on a line through the blob centre"},
-    {"cellvolume",                0, 0,1,"","Cell volume fraction on a line through the blob centre"}
+    {"growthrate",                1, 0,1,"","Cell growth rate on a line through the blob centre"},
+    {"cellvolume",                1, 0,1,"","Cell volume fraction on a line through the blob centre"},
+// Distribution plots
+//    {"Oxygen",                    0, 0,1,"","Probability distribution of extracellular oxygen concentration"},
+//    {"cellvolume",                0, 0,1,"","Probability distribution of cell volume fraction"}
 
 };
 	nParams = sizeof(params)/sizeof(PARAM_SET);

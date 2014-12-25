@@ -69,7 +69,7 @@ GRAPH_SET tsGraphSet[] = {
     10, true, 0, 0.1, 0, TS_TYPE},
 
     {"growthfraction",
-    "Slow growth Fraction",
+    "Slow-growth Fraction",
     "%",
      "Percentage of cells that are growing at a rate less than the specified fraction of the mean growth rate with no nutrient limits",
     11, true, 0, 0.1, 0, TS_TYPE},
@@ -81,77 +81,104 @@ GRAPH_SET tsGraphSet[] = {
     12, true, 0, 0.1, 0, TS_TYPE},
 
 // Profiles
+    {"MULTI",
+    "Multi-constituent",
+    "",
+    "MULTI description",
+    MULTI, true, 0, 1, 0, PROF_TYPE},
+
     {"CFSE",
-    "CFSE",
+    "CFSE Concentration",
     "",
     "CFSE description",
-    PROFILE_CFSE, false, 0, 1, 0, PROF_TYPE},
+    CFSE, false, 0, 1, 0, PROF_TYPE},
 
     {"Oxygen",
-    "Oxygen",
+    "Oxygen Concentration",
     "",
     "Oxygen description",
-    PROFILE_OXYGEN, true, 0, 1, 0, PROF_TYPE},
+    OXYGEN, false, 0, 1, 0, PROF_TYPE},
 
     {"Glucose",
-    "Glucose",
+    "Glucose Concentration",
     "",
     "Glucose description",
-    PROFILE_GLUCOSE, false, 0, 1, 0, PROF_TYPE},
+    GLUCOSE, false, 0, 1, 0, PROF_TYPE},
 
     {"Tracer",
-    "Tracer",
+    "Tracer Concentration",
     "",
     "Tracer description",
-    PROFILE_TRACER, false, 0, 1, 0, PROF_TYPE},
+    TRACER, false, 0, 1, 0, PROF_TYPE},
 
     {"TPZdrug",
-    "TPZ drug",
+    "TPZ Drug Concentration",
     "",
     "TPZ drug description",
-    PROFILE_TPZ_DRUG, false, 0, 1, 0, PROF_TYPE},
+    TPZ_DRUG, false, 0, 1, 0, PROF_TYPE},
 
     {"TPZmetab1",
-    "TPZ metabolite 1",
+    "TPZ Metabolite 1 Concentration",
     "",
     "TPZmetab1 description",
-    PROFILE_TPZ_METAB_1, false, 0, 1, 0, PROF_TYPE},
+    TPZ_DRUG_METAB_1, false, 0, 1, 0, PROF_TYPE},
 
     {"TPZmetab2",
-    "TPZ metabolite 2",
+    "TPZ Metabolite 2 Concentration",
     "",
     "TPZmetab2 description",
-    PROFILE_TPZ_METAB_2, false, 0, 1, 0, PROF_TYPE},
+    TPZ_DRUG_METAB_2, false, 0, 1, 0, PROF_TYPE},
 
     {"DNBdrug",
-    "DNB drug",
+    "DNB Drug Concentration",
     "",
     "DNB drug description",
-    PROFILE_DNB_DRUG, false, 0, 1, 0, PROF_TYPE},
+    DNB_DRUG, false, 0, 1, 0, PROF_TYPE},
 
     {"DNBmetab1",
-    "DNB metabolite 1",
+    "DNB Metabolite 1 Concentration",
     "",
     "DNBmetab1 description",
-    PROFILE_DNB_METAB_1, false, 0, 1, 0, PROF_TYPE},
+    DNB_DRUG_METAB_1, false, 0, 1, 0, PROF_TYPE},
 
     {"DNBmetab2",
-    "DNB metabolite 2",
+    "DNB Metabolite 2 Concentration",
     "",
     "DNBmetab2 description",
-    PROFILE_DNB_METAB_2, false, 0, 1, 0, PROF_TYPE},
+    DNB_DRUG_METAB_2, false, 0, 1, 0, PROF_TYPE},
 
     {"growthrate",
-    "Growth rate",
+    "Growth Rate",
     "",
     "Growth rate description",
-    PROFILE_GROWTH_RATE, false, 0, 1, 0, PROF_TYPE},
+    GROWTH_RATE, false, 0, 1, 0, PROF_TYPE},
 
     {"cellvolume",
-    "Cell volume",
+    "Cell Volume",
     "",
     "Cell volume description",
-    PROFILE_CELL_VOLUME, false, 0, 1, 0, PROF_TYPE},
+    CELL_VOLUME, false, 0, 1, 0, PROF_TYPE},
+
+    {"O2byvolume",
+    "Cell O2xVolume",
+    "",
+    "Cell volume description",
+    O2_BY_VOL, false, 0, 1, 0, PROF_TYPE},
+
+// Distributions
+//    {"Oxygen_dist",
+//    "Oxygen distribution",
+//    "Prob",
+//    "Oxygen description",
+//    OXYGEN, false, 0, 1, 0, DIST_TYPE},
+
+//    {"cellvolume_dist",
+//    "Cell volume distribution",
+//    "Prob",
+//    "Cell volume description",
+//    CELL_VOLUME, false, 0, 1, 0, DIST_TYPE}
+
+
 };
 
     n_tsGraphs = sizeof(tsGraphSet)/sizeof(GRAPH_SET);
@@ -215,7 +242,6 @@ double Graphs::get_xscale(double xmax) {
     return double(n);
 }
 
-
 bool Graphs::isActive(int k)
 {
 	return graphList[k].active;
@@ -261,14 +287,12 @@ void Graphs::makeGraphList(int non_ts)
     for (k=0; k<ndummy; k++) {
         graphList[k].tag = "dummy";
         graphList[k].active = false;
-//        graphList[k].ts = true;
         graphList[k].type = TS_TYPE;
         graphList[k].scaling = 1;
     }
     for (k=ndummy; k<ndummy + non_ts; k++) {
         graphList[k].tag = "non_ts";
         graphList[k].active = true;
-//        graphList[k].ts = false;
         graphList[k].type = DIST_TYPE;  //????
         graphList[k].scaling = 1;
     }

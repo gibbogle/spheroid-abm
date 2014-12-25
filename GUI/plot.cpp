@@ -135,14 +135,14 @@ void Plot::setYScale(double maxval)
 double Plot::calc_yscale(double yval)
 {
     return 1.3*yval;
-    /*
-    int v = int(1.3*yval);
-    if (v >= 1) {
-        return double(v);
-    } else {
-        return 1.3*yval;
-    }
-    */
+//    /*
+//    int v = int(1.3*yval);
+//    if (v >= 1) {
+//        return double(v);
+//    } else {
+//        return 1.3*yval;
+//    }
+//    */
 }
 
 //-----------------------------------------------------------------------------------------
@@ -162,7 +162,7 @@ void Plot::redraw(double *x, double *y, int n, QString name, QString tag, double
     QPen *pen = new QPen();
     for (int k=0; k<ncmax; k++) {
         if (curve[k] == 0) continue;
-        if (profile) LOG_QMSG("profile redraw "+name);
+//        if (profile) LOG_QMSG("profile redraw "+name);
         if (name.compare(curve[k]->title().text()) == 0) {
 //            LOG_QMSG("redraw " + tag);
             // Just in case someone set ncmax > # of pen colors (currently = 6)
@@ -173,17 +173,15 @@ void Plot::redraw(double *x, double *y, int n, QString name, QString tag, double
             }
             curve[k]->setPen(*pen);
             curve[k]->setData(x, y, n);
-                if (fixed_yscale == 0) {
-                    double ylast = y[n-1];
-                    if (ylast > yscale) {
-                        yscale = max(yscale,calc_yscale_ts(ylast));
-//                        sprintf(msg,"ylast: %f yscale: %f",ylast,yscale);
-//                        LOG_MSG(msg);
-                    }
-                } else {
-                    yscale = fixed_yscale;
+            if (fixed_yscale == 0) {
+                double ylast = y[n-1];
+                if (ylast > yscale) {
+                    yscale = max(yscale,calc_yscale(ylast));
                 }
-                setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
+            } else {
+                yscale = fixed_yscale;
+            }
+            setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
             replot();
         }
     }
@@ -238,26 +236,35 @@ void Plot::redraw(double *x, double *y, int n, QString name, QString tag)
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-double Plot::calc_yscale_ts(double yval)
-{
-    int v;
-    double yscale;
-    if (yval > 10) {
-        v = int(1.3*yval);
-        yscale = double(v);
-    } else if (yval > 1) {
-        v = int(13.*yval);
-        yscale = v/10.;
-    } else if (yval > 0.1) {
-        v = int(130.*yval);
-        yscale = v/100.;
-    } else {
-        yscale = 0.1;
-    }
-    sprintf(msg,"calc_yscale_ts: yval: %f v: %d yscale: %f",yval,v,yscale);
-    LOG_MSG(msg);
-    return yscale;
-}
+//double Plot::calc_yscale(double yval)
+//{
+//    double v;
+//    int iv;
+//    double yscale;
+//    if (yval > 10) {
+//        v = int(1.3*yval);
+//        yscale = double(v);
+//    } else if (yval > 1) {
+//        v = int(13.*yval);
+//        yscale = v/10.;
+//    } else if (yval > 0.1) {
+//        v = int(130.*yval);
+//        yscale = v/100.;
+//    } else {
+//        yscale = 0.1;
+//    }
+//    v = log10(yval);
+//    iv = int(v);
+//    v = pow(10.,iv);
+//    if (yval > v) {
+//        yscale = 13.*v;
+//    } else {
+//        yscale = 1.3*v;
+//    }
+//    sprintf(msg,"calc_yscale: yval: %f v: %d yscale: %f",yval,v,yscale);
+//    LOG_MSG(msg);
+//    return yscale;
+//}
 
 /*
 

@@ -6,6 +6,9 @@
 #include <qwt_scale_map.h>
 #include "histogram_item.h"
 
+#include <QtGui>
+#include <QFileDialog>
+
 #include "log.h"
 
 LOG_USE();
@@ -93,7 +96,7 @@ QwtDoubleRect HistogramItem::boundingRect() const
     if ( !rect.isValid() ) 
         return rect;
 
-    if ( d_data->attributes & Xfy ) 
+    if ( d_data->attributes & Xfy )
     {
         rect = QwtDoubleRect( rect.y(), rect.x(), 
             rect.height(), rect.width() );
@@ -179,8 +182,7 @@ void HistogramItem::draw(QPainter *painter, const QwtScaleMap &xMap,
                 }
             }
 
-            drawBar(painter, Qt::Horizontal,
-                QRect(x0, y1, x2 - x0, y2 - y1));
+            drawBar(painter, Qt::Horizontal, QRect(x0, y1, x2 - x0, y2 - y1));
         }
         else    // this is used
         {
@@ -209,8 +211,7 @@ void HistogramItem::draw(QPainter *painter, const QwtScaleMap &xMap,
                     }
                 }
             }
-            drawBar(painter, Qt::Vertical,
-                QRect(x1, y0, x2 - x1, y2 - y0) );
+            drawBar(painter, Qt::Vertical, QRect(x1, y0, x2 - x1, y2 - y0) );
         }
     }
 }
@@ -284,4 +285,34 @@ void HistogramItem::drawBar(QPainter *painter,
 #endif
 
    painter->restore();
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void HistogramItem::mousePressEvent (QMouseEvent *event) {
+    event->accept();
+    if (event->button() == Qt::RightButton) {
+//        int w = this->width();
+//        int h = this->height();
+        int w = 512;
+        int h = 512;
+        QPixmap pixmap(w, h);
+        pixmap.fill(Qt::white); // Qt::transparent ?
+
+        QwtPlotPrintFilter filter;
+        int options = QwtPlotPrintFilter::PrintAll;
+        options &= ~QwtPlotPrintFilter::PrintBackground;
+        options |= QwtPlotPrintFilter::PrintFrameWithScales;
+        filter.setOptions(options);
+
+//        this->print(pixmap, filter);
+
+//		QString fileName = getImageFile();
+        QString fileName = QFileDialog::getSaveFileName(0,"Select image file", ".",
+            "Image files (*.png *.jpg *.tif *.bmp)");
+        if (fileName.isEmpty()) {
+            return;
+        }
+        pixmap.save(fileName,0,-1);
+    }
 }

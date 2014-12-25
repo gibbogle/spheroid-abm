@@ -5,20 +5,6 @@
 
 LOG_USE();
 
-//double concData[4000];
-//int conc_nc;
-//double conc_dx;
-//int MAX_CHEMO;
-//int NX, NY, NZ;
-//double dfraction;
-//double volProb[100];
-//int vol_nv;
-//double vol_v0;
-//double vol_dv;
-//double oxyProb[100];
-//int oxy_nv;
-//double oxy_dv;
-
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 //Field::Field(QWidget *page2D)
@@ -28,22 +14,11 @@ Field::Field(QWidget *aParent) : QWidget(aParent)
     field_page = aParent;
     axis = Z_AXIS;
     fraction = 0;
-//    const_name[CFSE] = "CFSE";
-//    const_name[OXYGEN] = "Oxygen";
-//    const_name[GLUCOSE] = "Glucose";
-//    const_name[TRACER] = "Tracer";
-//    const_name[DRUG_A] = "Drug A";
-//    const_name[DRUG_A_METAB_1] = "Drug A metabolite 1";
-//    const_name[DRUG_A_METAB_2] = "Drug A metabolite 2";
-//    const_name[DRUG_B] = "Drug B";
-//    const_name[DRUG_B_METAB_1] = "Drug B metabolite 1";
-//    const_name[DRUG_B_METAB_2] = "Drug B metabolite 2";
-//    const_name[GROWTH_RATE] = "Growth rate";
     constituent = OXYGEN;
     slice_changed = true;
     setConcPlot(false);
-    setVolPlot(true);
-    setOxyPlot(true);
+    setVolPlot(false);
+    setOxyPlot(false);
     pGconc = NULL;
     pGvol = NULL;
     pGoxy = NULL;
@@ -160,20 +135,6 @@ void Field::selectConstituent()
     QStringList items;
 
     LOG_MSG("selectConstituent");
-    /*
-    get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, &res);
-    if (nconst != MAX_CONC) {
-        sprintf(msg,"Error: selectConstituent: get_fieldinfo: MAX_CONC != MAX_CHEMO: %d %d",MAX_CONC,Global::MAX_CHEMO);
-        LOG_MSG(msg);
-        exit(1);
-    }
-    for (iconst=0; iconst<MAX_CONC+2; iconst++) {
-        if (iconst == constituent) continue;
-        if (const_used[iconst] == 1) {
-            items << const_name[iconst];
-        }
-    }
-    */
     for (iconst=0; iconst<Global::nvars_used; iconst++) {
         if (iconst == constituent) continue;
         items << Global::var_string[iconst];
@@ -182,28 +143,14 @@ void Field::selectConstituent()
     QString item = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
                                           tr("Constituent:"), items, 0, false, &ok);
     if (ok && !item.isEmpty()) {
-//        for (iconst=0; iconst<MAX_CONC+2; iconst++) {
-//            if (item == const_name[iconst]) {
         for (iconst=0; iconst<Global::nvars_used; iconst++) {
             if (item == Global::var_string[iconst]) {
                 constituent = iconst;
-                if (useConcPlot)
-                    updateConcPlot();
-                break;
+//                if (useConcPlot)
+//                    updateConcPlot();
+//                break;
             }
         }
-    }
-}
-
-//------------------------------------------------------------------------------------------------
-// This is to pass the info from MainWindow to Field
-// The constituent with index ic in the list of used constituents has index cvar_index[ic] in the DLL.
-//------------------------------------------------------------------------------------------------
-void Field::setConstUsage(int nv, int *cv_index)
-{
-    nvars_used = nv;
-    for (int i=0; i<nv; i++) {
-        cvar_index[i] = cv_index[i];
     }
 }
 
@@ -217,41 +164,19 @@ void Field::setConstituent(QAbstractButton *button)
 //    msgBox.setText("setConstituent");
 //    msgBox.exec();
     LOG_MSG("setConstituent");
-	int prev_constituent = constituent;
+    int prev_constituent = constituent;
     QString text = button->text();
     for (int ivar=0; ivar<Global::nvars_used; ivar++) {
         if (text == Global::var_string[ivar]) {
             constituent = ivar;
         }
     }
-/*
-//    constituentText = text;
-    if (text.compare("CFSE") == 0)
-        constituent = CFSE;
-    else if (text.compare("Oxygen") == 0)
-        constituent = OXYGEN;
-    else if (text.compare("Glucose") == 0)
-        constituent = GLUCOSE;
-    else if (text.compare("Drug A") == 0)
-        constituent = DRUG_A;
-    else if (text.compare("Drug A metabolite 1") == 0)
-        constituent = DRUG_A_METAB_1;
-    else if (text.compare("Drug A metabolite 2") == 0)
-        constituent = DRUG_A_METAB_2;
-    else if (text.compare("Drug B") == 0)
-        constituent = DRUG_B;
-    else if (text.compare("Drug B metabolite 1") == 0)
-        constituent = DRUG_B_METAB_1;
-    else if (text.compare("Drug B metabolite 2") == 0)
-        constituent = DRUG_B_METAB_2;
-    else if (text.compare("Growth rate") == 0)
-        constituent = GROWTH_RATE;
- */
+
     if (constituent != prev_constituent) {
-		constituent_changed = true;
+        constituent_changed = true;
         LOG_MSG("setConstituent");
         displayField(hour,&res);
-	}
+    }
 }
 
 //------------------------------------------------------------------------------------------------
@@ -337,6 +262,11 @@ void Field::displayField(int hr, int *res)
         }
         if (nconst != MAX_CONC) {
             sprintf(msg,"Error: displayField: get_fieldinfo: MAX_CONC != MAX_CHEMO: %d %d",MAX_CONC,Global::MAX_CHEMO);
+            LOG_MSG(msg);
+            exit(1);
+        }
+        if (NEXTRA != Global::N_EXTRA) {
+            sprintf(msg,"Error: displayField: NEXTRA != N_EXTRA: %d %d",NEXTRA,Global::N_EXTRA);
             LOG_MSG(msg);
             exit(1);
         }
@@ -445,6 +375,7 @@ void Field::displayField(int hr, int *res)
             filename[11+i] = numstr[i];
         image.save(filename);
     }
+    LOG_MSG("did displayField");
 }
 
 
@@ -534,6 +465,7 @@ void Field::getTitle(int iconst, QString *title)
     }
 }
 
+/*
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 void Field::makeConcPlot(QMdiArea *mdiArea)
@@ -668,8 +600,10 @@ void Field::updateOxyPlot()
 
 //    LOG_MSG("UpdateOxyPlot");
     prob = Global::oxyProb;
-    v1 = 0;
-    v2 = Global::oxy_nv*Global::oxy_dv;
+//    v1 = 0;
+//    v2 = Global::oxy_nv*Global::oxy_dv;
+    v1 = Global::oxy_v0 - Global::oxy_dv/2;
+    v2 = Global::oxy_v0 + (Global::oxy_nv-0.5)*Global::oxy_dv;
 //    sprintf(msg,"updateOxyPlot: %d %f %f %f", oxy_nv, oxy_dv, v1, v2);
 //    LOG_MSG(msg);
     pGoxy->setAxisScale(QwtPlot::xBottom, v1, v2, 0);
@@ -680,7 +614,8 @@ void Field::updateOxyPlot()
 
     pmax = 0;
     for (i=0; i<Global::oxy_nv; i++) {
-        x[i] = (i+0.5)*Global::oxy_dv;
+//        x[i] = (i+0.5)*Global::oxy_dv;
+        x[i] = Global::oxy_v0 + i*Global::oxy_dv;
         y[i] = prob[i];
         pmax = MAX(pmax,y[i]);
     }
@@ -692,4 +627,4 @@ void Field::updateOxyPlot()
     pGoxy->replot();
     delete pen;
 }
-
+*/

@@ -107,6 +107,7 @@ do ichemo = 1,TRACER
 	endif
 enddo
 call AdjustMM
+call SetInitialGrowthRate
 Nradiation_tag = 0
 Ndrug_tag = 0
 Nanoxia_tag = 0
@@ -422,6 +423,7 @@ read(nfcell,*) iuse_oxygen		! chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%medium_diff_coef
 read(nfcell,*) chemo(OXYGEN)%membrane_diff_in
+chemo(OXYGEN)%membrane_diff_in = chemo(OXYGEN)%membrane_diff_in/60		! /min -> /sec
 chemo(OXYGEN)%membrane_diff_out = chemo(OXYGEN)%membrane_diff_in
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) iconstant
@@ -433,6 +435,7 @@ read(nfcell,*) iuse_glucose		!chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%medium_diff_coef
 read(nfcell,*) chemo(GLUCOSE)%membrane_diff_in
+chemo(GLUCOSE)%membrane_diff_in = chemo(GLUCOSE)%membrane_diff_in/60	! /min -> /sec
 chemo(GLUCOSE)%membrane_diff_out = chemo(GLUCOSE)%membrane_diff_in
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) iconstant
@@ -444,6 +447,7 @@ read(nfcell,*) iuse_tracer		!chemo(TRACER)%used
 read(nfcell,*) chemo(TRACER)%diff_coef
 read(nfcell,*) chemo(TRACER)%medium_diff_coef
 read(nfcell,*) chemo(TRACER)%membrane_diff_in
+chemo(TRACER)%membrane_diff_in = chemo(TRACER)%membrane_diff_in/60		! /min -> /sec
 chemo(TRACER)%membrane_diff_out = chemo(TRACER)%membrane_diff_in
 read(nfcell,*) chemo(TRACER)%bdry_conc
 read(nfcell,*) iconstant
@@ -485,7 +489,9 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 			read(nfcell,*) TPZ%diff_coef(im)
 			read(nfcell,*) TPZ%medium_diff_coef(im)
 			read(nfcell,*) TPZ%membrane_diff_in(im)
+			TPZ%membrane_diff_in(im) = TPZ%membrane_diff_in(im)/60		! /min -> /sec
 			read(nfcell,*) TPZ%membrane_diff_out(im)
+			TPZ%membrane_diff_out(im) = TPZ%membrane_diff_out(im)/60	! /min -> /sec
 			read(nfcell,*) TPZ%halflife(im)
 			ichemo = idrug + im
 			if (im > 0) then
@@ -527,7 +533,9 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 			read(nfcell,*) DNB%diff_coef(im)
 			read(nfcell,*) DNB%medium_diff_coef(im)
 			read(nfcell,*) DNB%membrane_diff_in(im)
+			DNB%membrane_diff_in(im) = DNB%membrane_diff_in(im)/60		! /min -> /sec
 			read(nfcell,*) DNB%membrane_diff_out(im)
+			DNB%membrane_diff_out(im) = DNB%membrane_diff_out(im)/60	! /min -> /sec
 			read(nfcell,*) DNB%halflife(im)
 			ichemo = idrug + im
 			if (im > 0) then
@@ -647,9 +655,11 @@ Vextra_cm3 = fluid_fraction*Vsite_cm3				! extracellular volume in a site (cm^3)
 cell_radius = (3*(1-fluid_fraction)*Vsite_cm3/(4*PI))**(1./3.)
 ! In a well-oxygenated tumour the average cell fractional volume is intermediate between vdivide0/2 and vdivide0.
 ! We assume that 0.75*vdivide0*Vcell_cm3 = (1 - fluid_fraction)*Vsite_cm3
-Vcell_cm3 = (1 - fluid_fraction)*Vsite_cm3/(0.75*vdivide0)	! nominal cell volume (cm^3) (corresponds to %volume = 1)
+Vcell_cm3 = (1 - fluid_fraction)*Vsite_cm3/(0.75*vdivide0)	! nominal cell volume in cm^3 (corresponds to %volume = 1)
 															! fractional volume: cell%volume = (cell volume in cm^3)/Vcell_cm3, 
-															! actual volume (cm^3) = Vcell_cm3*%cellvolume
+															! actual volume (cm^3) = Vcell_cm3*cell%volume
+Vcell_pL = 1.0e9*Vcell_Cm3									! nominal cell volume in pL
+															! actual volume (pL) = Vcell_pL*cell%volume
 
 write(logmsg,'(a,3e12.4)') 'DELTA_X, cell_radius: ',DELTA_X,cell_radius
 call logger(logmsg)
@@ -1163,10 +1173,10 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat, maxchemo, cused, dfraction) BIND(C)
+subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat, maxchemo, nextra, cused, dfraction) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
 use, intrinsic :: iso_c_binding
-integer(c_int) :: NX_dim,NY_dim,NZ_dim,nsteps_dim, maxchemo
+integer(c_int) :: NX_dim,NY_dim,NZ_dim,nsteps_dim, maxchemo, nextra
 real(c_double) :: deltat, dfraction
 logical(c_bool) :: cused(*)
 integer :: ichemo
@@ -1177,6 +1187,7 @@ NZ_dim = NZ
 nsteps_dim = nsteps
 deltat = DELTA_T
 maxchemo = MAX_CHEMO
+nextra = N_EXTRA
 do ichemo = 1,MAX_CHEMO
 	cused(ichemo+1) = chemo(ichemo)%used
 enddo
@@ -1188,7 +1199,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine InitConcs1
-integer :: nextra, ic, ichemo, kcell, site(3), ntvars
+integer :: ic, ichemo, kcell, site(3), ntvars
 
 write(logmsg,*) 'InitConcs: ',nchemo
 call logger(logmsg)
@@ -1690,7 +1701,7 @@ end subroutine
 subroutine get_fieldinfo(nxx, axis, fraction, ns, nc, cused, res) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_fieldinfo
 use, intrinsic :: iso_c_binding
-integer(c_int) :: nxx, axis, ns, nc, cused(*), res
+integer(c_int) :: nxx, axis, ns, nc, cused(0:*), res
 real(c_double) :: fraction
 integer rng(3,2), ichemo, kcell, x, y, z
 
@@ -1700,13 +1711,15 @@ nxx = NX
 nc = MAX_CHEMO
 do ichemo = 1,MAX_CHEMO
     if (chemo(ichemo)%used) then
-        cused(ichemo+1) = 1
+        cused(ichemo) = 1
     else
-        cused(ichemo+1) = 0
+        cused(ichemo) = 0
     endif
 enddo
-cused(1) = 1				! CFSE
-cused(MAX_CHEMO+2) = 1		! Growth rate
+cused(CFSE) = 1
+cused(GROWTH_RATE) = 1
+cused(CELL_VOLUME) = 1
+cused(O2_BY_VOL) = 1
 rng(:,1) = Centre(:) - (adrop*Radius + 2)
 rng(:,2) = Centre(:) + (adrop*Radius + 2)
 rng(axis,:) = Centre(axis) + fraction*Radius
@@ -1738,7 +1751,7 @@ real(c_double) :: fraction
 integer(c_int) :: axis, nc, nfdata, res
 type(FIELD_DATA) :: fdata(*)
 integer rng(3,2), kcell, x, y, z, i, ns
-real(REAL_KIND) :: growthrate, cfse
+real(REAL_KIND) :: growthrate, cellvolume, cfse
 
 !write(logmsg,*) 'get_fielddata: nfdata, nc: ',nfdata, nc, MAX_CHEMO
 !call logger(logmsg)
@@ -1765,16 +1778,19 @@ do z = rng(3,1),rng(3,2)
             fdata(ns)%state = 1
             if (kcell > 0) then
                 fdata(ns)%volume = cell_list(kcell)%volume
-                call getGrowthrate(kcell,growthrate,cfse)
+                call getExtraVars(kcell,growthrate,cellvolume,cfse)
             else
                 fdata(ns)%volume = 0
                 growthrate = 0
+                cellvolume = 0
                 cfse = 0
             endif
 !            fdata(ns)%dVdt = growthrate
 			fdata(ns)%conc(0) = cfse
             fdata(ns)%conc(1:MAX_CHEMO) = allstate(i,1:MAX_CHEMO)	! cell_list(kcell)%conc(1:MAX_CHEMO)
-            fdata(ns)%conc(MAX_CHEMO+1) = growthrate
+            fdata(ns)%conc(GROWTH_RATE) = growthrate
+            fdata(ns)%conc(CELL_VOLUME) = Vcell_pL*cellvolume
+            fdata(ns)%conc(O2_BY_VOL) = allstate(i,OXYGEN)*Vcell_pL*cellvolume
         enddo
     enddo
 enddo
@@ -1791,26 +1807,157 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine getGrowthrate(kcell,growthrate,cfse)
+subroutine getExtraVars(kcell,growthrate,cellvolume,cfse)
 integer :: kcell
-real(REAL_KIND) :: growthrate, cfse
+real(REAL_KIND) :: growthrate, cellvolume, cfse
 
-growthrate = cell_list(kcell)%dVdt
 cfse = cell_list(kcell)%CFSE
+growthrate = cell_list(kcell)%dVdt
+cellvolume = cell_list(kcell)%volume
 end subroutine
 
 !--------------------------------------------------------------------------------
 ! Returns all the extracellular concentrations along a line through the blob centre.
-! Together with CFSE and growth rate (dVdt)
+! Together with CFSE, growth rate (dVdt), cell volume,...
+! Store the constituent profiles one after the other.
+! Drop the extra end points
 !--------------------------------------------------------------------------------
-subroutine get_concdata(ns, dx, ex_conc) BIND(C)
+subroutine get_concdata(nvars, ns, dx, ex_conc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nvars, ns
+real(c_double) :: dx, ex_conc(0:*)
+real(REAL_KIND) :: cbnd, cmin = 1.0e-6
+integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z, x1, x2, offset
+
+!call logger('get_concdata')
+nvars = 1 + MAX_CHEMO + N_EXTRA
+dx = DELTA_X
+rng(:,1) = Centre(:) - (adrop*Radius + 2)
+rng(:,2) = Centre(:) + (adrop*Radius + 2)
+!rng(axis,:) = Centre(axis) + fraction*Radius
+y = Centre(2) + 0.5
+z = Centre(3) + 0.5
+
+! First need to establish the range of x that is inside the blob: (x1,x2)
+x1 = 0
+do x = rng(1,1),rng(1,2)
+	kcell = occupancy(x,y,z)%indx(1)
+	if (kcell <= OUTSIDE_TAG) then
+		if (x1 == 0) then
+			cycle
+		else
+			exit
+		endif
+	elseif (x1 == 0) then
+		x1 = x
+	endif
+	x2 = x
+enddo
+
+ns = x2 - x1 + 1 
+do ichemo = 0,nvars-1
+	offset = ichemo*ns
+	k = offset - 1
+	do x = x1, x2
+		k = k + 1
+		kcell = occupancy(x,y,z)%indx(1)
+		if (kcell <= OUTSIDE_TAG) then
+			ex_conc(k) = 0
+			cycle
+		endif
+		i = ODEdiff%ivar(x,y,z)
+        if (ichemo == 0) then	! CFSE
+			if (kcell > 0) then
+				ex_conc(k) = cell_list(kcell)%CFSE
+			else
+				ex_conc(k) = 0
+			endif
+       elseif (ichemo <= MAX_CHEMO) then
+			if (chemo(ichemo)%used) then
+				if (i > 0) then
+					ex_conc(k) = allstate(i,ichemo)	
+				else
+					ex_conc(k) = 0
+				endif
+			else
+				ex_conc(k) = 0
+			endif
+        elseif (ichemo == GROWTH_RATE) then	
+			if (kcell > 0) then
+				ex_conc(k) = cell_list(kcell)%dVdt
+			else
+				ex_conc(k) = 0
+			endif
+        elseif (ichemo == CELL_VOLUME) then	
+			if (kcell > 0) then
+				ex_conc(k) = Vcell_pL*cell_list(kcell)%volume
+			else
+				ex_conc(k) = 0
+			endif
+        elseif (ichemo == O2_BY_VOL) then	
+			if (kcell > 0) then
+				ex_conc(k) = allstate(i,OXYGEN)*Vcell_pL*cell_list(kcell)%volume
+			else
+				ex_conc(k) = 0
+			endif
+		endif
+    enddo
+enddo
+! Add concentrations at the two boundaries 
+! At ns=1, at at ns=ns+1
+!ns = ns+1
+!do ic = 1,nvars
+!	ichemo = ic - 1
+!	if (ichemo == 0) then	! CFSE
+!		k = ic	
+!		ex_conc(k) = 0
+!        k = (ns-1)*nvars + ic
+!        ex_conc(k) = 0	
+!	elseif (ichemo <= MAX_CHEMO) then
+!		k = ic
+!		if (chemo(ichemo)%used) then
+!			ex_conc(k) = BdryConc(ichemo,t_simulation)
+!		else
+!			ex_conc(k) = 0
+!		endif      
+!		k = (ns-1)*nvars + ic
+!		if (chemo(ichemo)%used) then
+!			ex_conc(k) = BdryConc(ichemo,t_simulation)
+!		else
+!			ex_conc(k) = 0
+!		endif      
+!    elseif (ichemo == MAX_CHEMO+1) then	! growth rate
+!		k = ic
+!		ex_conc(k) = 0
+!! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,1,i,k,ex_conc(k)
+!        k = (ns-1)*nvars + ic
+!        ex_conc(k) = 0
+!! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
+!    elseif (ichemo == MAX_CHEMO+2) then	! cell volume
+!		k = ic
+!		ex_conc(k) = 0
+!! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,1,i,k,ex_conc(k)
+!        k = (ns-1)*nvars + ic
+!        ex_conc(k) = 0
+!! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
+!    endif
+!enddo
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Returns all the extracellular concentrations along a line through the blob centre.
+! Together with CFSE, growth rate (dVdt), cell volume,...
+!--------------------------------------------------------------------------------
+subroutine old_get_concdata(ns, dx, ex_conc) BIND(C)
+!!DEC$ ATTRIBUTES DLLEXPORT :: get_concdata
 use, intrinsic :: iso_c_binding
 integer(c_int) :: ns
 real(c_double) :: dx, ex_conc(*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
-integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z
+integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z, nvars
 
+nvars = 1 + MAX_CHEMO + N_EXTRA
 !call logger('get_concdata')
 dx = DELTA_X
 rng(:,1) = Centre(:) - (adrop*Radius + 2)
@@ -1824,16 +1971,15 @@ do x = rng(1,1),rng(1,2)
     if (kcell <= OUTSIDE_TAG) cycle
 	i = ODEdiff%ivar(x,y,z)
     ns = ns + 1
-    do ic = 1,MAX_CHEMO+NEXTRA
-        k = (ns-1)*(MAX_CHEMO+NEXTRA) + ic
-        if (ic == 1) then	! CFSE
+    do ichemo = 1,nvars
+        k = (ns-1)*nvars + ic
+        if (ichemo == 0) then	! CFSE
 			if (kcell > 0) then
 				ex_conc(k) = cell_list(kcell)%CFSE
 			else
 				ex_conc(k) = 0
 			endif
-       elseif (ic <= MAX_CHEMO+1) then
-	        ichemo = ic - 1
+       elseif (ichemo <= MAX_CHEMO) then
 			if (chemo(ichemo)%used) then
 				if (i > 0) then
 					ex_conc(k) = allstate(i,ichemo)	
@@ -1843,50 +1989,63 @@ do x = rng(1,1),rng(1,2)
 			else
 				ex_conc(k) = 0
 			endif
-        elseif (ic == MAX_CHEMO+2) then	! growth rate
+        elseif (ichemo == MAX_CHEMO+1) then	! growth rate
 			if (kcell > 0) then
 				ex_conc(k) = cell_list(kcell)%dVdt
 			else
 				ex_conc(k) = 0
 			endif
-! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
+! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,kcell,k,ex_conc(k)
+        elseif (ichemo == MAX_CHEMO+2) then	! cell volume
+			if (kcell > 0) then
+				ex_conc(k) = cell_list(kcell)%volume
+			else
+				ex_conc(k) = 0
+			endif
+ 			write(nflog,'(a,4i6,f8.3)') 'Cell volume: ',x,ns,i,k,ex_conc(k)
 		endif
     enddo
 enddo
 ! Add concentrations at the two boundaries 
 ! At ns=1, at at ns=ns+1
 ns = ns+1
-do ic = 1,MAX_CHEMO+NEXTRA
-	if (ic == 1) then	! CFSE
+do ic = 1,nvars
+	ichemo = ic - 1
+	if (ichemo == 0) then	! CFSE
 		k = ic	
 		ex_conc(k) = 0
-        k = (ns-1)*(MAX_CHEMO+NEXTRA) + ic
+        k = (ns-1)*nvars + ic
         ex_conc(k) = 0	
-	elseif (ic <= MAX_CHEMO) then
-		ichemo = ic - 1
+	elseif (ichemo <= MAX_CHEMO) then
 		k = ic
 		if (chemo(ichemo)%used) then
 			ex_conc(k) = BdryConc(ichemo,t_simulation)
 		else
 			ex_conc(k) = 0
 		endif      
-		k = (ns-1)*(MAX_CHEMO+NEXTRA) + ic
+		k = (ns-1)*nvars + ic
 		if (chemo(ichemo)%used) then
 			ex_conc(k) = BdryConc(ichemo,t_simulation)
 		else
 			ex_conc(k) = 0
 		endif      
-    elseif (ic == MAX_CHEMO+NEXTRA) then	! growth rate
+    elseif (ichemo == MAX_CHEMO+1) then	! growth rate
 		k = ic
 		ex_conc(k) = 0
 ! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,1,i,k,ex_conc(k)
-        k = (ns-1)*(MAX_CHEMO+NEXTRA) + ic
+        k = (ns-1)*nvars + ic
+        ex_conc(k) = 0
+! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
+    elseif (ichemo == MAX_CHEMO+2) then	! cell volume
+		k = ic
+		ex_conc(k) = 0
+! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,1,i,k,ex_conc(k)
+        k = (ns-1)*nvars + ic
         ex_conc(k) = 0
 ! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
     endif
 enddo
 end subroutine
-
 !--------------------------------------------------------------------------------
 ! Returns the distribution of cell volume.
 ! nv is passed from the GUI
@@ -1926,7 +2085,7 @@ end subroutine
 ! Returns the distribution of intracellular O2 level
 ! nv is passed from the GUI
 !--------------------------------------------------------------------------------
-subroutine get_oxyprob(nv, dv, prob) BIND(C)
+subroutine get_oxyprob(nv, v0, dv, prob) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_oxyprob
 use, intrinsic :: iso_c_binding
 integer(c_int) :: nv
@@ -1937,6 +2096,7 @@ real(REAL_KIND) :: v, Vmin, Vmax, O2max
 !call logger('get_oxyprob')
 Vmin = 0
 Vmax = chemo(OXYGEN)%bdry_conc
+v0 = Vmin
 dv = (Vmax - Vmin)/nv
 prob(1:nv) = 0
 n = 0
@@ -1953,6 +2113,62 @@ do kcell = 1,nlist
 enddo
 prob(1:nv) = prob(1:nv)/n
 end subroutine
+
+!--------------------------------------------------------------------------------
+! Returns the distribution of intracellular constituent concentration
+! nv is passed from the GUI
+!--------------------------------------------------------------------------------
+subroutine get_concprob(ichemo, nv, v0, dv, prob) !BIND(C)
+!!DEC$ ATTRIBUTES DLLEXPORT :: get_concprob
+use, intrinsic :: iso_c_binding
+integer(c_int) :: ichemo, nv
+real(c_double) :: v0, dv, prob(*)
+integer :: n, kcell, k
+real(REAL_KIND) :: v, Vmin, Vmax
+
+!call logger('get_oxyprob')
+Vmin = 0
+!Vmax = chemo(ichemo)%bdry_conc
+Vmax = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	v = cell_list(kcell)%conc(ichemo)
+	Vmax = max(Vmax,v)
+enddo
+VMax = 1.05*Vmax;
+v0 = Vmin
+dv = (Vmax - Vmin)/nv
+prob(1:nv) = 0
+n = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	v = cell_list(kcell)%conc(ichemo)
+	k = (v - Vmin)/dv + 1
+	k = min(k,nv)
+	k = max(k,1)
+	prob(k) = prob(k) + 1
+	n = n+1
+enddo
+prob(1:nv) = prob(1:nv)/n
+end subroutine
+
+!--------------------------------------------------------------------------------
+!subroutine get_distdata(nv, ddata) BIND(C)
+!!DEC$ ATTRIBUTES DLLEXPORT :: get_distdata
+!integer(c_int) :: nv
+!type(dist_data) :: ddata(0:*)
+!integer :: ichemo
+!
+!do ichemo = 0,MAX_CHEMO+N_EXTRA
+!	if (.not.ddata(ichemo).used) continue
+!	if (ichemo  == 0) then	! CFSE
+!	elseif (ichemo <= MAX_CHEMO) then
+!	elseif (ichemo == GROWTH_RATE) then
+!	elseif (ichemo == CELL_VOLUME) then
+!	endif
+!enddo
+!
+!end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Get number of live cells
@@ -2025,15 +2241,20 @@ end subroutine
 !                          3 = type 2
 ! Stack three cases in vmax() and histo_data()
 !-----------------------------------------------------------------------------------------
-subroutine get_histo(nhisto, histo_data, vmax) BIND(C)
+subroutine get_histo(nhisto, histo_data, vmin, vmax, histo_data_log, vmin_log, vmax_log) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_histo
 use, intrinsic :: iso_c_binding
 integer(c_int),value :: nhisto
-real(c_double) :: vmax(*), histo_data(*)
-real(REAL_KIND) :: val
+real(c_double) :: vmin(*), vmax(*), histo_data(*)
+real(c_double) :: vmin_log(*), vmax_log(*), histo_data_log(*)
+real(REAL_KIND) :: val, val_log
 integer :: n(3), i, ih, k, kcell, ict, ichemo, ivar, nvars, var_index(32)
 integer,allocatable :: cnt(:,:,:)
-real(REAL_KIND),allocatable :: dv(:,:), valmax(:,:)
+real(REAL_KIND),allocatable :: dv(:,:), valmin(:,:), valmax(:,:)
+integer,allocatable :: cnt_log(:,:,:)
+real(REAL_KIND),allocatable :: dv_log(:,:), valmin_log(:,:), valmax_log(:,:)
+!real(REAL_KIND) :: vmin_log(100), vmax_log(100)
+!real(REAL_KIND),allocatable :: histo_data_log(:)
 
 write(nflog,*) 'get_histo: nhisto: ',nhisto
 
@@ -2044,14 +2265,28 @@ do ichemo = 1,MAX_CHEMO
 	nvars = nvars + 1
 	var_index(nvars) = ichemo
 enddo
-nvars = nvars + 1	! Growth rate
-var_index(nvars) = MAX_CHEMO + 1
+nvars = nvars + 1
+var_index(nvars) = GROWTH_RATE
+nvars = nvars + 1
+var_index(nvars) = CELL_VOLUME
+nvars = nvars + 1
+var_index(nvars) = O2_BY_VOL
 
 allocate(cnt(3,nvars,nhisto))
 allocate(dv(3,nvars))
+allocate(valmin(3,nvars))
 allocate(valmax(3,nvars))
+allocate(cnt_log(3,nvars,nhisto))
+allocate(dv_log(3,nvars))
+allocate(valmin_log(3,nvars))
+allocate(valmax_log(3,nvars))
+!allocate(histo_data_log(10000))
 cnt = 0
-valmax = 0
+valmin = 1.0e10
+valmax = -1.0e10
+cnt_log = 0
+valmin_log = 1.0e10
+valmax_log = -1.0e10
 n = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
@@ -2062,21 +2297,44 @@ do kcell = 1,nlist
 			val = cell_list(kcell)%CFSE
 		elseif (ichemo <= MAX_CHEMO) then
 			val = cell_list(kcell)%conc(ichemo)
-		elseif (ichemo == MAX_CHEMO+1) then
+		elseif (ichemo == GROWTH_RATE) then
 			val = cell_list(kcell)%dVdt
+		elseif (ichemo == CELL_VOLUME) then
+			val = Vcell_pL*cell_list(kcell)%volume
+		elseif (ichemo == O2_BY_VOL) then
+			val = cell_list(kcell)%conc(OXYGEN)*Vcell_pL*cell_list(kcell)%volume
 		endif
 		valmax(ict+1,ivar) = max(valmax(ict+1,ivar),val)	! cell type 1 or 2
 		valmax(1,ivar) = max(valmax(1,ivar),val)			! both
+		if (val <= 1.0e-8) then
+			val_log = -8
+		else
+			val_log = log10(val)
+		endif
+		valmin_log(ict+1,ivar) = min(valmin_log(ict+1,ivar),val_log)	! cell type 1 or 2
+		valmin_log(1,ivar) = min(valmin_log(1,ivar),val_log)			! both
+		valmax_log(ict+1,ivar) = max(valmax_log(ict+1,ivar),val_log)	! cell type 1 or 2
+		valmax_log(1,ivar) = max(valmax_log(1,ivar),val_log)			! both
 	enddo
 	n(ict+1) = n(ict+1) + 1
 	n(1) = n(1) + 1
 enddo
-!if (n == 0) then
-!	vmax(1:nvars) = 0
-!	histo_data(1:nhisto*nvars) = 0
-!	return
-!endif
-dv = valmax/nhisto
+do ivar = 1,nvars
+	ichemo = var_index(ivar)
+	if (ichemo == CELL_VOLUME) then
+		valmin(:,ivar) = Vcell_pL*0.8
+		valmin_log(:,ivar) = log10(Vcell_pL*0.8)
+	else
+		valmin(:,ivar) = 0
+	endif
+enddo
+
+dv = (valmax - valmin)/nhisto
+write(nflog,*) 'dv'
+write(nflog,'(e12.3)') dv
+dv_log = (valmax_log - valmin_log)/nhisto
+write(nflog,*) 'dv_log'
+write(nflog,'(e12.3)') dv_log
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	ict = cell_list(kcell)%celltype
@@ -2086,36 +2344,71 @@ do kcell = 1,nlist
 			val = cell_list(kcell)%CFSE
 		elseif (ichemo <= MAX_CHEMO) then
 			val = cell_list(kcell)%conc(ichemo)
-		elseif (ichemo == MAX_CHEMO+1) then
+		elseif (ichemo == GROWTH_RATE) then
 			val = cell_list(kcell)%dVdt
+		elseif (ichemo == CELL_VOLUME) then
+			val = Vcell_pL*cell_list(kcell)%volume
+		elseif (ichemo == O2_BY_VOL) then
+			val = cell_list(kcell)%conc(OXYGEN)*Vcell_pL*cell_list(kcell)%volume
 		endif
-		k = val/dv(1,ivar) + 1
+		k = (val-valmin(1,ivar))/dv(1,ivar) + 1
 		k = min(k,nhisto)
 		cnt(1,ivar,k) = cnt(1,ivar,k) + 1
-		k = val/dv(ict+1,ivar) + 1
+		k = (val-valmin(ict+1,ivar))/dv(ict+1,ivar) + 1
 		k = min(k,nhisto)
 		cnt(ict+1,ivar,k) = cnt(ict+1,ivar,k) + 1
+		if (val <= 1.0e-8) then
+			val_log = -8
+		else
+			val_log = log10(val)
+		endif
+		k = (val_log-valmin_log(1,ivar))/dv_log(1,ivar) + 1
+		k = min(k,nhisto)
+		cnt_log(1,ivar,k) = cnt_log(1,ivar,k) + 1
+		k = (val_log-valmin_log(ict+1,ivar))/dv_log(ict+1,ivar) + 1
+		k = min(k,nhisto)
+		cnt_log(ict+1,ivar,k) = cnt_log(ict+1,ivar,k) + 1
 	enddo
 enddo
 write(nflog,*) 'n: ',n
 
 do i = 1,3
 	if (n(i) == 0) then
+		vmin((i-1)*nvars+1:i*nvars) = 0
 		vmax((i-1)*nvars+1:i*nvars) = 0
 		histo_data((i-1)*nvars*nhisto+1:i*nhisto*nvars) = 0
+		vmin_log((i-1)*nvars+1:i*nvars) = 0
+		vmax_log((i-1)*nvars+1:i*nvars) = 0
+		histo_data_log((i-1)*nvars*nhisto+1:i*nhisto*nvars) = 0
 	else
 		do ivar = 1,nvars
+			write(nflog,*) 'ivar: ',ivar
+			vmin((i-1)*nvars+ivar) = valmin(i,ivar)
 			vmax((i-1)*nvars+ivar) = valmax(i,ivar)
 			do ih = 1,nhisto
 				k = (i-1)*nvars*nhisto + (ivar-1)*nhisto + ih
 				histo_data(k) = (100.*cnt(i,ivar,ih))/n(i)
+			enddo
+			vmin_log((i-1)*nvars+ivar) = valmin_log(i,ivar)
+			vmax_log((i-1)*nvars+ivar) = valmax_log(i,ivar)
+			do ih = 1,nhisto
+				write(nflog,*) 'ih: ',ih
+				k = (i-1)*nvars*nhisto + (ivar-1)*nhisto + ih
+				histo_data_log(k) = (100.*cnt_log(i,ivar,ih))/n(i)
 			enddo
 		enddo
 	endif
 enddo
 deallocate(cnt)
 deallocate(dv)
+deallocate(valmin)
 deallocate(valmax)
+deallocate(cnt_log)
+deallocate(dv_log)
+deallocate(valmin_log)
+deallocate(valmax_log)
+!deallocate(histo_data_log)
+write(nflog,*) 'did get_histo'
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -2126,7 +2419,7 @@ real(REAL_KIND) :: dx
 real(REAL_KIND), allocatable :: ex_conc(:,:)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer :: rng(3,2), i, k, ichemo, kcell, x, y, z, ic, nc, kmax
-character*(16) :: title(MAX_CHEMO+NEXTRA-1)
+character*(16) :: title(0:MAX_CHEMO+N_EXTRA)
 character*(128) :: filename
 character*(6) :: mintag
 
@@ -2134,19 +2427,32 @@ dx = DELTA_X
 rng(:,1) = Centre(:) - (adrop*Radius + 2)
 rng(:,2) = Centre(:) + (adrop*Radius + 2)
 kmax = rng(1,2)-rng(1,1)+ 3
-allocate(ex_conc(MAX_CHEMO+NEXTRA-1,kmax))
+allocate(ex_conc(0:MAX_CHEMO+N_EXTRA,kmax))
 y = Centre(2) + 0.5
 z = Centre(3) + 0.5
 ic = 0
-do ichemo = 1,MAX_CHEMO+NEXTRA-1
-	if (ichemo <= MAX_CHEMO) then
+do ichemo = 0,MAX_CHEMO+N_EXTRA
+	if (ichemo == CFSE) then
+		if (.not.chemo(ichemo)%used) cycle
+		ic = ic + 1
+		title(ic) = 'CFSE'
+	    cbnd = 0
+	elseif (ichemo <= MAX_CHEMO) then
 		if (.not.chemo(ichemo)%used) cycle
 		ic = ic + 1
 		title(ic) = chemo(ichemo)%name
 	    cbnd = BdryConc(ichemo,t_simulation)
-	else
+	elseif (ichemo == GROWTH_RATE) then
 		ic = ic + 1
 		title(ic) = 'Growth_rate'
+		cbnd = 0
+	elseif (ichemo == CELL_VOLUME) then
+		ic = ic + 1
+		title(ic) = 'Cell_volume'
+		cbnd = 0
+	elseif (ichemo == O2_BY_VOL) then
+		ic = ic + 1
+		title(ic) = 'Cell_O2xVol'
 		cbnd = 0
 	endif
 	k = 1
@@ -2156,15 +2462,33 @@ do ichemo = 1,MAX_CHEMO+NEXTRA-1
 		if (kcell <= OUTSIDE_TAG) cycle
 		i = ODEdiff%ivar(x,y,z)
 		k = k+1
-		if (ichemo <= MAX_CHEMO) then
+		if (ichemo == CFSE) then
+			if (kcell > 0) then
+				ex_conc(ic,k) = cell_list(kcell)%cfse
+			else
+				ex_conc(ic,k) = 0
+			endif
+		elseif (ichemo <= MAX_CHEMO) then
 			if (i > 0) then
 				ex_conc(ic,k) = allstate(i,ichemo)
 			else
 				ex_conc(ic,k) = 0
 			endif
-		elseif (ichemo == MAX_CHEMO+1) then	! growth rate
+		elseif (ichemo == GROWTH_RATE) then
 			if (kcell > 0) then
 				ex_conc(ic,k) = cell_list(kcell)%dVdt
+			else
+				ex_conc(ic,k) = 0
+			endif
+		elseif (ichemo == CELL_VOLUME) then
+			if (kcell > 0) then
+				ex_conc(ic,k) = Vcell_pL*cell_list(kcell)%volume
+			else
+				ex_conc(ic,k) = 0
+			endif
+		elseif (ichemo == O2_BY_VOL) then
+			if (kcell > 0) then
+				ex_conc(ic,k) = allstate(i,OXYGEN)*Vcell_pL*cell_list(kcell)%volume
 			else
 				ex_conc(ic,k) = 0
 			endif
@@ -2184,9 +2508,9 @@ open(nfprofile,file=filename,status='replace')
 write(nfprofile,'(i6,a)') int(istep*DELTA_T/60),' minutes'
 write(nfprofile,'(i6,a)') ns,' sites'
 write(nfprofile,'(f6.2,a)') 1000*DELTA_X,' dx (um)'
-write(nfprofile,'(32a16)') title(1:nc)
+write(nfprofile,'(32a16)') title(0:nc)
 do k = 1,ns
-	write(nfprofile,'(32(e12.3,4x))') ex_conc(1:nc,k)
+	write(nfprofile,'(32(e12.3,4x))') ex_conc(0:nc,k)
 enddo
 close(nfprofile)
 deallocate(ex_conc)
@@ -2197,34 +2521,44 @@ end subroutine
 subroutine get_constituents(nvars,cvar_index,nvarlen,name_array,narraylen) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_constituents
 use, intrinsic :: iso_c_binding
-character(c_char) :: name_array(*)
-integer(c_int) :: nvars, cvar_index(*), nvarlen, narraylen
+character(c_char) :: name_array(0:*)
+integer(c_int) :: nvars, cvar_index(0:*), nvarlen, narraylen
 integer :: ivar, k, ichemo
 character*(24) :: name
 character(c_char) :: c
 
 write(nflog,*) 'get_constituents'
 nvarlen = 24
-ivar = 1
-k = (ivar-1)*nvarlen + 1
+ivar = 0
+k = ivar*nvarlen
 cvar_index(ivar) = 0	! CFSE
 name = 'CFSE'
 call copyname(name,name_array(k),nvarlen)
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	ivar = ivar + 1
-	k = (ivar-1)*nvarlen + 1
+	k = ivar*nvarlen
 	cvar_index(ivar) = ichemo
 	name = chemo(ichemo)%name
 	write(nflog,*) 'get_constituents: ',ichemo,name
 	call copyname(name,name_array(k),nvarlen)
 enddo
 ivar = ivar + 1
-k = (ivar-1)*nvarlen + 1
-cvar_index(ivar) = MAX_CHEMO + 1	! Growth rate
+k = ivar*nvarlen
+cvar_index(ivar) = GROWTH_RATE
 name = 'Growth rate'
 call copyname(name,name_array(k),nvarlen)
-nvars = ivar
+ivar = ivar + 1
+k = ivar*nvarlen
+cvar_index(ivar) = CELL_VOLUME
+name = 'Cell volume'
+call copyname(name,name_array(k),nvarlen)
+ivar = ivar + 1
+k = ivar*nvarlen
+cvar_index(ivar) = O2_BY_VOL
+name = 'Cell O2xVol'
+call copyname(name,name_array(k),nvarlen)
+nvars = ivar + 1
 write(nflog,*) 'did get_constituents'
 end subroutine
 

@@ -165,7 +165,7 @@ void ExecThread::run()
     LOG_MSG("call execute");
     execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
     LOG_MSG("did execute");
-    get_dimensions(&Global::NX,&Global::NY,&Global::NZ,&nsteps,&Global::DELTA_T, &Global::MAX_CHEMO, cused, &Global::dfraction);
+    get_dimensions(&Global::NX,&Global::NY,&Global::NZ,&nsteps,&Global::DELTA_T, &Global::MAX_CHEMO, &Global::N_EXTRA, cused, &Global::dfraction);
     summary_interval = int(3600./Global::DELTA_T);
     sprintf(msg,"exthread: nsteps: %d summary_interval: %d",nsteps,summary_interval);
     LOG_MSG(msg);
@@ -215,9 +215,10 @@ void ExecThread::run()
 			mutex1.lock();
             get_summary(Global::summaryData, &Global::i_hypoxia_cutoff, &Global::i_growth_cutoff);
 //            getProfiles();
-            get_concdata(&Global::conc_nc, &Global::conc_dx, Global::concData);
             get_volprob(&Global::vol_nv, &Global::vol_v0, &Global::vol_dv, Global::volProb);
-            get_oxyprob(&Global::oxy_nv, &Global::oxy_dv, Global::oxyProb);
+            get_oxyprob(&Global::oxy_nv, &Global::oxy_v0, &Global::oxy_dv, Global::oxyProb);
+//            get_distdata(&Global::dist_nv, Global::distParams, Global::distData);
+            get_concdata(&Global::conc_nvars, &Global::conc_nc, &Global::conc_dx, Global::concData);
             if (Global::showingFACS || Global::recordingFACS) {
                 getFACS();
             }
@@ -340,12 +341,15 @@ void ExecThread::getFACS()
         Global::FACS_data = (double *)malloc(Global::nFACS_dim*sizeof(double));
     }
     get_facs(Global::FACS_data);
-    if (!Global::histo_data || Global::nhisto_boxes*Global::nvars_used > Global::nhisto_dim) {
+    if (!Global::histo_data || Global::nhisto_bins*Global::nvars_used > Global::nhisto_dim) {
         if (Global::histo_data) free(Global::histo_data);
-        Global::nhisto_dim = 6*Global::nhisto_boxes*Global::nvars_used;   // 2*3 to avoid excessive malloc/free (only 3* used)
+        if (Global::histo_data_log) free(Global::histo_data_log);
+        Global::nhisto_dim = 6*Global::nhisto_bins*Global::nvars_used;   // 2*3 to avoid excessive malloc/free (only 3* used)
         Global::histo_data = (double *)malloc(Global::nhisto_dim*sizeof(double));
+        Global::histo_data_log = (double *)malloc(Global::nhisto_dim*sizeof(double));
     }
-    get_histo(Global::nhisto_boxes, Global::histo_data, Global::histo_vmax);
+    get_histo(Global::nhisto_bins, Global::histo_data, Global::histo_vmin, Global::histo_vmax,
+              Global::histo_data_log, Global::histo_vmin_log, Global::histo_vmax_log);
 }
 
 //-----------------------------------------------------------------------------------------
