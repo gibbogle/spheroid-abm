@@ -3,6 +3,7 @@
 namespace Global
 {
     int MAX_CHEMO;
+    int N_EXTRA;
     int NX, NY, NZ;
     double DELTA_T;
     double dfraction;
@@ -20,9 +21,13 @@ namespace Global
     int nFACS_dim=0;
 
     double *histo_data=NULL;
-    int nhisto_boxes=20;
+    double *histo_data_log=NULL;
+    int nhisto_bins;
     int nhisto_dim=0;
+    double histo_vmin[3*32];
     double histo_vmax[3*32];
+    double histo_vmin_log[3*32];
+    double histo_vmax_log[3*32];
     int histo_celltype=0;
 
     int summaryData[100];
@@ -30,6 +35,7 @@ namespace Global
     int i_growth_cutoff;
 
     double concData[4000];
+    int conc_nvars;
     int conc_nc;
     double conc_dx;
 
@@ -39,7 +45,13 @@ namespace Global
     double vol_dv;
     double oxyProb[100];
     int oxy_nv;
+    double oxy_v0;
     double oxy_dv;
+
+//    double distData[4000];
+//    bool dist_used[20];
+    int dist_nv;
+    DIST_SET distParams[20];
 
     int cell_list[N_CELLINFO*MAX_CELLS];
     int ncell_list;

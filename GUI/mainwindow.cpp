@@ -144,60 +144,6 @@ MainWindow::MainWindow(QWidget *parent)
     goToInputs();
 }
 
-void MainWindow::test_histo()
-{
-    int numValues = 20;
-    double width = 10;
-    QwtArray<double> values(numValues);
-    for (int i=0; i<numValues; i++) {
-        values[i] = rand() %100;
-    }
-    makeHistoPlot(numValues,width,values);
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::makeHistoPlot(int numValues, double width,  QwtArray<double> values)
-{
-    LOG_MSG("makeHistoPlot");
-    QwtPlot *plot = qpHisto;
-    plot->clear();
-    plot->setCanvasBackground(QColor(Qt::white));
-    plot->setTitle("Histogram");
-
-    QwtPlotGrid *grid = new QwtPlotGrid;
-    grid->enableXMin(true);
-    grid->enableYMin(true);
-    grid->setMajPen(QPen(Qt::black, 0, Qt::DotLine));
-    grid->setMinPen(QPen(Qt::gray, 0 , Qt::DotLine));
-    grid->attach(plot);
-
-    if (histogram) {
-        histogram->detach();
-    } else {
-        histogram = new HistogramItem();
-    }
-    histogram->setColor(Qt::darkCyan);
-
-    QwtArray<QwtDoubleInterval> intervals(numValues);
-
-    double pos = 0.0;
-    for ( int i = 0; i < numValues; i++ )
-    {
-        intervals[i] = QwtDoubleInterval(pos, pos + width);
-        pos += width;
-    }
-
-    histogram->setData(QwtIntervalData(intervals, values));
-    histogram->attach(plot);
-
-    plot->setAxisScale(QwtPlot::yLeft, 0.0, 100.0);
-    plot->setAxisScale(QwtPlot::xBottom, 0.0, pos);
-    plot->replot();
-//    plot->resize(600,400);
-    plot->show();
-
-}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -517,73 +463,12 @@ void MainWindow:: initFACSPlot()
     qpFACS->setTitle("FACS");
     QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
     qpFACS->replot();
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow:: initHistoPlot()
-{
-    qpHisto = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_Histo");
-    qpHisto->setTitle("Histogram");
-//    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
-    qpHisto->replot();
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::on_buttonGroup_celltype_buttonClicked(QAbstractButton* button)
-{
-    LOG_MSG("on_buttonGroup_celltype_buttonClicked");
-    if (button->text() == "Cell type 1") {
-        Global::histo_celltype = 1;
-    } else if (button->text() == "Cell type 2") {
-        Global::histo_celltype = 2;
-    } else {
-        Global::histo_celltype = 0; // both cell types
-    }
-    showHisto();
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow:: showHisto()
-{
-    int ivar, k, k0, numValues;
-    QRadioButton *rb;
-    QString xlabel;
-    double width;
-
-    LOG_MSG("showHisto");
-    numValues = Global::nhisto_boxes;
-    QwtArray<double> values(numValues);
-
-    // Determine which button is checked:
-    for (ivar=0; ivar<Global::nvars_used; ivar++) {
-        rb = histo_rb_list[ivar];
-        if (rb->isChecked()) {
-            break;
-        }
-    }
-    xlabel = Global::var_string[ivar];
-    k0 = Global::histo_celltype*numValues*Global::nvars_used;
-//    sprintf(msg,"histo_celltype: %d numValues: %d nvars_used: %d k0: %d",Global::histo_celltype,numValues,Global::nvars_used,k0);
-//    LOG_MSG(msg);
-    if (!Global::histo_data) {
-        LOG_MSG("No histo_data");
-        return;
-    }
-    for (int i=0; i<numValues; i++) {
-        k = k0 + ivar*numValues + i;
-        values[i] = Global::histo_data[k];
-    }
-    width = Global::histo_vmax[ivar]/numValues;
-    makeHistoPlot(numValues,width,values);
-    LOG_MSG("did makeHistoPlot");
+    connect((QObject *)groupBox_FACS,SIGNAL(groupBoxClicked(QString)),this,SLOT(processGroupBoxClick(QString)));
 }
 
 //--------------------------------------------------------------------------------------------------------
 // Possible variables to plot are Global::vars_used[]
-// Use this to trigger histogram plot.
+// Use this to trigger FACS plot.
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showFACS()
 {
@@ -650,6 +535,11 @@ void MainWindow::showFACS()
         xmin = 1.0e-7;
         xmax = 1.0e-5;
         break;
+    case CELL_VOLUME:
+        xscale = 1;
+        xlabel = "Cell volume";
+        xmin = 0;
+        xmax = 2;
     }
     for (ivar=0; ivar<Global::nvars_used; ivar++) {
         rb = FACS_y_vars_rb_list[ivar];
@@ -719,7 +609,7 @@ void MainWindow::showFACS()
         }
     }
     qpFACS->setAxisScale(QwtPlot::yLeft, ymin, ymax, 0);
-    qpFACS->setAxisTitle(QwtPlot::yLeft, ylabel);   
+    qpFACS->setAxisTitle(QwtPlot::yLeft, ylabel);
     if (y_logscale) {
         qpFACS->setAxisScaleEngine(QwtPlot::yLeft, new QwtLog10ScaleEngine);
     } else {
@@ -750,7 +640,179 @@ void MainWindow::showFACS()
         actionStart_recording_FACS->setEnabled(true);
         actionStop_recording_FACS->setEnabled(false);
     }
-//    showHisto();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::test_histo()
+{
+    int numValues = 20;
+    double width = 10, xmin = 0;
+    QwtArray<double> values(numValues);
+    for (int i=0; i<numValues; i++) {
+        values[i] = rand() %100;
+    }
+    makeHistoPlot(numValues,xmin,width,values);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: initHistoPlot()
+{
+    qpHistoBar = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_Histo");
+    qpHistoBar->setTitle("Histogram");
+//    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+    qpHistoBar->replot();
+
+    qpHistoLine = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_HistoLine");
+    qpHistoLine->hide();
+
+    connect((QObject *)groupBox_Histo,SIGNAL(groupBoxClicked(QString)),this,SLOT(processGroupBoxClick(QString)));
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::makeHistoPlot(int numValues, double xmin, double width,  QwtArray<double> values)
+{
+    QwtPlot *plot;
+    double pos;
+
+    LOG_MSG("makeHistoPlot");
+    bool use_HistoBar = radioButton_histotype_1->isChecked();
+    if (use_HistoBar) {
+        plot = qpHistoBar;
+        qpHistoLine->hide();
+    } else {
+        plot = qpHistoLine;
+        qpHistoBar->hide();
+    }
+    plot->clear();
+    plot->setCanvasBackground(QColor(Qt::white));
+    plot->setTitle("Histogram");
+
+    QwtPlotGrid *grid = new QwtPlotGrid;
+    grid->enableXMin(true);
+    grid->enableYMin(true);
+    grid->setMajPen(QPen(Qt::black, 0, Qt::DotLine));
+    grid->setMinPen(QPen(Qt::gray, 0 , Qt::DotLine));
+    grid->attach(plot);
+
+    if (use_HistoBar) {
+        if (histogram) {
+            histogram->detach();
+        } else {
+            histogram = new HistogramItem();
+        }
+        histogram->setColor(Qt::darkCyan);
+
+        QwtArray<QwtDoubleInterval> intervals(numValues);
+
+        pos = xmin;
+        for ( int i = 0; i < numValues; i++ )
+        {
+            intervals[i] = QwtDoubleInterval(pos, pos + width);
+            pos += width;
+        }
+
+        histogram->setData(QwtIntervalData(intervals, values));
+        histogram->attach(plot);
+    } else {
+        double x[100], y[100];
+        for ( int i = 0; i < numValues; i++ ) {
+            x[i] = xmin + (i + 0.5)*width;
+            y[i] = values[i];
+        }
+        pos = x[numValues-1] + width/2;
+        QwtPlotCurve *curve = new QwtPlotCurve("");
+        QPen *pen = new QPen();
+        pen->setColor(Qt::black);
+        curve->attach(plot);
+        curve->setPen(*pen);
+        curve->setData(x, y, numValues);
+    }
+
+    plot->setAxisScale(QwtPlot::yLeft, 0.0, 100.0);
+    plot->setAxisScale(QwtPlot::xBottom, xmin, pos);
+    plot->replot();
+//    plot->resize(600,400);
+    plot->show();
+
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_buttonGroup_celltype_buttonClicked(QAbstractButton* button)
+{
+    LOG_MSG("on_buttonGroup_celltype_buttonClicked");
+    if (button->text() == "Cell type 1") {
+        Global::histo_celltype = 1;
+    } else if (button->text() == "Cell type 2") {
+        Global::histo_celltype = 2;
+    } else {
+        Global::histo_celltype = 0; // both cell types
+    }
+    showHisto();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_histo_logscale_toggled()
+{
+    showHisto();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_buttonGroup_histotype_buttonClicked(QAbstractButton* button)
+{
+    showHisto();
+}
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: showHisto()
+{
+    int ivar, k, k0, numValues;
+    QRadioButton *rb;
+    QString xlabel;
+    double width, xmin;
+    bool log_scale;
+
+    LOG_MSG("showHisto");
+    log_scale = checkBox_histo_logscale->isChecked();
+    numValues = Global::nhisto_bins;
+    QwtArray<double> values(numValues);
+
+    // Determine which button is checked:
+    for (ivar=0; ivar<Global::nvars_used; ivar++) {
+        rb = histo_rb_list[ivar];
+        if (rb->isChecked()) {
+            break;
+        }
+    }
+    xlabel = Global::var_string[ivar];
+    k0 = Global::histo_celltype*numValues*Global::nvars_used;
+//    sprintf(msg,"histo_celltype: %d numValues: %d nvars_used: %d k0: %d",Global::histo_celltype,numValues,Global::nvars_used,k0);
+//    LOG_MSG(msg);
+    if (!Global::histo_data) {
+        LOG_MSG("No histo_data");
+        return;
+    }
+    for (int i=0; i<numValues; i++) {
+        k = k0 + ivar*numValues + i;
+        if (log_scale)
+            values[i] = Global::histo_data_log[k];
+        else
+            values[i] = Global::histo_data[k];
+    }
+    if (log_scale) {
+        xmin = Global::histo_vmin_log[ivar];
+        width = (Global::histo_vmax_log[ivar] - Global::histo_vmin_log[ivar])/numValues;
+    } else {
+        xmin = Global::histo_vmin[ivar];
+        width = (Global::histo_vmax[ivar] - Global::histo_vmin[ivar])/numValues;
+    }
+    makeHistoPlot(numValues,xmin,width,values);
+    LOG_MSG("did makeHistoPlot");
 }
 
 //-------------------------------------------------------------
@@ -1174,8 +1236,7 @@ void MainWindow::setBdryRadioButton(QRadioButton *w_rb, int val)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::showMore(QString moreText)
 {
-	LOG_MSG("label clicked!");
-	LOG_QMSG(moreText);
+//    LOG_QMSG("showMore " + moreText);
 	
     text_more->setEnabled(true);
     text_more->setText(moreText); // text_description
@@ -1825,6 +1886,7 @@ void MainWindow::preConnection()
 	// Initialize graphs
     initializeGraphs(newR);
     LOG_MSG("did initializeGraphs");
+    Global::nhisto_bins = lineEdit_nhistobins->text().toInt();
     posdata = false;
 	LOG_MSG("preconnection: done");
 }
@@ -1848,9 +1910,9 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 	mdiArea->show();
     setGraphsActive();
     int non_ts = 0;
-    if (field->isConcPlot()) non_ts++;
-    if (field->isVolPlot()) non_ts++;
-    if (field->isOxyPlot()) non_ts++;
+//    if (field->isConcPlot()) non_ts++;
+//    if (field->isVolPlot()) non_ts++;
+//    if (field->isOxyPlot()) non_ts++;
     grph->makeGraphList(non_ts);
     nGraphs = grph->nGraphs;
     if (nGraphCases > 0) {
@@ -1860,7 +1922,7 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     QString title;
     QString yAxisTitle;
     for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i) && !grph->isProfile(i)) continue;   // ???
+        if (!grph->isTimeseries(i) && !grph->isProfile(i) && !grph->isDistribution(i)) continue;   // ???
         tag = grph->get_tag(i);
         title = grph->get_title(i);
         yAxisTitle = grph->get_yAxisTitle(i);
@@ -1881,7 +1943,7 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
     graphResultSet[0] = R;
 
     for (int i=0; i<nGraphs; i++) {
-        if (!grph->isTimeseries(i) && !grph->isProfile(i)) continue;
+        if (!grph->isTimeseries(i) && !grph->isProfile(i) && !grph->isDistribution(i)) continue;
         mdiArea->addSubWindow(pGraph[i]);
 		pGraph[i]->show();
     }
@@ -1890,20 +1952,21 @@ void MainWindow::initializeGraphs(RESULT_SET *R)
 		mdiArea->addSubWindow(box_outputData);	// Need another way of creating this window - should be floating
 		box_outputData->show();
 	}
-
+/*
     if (field->isConcPlot())
         field->makeConcPlot(mdiArea);
     if (field->isVolPlot())
         field->makeVolPlot(mdiArea);
     if (field->isOxyPlot())
         field->makeOxyPlot(mdiArea);
-
+*/
     mdiArea->tileSubWindows();
 
 	for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
         pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, R->nsteps, 0);
 	}
+    Global::dist_nv = 20;
 }
 
 
@@ -1969,7 +2032,8 @@ void MainWindow::displayScene()
 void MainWindow::showSummary(int hr)
 {
     double val;
-    int res;
+    int n, res;
+    QString tag;
 
 //    sprintf(msg,"showSummary: step: %d",step);
 //    LOG_MSG(msg);
@@ -1992,17 +2056,18 @@ void MainWindow::showSummary(int hr)
 
 	QString casename = newR->casename;
     newR->tnow[step] = step;
-
+/*
     if (field->isConcPlot()) {
         field->updateConcPlot();
     }
+
     if (field->isVolPlot()) {
         field->updateVolPlot();
     }
     if (field->isOxyPlot()) {
         field->updateOxyPlot();
     }
-
+*/
     // TS plots
 	for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
@@ -2010,7 +2075,7 @@ void MainWindow::showSummary(int hr)
 		int k = grph->get_dataIndex(i);
         val = Global::summaryData[k];
         newR->pData[i][step] = val*grph->get_scaling(i);
-        QString tag = grph->get_tag(i);
+        tag = grph->get_tag(i);
 //        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
         double yscale = grph->get_yscale(i);
         pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag, yscale, false);
@@ -2018,42 +2083,78 @@ void MainWindow::showSummary(int hr)
 //    LOG_QMSG("did ts graphs");
 
     // Profile plots
+//    int nvars = 1 + Global::MAX_CHEMO + Global::N_EXTRA;
+    int ivar=0;
+    int nvars = Global::conc_nvars;
     for (int i=0; i<nGraphs; i++) {
         if (!grph->isActive(i)) continue;
         if (Global::conc_nc > 0 && grph->isProfile(i)) {
             double x[100], y[100];
             double xscale, yscale;
-            int n;
-            QString tag = grph->get_tag(i);
+            tag = grph->get_tag(i);
             int k = grph->get_dataIndex(i);
-//            x = profile_x[k];
-//            y = profile_y[k];
-//            n = profile_n[k];
+            if (k == MULTI) {
+                ivar = field->constituent;
+                QString title;
+                field->getTitle(ivar,&title);
+                pGraph[i]->setTitle(title);
+                k = Global::GUI_to_DLL_index[ivar];
+            }
             n = Global::conc_nc;
+            int offset = k*n;
             for (int j=0; j<n; j++) {
                 x[j] = j*Global::conc_dx*1.0e4;
-                y[j] = Global::concData[j*(Global::MAX_CHEMO+2)+k];
-//                sprintf(msg,"%d %f %f",j,x[j],y[j]);
-//                LOG_MSG(msg);
+                y[j] = Global::concData[offset+j];
             }
             xscale = grph->get_xscale(x[n-1]);
             double maxval = 0;
             for (int j=0; j<n; j++) {
                 if (y[j] > maxval) maxval = y[j];
             }
-            yscale = pGraph[i]->calc_yscale_ts(maxval);
-//            sprintf(msg,"Profile plot: %d k: %d n: %d yscale: %f",i,k,n,yscale);
-//            LOG_MSG(msg);
+            yscale = pGraph[i]->calc_yscale(maxval);
             pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
-//            if (k == PROFILE_CFSE){
+            pGraph[i]->setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
+//            if (k == CFSE){
 //                pGraph[i]->setAxisScale(QwtPlot::xBottom, -20.0, 1.0, 0);
 //            }
-            pGraph[i]->setAxisTitle(QwtPlot::xBottom, tag);
+            pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Distance (microns)");
             pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
             pGraph[i]->redraw(x, y, n, casename, tag, yscale, true);
         }
     }
 //    LOG_QMSG("did profile graphs");
+    /*
+    // Distribution plots
+    for (int i=0; i<nGraphs; i++) {
+        if (!grph->isActive(i)) continue;
+        if (grph->isDistribution(i)) {
+            double x[100], y[100];
+            double yscale;
+            QString tag = grph->get_tag(i);
+            int k = grph->get_dataIndex(i);
+            double v1 = Global::distData[k].v0 - Global::distData[k].dv/2;
+            double v2 = Global::distData[k].v0 + (Global::dist_nv-0.5)*Global::distData[k].dv;
+            pGraph[i]->setAxisScale(QwtPlot::xBottom, v1, v2, 0);
+            n = Global::dist_nv;
+
+            double pmax = 0;
+            for (int j=0; j<n; j++) {
+                x[j] = Global::distData[k].v0 + j*Global::distData[k].dv;
+                y[j] = Global::distData[k].prob[j];
+                pmax = MAX(pmax,y[j]);
+            }
+            int j = pmax/0.1;
+            pmax = (j+1)*0.1;
+            yscale = pmax;
+            pGraph[i]->setAxisScale(QwtPlot::yLeft, 0, pmax, 0);
+            pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Concentration");
+            pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
+            pGraph[i]->redraw(x, y, n, casename, tag, yscale, true);
+        }
+    }
+    */
+//    LOG_QMSG("did distribution graphs");
+
     field->setSliceChanged();
     if (step > 0 && !action_field->isEnabled()) {
         field->displayField(hour,&res);
@@ -3123,7 +3224,7 @@ void MainWindow::setupGraphSelector()
     row[0]++;
     grid->addWidget(checkBox_conc,row[0],0);
     connect((QObject *)checkBox_conc, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-*/
+
     checkBox_vol = new QMyCheckBox();
     checkBox_vol->setText("Cell Volume Distribution");
     checkBox_vol->setChecked(field->isVolPlot());
@@ -3141,7 +3242,7 @@ void MainWindow::setupGraphSelector()
     row[0]++;
     grid->addWidget(checkBox_oxy,row[0],0);
     connect((QObject *)checkBox_oxy, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-
+*/
     cbox_ts = new QMyCheckBox*[grph->n_tsGraphs];
     for (int i=0; i<grph->n_tsGraphs; i++) {
         int col = grph->tsGraphs[i].type;
@@ -3153,6 +3254,11 @@ void MainWindow::setupGraphSelector()
         cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
         grid->addWidget(cbox_ts[i],row[col],col);
         connect((QObject *)cbox_ts[i], SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
+        if (col == 2) {
+            LOG_QMSG(grph->tsGraphs[i].tag);
+            sprintf(msg,"dist: %d %d",i,grph->tsGraphs[i].active);
+            LOG_MSG(msg);
+        }
     }
     groupBox_graphselect->setLayout(grid);
 
@@ -3160,7 +3266,7 @@ void MainWindow::setupGraphSelector()
 #ifdef __DISPLAY768
     rect.setHeight(460);
 #else
-    rect.setHeight(700);
+    rect.setHeight(500);
 #endif
     groupBox_graphselect->setGeometry(rect);
 
@@ -3168,13 +3274,67 @@ void MainWindow::setupGraphSelector()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
+void MainWindow::processGroupBoxClick(QString text)
+{
+    LOG_QMSG("processGroupBoxClick: " + text);
+    QwtPlot *plot;
+
+    if (text.compare("Histo") == 0) {
+        LOG_MSG("save Histo plot");
+        bool use_HistoBar = radioButton_histotype_1->isChecked();
+        if (use_HistoBar) {
+            plot = qpHistoBar;
+            qpHistoLine->hide();
+        } else {
+            plot = qpHistoLine;
+            qpHistoBar->hide();
+        }
+    } else if (text.compare("FACS") == 0) {
+        LOG_MSG("save FACS plot");
+        plot = qpFACS;
+    } else {
+        return;
+    }
+
+    int w = plot->width();
+    int h = plot->height();
+    QPixmap pixmap(w, h);
+    pixmap.fill(Qt::white); // Qt::transparent ?
+
+    QwtPlotPrintFilter filter;
+    int options = QwtPlotPrintFilter::PrintAll;
+    options &= ~QwtPlotPrintFilter::PrintBackground;
+    options |= QwtPlotPrintFilter::PrintFrameWithScales;
+    filter.setOptions(options);
+
+    plot->print(pixmap, filter);
+
+//		QString fileName = getImageFile();
+    QString fileName = QFileDialog::getSaveFileName(0,"Select image file", ".",
+        "Image files (*.png *.jpg *.tif *.bmp)");
+    if (fileName.isEmpty()) {
+        return;
+    }
+    pixmap.save(fileName,0,-1);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 void MainWindow::setGraphsActive()
 {
-    field->setConcPlot(checkBox_conc->isChecked());
-    field->setVolPlot(checkBox_vol->isChecked());
-    field->setOxyPlot(checkBox_oxy->isChecked());
     for (int i=0; i<grph->n_tsGraphs; i++) {
         grph->tsGraphs[i].active = cbox_ts[i]->isChecked();
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::showBool(QString qstr, bool result)
+{
+    if (result) {
+        LOG_QMSG(qstr + "= true");
+    } else {
+        LOG_QMSG(qstr + "= false");
     }
 }
 
@@ -3388,20 +3548,7 @@ void MainWindow::on_verticalSliderTransparency_sliderMoved(int position)
 {
     vtk->setOpacity(position);
 }
-*/
 
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::showBool(QString qstr, bool result)
-{
-    if (result) {
-        LOG_QMSG(qstr + "= true");
-    } else {
-        LOG_QMSG(qstr + "= false");
-    }
-}
-
-/*
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_TPZ_DRUG_SIMULATE_METABOLITE_toggled(bool checked)

@@ -165,6 +165,8 @@ public slots:
     void radioButtonChanged(QAbstractButton *b);
     void killModelChanged();
     void on_buttonGroup_celltype_buttonClicked(QAbstractButton* button);
+    void on_buttonGroup_histotype_buttonClicked(QAbstractButton* button);
+    void on_checkBox_histo_logscale_toggled();
 
     void on_comb_TPZ_currentIndexChanged(int);
     void on_comb_DNB_currentIndexChanged(int);
@@ -172,6 +174,7 @@ public slots:
 //    void on_pushButton_SN30K_Kd_1_clicked();
 //    void on_pushButton_SN30K_Kd_2_clicked();
 
+    void processGroupBoxClick(QString);
 signals:
     void facs_update();
     void histo_update();
@@ -220,7 +223,7 @@ private:
     void setGraphsActive();
     void initDrugComboBoxes();
     void test_histo();
-    void makeHistoPlot(int numValues, double width, QVector<double> values);
+    void makeHistoPlot(int numValues, double xmin, double width, QVector<double> values);
     void showBool(QString, bool);
 
 	double erf(double z);
@@ -265,7 +268,7 @@ private:
 
     QwtPlot *qpFACS;
     QwtPlotCurve *curveFACS;
-    QwtPlot *qpHisto;
+    QwtPlot *qpHistoBar, *qpHistoLine;
     HistogramItem *histogram;
 
 	int nDistPts;

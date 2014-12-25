@@ -460,9 +460,10 @@ do kcell = 1,nlist0
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0
 	endif
-!	if (istep > 1 .and. dVdt == 0) then
-!		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
-!	endif
+	if (istep > 1 .and. dVdt == 0) then
+		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
+		stop
+	endif
 	site = cell_list(kcell)%site
 	Cin_0 = cell_list(kcell)%conc
 	Cex_0 = occupancy(site(1),site(2),site(3))%C
@@ -513,6 +514,30 @@ do i = 1,ndivide
 	kcell_dividing = kcell
 	call CellDivider(kcell, ok)
 	if (.not.ok) return
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine SetInitialGrowthRate
+integer :: kcell
+real(REAL_KIND) :: c_rate, r_mean, C_O2, metab, dVdt 
+
+c_rate = log(2.0)/divide_time_mean
+r_mean = Vdivide0/(2*divide_time_mean)
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	C_O2 = chemo(OXYGEN)%bdry_conc
+	metab = O2_metab(C_O2)
+	if (use_V_dependence) then
+		dVdt = c_rate*cell_list(kcell)%volume*metab
+	else
+		dVdt = r_mean*metab
+	endif
+	if (suppress_growth) then	! for checking solvers
+		dVdt = 0
+	endif
+	cell_list(kcell)%dVdt = dVdt
 enddo
 end subroutine
 

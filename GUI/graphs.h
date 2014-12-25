@@ -1,7 +1,7 @@
 #ifndef GRAPHS_H
 #define GRAPHS_H
 
-#include "profile.h"
+#include "global.h"
 
 #define maxGraphs 12
 #define TS_TYPE 0
@@ -18,7 +18,6 @@ struct graph_set {
 	double maxValue;
 	double scaling;		// multiplying factor for scaling of summary_data
     double yscale;
-//    bool ts;
     int type;           // 0 = time-series, 1 = profile, 2 = distribution
 };
 
@@ -52,7 +51,6 @@ public:
     bool isDistribution(int);
     void set_maxValue(int, double);
     void makeGraphList(int);
-//    void makeGraphList();
 
 };
 

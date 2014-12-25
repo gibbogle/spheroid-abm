@@ -13,7 +13,7 @@ QMyLabel::QMyLabel(QWidget *parent) : QLabel(parent)
 void QMyLabel::mousePressEvent (QMouseEvent *event) {
 	event->accept();
 	QString sname = objectName().mid(6);
-	QString text = "mousePressEvent";
+    QString text;
 	// Find which label_ sent the signal, and read its text
 	for (int k=0; k<parm->nParams; k++) {
 		PARAM_SET param = parm->get_param(k);
@@ -34,11 +34,13 @@ void QMyCheckBox::mousePressEvent (QMouseEvent *event) {
     QString text;
     if (objectName().contains("cbox_")) {
         QString sname = objectName().mid(5);
+//        LOG_QMSG("checkBoxClicked: " + sname);
         // Find which cbox_ sent the signal, and read its text
         for (int k=0; k<parm->nParams; k++) {
             PARAM_SET param = parm->get_param(k);
-            if (sname.compare(param.tag) == 0)
+            if (sname.compare(param.tag) == 0) {
                 text = param.text;
+            }
         }
     } else if (objectName().contains("checkBox_")) {
         text = this->description;
@@ -47,4 +49,20 @@ void QMyCheckBox::mousePressEvent (QMouseEvent *event) {
         this->toggle();
     }
     emit checkBoxClicked(text);
+};
+
+QMyGroupBox::QMyGroupBox(QWidget *parent) : QGroupBox(parent)
+{}
+//--------------------------------------------------------------------------------------------------------
+// Redefines mousePressEvent for QMyGroupBox, which extends QGroupBox.
+// This is used to save a plot on right-button click.
+//--------------------------------------------------------------------------------------------------------
+void QMyGroupBox::mousePressEvent (QMouseEvent *event) {
+    event->accept();
+    if (event->button() == Qt::RightButton) {
+        QString sname = objectName().mid(9);
+        // Find which groupBox_ sent the signal
+        LOG_QMSG("groupBox clicked: " + sname);
+        emit groupBoxClicked(sname);
+    }
 };

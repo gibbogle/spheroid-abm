@@ -50,6 +50,8 @@ public:
     void setHistogramAttribute(HistogramAttribute, bool on = true);
     bool testHistogramAttribute(HistogramAttribute) const;
 
+    void mousePressEvent (QMouseEvent *event);
+
 protected:
     virtual void drawBar(QPainter *,
         Qt::Orientation o, const QRect &) const;

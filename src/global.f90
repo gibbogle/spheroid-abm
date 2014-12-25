@@ -33,7 +33,7 @@ integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16, nfprofile=17
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
-integer, parameter :: CFSE = 0	! (not used here, used in the GUI)
+integer, parameter :: CFSE = 0
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
 integer, parameter :: TRACER = 3
@@ -47,9 +47,12 @@ integer, parameter :: DNB_DRUG_METAB_1 = DNB_DRUG + 1
 integer, parameter :: DNB_DRUG_METAB_2 = DNB_DRUG + 2
 integer, parameter :: MAX_CHEMO = DNB_DRUG_METAB_2
 integer, parameter :: GROWTH_RATE = MAX_CHEMO + 1	! (not used here, used in the GUI)
-integer, parameter :: CELL_VOLUME = MAX_CHEMO + 2	! (not used here, used in the GUI)
+integer, parameter :: CELL_VOLUME = MAX_CHEMO + 2
+integer, parameter :: O2_BY_VOL = MAX_CHEMO + 3
 
-integer, parameter :: NEXTRA = GROWTH_RATE + 1 - MAX_CHEMO	! = 2 = total # of variables - MAX_CHEMO
+integer, parameter :: N_EXTRA = O2_BY_VOL - MAX_CHEMO	! = 3 = total # of variables - MAX_CHEMO
+
+integer, parameter :: DIST_NV = 20
 
 !integer, parameter :: SN30000 = DRUG_A
 !integer, parameter :: SN30000_METAB = DRUG_A + 1
@@ -190,7 +193,14 @@ type, bind(C) :: field_data
 !	real(c_double) :: CFSE
 !	real(c_double) :: dVdt
 	real(c_double) :: volume
-	real(c_double) :: conc(0:MAX_CHEMO+NEXTRA-1)	! This needs to agree with the definition in field.h: 0 = CFSE, MAX_CHEMO+1 = dVdt
+	real(c_double) :: conc(0:MAX_CHEMO+N_EXTRA)	! Must agree with the definition in field.h: 0 = CFSE, MAX_CHEMO+1 = dVdt, MAX_CHEMO+2 = volume
+end type
+
+type, bind(C) :: dist_data
+	logical(c_bool) :: used
+	real(c_double) :: dv
+	real(c_double) :: v0
+	real(c_double) :: prob(DIST_NV)
 end type
 
 type treatment_type
@@ -238,7 +248,7 @@ integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, 
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes, ncpu_input
 integer :: nt_saveprofiledata, it_saveprofiledata
-real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3
+real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
 real(REAL_KIND) :: medium_volume0, medium_volume, cell_radius, d_layer
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
