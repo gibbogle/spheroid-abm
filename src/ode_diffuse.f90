@@ -539,8 +539,7 @@ membrane_kout = chemo(ichemo)%membrane_diff_out
 TPZ_metabolised(:,:) = (TPZ%Kmet0(:,:) > 0)	
 DNB_metabolised(:,:) = (DNB%Kmet0(:,:) > 0)	
 
-!$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, &
-                          kcell, ict, membrane_flux, KmetC) default(shared) schedule(static)
+!$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, kcell, ict, membrane_flux, KmetC) default(shared) schedule(static)
 do i = 1,neqn
 	yy = y(i)
 	if (isnan(yy)) then
@@ -855,7 +854,8 @@ real(REAL_KIND) :: DX2, Kdiff, Csum, dCreact, val, cbnd, esum2, sum, Cnew, y0tem
 real(REAL_KIND), parameter :: w_over = 1.6, w_under = 0.05
 real(REAL_KIND), parameter :: tol1_over = 1.0e-5, tol1_under = 1.0e-6, tol2 = 1.0e-10
 integer, parameter :: n_over = 1000, n_under = 1000
-integer, static :: iemin = 500
+!integer, static :: iemin = 500
+integer :: iemin = 500
 
 !write(*,*) 'RelaxSolver'
 DX2 = DELTA_X*DELTA_X
@@ -1014,7 +1014,8 @@ real(REAL_KIND) :: DX2, Kdiff, Csum, dCreact, val, cbnd, esum2, sum, Cnew, y0tem
 real(REAL_KIND), parameter :: w_over = 1.7, w_under = 0.05
 real(REAL_KIND), parameter :: tol1_over = 1.0e-5, tol1_under = 1.0e-6, tol2 = 1.0e-10
 integer, parameter :: n_over = 1000, n_under = 1000
-integer, static :: iemin = 500
+!integer, static :: iemin = 500
+integer :: iemin = 500
 logical, parameter :: interleave = .false.
 
 !write(*,*) 'ParRelaxSolver'
