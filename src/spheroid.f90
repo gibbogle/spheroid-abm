@@ -1364,10 +1364,14 @@ if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
 	call logger(logmsg)
 	if (bdry_changed) then
+!		write(nflog,*) 'UpdateBdryList'
 		call UpdateBdrylist
+!		write(nflog,*) 'did UpdateBdryList'
 	endif
 	if (mod(istep,6*nthour) == 0) then
+!		write(nflog,*) 'CheckBdryList'
 		call CheckBdryList('simulate_step')
+!		write(nflog,*) 'did CheckBdryList'
 	endif
 !	write(logmsg,'(a,2e12.3,i6)') 'Oxygen U, Cbnd, Nbnd: ', chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd, Nbnd
 !	call logger(logmsg)
@@ -1382,14 +1386,18 @@ if (use_treatment) then
 		call logger(logmsg)
 	endif
 endif
+!write(nflog,*) 'GrowCells'
 call GrowCells(radiation_dose,DELTA_T,ok)
+!write(nflog,*) 'did GrowCells'
 if (.not.ok) then
 	res = 3
 	return
 endif
 
 ! Update Cbnd using current M, R1 and previous U, Cext
+!write(nflog,*) 'UpdateCbnd'
 call UpdateCbnd
+!write(nflog,*) 'did UpdateCbnd'
 
 call SetupODEdiff
 
@@ -1397,11 +1405,13 @@ call SetupODEdiff
 call SiteCellToState
 !call check_allstate('after SiteCellToState')
 
+!write(nflog,*) 'Solver'
 do it_solve = 1,NT_CONC
 	tstart = (it_solve-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
 	call Solver(it_solve,tstart,dt,Ncells)
 enddo
+!write(nflog,*) 'did Solver'
 !call check_allstate('after Solver')
 
 call StateToSiteCell
@@ -1410,7 +1420,9 @@ call StateToSiteCell
 res = 0
 
 ! Compute U and update M, Cext, Cbnd
+!write(nflog,*) 'UpdateMedium'
 call UpdateMedium(DELTA_T)
+!write(nflog,*) 'did UpdateMedium'
 
 if (mod(istep,60) == -1) then
 	rmax = 0
@@ -2192,7 +2204,8 @@ subroutine get_FACS(facs_data) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_facs
 use, intrinsic :: iso_c_binding
 real(c_double) :: val, facs_data(*)
-integer :: k, kcell, ichemo, ivar, nvars, var_index(32)
+integer :: k, kcell, iextra, ichemo, ivar, nvars, var_index(32)
+real(REAL_KIND) :: cfse_min
 
 nvars = 1	! CFSE
 var_index(nvars) = 0
@@ -2201,9 +2214,11 @@ do ichemo = 1,MAX_CHEMO
 	nvars = nvars + 1
 	var_index(nvars) = ichemo
 enddo
-nvars = nvars + 1	! Growth rate
-var_index(nvars) = MAX_CHEMO + 1
-
+do iextra = 1,N_EXTRA
+	nvars = nvars + 1
+	var_index(nvars) = MAX_CHEMO + iextra
+enddo
+cfse_min = 1.0e20
 k = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
@@ -2220,10 +2235,15 @@ do kcell = 1,nlist
 		ichemo = var_index(ivar)
 		if (ichemo == 0) then
 			val = cell_list(kcell)%CFSE
+			cfse_min = min(val,cfse_min)
 		elseif (ichemo <= MAX_CHEMO) then
 			val = cell_list(kcell)%conc(ichemo)
-		elseif (ichemo == MAX_CHEMO+1) then
+		elseif (ichemo == GROWTH_RATE) then
 			val = cell_list(kcell)%dVdt
+		elseif (ichemo == CELL_VOLUME) then
+			val = cell_list(kcell)%volume
+		elseif (ichemo == O2_BY_VOL) then
+			val = cell_list(kcell)%volume*cell_list(kcell)%conc(OXYGEN)
 		endif
 		k = k+1
 		facs_data(k) = val
@@ -2255,8 +2275,6 @@ integer,allocatable :: cnt_log(:,:,:)
 real(REAL_KIND),allocatable :: dv_log(:,:), valmin_log(:,:), valmax_log(:,:)
 !real(REAL_KIND) :: vmin_log(100), vmax_log(100)
 !real(REAL_KIND),allocatable :: histo_data_log(:)
-
-write(nflog,*) 'get_histo: nhisto: ',nhisto
 
 nvars = 1	! CFSE
 var_index(nvars) = 0
@@ -2330,11 +2348,11 @@ do ivar = 1,nvars
 enddo
 
 dv = (valmax - valmin)/nhisto
-write(nflog,*) 'dv'
-write(nflog,'(e12.3)') dv
+!write(nflog,*) 'dv'
+!write(nflog,'(e12.3)') dv
 dv_log = (valmax_log - valmin_log)/nhisto
-write(nflog,*) 'dv_log'
-write(nflog,'(e12.3)') dv_log
+!write(nflog,*) 'dv_log'
+!write(nflog,'(e12.3)') dv_log
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	ict = cell_list(kcell)%celltype
@@ -2353,9 +2371,11 @@ do kcell = 1,nlist
 		endif
 		k = (val-valmin(1,ivar))/dv(1,ivar) + 1
 		k = min(k,nhisto)
+		k = max(k,1)
 		cnt(1,ivar,k) = cnt(1,ivar,k) + 1
 		k = (val-valmin(ict+1,ivar))/dv(ict+1,ivar) + 1
 		k = min(k,nhisto)
+		k = max(k,1)
 		cnt(ict+1,ivar,k) = cnt(ict+1,ivar,k) + 1
 		if (val <= 1.0e-8) then
 			val_log = -8
@@ -2364,13 +2384,14 @@ do kcell = 1,nlist
 		endif
 		k = (val_log-valmin_log(1,ivar))/dv_log(1,ivar) + 1
 		k = min(k,nhisto)
+		k = max(k,1)
 		cnt_log(1,ivar,k) = cnt_log(1,ivar,k) + 1
 		k = (val_log-valmin_log(ict+1,ivar))/dv_log(ict+1,ivar) + 1
 		k = min(k,nhisto)
+		k = max(k,1)
 		cnt_log(ict+1,ivar,k) = cnt_log(ict+1,ivar,k) + 1
 	enddo
 enddo
-write(nflog,*) 'n: ',n
 
 do i = 1,3
 	if (n(i) == 0) then
@@ -2382,7 +2403,6 @@ do i = 1,3
 		histo_data_log((i-1)*nvars*nhisto+1:i*nhisto*nvars) = 0
 	else
 		do ivar = 1,nvars
-			write(nflog,*) 'ivar: ',ivar
 			vmin((i-1)*nvars+ivar) = valmin(i,ivar)
 			vmax((i-1)*nvars+ivar) = valmax(i,ivar)
 			do ih = 1,nhisto
@@ -2392,7 +2412,6 @@ do i = 1,3
 			vmin_log((i-1)*nvars+ivar) = valmin_log(i,ivar)
 			vmax_log((i-1)*nvars+ivar) = valmax_log(i,ivar)
 			do ih = 1,nhisto
-				write(nflog,*) 'ih: ',ih
 				k = (i-1)*nvars*nhisto + (ivar-1)*nhisto + ih
 				histo_data_log(k) = (100.*cnt_log(i,ivar,ih))/n(i)
 			enddo
@@ -2408,7 +2427,6 @@ deallocate(dv_log)
 deallocate(valmin_log)
 deallocate(valmax_log)
 !deallocate(histo_data_log)
-write(nflog,*) 'did get_histo'
 end subroutine
 
 !--------------------------------------------------------------------------------

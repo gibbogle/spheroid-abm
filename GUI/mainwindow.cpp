@@ -460,8 +460,9 @@ void MainWindow:: drawDistPlots()
 void MainWindow:: initFACSPlot()
 {
     qpFACS = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_FACS");
+    qpFACS->clear();
     qpFACS->setTitle("FACS");
-    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+//    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
     qpFACS->replot();
     connect((QObject *)groupBox_FACS,SIGNAL(groupBoxClicked(QString)),this,SLOT(processGroupBoxClick(QString)));
 }
@@ -485,7 +486,8 @@ void MainWindow::showFACS()
     qpFACS->size();
     qpFACS->clear();
     qpFACS->setTitle("FACS");
-    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+//    QwtSymbol symbol = QwtSymbol( QwtSymbol::Diamond, Qt::blue, Qt::NoPen, QSize( 3,3 ) );
+    QwtSymbol symbol = QwtSymbol( QwtSymbol::Rect, Qt::blue, Qt::NoPen, QSize( 2,2 ) );
 
     // Determine which button is checked:
     for (ivar=0; ivar<Global::nvars_used; ivar++) {
@@ -540,6 +542,13 @@ void MainWindow::showFACS()
         xlabel = "Cell volume";
         xmin = 0;
         xmax = 2;
+        break;
+    case O2_BY_VOL:
+        xscale = 1;
+        xlabel = "O2 x volume";
+        xmin = 0;
+        xmax = 2;
+        break;
     }
     for (ivar=0; ivar<Global::nvars_used; ivar++) {
         rb = FACS_y_vars_rb_list[ivar];
@@ -588,14 +597,28 @@ void MainWindow::showFACS()
         ymin = 1.0e-7;
         ymax = 1.0e-5;
         break;
+    case CELL_VOLUME:
+        yscale = 1;
+        ylabel = "Cell volume";
+        ymin = 0;
+        ymax = 2;
+        break;
+    case O2_BY_VOL:
+        yscale = 1;
+        ylabel = "O2 x volume";
+        ymin = 0;
+        ymax = 2;
+        break;
     }
 
     x_logscale = checkBox_FACS_log_x->isChecked();
     y_logscale = checkBox_FACS_log_y->isChecked();
 //    xmin = 0.1;
 //    xmax = 1500;
+    double cfse_min = 1.0e20;
     for (i=0; i<Global::nFACS_cells; i++) {
         x = Global::FACS_data[Global::nvars_used*i+kvar_x];
+        cfse_min = MIN(x,cfse_min);
         y = Global::FACS_data[Global::nvars_used*i+kvar_y];
         x = xscale*x;
         y = yscale*y;
@@ -677,7 +700,7 @@ void MainWindow::makeHistoPlot(int numValues, double xmin, double width,  QwtArr
     QwtPlot *plot;
     double pos;
 
-    LOG_MSG("makeHistoPlot");
+//    LOG_MSG("makeHistoPlot");
     bool use_HistoBar = radioButton_histotype_1->isChecked();
     if (use_HistoBar) {
         plot = qpHistoBar;
@@ -777,7 +800,6 @@ void MainWindow:: showHisto()
     double width, xmin;
     bool log_scale;
 
-    LOG_MSG("showHisto");
     log_scale = checkBox_histo_logscale->isChecked();
     numValues = Global::nhisto_bins;
     QwtArray<double> values(numValues);
@@ -812,7 +834,6 @@ void MainWindow:: showHisto()
         width = (Global::histo_vmax[ivar] - Global::histo_vmin[ivar])/numValues;
     }
     makeHistoPlot(numValues,xmin,width,values);
-    LOG_MSG("did makeHistoPlot");
 }
 
 //-------------------------------------------------------------
