@@ -1473,7 +1473,7 @@ enddo
 U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
 chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
 chemo(:)%medium_U = U(:)
-
+write(nflog,'(a,f8.4)') 'Medium glucose: ',chemo(GLUCOSE)%medium_Cext
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -2234,7 +2234,7 @@ end subroutine
 ! Note that concentrations of O2 and glucose are not varied.
 ! NOT USED
 !----------------------------------------------------------------------------------
-subroutine UpdateMedium1(ntvars,state,dt)
+subroutine UpdateMedium_old(ntvars,state,dt)
 integer :: ntvars
 real(REAL_KIND) :: dt, state(:,:)
 integer :: nb, i, k
