@@ -223,11 +223,11 @@ void ExecThread::run()
                 getFACS();
             }
             mutex1.unlock();
-            hour++;
             if (Global::showingFACS || Global::recordingFACS) {
                 emit facs_update();
                 emit histo_update();
             }
+            hour++;
             emit summary(hour);		// Emit signal to update summary plots, at hourly intervals
             summary_done.wait(&mutex3);
         }

@@ -40,11 +40,11 @@ namespace Global
     double conc_dx;
 
     double volProb[100];
-    int vol_nv;
+    int vol_nv = 20;
     double vol_v0;
     double vol_dv;
     double oxyProb[100];
-    int oxy_nv;
+    int oxy_nv = 20;
     double oxy_v0;
     double oxy_dv;
 
