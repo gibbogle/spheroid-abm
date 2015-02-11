@@ -80,6 +80,30 @@ GRAPH_SET tsGraphSet[] = {
      "Percentage of the spheroid that is necrotic = (number of vacant sites)/(number of sites taken up by the spheroid)",
     12, true, 0, 0.1, 0, TS_TYPE},
 
+    {"mediumoxygen",
+    "Medium Oxygen",
+    "Concentration",
+     "Average concentration of oxygen in the medium (far-field)",
+    13, true, 0, 0.01, 0, TS_TYPE},
+
+    {"mediumglucose",
+    "Medium Glucose",
+    "Concentration",
+     "Average concentration of glucose in the medium (far-field)",
+    14, true, 0, 0.01, 0, TS_TYPE},
+
+    {"mediumTPZdrug",
+    "Medium TPZ Drug",
+    "Concentration",
+     "Average concentration of TPZ drug in the medium (far-field)",
+    15, true, 0, 0.001, 0, TS_TYPE},
+
+    {"mediumDNBdrug",
+    "Medium DNB Drug",
+    "Concentration",
+     "Average concentration of DNB drug in the medium (far-field)",
+    16, true, 0, 0.001, 0, TS_TYPE},
+
 // Profiles
     {"MULTI",
     "Multi-constituent",

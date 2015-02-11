@@ -1645,7 +1645,8 @@ use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*), i_hypoxia_cutoff,i_growth_cutoff
 integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
     diam_um, vol_mm3_1000, nhypoxic(3), ngrowth(3), &
-    hypoxic_percent_10, growth_percent_10, necrotic_percent_10
+    hypoxic_percent_10, growth_percent_10, necrotic_percent_10, &
+    medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000
 real(REAL_KIND) :: vol_cm3, vol_mm3, hour
 
 hour = istep*DELTA_T/3600.
@@ -1665,9 +1666,14 @@ hypoxic_percent_10 = (1000*nhypoxic(i_hypoxia_cutoff))/Ncells
 call getGrowthCount(ngrowth)
 growth_percent_10 = (1000*ngrowth(i_growth_cutoff))/Ncells
 necrotic_percent_10 = (1000*(Nsites-Ncells))/Nsites
-summaryData(1:13) = (/ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, &
+medium_oxygen_100 = 100*chemo(OXYGEN)%medium_Cext
+medium_glucose_100 = 100*chemo(GLUCOSE)%medium_Cext
+medium_TPZ_drug_1000 = 1000*chemo(TPZ_DRUG)%medium_Cext
+medium_DNB_drug_1000 = 1000*chemo(DNB_DRUG)%medium_Cext
+summaryData(1:17) = [ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, &
     Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
-	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10 /)
+	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, &
+	medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000 ]
 write(nfres,'(i8,f8.2,f8.4,8i7,7f7.3)') istep, hour, vol_mm3, diam_um, Ncells, &
     Nanoxia_dead, Ndrug_dead, Nradiation_dead, Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
 	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)

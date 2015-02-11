@@ -1044,6 +1044,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
     {"hypoxiafraction",           1, 0,1,"","Fraction of cells with oxygen level below the specified threshold for hypoxia"},
     {"growthfraction",            1, 0,1,"","Percentage of cells that are growing at a rate less than the specified fraction of the mean growth rate with no nutrient limits"},
     {"necroticfraction",          0, 0,1,"","Percentage of the spheroid that is necrotic = (number of vacant sites)/(number of sites taken up by the spheroid)"},
+    {"mediumoxygen",              0, 0,1,"","Average concentration of oxygen in the medium (far-field)"},
+    {"mediumglucose",             0, 0,1,"","Average concentration of glucose in the medium (far-field)"},
+    {"mediumTPZdrug",             0, 0,1,"","Average concentration of TPZ drug in the medium (far-field)"},
+    {"mediumDNBdrug",             0, 0,1,"","Average concentration of DNB drug in the medium (far-field)"},
+
 // Profile plots
     {"MULTI",                     1, 0,1,"","Selected constituent on a line through the blob centre"},
     {"CFSE",                      0, 0,1,"","Extracellular CFSE concentration on a line through the blob centre"},
