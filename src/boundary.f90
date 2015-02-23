@@ -104,17 +104,20 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine UpdateBdrylist
 integer :: x, y, z
-integer :: k, site(3)
+integer :: k, site(3), Nsites_old
 type (boundary_type), pointer :: bdry
 logical :: done
 
+Nsites_old = Nsites
 done = .false.
 do while (.not.done)
 	done = .true.
+	Nsites = 0
 	do x = 1,NX
 		do y = 1,NY
 			do z = 1,NZ
 				site = (/x,y,z/)
+				if (occupancy(site(1),site(2),site(3))%indx(1) /= OUTSIDE_TAG) Nsites = Nsites + 1
 				if (associated(occupancy(site(1),site(2),site(3))%bdry)) cycle
 				if (isbdry(site)) then
 					if (occupancy(site(1),site(2),site(3))%indx(1) == 0) then
@@ -132,6 +135,10 @@ do while (.not.done)
 		enddo
 	enddo
 enddo
+if (Nsites /= Nsites_old) then
+	write(*,*) 'Nsites changed in UpdateBdryList: old,new: ',Nsites_old,Nsites
+!	stop
+endif
 bdry_changed = .false.
 end subroutine
 
@@ -326,258 +333,6 @@ write(logmsg,*) 'bdrylist and occupancy%bdry are consistent: ',nb1,nbx
 call logger(logmsg)
 end subroutine
 
-!----------------------------------------------------------------------------------------
-! A new site is to be added to the blob.  The site is chosen so as to maintain the
-! ellipsoidal shape.  For each current bdry site, P, imagine a line drawn from the blob centre,
-! O, through the site, and determine the point Q where this line intersects the surface of the
-! ellipsoid with a = aRadius, b = bRadius.  The distance from the site to the intersection
-! point is calculated, and the bdry site that maximizes this distance (the site most inside the
-! ellipsoid is chosen as the starting point of the search for a site to add.
-! If r = site - Centre, we can parametrise the line by t.r, where t is a scalar:
-! x = t.r(1), y = t.r(2), z = t.r(3)
-! and t = 1 gives the point P.
-! On the ellipsoid with radii a and b:
-! x^2/a^2 + (y^2 + z^2)/b^2 = 1
-! which implies that t^2[r(1)^2/a^2 + (r(2)^2 + r(3)^2)/b^2] = 1
-! from which we obtain t^2.
-! Next the 'outside' neighbours of the chosen bdry site are examined, and the one that
-! is closest to the centre is selected as the new 'inside' blob site.
-! The square of the length of OP is dp^2 = r(1)^2 + r(2)^2 + r(3)^2, and the square of the length
-! of OQ is dq^2 = t^2.dp^2, dq = t.dp, and the distance PQ = (t-1).dp.  We want to choose the
-! bdry site for which PQ is a maximum.
-! Finally the bdry sites in the vicinity are tested to see if any need to be removed from
-! the bdrylist. (This is why it makes sense to use a linked list).
-! Removal of bdry sites is done by FixBdrylist.
-! NOT USED
-!----------------------------------------------------------------------------------------
-subroutine AddSite(ok)
-logical :: ok
-type (boundary_type), pointer :: bdry
-integer :: site(3), psite(3), indx(2), k, kmin, x, y, z
-real(REAL_KIND) :: r(3), x2, y2, z2, dp, t, tmax, dpq, dmax, dmin
-real(REAL_KIND) :: cmin, cmax
-
-!write(*,*) 'AddSite'
-dmax = -1.0e10
-bdry => bdrylist
-do while ( associated ( bdry )) 
-    site = bdry%site
-    r = site - Centre
-    x2 = r(1)**2
-    y2 = r(2)**2
-    z2 = r(3)**2
-    dp = sqrt(x2 + y2 + z2)
-    t = sqrt(1/(x2/Radius**2 + y2/Radius**2 + z2/Radius**2))
-    dpq = (t-1)*dp
-    if (dpq > dmax) then
-        psite = site
-        dmax = dpq
-        tmax = t
-    endif
-    bdry => bdry%next
-enddo
-if (.not.isbdry(psite))then
-    write(logmsg,*) 'psite is not a bdry site'
-	call logger(logmsg)
-    stop
-endif
-
-! Now we need to look at all 26 neighbours of psite, to determine which 'outside' neighbour
-! is closest to O.
-dmin = 1.0e10
-kmin = 0
-do k = 1,27
-	if (k == 14) cycle
-	site = psite + jumpvec(:,k)
-	indx = occupancy(site(1),site(2),site(3))%indx
-    if (indx(1) /= OUTSIDE_TAG) cycle
-    r = site - Centre
-    x2 = r(1)**2
-    y2 = r(2)**2
-    z2 = r(3)**2
-    dp = sqrt(x2 + y2 + z2)
-    if (dp < dmin) then
-        dmin = dp
-        kmin = k
-    endif
-enddo    
-if (kmin == 0) then
-    write(logmsg,*) 'Error: no outside neighbours of bdry site'
-	call logger(logmsg)
-    ok = .false.
-    return
-endif
-
-! This is the site to convert to 'inside'
-site = psite + jumpvec(:,kmin)
-occupancy(site(1),site(2),site(3))%indx = 0
-Nsites = Nsites + 1
-call SetRadius(Nsites)
-if (isbdry(site)) then   ! add it to the bdrylist
-    allocate(bdry)
-    bdry%site = site
-!    bdry%chemo_influx = .false.
-    nullify(bdry%next)
-    call bdrylist_insert(bdry,bdrylist)
-    occupancy(site(1),site(2),site(3))%bdry => bdry
-!    call SetBdryConcs(site)
-else
-    write(logmsg,*) 'Added site is not bdry: ',site,occupancy(site(1),site(2),site(3))%indx
-	call logger(logmsg)
-    stop
-endif
-ok = .true.
-return
-end subroutine
-
-!----------------------------------------------------------------------------------------
-! The logic is similar to AddSite.  We look for the bdry site P which is most outside
-! the ellipsoid, i.e. to minimise OQ-OP, where Q is the point at
-! which the line through OP intersects the ellipsoid surface.  We then choose the 'inside'
-! neighbour of P that is furthest from O.
-! NOT USED
-!----------------------------------------------------------------------------------------
-subroutine RemoveSite(ok)
-logical :: ok
-type (boundary_type), pointer :: bdry
-integer :: site(3), psite(3), k, kmax
-real(REAL_KIND) :: r(3), x2, y2, z2, dp, t, dpq, dmax, dmin
-
-dmin = 1.0e10
-psite = 0
-bdry => bdrylist
-do while ( associated ( bdry )) 
-    site = bdry%site
-    r = site - Centre
-    x2 = r(1)**2
-    y2 = r(2)**2
-    z2 = r(3)**2
-    dp = sqrt(x2 + y2 + z2)
-    t = sqrt(1/(x2/Radius**2 + y2/Radius**2 + z2/Radius**2))
-    dpq = (t-1)*dp
-    if (dpq < dmin) then
-        psite = site
-        dmin = dpq
-    endif
-    bdry => bdry%next
-enddo
-if (psite(1) == 0) then
-    write(logmsg,*) 'No more bdry sites: ',nbdry
-	call logger(logmsg)
-    ok = .false.
-    return
-endif
-if (.not.isbdry(psite)) then
-    write(logmsg,*) 'Not a bdry site: ',psite
-	call logger(logmsg)
-    ok = .false.
-    return
-endif
-
-! Now we need to look at psite and its 26 neighbours, to determine which 'inside' neighbour
-! is most distant from O.
-dmax = -1.0e10
-kmax = 0
-do k = 1,27
-	site = psite + jumpvec(:,k)
-    if (occupancy(site(1),site(2),site(3))%indx(1) <= OUTSIDE_TAG) cycle   ! outside or unreachable
-    r = site - Centre
-    x2 = r(1)**2
-    y2 = r(2)**2
-    z2 = r(3)**2
-    dp = sqrt(x2 + y2 + z2)
-    if (dp > dmax) then
-        dmax = dp
-        kmax = k
-    endif
-enddo    
-if (kmax == 0) then
-    write(logmsg,*) 'Error: no inside neighbours of bdry site'
-	call logger(logmsg)
-    ok = .false.
-    return
-endif
-! This is the site to convert to 'outside'
-site = psite + jumpvec(:,kmax)
-call ClearSite(site)
-occupancy(site(1),site(2),site(3))%indx = OUTSIDE_TAG
-Nsites = Nsites - 1
-call SetRadius(Nsites)
-if (associated(occupancy(site(1),site(2),site(3))%bdry)) then   ! remove it from the bdrylist
-    call bdrylist_delete(site, bdrylist)
-    nullify(occupancy(site(1),site(2),site(3))%bdry)
-! Need to check for a new bdry site to replace the one removed
-! Look at all the neighbours
-    psite = site
-    do k = 1,27
-	    site = psite + jumpvec(:,k)
-        if (occupancy(site(1),site(2),site(3))%indx(1) <= OUTSIDE_TAG) cycle   ! outside or unreachable
-        if (associated(occupancy(site(1),site(2),site(3))%bdry)) cycle   ! bdry
-        if (isbdry(site)) then
-            allocate(bdry)
-            bdry%site = site
-!            bdry%chemo_influx = .false.
-            nullify(bdry%next)
-            call bdrylist_insert(bdry,bdrylist)
-            occupancy(site(1),site(2),site(3))%bdry => bdry
-!            call SetBdryConcs(site)
-        endif
-    enddo
-endif
-ok = .true.
-end subroutine
-
-!--------------------------------------------------------------------------------
-! NOT USED
-!--------------------------------------------------------------------------------
-subroutine AddSites(n,ok)
-integer :: n
-logical :: ok
-integer :: k
-
-do k = 1,n
-    call AddSite(ok)
-    if (.not.ok) return
-    call FixBdrylist
-enddo
-ok = .true.
-end subroutine
-
-!--------------------------------------------------------------------------------
-! NOT USED
-!--------------------------------------------------------------------------------
-subroutine RemoveSites(n,ok)
-integer :: n
-logical :: ok
-integer :: k
-
-do k = 1,n
-    call RemoveSite(ok)
-    if (.not.ok) return
-    call FixBdrylist
-enddo
-ok = .true.
-end subroutine
-
-!----------------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------------
-subroutine TestAddRemoveSites
-integer :: i, n, k, nb
-logical :: ok
-type (boundary_type), pointer :: bdry
-
-write(*,*) 'TestAddRemoveSites'
-n = 10000
-do i = 1,10
-    write(*,*) 'Adding sites'
-    call AddSites(n,ok)
-    write(*,*) 'nbdry = ',nbdry
-    write(*,*) 'Removing sites'
-    call RemoveSites(n,ok)
-    write(*,*) 'nbdry = ',nbdry
-enddo
-call CreateCheckList
-end subroutine
 
 
 end module
