@@ -1674,9 +1674,10 @@ summaryData(1:17) = [ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, 
     Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
 	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, &
 	medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000 ]
-write(nfres,'(i8,f8.2,f8.4,8i7,7f7.3)') istep, hour, vol_mm3, diam_um, Ncells, &
+write(nfres,'(i8,f8.2,f8.4,8i7,11f7.3)') istep, hour, vol_mm3, diam_um, Ncells, &
     Nanoxia_dead, Ndrug_dead, Nradiation_dead, Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
-	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites)
+	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites), &
+	chemo(OXYGEN)%medium_Cext, chemo(GLUCOSE)%medium_Cext, chemo(TPZ_DRUG)%medium_Cext, chemo(DNB_DRUG)%medium_Cext
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -2623,7 +2624,8 @@ open(nflog,file='spheroid.log',status='replace')
 open(nfres,file='spheroid_ts.out',status='replace')
 write(nfres,'(a)') 'istep hour vol_mm3 diam_um Ncells &
 Nanoxia_dead Ndrug_dead Nradiation_dead Ntagged_anoxia Ntagged_drug Ntagged_radiation &
-f_hypox_1 f_hypox_2 f_hypox_3 f_growth_1 f_growth_2 f_growth_3 f_necrot'
+f_hypox_1 f_hypox_2 f_hypox_3 f_growth_1 f_growth_2 f_growth_3 f_necrot &
+medium_oxygen medium_glucose medium_TPZ medium_DNB'
 
 #ifdef GFORTRAN
     write(logmsg,'(a)') 'Built with GFORTRAN'
