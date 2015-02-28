@@ -42,7 +42,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>4</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>3</number>
+           <number>4</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -6551,6 +6551,82 @@ padding: 8px
             </property>
             <property name="text">
              <string>Generate FACS plots?</string>
+            </property>
+           </widget>
+           <widget class="QMyLabel" name="label_GUI_VERSION_NAME">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>0</y>
+              <width>71</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>GUI version</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="text_GUI_VERSION_NAME">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>80</x>
+              <y>0</y>
+              <width>41</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>0.00</string>
+            </property>
+            <property name="readOnly">
+             <bool>false</bool>
+            </property>
+           </widget>
+           <widget class="QMyLabel" name="label_DLL_VERSION_NAME">
+            <property name="geometry">
+             <rect>
+              <x>140</x>
+              <y>0</y>
+              <width>71</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>DLL version</string>
+            </property>
+           </widget>
+           <widget class="QLineEdit" name="text_DLL_VERSION_NAME">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="geometry">
+             <rect>
+              <x>210</x>
+              <y>0</y>
+              <width>41</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>0.00</string>
+            </property>
+            <property name="readOnly">
+             <bool>false</bool>
             </property>
            </widget>
           </widget>

@@ -18,6 +18,8 @@
 
 #include "global.h"
 
+#include "../src/version.h"
+
 #ifdef linux
 #include <QTcpServer>
 #else
@@ -34,7 +36,14 @@ Graphs *grph;
 MainWindow::MainWindow(QWidget *parent)
    : QMainWindow(parent)
 {
-	LOG_MSG("Started MainWindow");
+    LOG_MSG("Executable build versions:");
+    Global::GUI_build_version = GUI_BUILD_VERSION;
+    Global::DLL_build_version = DLL_BUILD_VERSION;
+    LOG_QMSG("GUI build version: " + Global::GUI_build_version);
+    LOG_QMSG("DLL build version: " + Global::DLL_build_version);
+    LOG_MSG("");
+
+    LOG_MSG("Started MainWindow");
 	setupUi(this);
     LOG_MSG("did setupUi");
     showMaximized();
@@ -46,6 +55,7 @@ MainWindow::MainWindow(QWidget *parent)
     QDir::setCurrent(newPath);
     currPath = QDir::currentPath();
     LOG_QMSG("current path: " + currPath);
+
 
     // Some initializations
     nDistPts = 200;
@@ -1052,6 +1062,8 @@ void MainWindow::loadParams()
 		}
 	}
     setTreatmentFileUsage();
+    text_GUI_VERSION_NAME->setText(Global::GUI_build_version);
+    text_DLL_VERSION_NAME->setText(Global::DLL_build_version);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1235,7 +1247,9 @@ void MainWindow::reloadParams()
 //				LOG_QMSG(wtag);
 //			}
 		}
-	}				
+    }
+    text_GUI_VERSION_NAME->setText(Global::GUI_build_version);
+    text_DLL_VERSION_NAME->setText(Global::DLL_build_version);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1333,6 +1347,24 @@ void MainWindow::readInputFile()
 		QStringList data = line.split(" ",QString::SkipEmptyParts);
 		PARAM_SET p = parm->get_param(k);
 		QString ptag = p.tag;
+        if (ptag.contains("GUI_VERSION")) {
+            if (data[0] != Global::GUI_build_version) {
+                QMessageBox::warning(this, tr("Application"),
+                                     tr("Incorrect GUI version in input file: %1\nthis program is version: %2")
+                                     .arg(data[0])
+                                     .arg(Global::GUI_build_version));
+                return;
+            }
+        }
+        if (ptag.contains("DLL_VERSION")) {
+            if (data[0] != Global::DLL_build_version) {
+                QMessageBox::warning(this, tr("Application"),
+                                     tr("Incorrect DLL version in input file: %1\nthis program was built with DLL version: %2")
+                                     .arg(data[0])
+                                     .arg(Global::DLL_build_version));
+                return;
+            }
+        }
         if (ptag.contains("_NAME")) {
             parm->set_label(k,data[0]);
         } else {
@@ -1862,6 +1894,7 @@ void MainWindow::runServer()
     connect(exthread, SIGNAL(histo_update()), this, SLOT(showHisto()));
     connect(this, SIGNAL(histo_update()), this, SLOT(showHisto()));
     connect(exthread, SIGNAL(setupC()), this, SLOT(setupConstituents()));
+    connect(exthread, SIGNAL(badDLL(QString)), this, SLOT(reportBadDLL(QString)));
     exthread->ncpu = ncpu;
     exthread->nsteps = int(hours*60/Global::DELTA_T);
 	exthread->paused = false;
@@ -1910,6 +1943,16 @@ void MainWindow::preConnection()
     Global::nhisto_bins = lineEdit_nhistobins->text().toInt();
     posdata = false;
 	LOG_MSG("preconnection: done");
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::reportBadDLL(QString dll_version)
+{
+    QMessageBox::warning(this, tr("Application"),
+                         tr("The version of the DLL linked: %1\nis different from the version the GUI was built with: %2")
+                         .arg(dll_version)
+                         .arg(Global::DLL_build_version));
 }
 
 //--------------------------------------------------------------------------------------------------------

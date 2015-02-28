@@ -7,11 +7,13 @@ use winsock
 use deform
 use drop
 
+#include "../src/version.h"
+
 IMPLICIT NONE
 
 contains 
 
-!-----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------- 
 ! This subroutine is called to initialize a simulation run. 
 ! ncpu = the number of processors to use 
 ! infile = file with the input data
@@ -387,6 +389,8 @@ chemo(:)%used = .false.
 
 open(nfcell,file=inputfile,status='old')
 
+read(nfcell,*) gui_run_version				! program run version number
+read(nfcell,*) dll_run_version				! DLL run version number
 read(nfcell,*) NX							! size of grid
 read(nfcell,*) initial_count				! initial number of tumour cells
 read(nfcell,*) divide_time_median
@@ -702,7 +706,26 @@ if (itestcase /= 0) then
 endif
 
 if (mod(NX,2) /= 0) NX = NX+1					! ensure that NX is even
+
 open(nfout,file=outputfile,status='replace')
+write(nfout,'(a,a)') 'GUI version: ',gui_run_version
+write(nfout,'(a,a)') 'DLL version: ',dll_run_version
+write(nfout,*)
+
+write(nflog,*)
+write(nflog,'(a,a)') 'GUI version: ',gui_run_version
+write(nflog,'(a,a)') 'DLL version: ',dll_run_version
+write(nflog,*)
+
+open(nfres,file='spheroid_ts.out',status='replace')
+write(nfres,'(a,a)') 'GUI version: ',gui_run_version
+write(nfres,'(a,a)') 'DLL version: ',dll_run_version
+write(nfres,*)
+write(nfres,'(a)') 'istep hour vol_mm3 diam_um Ncells &
+Nanoxia_dead Ndrug_dead Nradiation_dead Ntagged_anoxia Ntagged_drug Ntagged_radiation &
+f_hypox_1 f_hypox_2 f_hypox_3 f_growth_1 f_growth_2 f_growth_3 f_necrot &
+medium_oxygen medium_glucose medium_TPZ medium_DNB'
+
 write(logmsg,*) 'Opened nfout: ',outputfile
 call logger(logmsg)
 
@@ -760,11 +783,11 @@ nmax = 0
 do
 	read(nftreatment,'(a)',end=99) line
 	if (line(1:3) == 'END' .or. line(1:3) == 'end') exit
-!	if (line(1:6) == 'DRUG_A') then
-!		ichemo = DRUG_A
-!	elseif (line(1:6) == 'DRUG_B') then
-!		ichemo = DRUG_B
-	if (trim(line) == 'SN30000') then
+	if (line(1:6) == 'DRUG_A') then
+		ichemo = -1	! ignore
+	elseif (line(1:6) == 'DRUG_B') then
+		ichemo = -1	! ignore
+	elseif (trim(line) == 'SN30000') then
 		ichemo = TPZ_DRUG
 		chemo(ichemo)%name = 'SN30000'
 		idrug = 1
@@ -796,7 +819,7 @@ do
 				read(nftreatment,*) conc
 			enddo
 		endif
-	else
+	elseif (ichemo == 0) then
 !		use_radiation = .true.
 		read(nftreatment,*) protocol(idrug)%n
 		nmax = max(nmax,protocol(idrug)%n)
@@ -824,13 +847,13 @@ enddo
 do
 	read(nftreatment,'(a)',end=199) line
 	if (line(1:3) == 'END' .or. line(1:3) == 'end') exit
-!	if (line(1:6) == 'DRUG_A') then
-!		ichemo = DRUG_A
+	if (line(1:6) == 'DRUG_A') then
+		ichemo = -1
 !		idrug = 1
-!	elseif (line(1:6) == 'DRUG_B') then
-!		ichemo = DRUG_B
+	elseif (line(1:6) == 'DRUG_B') then
+		ichemo = -1
 !		idrug = 2
-	if (trim(line) == 'SN30000') then
+	elseif (trim(line) == 'SN30000') then
 		ichemo = TPZ_DRUG
 		chemo(ichemo)%name = 'SN30000'
 		idrug = 1
@@ -872,7 +895,7 @@ do
 				write(nflog,*) 'treatment: ',chemo(ichemo)%name,protocol(idrug)%n,i,tstart,tend,protocol(idrug)%conc(i)
 			enddo
 		endif
-	else
+	elseif (ichemo == 0) then
 		protocol(idrug)%ichemo = 0
 		read(nftreatment,*) protocol(idrug)%n
 		if (protocol(idrug)%n > 0) then
@@ -2530,6 +2553,8 @@ filename = trim(filename)//'_'
 filename = trim(filename)//trim(adjustl(mintag))
 filename = trim(filename)//'min.dat'
 open(nfprofile,file=filename,status='replace')
+write(nfprofile,'(a,a)') 'GUI version: ',gui_run_version
+write(nfprofile,'(a,a)') 'DLL version: ',dll_run_version
 write(nfprofile,'(i6,a)') int(istep*DELTA_T/60),' minutes'
 write(nfprofile,'(i6,a)') ns,' sites'
 write(nfprofile,'(f6.2,a)') 1000*DELTA_X,' dx (um)'
@@ -2602,6 +2627,30 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
+subroutine get_DLL_build_version(version_array,array_len) BIND(C) 
+!DEC$ ATTRIBUTES DLLEXPORT :: get_dll_build_version
+use, intrinsic :: iso_c_binding
+character(c_char) :: version_array(10)
+integer(c_int) :: array_len
+integer :: k
+
+dll_version = DLL_BUILD_VERSION
+gui_version = GUI_BUILD_VERSION
+write(nflog,*) 'get_DLL_build_version: ',dll_version
+do k = 1,6
+	version_array(k) = dll_version(k:k)
+	write(nflog,'(i2,a,a)') k,' ',version_array(k)
+	if (version_array(k) == ' ') then
+		version_array(k) = char(0)
+		array_len = k
+		exit
+	endif
+enddo
+write(nflog,*) 'array_len: ',array_len
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
 subroutine Execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen) BIND(C) 
 !DEC$ ATTRIBUTES DLLEXPORT :: execute
 use, intrinsic :: iso_c_binding
@@ -2621,11 +2670,6 @@ do i = 1,outbuflen
 enddo
 
 open(nflog,file='spheroid.log',status='replace')
-open(nfres,file='spheroid_ts.out',status='replace')
-write(nfres,'(a)') 'istep hour vol_mm3 diam_um Ncells &
-Nanoxia_dead Ndrug_dead Nradiation_dead Ntagged_anoxia Ntagged_drug Ntagged_radiation &
-f_hypox_1 f_hypox_2 f_hypox_3 f_growth_1 f_growth_2 f_growth_3 f_necrot &
-medium_oxygen medium_glucose medium_TPZ medium_DNB'
 
 #ifdef GFORTRAN
     write(logmsg,'(a)') 'Built with GFORTRAN'
@@ -2652,6 +2696,9 @@ call logger(logmsg)
     write(logmsg,'(a)') 'Executing with OpenMP'
 	call logger(logmsg)
 #endif
+
+write(*,*) 'dll_build_version: ',dll_version
+write(*,*) 'gui_build_version: ',gui_version
 
 write(logmsg,*) 'inputfile:  ', infile
 call logger(logmsg)

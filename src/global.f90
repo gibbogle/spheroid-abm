@@ -226,6 +226,8 @@ type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
 type(treatment_type), allocatable :: protocol(:)
 
+character*(6) :: dll_version, dll_run_version
+character*(6) :: gui_version, gui_run_version
 integer :: NX, NY, NZ
 integer :: initial_count
 integer, allocatable :: zdomain(:),zoffset(:)

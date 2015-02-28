@@ -6,6 +6,7 @@ extern "C" {
 #endif
 //
 //
+void get_dll_build_version(char *, int *);
 void execute(int *,char *, int *,char *, int *);
 void simulate_step(int *);
 void terminate_run(int *);
