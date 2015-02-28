@@ -1,0 +1,2 @@
+#define DLL_BUILD_VERSION "1.0"
+#define GUI_BUILD_VERSION "1.0"

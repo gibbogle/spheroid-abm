@@ -17,6 +17,14 @@ Params::Params()
 The shape value must be greater than 1, and values close to 1 give distributions that are close to normal."},
 */
 
+{"GUI_VERSION_NAME", 0.00, 0, 0,
+ "GUI version",
+ "GUI program version number."},
+
+{"DLL_VERSION_NAME", 0.00, 0, 0,
+ "DLL version",
+ "DLL version number."},
+
 {"NX", 100, 0, 0,
 "Lattice size",
 "Dimension of the lattice (number of sites in X,Y and Z directions).  Typically 5*BLOB_RADIUS is OK."},

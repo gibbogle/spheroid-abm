@@ -2,6 +2,9 @@
 
 namespace Global
 {
+    QString GUI_build_version;
+    QString DLL_build_version;
+
     int MAX_CHEMO;
     int N_EXTRA;
     int NX, NY, NZ;

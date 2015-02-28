@@ -145,10 +145,13 @@ void ExecThread::run()
 {
 	LOG_MSG("Invoking DLL...");
 	int res=0;
-    int nsumm_interval, hour;
+    int hour;
 	const char *infile, *outfile;
+    char version[10];
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
+    int len_version;
+    QString dll_version;
     bool cused[32];
 
 	infile_path = inputFile;
@@ -161,6 +164,15 @@ void ExecThread::run()
 	std::string std_outfile = outfile_path.toStdString();
     outfile = std_outfile.c_str();
 
+    get_dll_build_version(version,&len_version);
+    dll_version = version;
+    // We can compare the version of the actual DLL that is linked
+    // with the GUI's idea of the DLL version (i.e. the version of the library the GUI was built with)
+    if (dll_version != Global::DLL_build_version) {
+        LOG_QMSG("Bad DLL version: " + dll_version);
+        emit(badDLL(dll_version));
+        return;
+    }
 	paused = false;
     LOG_MSG("call execute");
     execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);

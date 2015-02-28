@@ -53,6 +53,9 @@ typedef dist_set DIST_SET;
 
 namespace Global
 {
+    extern QString GUI_build_version;
+    extern QString DLL_build_version;
+
     extern int MAX_CHEMO;
     extern int N_EXTRA;
     extern int NX, NY, NZ;

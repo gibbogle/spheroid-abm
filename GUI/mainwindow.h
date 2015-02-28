@@ -5,6 +5,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+
 #include <string>
 #include <fstream>
 #include <QTcpServer>
@@ -139,6 +140,7 @@ public slots:
 	void timer_update();
 	void errorPopup(QString);
 	void displayScene();
+    void reportBadDLL(QString);
     void showSummary(int);
     void showFACS();
     void showHisto();

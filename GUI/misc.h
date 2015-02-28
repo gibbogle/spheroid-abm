@@ -73,6 +73,7 @@ signals:
     void facs_update();
     void histo_update();
     void run_tester();
+    void badDLL(QString);
 };
 
 bool quitMessage(QString);
