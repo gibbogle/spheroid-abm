@@ -17,12 +17,12 @@ Params::Params()
 The shape value must be greater than 1, and values close to 1 give distributions that are close to normal."},
 */
 
-{"GUI_VERSION_NAME", 0.00, 0, 0,
- "GUI version",
+{"GUI_VERSION_NAME", 0, 0, 0,
+ "GUI0.00",
  "GUI program version number."},
 
-{"DLL_VERSION_NAME", 0.00, 0, 0,
- "DLL version",
+{"DLL_VERSION_NAME", 0, 0, 0,
+ "DLL0.00",
  "DLL version number."},
 
 {"NX", 100, 0, 0,
