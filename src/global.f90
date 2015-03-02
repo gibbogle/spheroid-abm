@@ -226,8 +226,8 @@ type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
 type(treatment_type), allocatable :: protocol(:)
 
-character*(6) :: dll_version, dll_run_version
-character*(6) :: gui_version, gui_run_version
+character*(12) :: dll_version, dll_run_version
+character*(12) :: gui_version, gui_run_version
 integer :: NX, NY, NZ
 integer :: initial_count
 integer, allocatable :: zdomain(:),zoffset(:)
@@ -522,7 +522,6 @@ case (LOGNORMAL_DIST)
 case (CONSTANT_DIST)
 	DivideTime = p1
 end select
-!write(*,'(a,f8.2)') 'DivideTime: ',DivideTime/3600
 end function
 
 !--------------------------------------------------------------------------------------

@@ -76,7 +76,6 @@ allocate(usable(NX,NY))
 
 call SetRadius(Nsites)
 zmin = GetZmin()
-!write(*,*) 'Radius, zmin: ',Radius,zmin
 z0drop = zmin + (bdrop-cdrop)*Radius
 z0 = z0drop
 Centre(3) = z0
@@ -84,7 +83,6 @@ sintheta0 = sqrt(1 - (1-cdrop/bdrop)**2)
 Rcontact = adrop*Radius*sintheta0
 Rc2 = Rcontact*Rcontact
 Ra2 = (adrop*Radius)**2
-!write(*,*) 'z0drop,sintheta0,Rcontact: ',z0drop,sintheta0,Rcontact
 
 ! Stage 1
 !--------
@@ -161,7 +159,7 @@ do z = zmin,zbmax
 	rz(z) = adrop*Radius*sina
 	newtot = newtot + 3.14159*rz(z)*rz(z)
 enddo
-!write(*,*) 'Approximate number of sites in the squashed spheroid: ',newtot
+!write(nflog,*) 'Approximate number of sites in the squashed spheroid: ',newtot
 
 bdist = -1
 nbtot = 0
@@ -187,17 +185,15 @@ do x = 1,NX
 	enddo
 enddo
 
-!write(*,*) 'Actual number of sites in the squashed spheroid: ',nbtot
+!write(nflog,*) 'Actual number of sites in the squashed spheroid: ',nbtot
 nvtot = 0
 do z = zmin+1,zmax
 	usable = .true.		! initially set all sites in this layer as usable
 	call GetNearestVacantSite(z,xv,yv,nv)
 	nvtot = nvtot + nv
 enddo
-!write(*,*) 'nstot,nvtot: ',nstot,nvtot
 
 noutside = CountOutside()
-!write(*,*) 'noutside, Ncells: ',noutside,Ncells
 
 if (.true.) then
 ! move cells to the expanded radius
@@ -224,7 +220,6 @@ deallocate(nstack)
 deallocate(usable)
 
 noutside = CountOutside()
-!write(*,*) 'noutside, Ncells: ',noutside,Ncells
 
 is_dropped = .true.
 occupancy(:,:,1:zmin-1)%indx(1) = UNREACHABLE_TAG

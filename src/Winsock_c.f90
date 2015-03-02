@@ -21,7 +21,7 @@ contains
 !-------------------------------------------------------------------------------------------
 !subroutine write_error_sub(msg)
 !character*(*) :: msg
-!write(*,*) 'write_error_sub: ',msg
+!write(nflog,*) 'write_error_sub: ',msg
 !end subroutine
 
 !-------------------------------------------------------------------------------------------

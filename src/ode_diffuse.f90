@@ -119,7 +119,6 @@ integer :: ierr
 logical :: left, right
 
 !call logger('Set diffusion parameters')
-!write(*,*) 'SetupODEDiff'
 if (.not.allocated(ODEdiff%ivar)) then
 	allocate(ODEdiff%ivar(NX,NY,NZ))
 endif
@@ -192,8 +191,6 @@ enddo
 ODEdiff%nextra = nex
 ODEdiff%nintra = nin
 ODEdiff%nvars = i
-!write(*,*) 'SetupODEDiff: Ncells,Nsites,nex,nin,ODEdiff%nvars:'
-!write(*,*) Ncells,Nsites,nex,nin,ODEdiff%nvars
 if (.not.use_ODE_diffusion) return
 
 ! Set up mapping for EXTRA variables from variable index to EXTRA sequence number
@@ -349,7 +346,6 @@ do ichemo = 1,MAX_CHEMO
 	endif
 enddo
 deallocate(exmap)
-!write(*,*) 'chemomap: ',nchemo,chemomap(1:nchemo)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -361,7 +357,6 @@ integer :: site(3), iv
 
 site = cell_list(kcell)%site
 iv = ODEdiff%ivar(site(1),site(2),site(3))
-write(*,*) 'check_ivar: ',msg,' ',kcell,site,iv
 if (iv < 1) then
     stop
 endif
@@ -421,7 +416,6 @@ subroutine SiteCellToState
 integer :: i, site(3), kcell, ichemo
 logical :: ZERO_CONCS = .false.
 
-!write(*,*) 'SiteCellToState: ',ODEdiff%nvars
 do i = 1,ODEdiff%nvars
     site = ODEdiff%varsite(i,:)
     if (ODEdiff%vartype(i) == EXTRA) then
@@ -543,7 +537,7 @@ DNB_metabolised(:,:) = (DNB%Kmet0(:,:) > 0)
 do i = 1,neqn
 	yy = y(i)
 	if (isnan(yy)) then
-		write(*,*) 'f_rkc: isnan: ',i,ichemo,yy
+		write(nflog,*) 'f_rkc: isnan: ',i,ichemo,yy
 		stop
 	endif
     if (ODEdiff%vartype(i) == EXTRA) then
@@ -724,7 +718,6 @@ integer :: i
 if (chemo(DRUG_A)%present) return
 do i = 1,MAX_VARS
 	if (allstate(i,DRUG_A) /= 0) then
-		write(*,*) 'check_allstate: ',msg
 		stop
 	endif
 enddo
@@ -766,7 +759,6 @@ type(rkc_comm) :: comm_rkc(MAX_CHEMO)
 !	return
 !endif
 
-!write(*,*) 'Solver'
 ODEdiff%nintra = nc
 ntvars = ODEdiff%nextra + ODEdiff%nintra
 if (EXPLICIT_INTRA) then
@@ -857,7 +849,6 @@ integer, parameter :: n_over = 1000, n_under = 1000
 !integer, static :: iemin = 500
 integer :: iemin = 500
 
-!write(*,*) 'RelaxSolver'
 DX2 = DELTA_X*DELTA_X
 nvar = ODEdiff%nextra
 Kdiff = chemo(ichemo)%diff_coef
@@ -906,7 +897,6 @@ do k_under = 1,n_under
 
     ! Loop over diffusion by over-relaxation until convergence
     do k_over = 1,n_over
-!        write(*,*) 'k_under: ',k_under
 		sum = 0
 		n = 0
         do ie = 1,nvar
@@ -929,7 +919,7 @@ do k_under = 1,n_under
             ydiff(ie) = (1-w_over)*ydiff(ie)+ w_over*Cnew
             ydiff(ie) = max(ydiff(ie),0.000001)
             if (ydiff(ie) < 0) then
-				write(*,*) 'ydiff < 0'
+				write(nflog,*) 'ydiff < 0'
 				stop
 			endif
 			dy = abs(val-ydiff(ie))/ydiff(ie)
@@ -940,7 +930,6 @@ do k_under = 1,n_under
         enddo
         if (n == 0) exit
     enddo
-!    write(*,'(a,4i6)') 'istep,it_solve,k_under, k_over: ',istep,it_solve,k_under,k_over
     esum2 = 0
     sum = 0
     n = 0
@@ -959,7 +948,6 @@ do k_under = 1,n_under
     if (n == 0) exit
 !    if (sum/nvar < tol2) exit
 enddo
-!write(*,'(i6,i4,e12.4)') istep,k_under
 !call write_solution('end',y0,nvar)
 !ysave(1:nvar) = y0(1:nvar)
 
@@ -1018,7 +1006,6 @@ integer, parameter :: n_over = 1000, n_under = 1000
 integer :: iemin = 500
 logical, parameter :: interleave = .false.
 
-!write(*,*) 'ParRelaxSolver'
 DX2 = DELTA_X*DELTA_X
 nexvar = ODEdiff%nextra
 Kdiff = chemo(ichemo)%diff_coef
@@ -1063,10 +1050,6 @@ if (n2 == nrange) then
 else
 	n1 = nrange
 endif
-!write(*,*) 'ParRelaxSolver: nrange: ',nrange
-!do i = 1,nrange
-!	write(*,'(3i6)') i,ierange(i,:)
-!enddo
 
 ydiff = y0
 
@@ -1123,7 +1106,6 @@ do k_under = 1,n_under
 		nt = sum(n(1:nrange))
         if (nt == 0) exit
     enddo
-!    write(*,'(a,4i6)') 'istep,it_solve,k_under, k_over: ',istep,it_solve,k_under,k_over
 !    sum = 0
     nt = 0
     do ie = 1,nexvar
@@ -1141,7 +1123,6 @@ do k_under = 1,n_under
     if (nt == 0) exit
 !    if (sum/nexvar < tol2) exit
 enddo
-!write(*,'(i6,i4,e12.4)') istep,k_under
 
 !call write_solution('end',y0,nexvar)
 !ysave(1:nexvar) = y0(1:nexvar)
@@ -1208,7 +1189,7 @@ do ie = ie1,ie2
     ydiff(ie) = (1-w_over)*ydiff(ie)+ w_over*Cnew
     ydiff(ie) = max(ydiff(ie),0.000001)
     if (ydiff(ie) < 0) then
-		write(*,*) 'ydiff < 0'
+		write(nflog,*) 'ydiff < 0'
 		stop
 	endif
 	dy = abs(val-ydiff(ie))/ydiff(ie)
@@ -1258,7 +1239,8 @@ if (ichemo == OXYGEN) then
 	if (dbug) write(nfout,'(a,2e12.4)') 'Cex, flux: ',Cex,flux
 	UptakeRate = flux/vol	! concentration rate (mM/s)
 else
-	write(*,*) 'ERROR: UptakeRate: currently only for OXYGEN'
+	write(logmsg,*) 'ERROR: UptakeRate: currently only for OXYGEN'
+	call logger(logmsg)
 	stop
 endif
 end function
@@ -1278,7 +1260,8 @@ real(REAL_KIND) :: K1, K2, K2K1, C0, a, b, cc, D, r(3), Cin
 integer :: i, n
 
 if (ichemo /= OXYGEN) then
-	write(*,*) 'ERROR: getCin: currently only for OXYGEN'
+	write(logmsg,*) 'ERROR: getCin: currently only for OXYGEN'
+	call logger(logmsg)
 	stop
 endif
 !ichemo = OXYGEN
@@ -1303,7 +1286,7 @@ if (chemo(ichemo)%Hill_N == 2) then
 			endif
 		enddo
 		if (n > 1) then
-			write(*,*) 'getCin: two roots > 0: ',r
+			write(nflog,*) 'getCin: two roots > 0: ',r
 			stop
 		endif
 	endif
@@ -1383,9 +1366,6 @@ do ichemo = 1,MAX_CHEMO
 	else
 		R2 = R1 + chemo(ichemo)%medium_dlayer
 		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (chemo(ichemo)%medium_U/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
-!		if (ichemo == TRACER) then
-!			write(*,'(a,3e12.4,i8)') 'Cbnd,Cext,U,Nsites: ',chemo(ichemo)%medium_Cbnd, chemo(ichemo)%medium_Cext, chemo(ichemo)%medium_U,Nsites
-!		endif
 	endif
 	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd < 0) then
 		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateCbnd: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
@@ -1461,10 +1441,6 @@ do ichemo = 1,MAX_CHEMO
 		R2 = Rlayer(ichemo)
 		if (ichemo /= OXYGEN) then
 			chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
-!			if (ichemo == TRACER) then
-!				write(*,'(a,4e12.4)') 'M, decay, U*dt, Cave: ',chemo(ichemo)%medium_M,(1 - chemo(ichemo)%decay_rate*dt), U(ichemo)*dt, tracer_C/tracer_N
-!				write(*,*) 'R1,R2,V0,Vfactor: ',R1,R2,V0,((R1*R1*(3*R2 - 2*R1)/R2 - R2*R2)),(V0 - 4*PI*R2*R2*R2/3.)
-!			endif
 			chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)) &
 				*(R1*R1*(3*R2 - 2*R1)/R2 - R2*R2))/(V0 - 4*PI*R2*R2*R2/3.)
 		endif
@@ -1473,7 +1449,6 @@ enddo
 U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
 chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
 chemo(:)%medium_U = U(:)
-write(nflog,'(a,f8.4)') 'Medium glucose: ',chemo(GLUCOSE)%medium_Cext
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1485,7 +1460,6 @@ real(REAL_KIND) :: state(:)
 integer :: x, y, z, i, site(3), nz
 real(REAL_KIND) :: smin, smax
 
-write(*,*) 'InitState: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc
 write(logmsg,*) 'InitState: ',chemo(ichemo)%name
 call logger(logmsg)
 smin = 1.0e10
@@ -1509,12 +1483,10 @@ dt = trun/nt
 timer1 = wtime()
 tstart = 0
 do it = 1,nt
-!	write(*,'(a,i4,f8.1)') 'it, tstart: ',it,tstart
 	tstart = (it-1)*dt
 	call Solver(it,tstart,dt,ncells)
 enddo
 timer2 = wtime()
-write(*,'(a,f10.1)') 'Time: ',timer2-timer1
 stop
 end subroutine
 
@@ -1588,7 +1560,6 @@ do ichemo = 1,nchemo
 		atol = rtol
 		idid = 0
 	endif
-!	write(*,'(10f7.3)') allstate(k0:k0+9,ichemo)
 enddo
 
 t1 = wtime()
@@ -1603,7 +1574,6 @@ do k = 1,nt
 		state = allstate(1:nvars,ichemo)
 		statep = allstatep(1:nvars,ichemo)
 		if (ichemo == 1) then
-!			write(*,'(i6,10f7.3)') k,state(k0:k0+9)
 			call showresults(state)
 		endif
 		if (k == 1) then
@@ -1645,7 +1615,6 @@ do k = 1,nt
 			idid = 0
 			call rkc(comm_rkc(ichemo),nvars,f_rkc,state,tstart,tend,rtol,atol,info,work(:,ichemo),idid,ichemo)
 			if (idid /= 1) then
-				write(*,*) ' Failed at t = ',tstart,' with idid = ',idid
 				stop
 			endif
 		endif
@@ -1664,8 +1633,6 @@ do k = 1,nt
 !				imax = i
 !			endif
 !		enddo
-!		write(*,*) 'Max dv: ',imax,dvmax
-!		write(*,'(7i6)') ODEdiff%icoef(imax,:)
 		deallocate(state)
 		deallocate(statep)
 	enddo
@@ -1675,7 +1642,6 @@ do k = 1,nt
 enddo
 
 t2 = wtime()
-write(*,'(a,f10.1)') 'Time: ',t2-t1
 
 !	do x = 1,NX
 !		do y = 1,NY
@@ -1721,11 +1687,10 @@ do
 				z = z+1
 			endif
 			if (ODEdiff%ivar(x,y,z) /= 0) then
-				write(*,*) 'Error: TestAddSite: ',ODEdiff%ivar(x,y,z)
+				write(nflog,*) 'Error: TestAddSite: ',ODEdiff%ivar(x,y,z)
 				stop
 			endif
 			site = (/x,y,z/)
-			write(*,*) 'Add site at bdry: ',site
 			call ExtendODEDiff(site)
 			return
 		endif
@@ -1881,11 +1846,6 @@ r = rmax*1.0e6/V
 Ks = ODEdiff%k_soft
 Kd = chemo(OXYGEN)%membrane_diff_in
 
-write(*,'(a,3e12.4)') 'Cs, dC, MM0: ',Cs,dC,MM0
-write(*,'(a,3e12.4)') 'rmax,V,r: ',rmax,V,r
-write(*,'(a,3e12.4)') 'Kd, Ks: ',Kd,Ks
-write(*,*)
-
 if (from_Ce) then
 	! Specifying Ce -> Ci
 	! If Ci > Cs
@@ -1898,7 +1858,6 @@ if (from_Ce) then
 	d = sqrt(b*b - 4*a*c)
 	C1 = (-b + d)/(2*a)
 	C2 = (-b - d)/(2*a)
-	write(*,'(3f8.4)') Ce,C1,C2
 else
 	! Specifying Ci -> Ce
 
@@ -1910,7 +1869,6 @@ else
 			M = Ks*Ci*Ci
 		endif
 		Ce = Ci + M*r/Kd
-		write(*,'(a,2e12.4,f6.1)') 'Ci, Ce: ',Ci,Ce, 100*(Ce-Ci)/Ci
 		Ci = 2*Ci
 		if (Ci > 0.15) exit
 	enddo
@@ -1991,7 +1949,7 @@ info(4) = 0
 rtol = 1d-2
 atol = rtol
 
-if (dbug) write(*,'(a,2e12.3)') 'start: ',state_ex(1,1:nchemo)
+if (dbug) write(nflog,'(a,2e12.3)') 'start: ',state_ex(1,1:nchemo)
 ! Solve diffusion equation for each constituent
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
@@ -2021,12 +1979,11 @@ do i = 1,ntvars
 		Creact(ic+nchemo) = allstate(i,ic)	! intracellular concentrations next
 	enddo
 	if (dbug .and. kintra == 1) then
-		write(*,'(a,i4,4e12.3)') 'before: ',nchemo,Creact(1:4)
+		write(nflog,'(a,i4,4e12.3)') 'before: ',nchemo,Creact(1:4)
 	endif
 	idid = 0
 	t = tstart
 	tend = t + dt
-!	write(*,*) 'Solve intra: ',i,kintra
 	! what do do with comm_rkc?
 !	call rkc(comm_rkc(kintra),ncvars,f_rkc_intra,Creact,t,tend,rtol,atol,info,work_rkc,idid,kintra)
 	if (idid /= 1) then
@@ -2035,7 +1992,7 @@ do i = 1,ntvars
 		stop
 	endif
 	if (dbug .and. kintra == 1) then
-		write(*,'(a,i4,4e12.3)') 'after: ',nchemo,Creact(1:4)
+		write(nflog,'(a,i4,4e12.3)') 'after: ',nchemo,Creact(1:4)
 	endif
 	! transfer results
 	do ic = 1,nchemo
@@ -2043,7 +2000,6 @@ do i = 1,ntvars
 		state_in(kintra,ic) = Creact(ic+nchemo) ! intracellular concentrations next
 	enddo
 enddo
-!write(*,*) 'Solved intra: '
 endif
 
 !if (use_medium_flux .and. medium_volume > 0) then
@@ -2062,7 +2018,7 @@ do i = 1,ntvars
 		allstate(i,1:nchemo) = state_in(kintra,1:nchemo) 
 	endif
 enddo
-if (dbug) write(*,'(a,4e12.3)') 'allstate (a): ',allstate(1,1:2),allstate(2,1:2)
+if (dbug) write(nflog,'(a,4e12.3)') 'allstate (a): ',allstate(1,1:2),allstate(2,1:2)
 !allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
 ! Note: some time we need to copy the state values to the cell_list() array.
 deallocate(state_ex)

@@ -135,10 +135,6 @@ do while (.not.done)
 		enddo
 	enddo
 enddo
-if (Nsites /= Nsites_old) then
-	write(*,*) 'Nsites changed in UpdateBdryList: old,new: ',Nsites_old,Nsites
-!	stop
-endif
 bdry_changed = .false.
 end subroutine
 

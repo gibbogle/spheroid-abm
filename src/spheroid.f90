@@ -135,7 +135,6 @@ if (chemo(ichemo)%present) then
 	R1 = Radius*DELTA_X			! cm
 	V0 = medium_volume0			! cm3
 	V = V0 - (4./3.)*PI*R1**3	! cm3
-	!write(*,'(a,3f10.3)') 'SetupMedium: ',R1,V0,V
 	chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_M = V*chemo(ichemo)%bdry_conc
@@ -146,29 +145,6 @@ else
 	chemo(ichemo)%medium_M = 0
 	chemo(ichemo)%medium_U = 0
 endif
-!write(*,'(a,i4,2e12.4)') 'SetupMedium: ',ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
-end subroutine
-
-!----------------------------------------------------------------------------------------- 
-! Initialise medium concentrations, etc.
-!-----------------------------------------------------------------------------------------
-subroutine SetupMedium1
-integer :: ichemo
-real(REAL_KIND) :: V, V0, R1
-
-call SetRadius(Nsites)
-R1 = Radius*DELTA_X			! cm
-V0 = medium_volume0			! cm3
-V = V0 - (4./3.)*PI*R1**3	! cm3
-!write(*,'(a,3f10.3)') 'SetupMedium: ',R1,V0,V
-do ichemo = 1,MAX_CHEMO
-	if (.not.chemo(ichemo)%used) cycle
-	chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
-	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
-	chemo(ichemo)%medium_M = V*chemo(ichemo)%bdry_conc
-	chemo(ichemo)%medium_U = 0
-	write(*,'(a,i4,2e12.4)') 'SetupMedium: ',ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
-enddo
 end subroutine
 
 !----------------------------------------------------------------------------------------- 
@@ -230,8 +206,6 @@ do i = 1,n
 	sum2 = sum2 + y2(i)
 enddo
 !$omp end parallel do
-write(*,*) 'sum1: ',sum1
-write(*,*) 'sum2: ',sum2
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -288,8 +262,6 @@ do i = 1,n
 	ysum(ith) = ysum(ith) + z
 enddo
 !$omp end parallel do
-!write(*,*) 'sum1: ',sum1
-write(*,*) 'ysum: ',sum(ysum)
 stop
 end subroutine
 
@@ -835,7 +807,6 @@ do
 99	exit
 enddo
 rewind(nftreatment)
-!write(*,*) 'nmax: ',nmax
 do idrug = 0,2
 	allocate(protocol(idrug)%tstart(nmax))
 	allocate(protocol(idrug)%tend(nmax))
@@ -1061,7 +1032,6 @@ do x = 1,NX
 	enddo
 enddo
 
-!write(*,*) 'Initial placement: ',kcell
 if (kcell > initial_count) then
 	write(logmsg,*) 'Cell count already exceeds specified number: ',kcell,initial_count
 	call logger(logmsg)
@@ -1086,7 +1056,6 @@ Ncells = kcell
 Ncells0 = Ncells
 Nreuse = 0	
 ok = .true.
-!write(*,*) 'initial_count, Ncells: ',initial_count, Ncells
 !write(logmsg,*) 'idbug: ',idbug
 !call logger(logmsg)
 end subroutine
@@ -1325,7 +1294,6 @@ do idrug = 1,2
 				endif
 			enddo
 			write(nflog,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
-!			write(*,*) 'Started DRUG: ',chemo(ichemo)%name,chemo(ichemo)%bdry_conc, i
 			exit
 		endif
 	enddo
@@ -1345,7 +1313,6 @@ do idrug = 1,2
 				endif
 			enddo
 			write(nflog,*) 'Ended DRUG: ',chemo(ichemo)%name,i
-!			write(*,*) 'Ended DRUG: ',chemo(ichemo)%name,i
 			exit
 		endif
 	enddo
@@ -2636,17 +2603,17 @@ integer :: k
 
 dll_version = DLL_BUILD_VERSION
 gui_version = GUI_BUILD_VERSION
-write(nflog,*) 'get_DLL_build_version: ',dll_version
+!write(nflog,*) 'get_DLL_build_version: ',dll_version
 do k = 1,12
 	version_array(k) = dll_version(k:k)
-	write(nflog,'(i2,a,a)') k,' ',version_array(k)
+!	write(nflog,'(i2,a,a)') k,' ',version_array(k)
 	if (version_array(k) == ' ') then
 		version_array(k) = char(0)
 		array_len = k
 		exit
 	endif
 enddo
-write(nflog,*) 'array_len: ',array_len
+!write(nflog,*) 'array_len: ',array_len
 end subroutine
 
 !-----------------------------------------------------------------------------------------
