@@ -2626,3 +2626,26 @@ do i = 1,10
 enddo
 call CreateCheckList
 end subroutine
+
+!----------------------------------------------------------------------------------------- 
+! Initialise medium concentrations, etc.
+! NOT USED
+!-----------------------------------------------------------------------------------------
+subroutine SetupMedium1
+integer :: ichemo
+real(REAL_KIND) :: V, V0, R1
+
+call SetRadius(Nsites)
+R1 = Radius*DELTA_X			! cm
+V0 = medium_volume0			! cm3
+V = V0 - (4./3.)*PI*R1**3	! cm3
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_M = V*chemo(ichemo)%bdry_conc
+	chemo(ichemo)%medium_U = 0
+	write(*,'(a,i4,2e12.4)') 'SetupMedium: ',ichemo,chemo(ichemo)%medium_Cext,chemo(ichemo)%medium_M
+enddo
+end subroutine
+

@@ -240,7 +240,6 @@ do x = blobrange(1,1),blobrange(1,2)
 enddo
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
-    write(*,'(i4,2x,10f7.2)') istep/60,C(ichemo,1:10)
 enddo
 !if (C(1) < 100) then
 !	write(logmsg,*) 'First conc < 100: istep: ',istep, C(1),occupancy(x1,y,z)%indx(1)

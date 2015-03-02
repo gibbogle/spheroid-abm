@@ -90,7 +90,6 @@ do kcell = 1,nlist
 	OER_beta_d = dose*(LQ%OER_bm*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
 	expon = LQ%alpha_H*OER_alpha_d + LQ%beta_H*OER_alpha_d**2
 	kill_prob = 1 - exp(-expon)
-!	write(*,'(i6,3e12.4)') kcell,C_O2,expon,kill_prob
 	R = par_uni(kpar)
 	if (R < kill_prob) then
 		cell_list(kcell)%radiation_tag = .true.
@@ -142,7 +141,6 @@ do kcell = 1,nlist
 		cell_list(kcell)%site = site
 		occupancy(site(1),site(2),site(3))%indx(1) = kcell
 		occupancy(site0(1),site0(2),site0(3))%indx(1) = indx
-!		write(*,'(i2,2f8.4,3i4,f6.1,4x,3i4,f6.1)') jmax,v0,vmax,site0,d0,site,d
 	endif
 enddo
 end subroutine
@@ -217,7 +215,6 @@ do kcell = 1,nlist
 	    elseif (TPZ%kill_model(ict) == 5) then
 		    pdeath = Kd*cell_list(kcell)%conc(TPZ_DRUG)**2*dt
 		endif
-!	    write(*,'(a,i6,4f10.5)') 'CellDeath: ',kcell,cell_list(kcell)%conc(DRUG_A),kmet,dMdt,pdeath
 	    if (par_uni(kpar) < pdeath) then
             cell_list(kcell)%drug_tag = .true.
             Ndrug_tag = Ndrug_tag + 1
@@ -308,9 +305,6 @@ V = cell_list(kcell)%volume*Vcell_cm3
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	chemo(ichemo)%medium_M = chemo(ichemo)%medium_M + V*Cin(ichemo) + (Vsite_cm3 - V)*Cex(ichemo)
-!	if (ichemo == DRUG_A) then
-!		write(*,*) 'AddToMedium: ',chemo(ichemo)%medium_M
-!	endif
 enddo
 end subroutine
 
@@ -392,18 +386,15 @@ do
 			jmin = j
 		endif
 	enddo
-!	write(*,*) 'd1, dmin, jmin: ',d1,dmin, jmin
 	if (dmin >= d1) then
 		site2 = site1
 		exit
 	endif
 	if (jmin <= 0) then
-		write(*,*) 'Error: jmin: ',jmin
+		write(nflog,*) 'Error: jmin: ',jmin
 		stop
 	endif
-!	write(*,*) site1,jmin,jumpvec(:,jmin)
 	site2 = site1 + jumpvec(:,jmin)
-!	write(*,*) site2
 	! Now swap site1 and site2
 	kcell = occupancy(site2(1),site2(2),site2(3))%indx(1)
 	tmp_indx = occupancy(site1(1),site1(2),site1(3))%indx(1)
@@ -412,7 +403,6 @@ do
 	cell_list(kcell)%site = site1
 	site1 = site2
 enddo
-!write(*,*) 'NecroticMigration: site2: ',site2
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -491,7 +481,6 @@ do kcell = 1,nlist0
 			if (cell_list(kcell)%anoxia_tag) then
 				Nanoxia_tag = Nanoxia_tag - 1
 			endif
-!			write(*,*) 'Cell died: ',kcell,
 			cycle
 		endif
 		if (cell_list(kcell)%drug_tag) then
@@ -617,12 +606,11 @@ do
 	if (site01(3) < zmin) then
 		cycle
 	endif
-	!if (dbug) write(*,*) 'CellDivider: ',kcell0,site0,occupancy(site0(1),site0(2),site0(3))%indx
 	if (occupancy(site01(1),site01(2),site01(3))%indx(1) == OUTSIDE_TAG) then	! site01 is outside, use it directly
 		npath = 0
 		site1 = site0
 		if (site01(3) < zmin) then
-			write(*,*) 'CellDivider: OUTSIDE: z < zmin'
+			write(nflog,*) 'CellDivider: OUTSIDE: z < zmin'
 			stop
 		endif
 	elseif (bdrylist_present(site01,bdrylist)) then	! site01 is on the boundary
@@ -630,7 +618,7 @@ do
 		site1 = site01
 		path(:,1) = site01
 		if (site01(3) < zmin) then
-			write(*,*) 'CellDivider: boundary: z < zmin'
+			write(nflog,*) 'CellDivider: boundary: z < zmin'
 			stop
 		endif
 	else
@@ -639,11 +627,11 @@ do
 		if (dbug) call logger('did ChooseBdrySite')
 		if (.not.ok) return
 		if (site01(3) < zmin) then
-			write(*,*) 'CellDivider: chosen: z < zmin'
+			write(nflog,*) 'CellDivider: chosen: z < zmin'
 			stop
 		endif
 		if (occupancy(site1(1),site1(2),site1(3))%indx(1) == 0) then
-			write(*,*) 'after choose_bdrysite: site1 is VACANT: ',site1
+			write(nflog,*) 'after choose_bdrysite: site1 is VACANT: ',site1
 			stop
 		endif
 		call SelectPath(site0,site01,site1,path,npath)
@@ -655,10 +643,6 @@ do
 	endif
 	exit
 enddo
-!if (dbug) write(*,*) 'path: ',npath
-!do k = 1,npath
-!	if (dbug) write(*,'(i3,2x,3i4)') path(:,k)
-!enddo
 
 if (npath > 0) then
 	! Need to choose an outside or vacant site near site1
@@ -670,7 +654,6 @@ if (npath > 0) then
 		Nsites = Nsites + 1
 		call RemoveFromMedium
 	endif
-!	write(*,'(a,3i4,i6)') 'outside site: ',site2,occupancy(site2(1),site2(2),site2(3))%indx(1)
 else
 	! site01 is the destination site for the new cell
 	site2 = site01
@@ -688,7 +671,6 @@ if (.not.ok) then
 	return
 endif
 cell_list(kcell1)%CFSE = cfse1
-!write(*,*) 'added cell at: ',site01
 
 call GetPathMass(site0,site01,path,npath,M1)
 do ichemo = 1,MAX_CHEMO
@@ -736,33 +718,23 @@ endif
 do j = 1,27
 	if (j == 14) cycle
 	site = site2 + jumpvec(:,j)
-	!write(*,*) j,site
 	if (isbdry(site)) then
-		if (dbug) write(*,*) 'isbdry'
 		if (.not.bdrylist_present(site,bdrylist)) then	! add it
-			if (dbug) write(*,*) 'not present, add it'
 			allocate(bdry)
 			bdry%site = site
-		!    bdry%chemo_influx = .false.
 			nullify(bdry%next)
 			call bdrylist_insert(bdry,bdrylist)
-			if (dbug) write(*,*) 'inserted bdry site: ',site
 			occupancy(site(1),site(2),site(3))%bdry => bdry
 !			call CheckBdryList('after bdrylist_insert')
 		endif
 	else
-		if (dbug) write(*,*) 'not isbdry'
 		if (bdrylist_present(site,bdrylist)) then	! remove it
-			if (dbug) write(*,*) 'present, remove it'
 			call bdrylist_delete(site,bdrylist)
-			if (dbug) write(*,*) 'deleted bdry site: ',site
 			nullify(occupancy(site(1),site(2),site(3))%bdry)
 !			call CheckBdryList('after bdrylist_delete')
 		endif
 	endif
 enddo
-!call AdjustMedium
-if (dbug) write(*,*) 'done!'
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -818,8 +790,6 @@ integer :: site0(3),site01(3),path(3,200),npath
 real(REAL_KIND) :: alpha(:)
 integer :: k, site(3), kcell, ichemo
 
-!write(*,*) 'ScalePathConcentrations - returning!!!!!!!!!!'
-!return
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	if (chemo(ichemo)%constant) cycle
@@ -831,10 +801,10 @@ do ichemo = 1,MAX_CHEMO
 			site01 = path(:,k)
 			occupancy(site01(1),site01(2),site01(3))%C(ichemo) = alpha(ichemo)*occupancy(site01(1),site01(2),site01(3))%C(ichemo)
 			if (isnan(occupancy(site01(1),site01(2),site01(3))%C(ichemo))) then
-				write(*,*) 'ScalePathConcentrations: isnan: ichemo,site: ',ichemo,site01,alpha(ichemo)
+				write(nflog,*) 'ScalePathConcentrations: isnan: ichemo,site: ',ichemo,site01,alpha(ichemo)
 			endif
 			if (chemo(ichemo)%constant .and. occupancy(site01(1),site01(2),site01(3))%C(ichemo) /= chemo(ichemo)%bdry_conc) then
-				write(*,*) 'ScalePathConcentrations: constant but C != bdry_conc: ', &
+				write(nflog,*) 'ScalePathConcentrations: constant but C != bdry_conc: ', &
 					ichemo,occupancy(site01(1),site01(2),site01(3))%C(ichemo),chemo(ichemo)%bdry_conc
 				stop
 			endif
@@ -867,9 +837,6 @@ do k = npath-1,1,-1
 			occupancy(site1(1),site1(2),site1(3))%C(ic) = max(occupancy(site2(1),site2(2),site2(3))%C(ic), Cex(ic))
 		endif
 	enddo
-!	write(*,'(i4,4e12.4)') k,Cex(1:2),Vsite_cm3,V
-!	write(*,'(4x,2e12.4)') occupancy(site2(1),site2(2),site2(3))%C(1:2)
-!	write(*,'(4x,2e12.4)') occupancy(site1(1),site1(2),site1(3))%C(1:2)
 enddo
 end subroutine
 
@@ -915,7 +882,6 @@ real(REAL_KIND) :: z, r2, sin2, cos2, d2, dd, dsq, dsqmax, tempCentre(3)
 logical :: hit
 type (boundary_type), pointer :: bdry
 
-if (dbug) write(*,*) 'ChooseBdrysite: ',site0
 tempCentre = Centre
 if (is_dropped .and. site0(3) < Centre(3)) then
 	tempCentre(3) = (site0(3) + 2*Centre(3))/3
@@ -949,8 +915,8 @@ do while ( associated ( bdry ))
 			endif
 			d2 = adrop*adrop*sin2 + bdrop*bdrop*cos2
 			if (d2 < 0) then
-				write(*,*) 'd2 < 0: cos2, sin2: ',cos2,sin2
-				write(*,*) 'site0(3),cdrop,zmin: ',site0(3),cdrop,zmin,(site0(3) + cdrop - zmin)/(bdrop*Radius)
+				write(nflog,*) 'd2 < 0: cos2, sin2: ',cos2,sin2
+				write(nflog,*) 'site0(3),cdrop,zmin: ',site0(3),cdrop,zmin,(site0(3) + cdrop - zmin)/(bdrop*Radius)
 				stop
 			endif
 			dd = Radius*sqrt(d2)	! this is the desired distance for this z
@@ -963,7 +929,6 @@ do while ( associated ( bdry ))
 			if (d < dmin) then
 				dmin = d
 				sitemin = site
-				if (dbug) write(*,*) 'sitemin: ',sitemin
 			endif
 		endif
 	endif
@@ -976,7 +941,6 @@ if (.not.hit) then
 	return
 endif
 site1 = sitemin
-if (dbug) write(*,*) 'site1: ',site1,occupancy(site1(1),site1(2),site1(3))%indx
 ok = .true.
 end subroutine
 
@@ -1024,9 +988,9 @@ do it = 1,10
 	enddo
 	site2 = (/x,y,z/)
 	call SelectPath(site0,site1,site2,path,npath)
-	write(*,*) 'path: ',npath
+	write(nflog,*) 'path: ',npath
 	do k = 1,npath
-		write(*,'(i3,2x,3i4)') path(:,k)
+		write(nflog,'(i3,2x,3i4)') path(:,k)
 	enddo
 enddo
 end subroutine
@@ -1074,7 +1038,6 @@ do
 		endif
 		v = site2 - v
 		d2 = v(1)*v(1) + v(2)*v(2) + v(3)*v(3)
-		if (dbug) write(*,'(8i6,2f6.1)') k,j,site+jump,v,d2,d2min
 		if (d2 < d2min) then
 			d2min = d2
 			jmin = j
@@ -1087,7 +1050,6 @@ do
 	endif
 	site = site + jumpvec(:,jmin)
 	k = k+1
-	if (dbug) write(*,'(11i4,f8.1)') k,site1,site2,site,jmin,d2min
 	if (k==20) stop
 	path(:,k) = site
 	if (site(1) == site2(1) .and. site(2) == site2(2) .and. site(3) == site2(3)) exit
@@ -1131,9 +1093,7 @@ integer :: k, site1(3), site2(3), kcell
 do k = npath-1,1,-1
 	site1 = path(:,k)
 	kcell = occupancy(site1(1),site1(2),site1(3))%indx(1)
-	if (dbug) write(*,*) k,' site1: ',site1,kcell
 	site2 = path(:,k+1)
-	if (dbug) write(*,*) 'site2: ',site2
 	if (kcell > 0) then
     	cell_list(kcell)%site = site2
     endif
@@ -1154,9 +1114,7 @@ integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
 
 ok = .true.
-!write(*,*) 'CloneCell: ',kcell0,kcell1
 tnow = istep*DELTA_T
-!lastID = lastID + 1
 nlist = nlist + 1
 if (nlist > max_nlist) then
 	call logger('Dimension of cell_list() has been exceeded: increase max_nlist and rebuild')
@@ -1225,7 +1183,6 @@ do kcell = 1,nlist
 		endif
 	endif
 enddo
-!write(*,'(a,2(f7.1,3i4,2x))') 'rmin, rmax: ',rmin,minv,rmax,maxv
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1238,11 +1195,11 @@ do kcell = 1,nlist
 	site = cell_list(kcell)%site
 	indx = occupancy(site(1),site(2),site(3))%indx
 	if (indx(1) == UNREACHABLE_TAG .or. indx(1) == OUTSIDE_TAG) then
-		write(*,'(a,6i6)') 'CheckUnreachable: bad indx: ',kcell,Ncells,site,indx(1)
+		write(nflog,'(a,6i6)') 'CheckUnreachable: bad indx: ',kcell,Ncells,site,indx(1)
 		stop
 	endif
 	if (site(3) < zmin) then	
-		write(*,'(a,6i6)') 'CheckUnreachable: bad z: ',kcell,Ncells,site,indx(1)
+		write(nflog,'(a,6i6)') 'CheckUnreachable: bad z: ',kcell,Ncells,site,indx(1)
 		stop
 	endif
 enddo
@@ -1258,11 +1215,10 @@ integer :: i, site(3), kcell, sitemax(3)
 real(REAL_KIND) :: r0, r, rmax
 
 if (occupancy(site0(1),site0(2),site0(3))%indx(1) /= OUTSIDE_TAG) then
-	write(*,*) 'Error: adjust: site is not OUTSIDE: ',site0
+	write(nflog,*) 'Error: adjust: site is not OUTSIDE: ',site0
 	stop
 endif
 r0 = cdistance(site0)
-!write(*,'(a,3i4,f6.2)') 'adjust: ',site0,r0
 rmax = 0
 do i = 1,6
 	site = site0 + neumann(:,i)
@@ -1277,7 +1233,6 @@ do i = 1,6
 enddo
 if (rmax > 0) then
 	kcell = occupancy(sitemax(1),sitemax(2),sitemax(3))%indx(1)
-!	write(*,'(i6,2x,3i4,f6.2)') kcell,sitemax,rmax
 	cell_list(kcell)%site = site0
 	occupancy(site0(1),site0(2),site0(3))%indx(1) = kcell
 	occupancy(sitemax(1),sitemax(2),sitemax(3))%indx(1) = OUTSIDE_TAG
