@@ -147,7 +147,7 @@ void ExecThread::run()
 	int res=0;
     int hour;
 	const char *infile, *outfile;
-    char version[10];
+    char version[12];
 	QString infile_path, outfile_path;
 	int len_infile, len_outfile;
     int len_version;

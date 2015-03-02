@@ -13,7 +13,7 @@ IMPLICIT NONE
 
 contains 
 
-!----------------------------------------------------------------------------------------- 
+!-----------------------------------------------------------------------------------------
 ! This subroutine is called to initialize a simulation run. 
 ! ncpu = the number of processors to use 
 ! infile = file with the input data
@@ -2467,7 +2467,7 @@ real(REAL_KIND) :: dx
 real(REAL_KIND), allocatable :: ex_conc(:,:)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer :: rng(3,2), i, k, ichemo, kcell, x, y, z, ic, nc, kmax
-character*(16) :: title(0:MAX_CHEMO+N_EXTRA)
+character*(16) :: title(1:MAX_CHEMO+N_EXTRA)
 character*(128) :: filename
 character*(6) :: mintag
 
@@ -2475,7 +2475,7 @@ dx = DELTA_X
 rng(:,1) = Centre(:) - (adrop*Radius + 2)
 rng(:,2) = Centre(:) + (adrop*Radius + 2)
 kmax = rng(1,2)-rng(1,1)+ 3
-allocate(ex_conc(0:MAX_CHEMO+N_EXTRA,kmax))
+allocate(ex_conc(1:MAX_CHEMO+N_EXTRA,kmax))
 y = Centre(2) + 0.5
 z = Centre(3) + 0.5
 ic = 0
@@ -2558,9 +2558,9 @@ write(nfprofile,'(a,a)') 'DLL version: ',dll_run_version
 write(nfprofile,'(i6,a)') int(istep*DELTA_T/60),' minutes'
 write(nfprofile,'(i6,a)') ns,' sites'
 write(nfprofile,'(f6.2,a)') 1000*DELTA_X,' dx (um)'
-write(nfprofile,'(32a16)') title(0:nc)
+write(nfprofile,'(32a16)') title(1:nc)
 do k = 1,ns
-	write(nfprofile,'(32(e12.3,4x))') ex_conc(0:nc,k)
+	write(nfprofile,'(32(e12.3,4x))') ex_conc(1:nc,k)
 enddo
 close(nfprofile)
 deallocate(ex_conc)
@@ -2630,14 +2630,14 @@ end subroutine
 subroutine get_DLL_build_version(version_array,array_len) BIND(C) 
 !DEC$ ATTRIBUTES DLLEXPORT :: get_dll_build_version
 use, intrinsic :: iso_c_binding
-character(c_char) :: version_array(10)
+character(c_char) :: version_array(12)
 integer(c_int) :: array_len
 integer :: k
 
 dll_version = DLL_BUILD_VERSION
 gui_version = GUI_BUILD_VERSION
 write(nflog,*) 'get_DLL_build_version: ',dll_version
-do k = 1,6
+do k = 1,12
 	version_array(k) = dll_version(k:k)
 	write(nflog,'(i2,a,a)') k,' ',version_array(k)
 	if (version_array(k) == ' ') then
@@ -2696,9 +2696,6 @@ call logger(logmsg)
     write(logmsg,'(a)') 'Executing with OpenMP'
 	call logger(logmsg)
 #endif
-
-write(*,*) 'dll_build_version: ',dll_version
-write(*,*) 'gui_build_version: ',gui_version
 
 write(logmsg,*) 'inputfile:  ', infile
 call logger(logmsg)

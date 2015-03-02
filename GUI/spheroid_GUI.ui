@@ -6580,12 +6580,12 @@ padding: 8px
              <rect>
               <x>80</x>
               <y>0</y>
-              <width>41</width>
+              <width>51</width>
               <height>20</height>
              </rect>
             </property>
             <property name="text">
-             <string>0.00</string>
+             <string>GUI0.00</string>
             </property>
             <property name="readOnly">
              <bool>false</bool>
@@ -6618,12 +6618,12 @@ padding: 8px
              <rect>
               <x>210</x>
               <y>0</y>
-              <width>41</width>
+              <width>51</width>
               <height>20</height>
              </rect>
             </property>
             <property name="text">
-             <string>0.00</string>
+             <string>DLL0.00</string>
             </property>
             <property name="readOnly">
              <bool>false</bool>
