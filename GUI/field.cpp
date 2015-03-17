@@ -27,6 +27,7 @@ Field::Field(QWidget *aParent) : QWidget(aParent)
     constituent_rb_list = NULL;
     vbox_constituent = NULL;
     buttonGroup_constituent = new QButtonGroup;
+    data = NULL;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -243,18 +244,18 @@ void Field::displayField(int hr, int *res)
 {
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, CANVAS_WIDTH, CANVAS_WIDTH));
     QBrush brush;
-    int i, xindex, yindex, ix, iy, w, rgbcol[3];
+    int i, xindex, yindex, ix, iy, w, rgbcol[3], ichemo;
     double xp, yp, d0, d, volume, scale, cmin, cmax, rmax;
     double a, b, Wc;
     int Nc;
 
-    LOG_MSG("displayField");
+    ichemo = Global::GUI_to_DLL_index[constituent];
+    LOG_QMSG("displayField: " + QString::number(constituent) + "-->" + QString::number(ichemo));
     use_log = false;    // temporary
     *res = 0;
     hour = hr;
 	if (slice_changed) {
-        LOG_MSG("get_fieldinfo:");
-        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, res);
+        get_fieldinfo(&NX, &axis, &fraction, &nsites, &nconst, const_used, res);    // Note: const_used[] is no longer used
         if (*res != 0) {
             printf("Error: get_fieldinfo: FAILED\n");
             LOG_MSG("Error: get_fieldinfo: FAILED");
@@ -270,14 +271,15 @@ void Field::displayField(int hr, int *res)
             LOG_MSG(msg);
             exit(1);
         }
+        if (this->data) {
+            free(this->data);
+        }
         this->data = (FIELD_DATA *)malloc(nsites*sizeof(FIELD_DATA));
-        LOG_MSG("get_fielddata:");
         get_fielddata(&axis, &fraction, &nsites, &nconst, this->data, res);
         if (*res != 0) {
             LOG_MSG("Error: get_fielddata: FAILED");
             return;
         }
-        LOG_MSG("get_fielddata: OK");
         slice_changed = false;
     }
 
@@ -315,10 +317,9 @@ void Field::displayField(int hr, int *res)
     cmax = 0;
     rmax = 0;
     for (i=0; i<nsites; i++) {
-//        rmax = MAX(rmax,data[i].dVdt);    // use conc[MAX_CHEMO+1] for dVdt
-        rmax = MAX(rmax,data[i].conc[Global::MAX_CHEMO+1]);
-        cmin = MIN(MAX(cmin,0),data[i].conc[constituent]);
-        cmax = MAX(cmax,data[i].conc[constituent]);
+        rmax = MAX(rmax,data[i].conc[GROWTH_RATE]);     // GROWTH_RATE = Global::MAX_CHEMO+1
+        cmin = MIN(MAX(cmin,0),data[i].conc[ichemo]);
+        cmax = MAX(cmax,data[i].conc[ichemo]);
         // Flip it
 //        data[i].site[yindex] = NX - data[i].site[yindex];
     }
@@ -336,7 +337,7 @@ void Field::displayField(int hr, int *res)
         iy = this->data[i].site[yindex];
         xp = int(a*ix + b - w);
         yp = int(a*iy + b - w);
-        chooseFieldColor(data[i].conc[constituent],cmin,cmax,use_log,rgbcol);
+        chooseFieldColor(data[i].conc[ichemo],cmin,cmax,use_log,rgbcol);
 //        sprintf(msg,"c: %f %f %f rgbcol: %d %d %d",data[i].conc[constituent],cmin,cmax,rgbcol[0],rgbcol[1],rgbcol[2]);
 //        LOG_MSG(msg);
         brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
@@ -351,7 +352,6 @@ void Field::displayField(int hr, int *res)
         if (volume > 0) {
             scale = pow(volume,0.3333);
             d = scale*d0;   // fix this - need to change d0
-//            double f = data[i].dVdt/rmax;
             double f = data[i].conc[GROWTH_RATE]/rmax;
             chooseRateColor(f,rgbcol);
             brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
@@ -375,7 +375,6 @@ void Field::displayField(int hr, int *res)
             filename[11+i] = numstr[i];
         image.save(filename);
     }
-    LOG_MSG("did displayField");
 }
 
 
@@ -452,11 +451,6 @@ void Field::chooseRateColor(double f, int rgbcol[])
 //-----------------------------------------------------------------------------------------
 void Field::getTitle(int iconst, QString *title)
 {
-//    if (constituent < Global::MAX_CHEMO+1) {
-//        *title = const_name[constituent] + " Concentration";
-//    } else if (constituent == GROWTH_RATE) {
-//        *title = "Growth rate";
-//    }
     QString name = Global::var_string[iconst];
     if (Global::GUI_to_DLL_index[iconst] <= Global::MAX_CHEMO) {
         *title = name + " Concentration";
@@ -464,167 +458,3 @@ void Field::getTitle(int iconst, QString *title)
         *title = name;
     }
 }
-
-/*
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void Field::makeConcPlot(QMdiArea *mdiArea)
-{
-    QString tag = "conc";
-    QString title;
-    if (pGconc != NULL) {
-        LOG_MSG("pGconc not NULL");
-        delete pGconc;
-    }
-    pGconc = new Plot(tag,tag);
-    getTitle(constituent,&title);
-    LOG_QMSG(title);
-    pGconc->setTitle(title);
-
-    mdiArea->addSubWindow(pGconc);
-    pGconc->show();
-}
-
-//-----------------------------------------------------------------------------------------
-// Note that growth_rate is now constituent MAX_CHEMO+1
-//-----------------------------------------------------------------------------------------
-void Field::updateConcPlot()
-{
-    int nc, nmu, i, ichemo;
-    double dx, x[1000], y[1000], *conc, cmax, cmin;
-    QString title = "Concentration";
-
-//    LOG_MSG("UpdateConcPlot");
-    dx = Global::conc_dx;
-    nc = Global::conc_nc;
-    conc = Global::concData;
-    if (nc == 0) return;
-    nmu = int(nc*dx*1.0e4);
-    getTitle(constituent,&title);
-    pGconc->setTitle(title);
-    pGconc->setAxisScale(QwtPlot::xBottom, 0, nmu, 0);
-    QPen *pen = new QPen();
-    QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
-    pen->setColor(pencolor[0]);
-    pGconc->curve[0]->setPen(*pen);
-//    ichemo = constituent;
-    ichemo = Global::GUI_to_DLL_index[constituent];
-    cmin = 1.0e10;
-    cmax = 0;
-    for (i=0; i<nc; i++) {
-        x[i] = i*dx*1.0e4;
-        y[i] = conc[i*(Global::MAX_CHEMO+2)+ichemo];
-        cmin = MIN(cmin,y[i]);
-        cmax = MAX(cmax,y[i]);
-    }
-    pGconc->setAxisScale(QwtPlot::yLeft, 0, cmax, 0);
-    pGconc->curve[0]->setData(x, y, nc);
-    pGconc->replot();
-    delete pen;
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void Field::makeVolPlot(QMdiArea *mdiArea)
-{
-    Global::vol_nv = 20;
-    QString tag = "vol";
-    QString title = "Volume Distribution";
-    if (pGvol != NULL) {
-        LOG_MSG("pGvol not NULL");
-        delete pGvol;
-    }
-    pGvol = new Plot(tag,tag);
-    pGvol->setTitle(title);
-
-    mdiArea->addSubWindow(pGvol);
-    pGvol->show();
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void Field::updateVolPlot()
-{
-    int i;
-    double x[100], y[100], *prob, pmax, v1, v2;
-
-//    LOG_MSG("UpdateVolPlot");
-    prob = Global::volProb;
-    v1 = Global::vol_v0 - Global::vol_dv/2;
-    v2 = Global::vol_v0 + (Global::vol_nv-0.5)*Global::vol_dv;
-    pGvol->setAxisScale(QwtPlot::xBottom, v1, v2, 0);
-    QPen *pen = new QPen();
-    QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
-    pen->setColor(pencolor[0]);
-    pGvol->curve[0]->setPen(*pen);
-
-    pmax = 0;
-    for (i=0; i<Global::vol_nv; i++) {
-        x[i] = Global::vol_v0 + i*Global::vol_dv;
-        y[i] = prob[i];
-        pmax = MAX(pmax,y[i]);
-    }
-    pmax = 4.0/Global::vol_nv;  // try this
-    pGvol->setAxisScale(QwtPlot::yLeft, 0, pmax, 0);
-    pGvol->curve[0]->setData(x, y, Global::vol_nv);
-
-    pGvol->replot();
-    delete pen;
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void Field::makeOxyPlot(QMdiArea *mdiArea)
-{
-    LOG_MSG("makeOxyPlot");
-    Global::oxy_nv = 20;
-    QString tag = "oxy";
-    QString title = "Cell O2 Distribution";
-    if (pGoxy != NULL) {
-        LOG_MSG("pGoxy not NULL");
-        delete pGoxy;
-    }
-    pGoxy = new Plot(tag,tag);
-    pGoxy->setTitle(title);
-
-    mdiArea->addSubWindow(pGoxy);
-    pGoxy->show();
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void Field::updateOxyPlot()
-{
-    int i;
-    double x[100], y[100], *prob, pmax, v1, v2;
-
-//    LOG_MSG("UpdateOxyPlot");
-    prob = Global::oxyProb;
-//    v1 = 0;
-//    v2 = Global::oxy_nv*Global::oxy_dv;
-    v1 = Global::oxy_v0 - Global::oxy_dv/2;
-    v2 = Global::oxy_v0 + (Global::oxy_nv-0.5)*Global::oxy_dv;
-//    sprintf(msg,"updateOxyPlot: %d %f %f %f", oxy_nv, oxy_dv, v1, v2);
-//    LOG_MSG(msg);
-    pGoxy->setAxisScale(QwtPlot::xBottom, v1, v2, 0);
-    QPen *pen = new QPen();
-    QColor pencolor[] = {Qt::black, Qt::red, Qt::blue, Qt::darkGreen, Qt::magenta, Qt::darkCyan };
-    pen->setColor(pencolor[0]);
-    pGoxy->curve[0]->setPen(*pen);
-
-    pmax = 0;
-    for (i=0; i<Global::oxy_nv; i++) {
-//        x[i] = (i+0.5)*Global::oxy_dv;
-        x[i] = Global::oxy_v0 + i*Global::oxy_dv;
-        y[i] = prob[i];
-        pmax = MAX(pmax,y[i]);
-    }
-    i = pmax/0.1;
-    pmax = (i+1)*0.1;
-    pGoxy->setAxisScale(QwtPlot::yLeft, 0, pmax, 0);
-    pGoxy->curve[0]->setData(x, y, Global::oxy_nv);
-
-    pGoxy->replot();
-    delete pen;
-}
-*/

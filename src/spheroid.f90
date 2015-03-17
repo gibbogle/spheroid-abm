@@ -111,10 +111,12 @@ enddo
 call AdjustMM
 call SetInitialGrowthRate
 Nradiation_tag = 0
-Ndrug_tag = 0
+NdrugA_tag = 0
+NdrugB_tag = 0
 Nanoxia_tag = 0
 Nradiation_dead = 0
-Ndrug_dead = 0
+NdrugA_dead = 0
+NdrugB_dead = 0
 Nanoxia_dead = 0
 t_simulation = 0
 it_saveprofiledata = 1
@@ -694,8 +696,8 @@ write(nfres,'(a,a)') 'GUI version: ',gui_run_version
 write(nfres,'(a,a)') 'DLL version: ',dll_run_version
 write(nfres,*)
 write(nfres,'(a)') 'istep hour vol_mm3 diam_um Ncells &
-Nanoxia_dead Ndrug_dead Nradiation_dead Ntagged_anoxia Ntagged_drug Ntagged_radiation &
-f_hypox_1 f_hypox_2 f_hypox_3 f_growth_1 f_growth_2 f_growth_3 f_necrot &
+Nanoxia_dead NdrugA_dead NdrugB_dead Nradiation_dead Ntagged_anoxia Ntagged_drugA Ntagged_drugB Ntagged_radiation &
+f_hypox_1 f_hypox_2 f_hypox_3 f_growth_1 f_growth_2 f_growth_3 f_necrot plating_efficiency &
 medium_oxygen medium_glucose medium_TPZ medium_DNB'
 
 write(logmsg,*) 'Opened nfout: ',outputfile
@@ -1072,7 +1074,8 @@ cell_list(k)%ID = lastID
 cell_list(k)%celltype = random_choice(celltype_fraction,Ncelltypes,kpar)
 cell_list(k)%site = site
 cell_list(k)%state = 1
-cell_list(k)%drug_tag = .false.
+cell_list(k)%drugA_tag = .false.
+cell_list(k)%drugB_tag = .false.
 cell_list(k)%radiation_tag = .false.
 cell_list(k)%anoxia_tag = .false.
 cell_list(k)%exists = .true.
@@ -1626,18 +1629,20 @@ end function
 ! Total deaths = Ndead
 ! Drug deaths = Ndrugdead
 ! Hypoxia deaths = Ndead - Ndrugdead
-! Total tagged for drug death on division = Ndrug_tag
+! Total tagged for drug death on division = NdrugA_tag, NdrugB_tag
 ! Current tagged = Ntodie - Ntagdead 
 !-----------------------------------------------------------------------------------------
 subroutine get_summary(summaryData,i_hypoxia_cutoff,i_growth_cutoff) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*), i_hypoxia_cutoff,i_growth_cutoff
-integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
+integer :: Ndead, Ntagged, Ntodie, Ntagdead, Ntagged_anoxia, &
+	Ntagged_drugA, Ntagged_drugB, Ntagged_radiation, nviable, &
     diam_um, vol_mm3_1000, nhypoxic(3), ngrowth(3), &
-    hypoxic_percent_10, growth_percent_10, necrotic_percent_10, &
+    hypoxic_percent_10, growth_percent_10, necrotic_percent_10, plate_eff_10, &
     medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000
-real(REAL_KIND) :: vol_cm3, vol_mm3, hour
+    
+real(REAL_KIND) :: vol_cm3, vol_mm3, hour, plate_eff
 
 hour = istep*DELTA_T/3600.
 vol_cm3 = Vsite_cm3*Nsites			! total volume in cm^3
@@ -1649,25 +1654,48 @@ diam_um = 2*DELTA_X*Radius*10000
 !Ndead = Nsites + Nreuse - Ncells				! total that died from any cause
 !Ntagged = Ntodie - Ntagdead					! number currently tagged by drug or radiation
 Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead				! number currently tagged by anoxia
-Ntagged_drug = Ndrug_tag - Ndrug_dead					! number currently tagged by drug
+Ntagged_drugA = NdrugA_tag - NdrugA_dead				! number currently tagged by drugA
+Ntagged_drugB = NdrugB_tag - NdrugB_dead				! number currently tagged by drugB
 Ntagged_radiation = Nradiation_tag - Nradiation_dead	! number currently tagged by radiation
 call getHypoxicCount(nhypoxic)
 hypoxic_percent_10 = (1000*nhypoxic(i_hypoxia_cutoff))/Ncells
 call getGrowthCount(ngrowth)
 growth_percent_10 = (1000*ngrowth(i_growth_cutoff))/Ncells
 necrotic_percent_10 = (1000*(Nsites-Ncells))/Nsites
+call getNviable(nviable)
+plate_eff = real(nviable)/Ncells
+plate_eff_10 = 1000*plate_eff
 medium_oxygen_100 = 100*chemo(OXYGEN)%medium_Cext
 medium_glucose_100 = 100*chemo(GLUCOSE)%medium_Cext
 medium_TPZ_drug_1000 = 1000*chemo(TPZ_DRUG)%medium_Cext
 medium_DNB_drug_1000 = 1000*chemo(DNB_DRUG)%medium_Cext
-summaryData(1:17) = [ istep, Ncells, Nanoxia_dead, Ndrug_dead, Nradiation_dead, &
-    Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
-	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, &
+summaryData(1:20) = [ istep, Ncells, Nanoxia_dead, NdrugA_dead, NdrugB_dead, Nradiation_dead, &
+    Ntagged_anoxia, Ntagged_drugA, Ntagged_drugB, Ntagged_radiation, &
+	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, plate_eff_10, &
 	medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000 ]
-write(nfres,'(i8,f8.2,f8.4,8i7,11f7.3)') istep, hour, vol_mm3, diam_um, Ncells, &
-    Nanoxia_dead, Ndrug_dead, Nradiation_dead, Ntagged_anoxia, Ntagged_drug, Ntagged_radiation, &
-	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites), &
+write(nfres,'(2a12,i8,f8.2,f8.4,10i7,12f7.3)') gui_run_version, dll_run_version, istep, hour, vol_mm3, diam_um, Ncells, &
+    Nanoxia_dead, NdrugA_dead, NdrugB_dead, Nradiation_dead, Ntagged_anoxia, Ntagged_drugA, Ntagged_drugB, Ntagged_radiation, &
+	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites), plate_eff, &
 	chemo(OXYGEN)%medium_Cext, chemo(GLUCOSE)%medium_Cext, chemo(TPZ_DRUG)%medium_Cext, chemo(DNB_DRUG)%medium_Cext
+	
+	
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine getNviable(nviable)
+integer :: nviable
+integer :: kcell
+
+nviable = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	if (cell_list(kcell)%anoxia_tag .or. &
+	    cell_list(kcell)%drugA_tag .or. &
+	    cell_list(kcell)%drugB_tag .or. &
+	    cell_list(kcell)%radiation_tag) cycle
+	nviable = nviable + 1
+enddo	
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1798,8 +1826,8 @@ do z = rng(3,1),rng(3,2)
 			fdata(ns)%conc(0) = cfse
             fdata(ns)%conc(1:MAX_CHEMO) = allstate(i,1:MAX_CHEMO)	! cell_list(kcell)%conc(1:MAX_CHEMO)
             fdata(ns)%conc(GROWTH_RATE) = growthrate
-            fdata(ns)%conc(CELL_VOLUME) = Vcell_pL*cellvolume
-            fdata(ns)%conc(O2_BY_VOL) = allstate(i,OXYGEN)*Vcell_pL*cellvolume
+            fdata(ns)%conc(CELL_VOLUME) = Vcell_pL*cellvolume		! Note: = fdata(ns)%volume, therefore redundant
+            fdata(ns)%conc(O2_BY_VOL) = allstate(i,OXYGEN)*Vcell_pL*cellvolume	
         enddo
     enddo
 enddo

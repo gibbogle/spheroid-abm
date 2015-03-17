@@ -146,11 +146,11 @@ MainWindow::MainWindow(QWidget *parent)
     rect.setWidth(786);
 #endif
     mdiArea_VTK->setGeometry(rect);
-    tabs->setCurrentIndex(1);
 
     videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
     videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
 
+    tabs->setCurrentIndex(3);
     goToInputs();
 }
 
@@ -3314,15 +3314,15 @@ void MainWindow::setupGraphSelector()
         QString text = grph->tsGraphs[i].title;
         cbox_ts[i] = new QMyCheckBox;
         cbox_ts[i]->setText(text);
+//        cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
         cbox_ts[i]->setObjectName("cbox_"+grph->tsGraphs[i].tag);
-        cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
         grid->addWidget(cbox_ts[i],row[col],col);
         connect((QObject *)cbox_ts[i], SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-        if (col == 2) {
-            LOG_QMSG(grph->tsGraphs[i].tag);
-            sprintf(msg,"dist: %d %d",i,grph->tsGraphs[i].active);
-            LOG_MSG(msg);
-        }
+//        if (col == 2) {
+//            LOG_QMSG(grph->tsGraphs[i].tag);
+//            sprintf(msg,"graph: %d %d",i,grph->tsGraphs[i].active);
+//            LOG_MSG(msg);
+//        }
     }
     groupBox_graphselect->setLayout(grid);
 
@@ -3333,7 +3333,6 @@ void MainWindow::setupGraphSelector()
     rect.setHeight(500);
 #endif
     groupBox_graphselect->setGeometry(rect);
-
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3383,6 +3382,7 @@ void MainWindow::processGroupBoxClick(QString text)
 }
 
 //--------------------------------------------------------------------------------------------------------
+// Note that the initial selection of active graphs is now set in params.cpp
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setGraphsActive()
 {

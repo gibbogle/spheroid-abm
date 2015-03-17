@@ -105,7 +105,7 @@ type cell_type
 	real(REAL_KIND) :: t_hypoxic
 	real(REAL_KIND) :: t_anoxia_die
 	real(REAL_KIND) :: M
-	logical :: radiation_tag, drug_tag, anoxia_tag
+	logical :: radiation_tag, drugA_tag, drugB_tag, anoxia_tag
 	logical :: exists
 end type
 
@@ -193,7 +193,7 @@ type, bind(C) :: field_data
 !	real(c_double) :: CFSE
 !	real(c_double) :: dVdt
 	real(c_double) :: volume
-	real(c_double) :: conc(0:MAX_CHEMO+N_EXTRA)	! Must agree with the definition in field.h: 0 = CFSE, MAX_CHEMO+1 = dVdt, MAX_CHEMO+2 = volume
+	real(c_double) :: conc(0:MAX_CHEMO+N_EXTRA)	! Must agree with the definition in field.h: 0 = CFSE, MAX_CHEMO+1 = dVdt, MAX_CHEMO+2 = cellvolume
 end type
 
 type, bind(C) :: dist_data
@@ -246,7 +246,7 @@ integer :: jumpvec(3,27)
 
 integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
-integer :: Ndrug_tag, Nradiation_tag, Nanoxia_tag, Ndrug_dead, Nradiation_dead, Nanoxia_dead
+integer :: NdrugA_tag, NdrugB_tag, Nradiation_tag, Nanoxia_tag, NdrugA_dead, NdrugB_dead, Nradiation_dead, Nanoxia_dead
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes, ncpu_input
 integer :: nt_saveprofiledata, it_saveprofiledata

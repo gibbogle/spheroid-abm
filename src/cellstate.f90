@@ -162,7 +162,7 @@ subroutine CellDeath(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
 integer :: kcell, ict, nlist0, site(3), i, im, kpar=0 
-real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, pdeath, tnow
+real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, kill_prob, tnow
 logical :: use_TPZ_DRUG, use_DNB_DRUG
 
 !call logger('CellDeath')
@@ -181,8 +181,11 @@ do kcell = 1,nlist
 !			call logger('cell dies')
 			call CellDies(kcell)
 			Nanoxia_dead = Nanoxia_dead + 1
-			if (cell_list(kcell)%drug_tag) then
-				Ndrug_tag = Ndrug_tag - 1
+			if (cell_list(kcell)%drugA_tag) then
+				NdrugA_tag = NdrugA_tag - 1
+			endif
+			if (cell_list(kcell)%drugB_tag) then
+				NdrugB_tag = NdrugB_tag - 1
 			endif
 			if (cell_list(kcell)%radiation_tag) then
 				Nradiation_tag = Nradiation_tag - 1
@@ -197,31 +200,33 @@ do kcell = 1,nlist
 				cell_list(kcell)%t_anoxia_die = tnow + anoxia_death_delay	! time that the cell will die
 				Nanoxia_tag = Nanoxia_tag + 1
 			endif
+		else
+			cell_list(kcell)%t_hypoxic = 0
 		endif
 	endif
-	if (use_TPZ_DRUG .and. .not.cell_list(kcell)%drug_tag) then
+	if (use_TPZ_DRUG .and. .not.cell_list(kcell)%drugA_tag) then	
 		ict = cell_list(kcell)%celltype
 		Kd = TPZ%Kd(ict)
 	    kmet = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + C_O2))*TPZ%Kmet0(ict,0)
 	    dMdt = kmet*cell_list(kcell)%conc(TPZ_DRUG)
 	    if (TPZ%kill_model(ict) == 1) then
-		    pdeath = Kd*dMdt*dt
+		    kill_prob = Kd*dMdt*dt
 	    elseif (TPZ%kill_model(ict) == 2) then
-		    pdeath = Kd*dMdt*cell_list(kcell)%conc(TPZ_DRUG)*dt
+		    kill_prob = Kd*dMdt*cell_list(kcell)%conc(TPZ_DRUG)*dt
 	    elseif (TPZ%kill_model(ict) == 3) then
-		    pdeath = Kd*dMdt**2*dt
+		    kill_prob = Kd*dMdt**2*dt
 	    elseif (TPZ%kill_model(ict) == 4) then
-		    pdeath = Kd*cell_list(kcell)%conc(TPZ_DRUG)*dt
+		    kill_prob = Kd*cell_list(kcell)%conc(TPZ_DRUG)*dt
 	    elseif (TPZ%kill_model(ict) == 5) then
-		    pdeath = Kd*cell_list(kcell)%conc(TPZ_DRUG)**2*dt
+		    kill_prob = Kd*cell_list(kcell)%conc(TPZ_DRUG)**2*dt
 		endif
-	    if (par_uni(kpar) < pdeath) then
-            cell_list(kcell)%drug_tag = .true.
-            Ndrug_tag = Ndrug_tag + 1
+	    if (par_uni(kpar) < kill_prob) then
+            cell_list(kcell)%drugA_tag = .true.
+            NdrugA_tag = NdrugA_tag + 1
             write(nflog,'(a,2i6)') 'TPZ tagged: ',kcell,ict
 		endif
 	endif
-	if (use_DNB_DRUG .and. .not.cell_list(kcell)%drug_tag) then
+	if (use_DNB_DRUG .and. .not.cell_list(kcell)%drugB_tag) then
 		ict = cell_list(kcell)%celltype
 !	    kmet = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + C_O2))*TPZ%Kmet0(ict,0)
 !	    dMdt = kmet*cell_list(kcell)%conc(TPZ_DRUG)
@@ -231,17 +236,17 @@ do kcell = 1,nlist
 			ok = .false.
 			return
 		endif
-		pdeath = 0
+		kill_prob = 0
 		do im = 1,2
 			if (DNB%kill_model(ict,im) == 4) then
-				pdeath = pdeath + DNB%Kd(ict,im)*cell_list(kcell)%conc(DNB_DRUG + im)*dt
+				kill_prob = kill_prob + DNB%Kd(ict,im)*cell_list(kcell)%conc(DNB_DRUG + im)*dt
 			elseif (DNB%kill_model(ict,im) == 5) then
-				pdeath = pdeath + DNB%Kd(ict,im)*(cell_list(kcell)%conc(DNB_DRUG + im)**2)*dt
+				kill_prob = kill_prob + DNB%Kd(ict,im)*(cell_list(kcell)%conc(DNB_DRUG + im)**2)*dt
 			endif
 		enddo
-	    if (par_uni(kpar) < pdeath) then
-            cell_list(kcell)%drug_tag = .true.
-            Ndrug_tag = Ndrug_tag + 1
+	    if (par_uni(kpar) < kill_prob) then
+            cell_list(kcell)%drugB_tag = .true.
+            NdrugB_tag = NdrugB_tag + 1
             write(nflog,'(a,2i6)') 'DNB tagged: ',kcell,ict
 		endif
 	endif
@@ -475,17 +480,31 @@ do kcell = 1,nlist0
 		if (cell_list(kcell)%radiation_tag) then
 			call CellDies(kcell)
 			Nradiation_dead = Nradiation_dead + 1
-			if (cell_list(kcell)%drug_tag) then
-				Ndrug_tag = Ndrug_tag - 1
+			if (cell_list(kcell)%drugA_tag) then
+				NdrugA_tag = NdrugA_tag - 1
+			endif
+			if (cell_list(kcell)%drugB_tag) then
+				NdrugB_tag = NdrugB_tag - 1
 			endif
 			if (cell_list(kcell)%anoxia_tag) then
 				Nanoxia_tag = Nanoxia_tag - 1
 			endif
 			cycle
 		endif
-		if (cell_list(kcell)%drug_tag) then
+		if (cell_list(kcell)%drugA_tag) then
 			call CellDies(kcell)
-			Ndrug_dead = Ndrug_dead + 1
+			NdrugA_dead = NdrugA_dead + 1
+			if (cell_list(kcell)%anoxia_tag) then
+				Nanoxia_tag = Nanoxia_tag - 1
+			endif
+			if (cell_list(kcell)%radiation_tag) then
+				Nradiation_tag = Nradiation_tag - 1
+			endif
+			cycle
+		endif
+		if (cell_list(kcell)%drugB_tag) then
+			call CellDies(kcell)
+			NdrugB_dead = NdrugB_dead + 1
 			if (cell_list(kcell)%anoxia_tag) then
 				Nanoxia_tag = Nanoxia_tag - 1
 			endif
@@ -1129,7 +1148,8 @@ cell_list(kcell1)%site = site1
 !cell_list(kcell1)%ID = lastID
 cell_list(kcell1)%ID = cell_list(kcell0)%ID
 cell_list(kcell1)%radiation_tag = .false.
-cell_list(kcell1)%drug_tag = .false.
+cell_list(kcell1)%drugA_tag = .false.
+cell_list(kcell1)%drugB_tag = .false.
 cell_list(kcell1)%anoxia_tag = .false.
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%active = .true.
