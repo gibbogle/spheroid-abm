@@ -16,7 +16,7 @@ struct field_data {
     int site[3];
     int state;
     double volume;
-    double conc[MAX_CONC+NEXTRA+1];    // added CFSE, dVdt, volume,O2byVol
+    double conc[MAX_CONC+NEXTRA+1];    // added CFSE, dVdt, volume, O2byVol
 };
 
 typedef field_data FIELD_DATA;
