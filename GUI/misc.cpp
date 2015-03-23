@@ -219,7 +219,7 @@ void ExecThread::run()
 
         simulate_step(&res);
         if (res != 0) {
-            LOG_MSG("simulate_step: error: res != 0");
+            LOG_MSG("simulate_step: res != 0");
             break;
         }
 
