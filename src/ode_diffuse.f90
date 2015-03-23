@@ -1355,7 +1355,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine UpdateCbnd
 integer :: ichemo
-real(REAL_KIND) :: R1, R2
+real(REAL_KIND) :: R1, R2, a
 
 call SetRadius(Nsites)
 R1 = Radius*DELTA_X		! cm
@@ -1365,7 +1365,8 @@ do ichemo = 1,MAX_CHEMO
 		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
 	else
 		R2 = R1 + chemo(ichemo)%medium_dlayer
-		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + (chemo(ichemo)%medium_U/(4*PI*chemo(ichemo)%medium_diff_coef))*(1/R2 - 1/R1)
+		a = (1/R2 - 1/R1)/(4*PI*chemo(ichemo)%medium_diff_coef)
+		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
 	endif
 	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd < 0) then
 		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateCbnd: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
@@ -1373,6 +1374,7 @@ do ichemo = 1,MAX_CHEMO
 		stop
 	endif
 enddo
+write(nflog,'(a,2e12.3)') 'UpdateCbnd: O2: ',chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1385,18 +1387,20 @@ end subroutine
 subroutine UpdateMedium(dt)
 real(REAL_KIND) :: dt
 integer :: i, k, ichemo, ntvars
+integer :: ichemo_log
 real(REAL_KIND) :: dA, R1, R2, V0, Csum(MAX_CHEMO), U(MAX_CHEMO), tracer_C, tracer_N
 real(REAL_KIND) :: a(MAX_CHEMO), b(MAX_CHEMO), Rlayer(MAX_CHEMO)
 logical :: bnd
 
+ichemo_log = OXYGEN
 ! First need the spheroid radius
 call SetRadius(Nsites)
 dA = DELTA_X*DELTA_X	! cm2
 R1 = Radius*DELTA_X		! cm
 V0 = medium_volume0		! cm3
 Rlayer(:) = R1 + chemo(:)%medium_dlayer
-b = dA*chemo(:)%diff_coef/DELTA_X
-a = (1/Rlayer(:) - 1/R1)/(4*PI*chemo(:)%diff_coef)
+b = dA*chemo(:)%medium_diff_coef/DELTA_X
+a = (1/Rlayer(:) - 1/R1)/(4*PI*chemo(:)%medium_diff_coef)
 U = 0
 ! This could/should be done using sites in bdrylist
 ntvars = ODEdiff%nextra + ODEdiff%nintra
@@ -1414,8 +1418,8 @@ do i = 1,ntvars
 		endif
 	enddo
 	if (.not.bnd) cycle
-!	do k = 1,7
-!		if (ODEdiff%icoef(i,k) < 0) then	! boundary with medium ????????????????????????????????????????????????????????????????????
+	do k = 1,7
+		if (ODEdiff%icoef(i,k) < 0) then	! boundary with medium ???????????????????????????????????????????????????????????????????
 			Nbnd = Nbnd + 1
 			do ichemo = 1,MAX_CHEMO
 !				if (.not.chemo(ichemo)%used) cycle
@@ -1427,10 +1431,16 @@ do i = 1,ntvars
 					tracer_N = tracer_N + 1
 				endif
 			enddo
-!		endif
-!	enddo
+		endif
+	enddo
 enddo
-U = (dA*chemo(:)%diff_coef/DELTA_X)*(Nbnd*chemo(:)%medium_Cbnd - Csum(:))
+
+!!!U = (dA*chemo(:)%diff_coef/DELTA_X)*(Nbnd*chemo(:)%medium_Cbnd - Csum(:))	! Note: this is an approximation
+
+chemo(:)%medium_Cbnd = (chemo(:)%medium_Cext - Csum(:)*b*a(:))/(1 - Nbnd*b*a(:))
+U(:) = (chemo(:)%medium_Cbnd - chemo(:)%medium_Cext)/a(:)
+
+write(nflog,'(a,2i6,4e12.3)') 'updateMedium: ',istep,Nbnd,chemo(ichemo_log)%medium_Cext,Csum(ichemo_log),U(ichemo_log),chemo(ichemo_log)%medium_Cbnd
 
 do ichemo = 1,MAX_CHEMO
 !	if (.not.chemo(ichemo)%used) cycle
@@ -1441,14 +1451,15 @@ do ichemo = 1,MAX_CHEMO
 		R2 = Rlayer(ichemo)
 		if (ichemo /= OXYGEN) then
 			chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
-			chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)) &
-				*(R1*R1*(3*R2 - 2*R1)/R2 - R2*R2))/(V0 - 4*PI*R2*R2*R2/3.)
+			chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)*R2) &
+				*(R1*R1*(3*R2 - 2*R1) - R2*R2*R2))/(V0 - 4*PI*R1*R1*R1/3.)
 		endif
 	endif
 enddo	
-U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
-chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
+!!!U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
+!!!!chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
 chemo(:)%medium_U = U(:)
+!write(nflog,'(a,e12.3)') 'revised U: ',U(ichemo_log)
 end subroutine
 
 !----------------------------------------------------------------------------------

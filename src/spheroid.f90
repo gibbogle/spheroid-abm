@@ -1342,7 +1342,8 @@ logical :: ok = .true.
 
 !call logger('simulate_step')
 if (Ncells == 0) then
-    res = 2
+	call logger('Ncells = 0')
+    res = 3
     return
 endif
 nthour = 3600/DELTA_T
