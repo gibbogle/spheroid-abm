@@ -576,6 +576,7 @@ cell_list(kcell0)%volume = V0/2
 cfse0 = cell_list(kcell0)%CFSE
 cell_list(kcell0)%CFSE = generate_CFSE(cfse0/2)
 cfse1 = cfse0 - cell_list(kcell0)%CFSE
+cell_list(kcell0)%t_hypoxic = 0
 
 R = par_uni(kpar)
 cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
@@ -1124,7 +1125,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! The daughter cell kcell1 is given the same characteristics as kcell0 and placed at site1.
 ! Random variation is introduced into %divide_volume.
-! The concentrations of constituents must be halved.
+! The concentrations of constituents must be halved NOT TRUE!!!!!!!!!!!!
 !-----------------------------------------------------------------------------------------
 subroutine CloneCell(kcell0,kcell1,site1,ok)
 integer :: kcell0, kcell1, site1(3)
@@ -1160,13 +1161,10 @@ cell_list(kcell1)%volume = cell_list(kcell0)%volume
 R = par_uni(kpar)
 cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 cell_list(kcell1)%t_hypoxic = 0
-cell_list(kcell0)%conc = cell_list(kcell0)%conc/2
-cell_list(kcell0)%M = cell_list(kcell0)%M/2
+!cell_list(kcell0)%conc = cell_list(kcell0)%conc/2	! 25/03/2015 conc should be unchanged
+!cell_list(kcell0)%M = cell_list(kcell0)%M/2		! 25/03/2015 M has already been halved in the calling program
 cell_list(kcell1)%conc = cell_list(kcell0)%conc
 cell_list(kcell1)%M = cell_list(kcell0)%M
-!cell_list(kcell1)%oxygen = cell_list(kcell0)%oxygen
-!cell_list(kcell1)%drug_A = cell_list(kcell0)%drug_A
-!cell_list(kcell1)%drug_B = cell_list(kcell0)%drug_B
 occupancy(site1(1),site1(2),site1(3))%indx(1) = kcell1
 end subroutine
 
