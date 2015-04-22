@@ -988,13 +988,13 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Use radiation?",
 "Treatment with radiation"},
 
-{"USE_TREATMENT_FILE", 0, 0, 1,
-"Use treatment file?",
-"Treatment programme is specified in the treatment file"},
+//{"USE_TREATMENT_FILE", 0, 0, 1,
+//"Use treatment file?",
+//"Treatment programme is specified in the treatment file"},
 
-{"TREATMENT_FILE_NAME", 0, 0, 0,
-"treatment.data",
-"The treatment file contains data describing the drug and radiation dosing schedule"},
+//{"TREATMENT_FILE_NAME", 0, 0, 0,
+//"treatment.data",
+//"The treatment file contains data describing the drug and radiation dosing schedule"},
 
 {"USE_DROP", 0, 0, 1,
 "Account for drop deformation",

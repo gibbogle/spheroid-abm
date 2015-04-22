@@ -2649,3 +2649,56 @@ do ichemo = 1,MAX_CHEMO
 enddo
 end subroutine
 
+!----------------------------------------------------------------------------------
+! The medium concentrations are updated explicitly, assuming a sphere with boundary
+! concentrations equal to the mean extracellular concentrations of boundary sites.
+! Note that concentrations of O2 and glucose are not varied.
+! NOT USED
+!----------------------------------------------------------------------------------
+subroutine UpdateMedium_old(ntvars,state,dt)
+integer :: ntvars
+real(REAL_KIND) :: dt, state(:,:)
+integer :: nb, i, k
+real(REAL_KIND) :: Csurface(MAX_CHEMO), F(MAX_CHEMO), area, C_A
+logical :: bnd
+
+if (.not.chemo(DRUG_A)%used .and. .not.chemo(DRUG_B)%used) return
+! First need the spheroid radius
+call SetRadius(Nsites)
+! Now compute the mean boundary site concentrations Cbnd(:)
+nb = 0
+Csurface = 0
+do i = 1,ntvars
+	if (ODEdiff%vartype(i) /= EXTRA) cycle
+	bnd = .false.
+	do k = 1,7
+		if (ODEdiff%icoef(i,k) < 0) then
+			bnd = .true.
+			exit
+		endif
+	enddo
+	if (bnd) then
+		nb = nb + 1
+		Csurface = Csurface + state(i,:)
+	endif
+enddo
+Csurface = Csurface/nb
+area = 4*PI*Radius*Radius*DELTA_X*DELTA_X
+F(:) = area*chemo(:)%diff_coef*(Csurface(:) - chemo(:)%bdry_conc)/DELTA_X
+C_A = chemo(DRUG_A)%bdry_conc
+chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
+chemo(DRUG_A:MAX_CHEMO)%bdry_conc = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*(1 - dt*chemo(DRUG_A:MAX_CHEMO)%decay_rate)
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Reduce medium volume and concentrations to account for the growth of the spheroid
+! by one site.
+! THIS WILL BE SUPERCEDED
+!-----------------------------------------------------------------------------------------
+subroutine AdjustMedium1
+real(REAL_KIND) :: total(MAX_CHEMO)
+
+total(DRUG_A:MAX_CHEMO) = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume
+medium_volume = medium_volume - Vsite_cm3
+chemo(DRUG_A:MAX_CHEMO)%bdry_conc = total(DRUG_A:MAX_CHEMO)/medium_volume
+end subroutine

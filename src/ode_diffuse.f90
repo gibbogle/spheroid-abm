@@ -61,11 +61,6 @@ integer :: ichemo
 real(REAL_KIND) :: t
 
 BdryConc = chemo(ichemo)%medium_Cbnd
-!if ((use_medium_flux .and. medium_volume > 0) .or. .not.chemo(ichemo)%decay) then
-!    BdryConc = chemo(ichemo)%bdry_conc
-!else
-!    BdryConc = chemo(ichemo)%bdry_conc*exp(-chemo(ichemo)%decay_rate*t)
-!endif
 end function
 
 !----------------------------------------------------------------------------------
@@ -177,7 +172,7 @@ do x = 1,NX
     					ODEdiff%varsite(i,:) = (/x,y,z/)
 	    				ODEdiff%vartype(i) = INTRA
     					ODEdiff%cell_index(i) = kcell
-    					cell_list(kcell)%iv = i
+    					cell_list(kcell)%ivin = i		! (intracellular) variable index corresponding to kcell
 !						ODEdiff%isite_intra(isite) = i	! intracellular index corresponding to site index isite
 	!					write(nflog,*)kcell,'I ',ODEdiff%varsite(i,:),i
 	    			endif
@@ -511,7 +506,7 @@ integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, site(3), kcell, ict, ith, Ng
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol_cm3, val, Cin(MAX_CHEMO), Cex
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_kin, membrane_kout, membrane_flux
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_kin, membrane_kout, membrane_flux, area_factor
 logical :: bnd, dbug
 logical :: TPZ_metabolised(MAX_CELLTYPES,0:2), DNB_metabolised(MAX_CELLTYPES,0:2)
 real(REAL_KIND) :: metab, dMdt, KmetC
@@ -533,7 +528,7 @@ membrane_kout = chemo(ichemo)%membrane_diff_out
 TPZ_metabolised(:,:) = (TPZ%Kmet0(:,:) > 0)	
 DNB_metabolised(:,:) = (DNB%Kmet0(:,:) > 0)	
 
-!$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, kcell, ict, membrane_flux, KmetC) default(shared) schedule(static)
+!$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, kcell, ict, membrane_flux, KmetC, area_factor) default(shared) schedule(static)
 do i = 1,neqn
 	yy = y(i)
 	if (isnan(yy)) then
@@ -554,6 +549,7 @@ do i = 1,neqn
 				else
 	                vol_cm3 = Vextra_cm3									! for now, ignoring cell volume change!!!!!
 	            endif
+				area_factor = (cell_list(kcell)%volume)**(2./3.)
 	            Cin = allstate(i+1,:)
 	            Cin(ichemo) = y(i+1)
 	        endif
@@ -566,6 +562,7 @@ do i = 1,neqn
 		else
 			vol_cm3 = Vsite_cm3 - Vextra_cm3			! for now, ignoring cell volume change!!!!!
 		endif
+		area_factor = (cell_list(kcell)%volume)**(2./3.)
         Cex = y(i-1)
 	    Cin = allstate(i,:)
 	    Cin(ichemo) = yy
@@ -592,7 +589,7 @@ do i = 1,neqn
 	    enddo
 	    if (cell_exists) then
 !			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))*Vsite_cm3	! just a scaling.  We should account for change in surface area
-			membrane_flux = (membrane_kin*Cex - membrane_kout*Cin(ichemo))*Vsite_cm3	! just a scaling.  We should account for change in surface area
+			membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*Cin(ichemo))*Vsite_cm3	! just a scaling.
 		else
 		    membrane_flux = 0
 		endif
@@ -600,7 +597,7 @@ do i = 1,neqn
 	else
 		C = Cin(ichemo)
 !		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vsite_cm3		! just a scaling.  We should account for change in surface area
-		membrane_flux = (membrane_kin*Cex - membrane_kout*C)*Vsite_cm3	! just a scaling.  We should account for change in surface area
+		membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*C)*Vsite_cm3	! just a scaling.
 		dCreact = 0
 		select case (ichemo)
 		case (OXYGEN)
@@ -1374,7 +1371,10 @@ do ichemo = 1,MAX_CHEMO
 		stop
 	endif
 enddo
-write(nflog,'(a,2e12.3)') 'UpdateCbnd: O2: ',chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd
+!write(nflog,'(a,i6,2f10.6)') 'UpdateCbnd: istep,R1,R2: ',istep,R1,R2
+!write(nflog,'(a,4e12.3)') 'UpdateCbnd: medium_Cext,medium_U: ',chemo(OXYGEN)%medium_Cext,chemo(GLUCOSE)%medium_Cext, &
+!																chemo(OXYGEN)%medium_U,chemo(GLUCOSE)%medium_U
+!write(nflog,'(a,2e12.3)') 'UpdateCbnd: medium_Cbnd: ',chemo(OXYGEN)%medium_Cbnd,chemo(GLUCOSE)%medium_Cbnd
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1397,7 +1397,8 @@ ichemo_log = OXYGEN
 call SetRadius(Nsites)
 dA = DELTA_X*DELTA_X	! cm2
 R1 = Radius*DELTA_X		! cm
-V0 = medium_volume0		! cm3
+V0 = total_volume		! cm3
+!V0 = medium_volume0		! cm3
 Rlayer(:) = R1 + chemo(:)%medium_dlayer
 b = dA*chemo(:)%medium_diff_coef/DELTA_X
 a = (1/Rlayer(:) - 1/R1)/(4*PI*chemo(:)%medium_diff_coef)
@@ -1440,7 +1441,7 @@ enddo
 chemo(:)%medium_Cbnd = (chemo(:)%medium_Cext - Csum(:)*b*a(:))/(1 - Nbnd*b*a(:))
 U(:) = (chemo(:)%medium_Cbnd - chemo(:)%medium_Cext)/a(:)
 
-write(nflog,'(a,2i6,4e12.3)') 'updateMedium: ',istep,Nbnd,chemo(ichemo_log)%medium_Cext,Csum(ichemo_log),U(ichemo_log),chemo(ichemo_log)%medium_Cbnd
+!write(nflog,'(a,2i6,4e12.3)') 'updateMedium: ',istep,Nbnd,chemo(ichemo_log)%medium_Cext,Csum(ichemo_log),U(ichemo_log),chemo(ichemo_log)%medium_Cbnd
 
 do ichemo = 1,MAX_CHEMO
 !	if (.not.chemo(ichemo)%used) cycle
@@ -1459,7 +1460,10 @@ enddo
 !!!U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
 !!!!chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
 chemo(:)%medium_U = U(:)
-!write(nflog,'(a,e12.3)') 'revised U: ',U(ichemo_log)
+!write(nflog,'(a,i6,2f10.6)') 'UpdateMedium: istep,R1,R2: ',istep,R1,R2
+!write(nflog,'(a,4e12.3)') 'UpdateMedium: medium_Cext,medium_U: ',chemo(OXYGEN)%medium_Cext,chemo(GLUCOSE)%medium_Cext, &
+!																chemo(OXYGEN)%medium_U,chemo(GLUCOSE)%medium_U
+!write(nflog,'(a,2e12.3)') 'UpdateMedium: medium_Cbnd: ',chemo(OXYGEN)%medium_Cbnd,chemo(GLUCOSE)%medium_Cbnd
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -2013,10 +2017,6 @@ do i = 1,ntvars
 enddo
 endif
 
-!if (use_medium_flux .and. medium_volume > 0) then
-!	call update_medium1(ntvars,state,dt)
-!endif
-
 ! transfer results to allstate(:,:)
 kextra = 0
 kintra = 0
@@ -2193,47 +2193,6 @@ do ichemo = 1,MAX_CHEMO
     csum(ichemo) = csum(ichemo) + (6-nb)*BdryConc(ichemo,t_simulation)
 enddo
 allstate(n,:) = csum/6
-end subroutine
-
-!----------------------------------------------------------------------------------
-! The medium concentrations are updated explicitly, assuming a sphere with boundary
-! concentrations equal to the mean extracellular concentrations of boundary sites.
-! Note that concentrations of O2 and glucose are not varied.
-! NOT USED
-!----------------------------------------------------------------------------------
-subroutine UpdateMedium_old(ntvars,state,dt)
-integer :: ntvars
-real(REAL_KIND) :: dt, state(:,:)
-integer :: nb, i, k
-real(REAL_KIND) :: Csurface(MAX_CHEMO), F(MAX_CHEMO), area, C_A
-logical :: bnd
-
-if (.not.chemo(DRUG_A)%used .and. .not.chemo(DRUG_B)%used) return
-! First need the spheroid radius
-call SetRadius(Nsites)
-! Now compute the mean boundary site concentrations Cbnd(:)
-nb = 0
-Csurface = 0
-do i = 1,ntvars
-	if (ODEdiff%vartype(i) /= EXTRA) cycle
-	bnd = .false.
-	do k = 1,7
-		if (ODEdiff%icoef(i,k) < 0) then
-			bnd = .true.
-			exit
-		endif
-	enddo
-	if (bnd) then
-		nb = nb + 1
-		Csurface = Csurface + state(i,:)
-	endif
-enddo
-Csurface = Csurface/nb
-area = 4*PI*Radius*Radius*DELTA_X*DELTA_X
-F(:) = area*chemo(:)%diff_coef*(Csurface(:) - chemo(:)%bdry_conc)/DELTA_X
-C_A = chemo(DRUG_A)%bdry_conc
-chemo(DRUG_A:MAX_CHEMO)%bdry_conc = (chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume + F(DRUG_A:MAX_CHEMO)*dt)/medium_volume
-chemo(DRUG_A:MAX_CHEMO)%bdry_conc = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*(1 - dt*chemo(DRUG_A:MAX_CHEMO)%decay_rate)
 end subroutine
 
 !----------------------------------------------------------------------------------

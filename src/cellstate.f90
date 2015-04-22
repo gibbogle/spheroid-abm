@@ -52,10 +52,11 @@ integer :: iv, site(3)
 real(REAL_KIND) :: tnow
 
 if (use_extracellular_O2) then
-	iv = cell_list(kcell)%iv
+	iv = cell_list(kcell)%ivin
 	if (iv < 1) then
-!		write(logmsg,*) 'getO2conc: ',kcell,site,iv
-!		call logger(logmsg)
+		write(logmsg,*) 'getO2conc: ',kcell,site,iv
+		call logger(logmsg)
+		stop
 		tnow = istep*DELTA_T
 		C_O2 = BdryConc(OXYGEN,tnow)	! assume that this is a site at the boundary
 	else
@@ -683,7 +684,7 @@ endif
 call GetPathMass(site0,site01,path,npath,M0)
 if (npath > 0) then
 	call PushPath(path,npath)
-!	call CheckBdryList('after PushPath')
+!	if (bdry_debug) call CheckBdryList('after PushPath')
 endif
 call CloneCell(kcell0,kcell1,site01,ok)
 if (.not.ok) then
@@ -691,6 +692,9 @@ if (.not.ok) then
 	return
 endif
 cell_list(kcell1)%CFSE = cfse1
+
+! Cell division completed
+! Adjust concentrations, boundary list
 
 call GetPathMass(site0,site01,path,npath,M1)
 do ichemo = 1,MAX_CHEMO
@@ -745,13 +749,13 @@ do j = 1,27
 			nullify(bdry%next)
 			call bdrylist_insert(bdry,bdrylist)
 			occupancy(site(1),site(2),site(3))%bdry => bdry
-!			call CheckBdryList('after bdrylist_insert')
+!			if (bdry_debug) call CheckBdryList('after bdrylist_insert')
 		endif
 	else
 		if (bdrylist_present(site,bdrylist)) then	! remove it
 			call bdrylist_delete(site,bdrylist)
 			nullify(occupancy(site(1),site(2),site(3))%bdry)
-!			call CheckBdryList('after bdrylist_delete')
+!			if (bdry_debug) call CheckBdryList('after bdrylist_delete')
 		endif
 	endif
 enddo
@@ -858,25 +862,6 @@ do k = npath-1,1,-1
 		endif
 	enddo
 enddo
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-!-----------------------------------------------------------------------------------------
-subroutine AdjustMedium
-
-end subroutine
-
-!-----------------------------------------------------------------------------------------
-! Reduce medium volume and concentrations to account for the growth of the spheroid
-! by one site.
-! THIS WILL BE SUPERCEDED
-!-----------------------------------------------------------------------------------------
-subroutine AdjustMedium1
-real(REAL_KIND) :: total(MAX_CHEMO)
-
-total(DRUG_A:MAX_CHEMO) = chemo(DRUG_A:MAX_CHEMO)%bdry_conc*medium_volume
-medium_volume = medium_volume - Vsite_cm3
-chemo(DRUG_A:MAX_CHEMO)%bdry_conc = total(DRUG_A:MAX_CHEMO)/medium_volume
 end subroutine
 
 !-----------------------------------------------------------------------------------------

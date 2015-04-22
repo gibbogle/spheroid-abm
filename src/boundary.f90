@@ -120,7 +120,8 @@ do while (.not.done)
 				if (occupancy(site(1),site(2),site(3))%indx(1) /= OUTSIDE_TAG) Nsites = Nsites + 1
 				if (associated(occupancy(site(1),site(2),site(3))%bdry)) cycle
 				if (isbdry(site)) then
-					if (occupancy(site(1),site(2),site(3))%indx(1) == 0) then
+					if (occupancy(site(1),site(2),site(3))%indx(1) == 0) then	! vacant site is actually outside
+						write(nflog,*) 'UpdateBdryList: Vacant site was actually outside - corrected: ',site
 						occupancy(site(1),site(2),site(3))%indx(1) = OUTSIDE_TAG
 						done = .false.
 						cycle
@@ -136,6 +137,9 @@ do while (.not.done)
 	enddo
 enddo
 bdry_changed = .false.
+if (Nsites /= Nsites_old) then
+	write(nflog,*) 'UpdateBdryList: Nsites changed: ',Nsites_old,Nsites
+endif
 end subroutine
 
 !----------------------------------------------------------------------------------------
@@ -312,9 +316,14 @@ do x = 1,NX
 			else
 				site = (/x,y,z/)
 				if (isbdry(site)) then
-					write(logmsg,*) 'Error: boundary site not in bdrylist: ',x,y,z
+					write(logmsg,*) 'Adding boundary site to bdrylist: ',x,y,z
 					call logger(logmsg)
-					stop
+					! add it
+					allocate(bdry)
+					bdry%site = site
+					nullify(bdry%next)
+					call bdrylist_insert(bdry,bdrylist)
+					occupancy(site(1),site(2),site(3))%bdry => bdry
 				endif
 			endif
 		enddo

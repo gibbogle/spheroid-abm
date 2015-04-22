@@ -133,6 +133,9 @@ private slots:
 
     void on_cbox_SAVE_PROFILE_DATA_toggled(bool checked);
 
+    void LoadProtocol(QString);
+    void SaveProtocol(QString);
+
 public slots:
 	void preConnection();
 	void outputData(QString);
@@ -205,9 +208,9 @@ private:
 //    void disableUseTPZ();
 //    void enableUseDNB();
 //    void disableUseDNB();
-    void enableUseTreatmentFile();
-    void disableUseTreatmentFile();
-    void setTreatmentFileUsage();
+//    void enableUseTreatmentFile();
+//    void disableUseTreatmentFile();
+//    void setTreatmentFileUsage();
 
 	void writeout();
 	void execute_para();
@@ -249,6 +252,10 @@ private:
 //    bool saveFile(const QString &fileName);
     void setCurrentFile(const QString &fileName);
     QString strippedName(const QString &fullFileName);
+
+    void SetupProtocol();
+    void setField(QTableWidget *, int, int, QString);
+    int getField(QTableWidget *, int, int, QString *);
 
     QPlainTextEdit *textEdit;
     QString curFile;

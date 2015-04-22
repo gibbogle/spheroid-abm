@@ -135,7 +135,7 @@ real(REAL_KIND) :: V, V0, R1
 if (chemo(ichemo)%present) then
 	call SetRadius(Nsites)
 	R1 = Radius*DELTA_X			! cm
-	V0 = medium_volume0			! cm3
+	V0 = total_volume			! cm3
 	V = V0 - (4./3.)*PI*R1**3	! cm3
 	chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
@@ -577,8 +577,8 @@ read(nfcell,*) iuse_extra
 read(nfcell,*) iuse_relax
 read(nfcell,*) iuse_par_relax
 read(nfcell,*) iuse_radiation
-read(nfcell,*) itreatment
-read(nfcell,*) treatmentfile						! file with treatment programme
+!read(nfcell,*) itreatment
+!read(nfcell,*) treatmentfile						! file with treatment programme
 read(nfcell,*) iuse_drop
 read(nfcell,*) Ndrop
 read(nfcell,*) alpha_shape
@@ -587,6 +587,12 @@ read(nfcell,*) isaveprofiledata
 read(nfcell,*) profiledatafilebase
 read(nfcell,*) dt_saveprofiledata
 read(nfcell,*) nt_saveprofiledata
+
+if (use_events) then
+	call ReadProtocol(nfcell)
+	use_treatment = .false.
+endif
+
 close(nfcell)
 
 if (chemo(OXYGEN)%Hill_N /= 1 .and. chemo(OXYGEN)%Hill_N /= 2) then
@@ -638,6 +644,7 @@ Vcell_cm3 = (1 - fluid_fraction)*Vsite_cm3/(0.75*vdivide0)	! nominal cell volume
 															! actual volume (cm^3) = Vcell_cm3*cell%volume
 Vcell_pL = 1.0e9*Vcell_Cm3									! nominal cell volume in pL
 															! actual volume (pL) = Vcell_pL*cell%volume
+total_volume = medium_volume0
 
 write(logmsg,'(a,3e12.4)') 'DELTA_X, cell_radius: ',DELTA_X,cell_radius
 call logger(logmsg)
@@ -646,31 +653,17 @@ call logger(logmsg)
 
 saveprofiledata = (isaveprofiledata == 1)
 dt_saveprofiledata = 60*dt_saveprofiledata			! mins -> seconds
-if (itreatment == 1) then
-	use_treatment = .true.
-	call ReadTreatment(ok)
-	if (.not.ok) then
-		write(logmsg,'(a,a)') 'Error reading treatment programme file: ',treatmentfile
-		call logger(logmsg)
-		return
-	endif
-else	
-	use_treatment = .false.
-!	do ichemo = DRUG_A,MAX_CHEMO
-!		chemo(ichemo)%used = (iuse(ichemo) == 1)
-!	enddo
-!	do ichemo = DRUG_A,MAX_CHEMO
-!		if (idecay(ichemo) == 1) then
-!			chemo(ichemo)%decay = .true.
-!!			chemo(ichemo)%bdry_decay_rate = DecayRate(chemo(ichemo)%bdry_halflife)
-!			chemo(ichemo)%decay_rate = DecayRate(chemo(ichemo)%halflife)
-!		else
-!			chemo(ichemo)%decay = .false.
-!			chemo(ichemo)%decay_rate = 0
-!		endif
-!	enddo
-endif
-
+!if (.not.use_events .and. itreatment == 1) then
+!	use_treatment = .true.
+!	call ReadTreatment(ok)
+!	if (.not.ok) then
+!		write(logmsg,'(a,a)') 'Error reading treatment programme file: ',treatmentfile
+!		call logger(logmsg)
+!		return
+!	endif
+!else	
+!	use_treatment = .false.
+!endif
 use_dropper = (iuse_drop == 1)
 
 ! Setup test_case
@@ -727,6 +720,108 @@ else
 	idrug = 0
 	nmetab = 0
 endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Skip lines until the 'PROTOCOL' line
+!-----------------------------------------------------------------------------------------
+subroutine ReadProtocol(nf)
+integer :: nf
+integer :: itime, ntimes, kevent, ichemo, im
+character*(64) :: line
+real(REAL_KIND) :: t, dt, vol, conc, dose
+type(event_type) :: E
+
+chemo(TRACER+1:)%used = .false.
+do
+	read(nf,'(a)') line
+	if (trim(line) == 'PROTOCOL') exit
+enddo
+read(nf,*) ntimes
+if (allocated(event)) deallocate(event)
+allocate(event(2*ntimes))
+kevent = 0
+do itime = 1,ntimes
+	read(nf,'(a)') line
+	if (trim(line) == 'DRUG') then
+		kevent = kevent + 1
+		event(kevent)%etype = DRUG_EVENT
+		read(nf,'(a)') line
+		if (trim(line) == 'SN30000' .or. trim(line) == 'TPZ') then
+			ichemo = TPZ_DRUG
+		elseif (trim(line) == 'PR104A') then
+			ichemo = DNB_DRUG
+		endif
+		read(nf,*) t
+		read(nf,*) dt
+		read(nf,*) vol
+		read(nf,*) conc
+		write(*,*) line
+		write(*,*) ichemo,t, dt
+		event(kevent)%time = t
+		event(kevent)%ichemo = ichemo
+		event(kevent)%volume = vol
+		event(kevent)%conc = conc
+		event(kevent)%dose = 0
+		chemo(ichemo)%used = .true.
+		if (ichemo == TPZ_DRUG .and. TPZ%use_metabolites) then
+			do im = 1,TPZ%nmetabolites
+				chemo(ichemo+im)%used = .true.
+			enddo
+		endif
+		if (ichemo == DNB_DRUG .and. DNB%use_metabolites) then
+			do im = 1,DNB%nmetabolites
+				chemo(ichemo+im)%used = .true.
+			enddo
+		endif
+		kevent = kevent + 1
+		event(kevent)%etype = MEDIUM_EVENT
+		event(kevent)%time = t + dt
+		event(kevent)%ichemo = 0
+		event(kevent)%volume = medium_volume0*1.0e3		! -> uL for consistency
+		event(kevent)%conc = 0
+		event(kevent)%dose = 0
+	elseif (trim(line) == 'MEDIUM') then
+		kevent = kevent + 1
+		event(kevent)%etype = MEDIUM_EVENT
+		read(nf,*) t
+		read(nf,*) vol
+		event(kevent)%time = t
+		event(kevent)%volume = vol	
+		event(kevent)%ichemo = 0
+		event(kevent)%conc = 0
+		event(kevent)%dose = 0
+	elseif (trim(line) == 'RADIATION') then
+		kevent = kevent + 1
+		event(kevent)%etype = RADIATION_EVENT
+		read(nf,*) t
+		read(nf,*) dose
+		event(kevent)%time = t
+		event(kevent)%dose = dose	
+		event(kevent)%ichemo = 0
+		event(kevent)%volume = 0
+		event(kevent)%conc = 0
+	endif
+enddo
+Nevents = kevent
+! Set events not done
+! convert time from hours to seconds
+! convert volume from uL to cm^3
+do kevent = 1,Nevents
+	event(kevent)%done = .false.
+	event(kevent)%time = event(kevent)%time*60*60
+	event(kevent)%volume = event(kevent)%volume*1.0e-3
+	E = event(kevent)
+	write(*,'(a,i3,f8.0,2i3,3f8.4)') 'event: ',kevent,E%time,E%etype,E%ichemo,E%volume,E%conc,E%dose
+enddo
+! Check that events are sequential
+do kevent = 1,Nevents-1
+	if (event(kevent)%time >= event(kevent+1)%time) then
+		write(logmsg,*) 'Error: non-sequential event: ',kevent,event(kevent)%time
+		call logger(logmsg)
+		stop
+	endif
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1247,8 +1342,53 @@ endif
 end subroutine
 
 !----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine ProcessEvent(radiation_dose)
+real(REAL_KIND) :: radiation_dose
+integer :: kevent, ichemo, im, nmetab
+real(REAL_KIND) :: V, C(MAX_CHEMO)
+type(event_type) :: E
+
+do kevent = 1,Nevents
+	E = event(kevent)
+	if (t_simulation >= E%time .and. .not.E%done) then
+	write(*,'(i3,2f8.0,i3,2f10.4)') E%etype,t_simulation,E%time,E%ichemo,E%volume,E%conc
+		if (E%etype == RADIATION_EVENT) then
+			radiation_dose = E%dose
+		elseif (E%etype == MEDIUM_EVENT) then
+			C = 0
+			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
+			V = E%volume
+			call MediumChange(V,C)
+		elseif (E%etype == DRUG_EVENT) then
+			C = 0
+			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
+			ichemo = E%ichemo
+			C(ichemo) = E%conc
+			V = E%volume
+			! set %present
+			chemo(ichemo)%present = .true.
+			chemo(ichemo)%bdry_conc = 0
+			if (ichemo == TPZ_DRUG) then
+				nmetab = TPZ%nmetabolites
+			elseif (ichemo == DNB_DRUG) then
+				nmetab = DNB%nmetabolites
+			endif			
+			do im = 1,nmetab
+				if (chemo(ichemo + im)%used) then
+					chemo(ichemo + im)%present = .true.
+					chemo(ichemo + im)%bdry_conc = 0
+				endif
+			enddo
+			call MediumChange(V,C)
+		endif
+		event(kevent)%done = .true.
+	endif
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
 ! Radiation treatment is stored in protocol(0)
-! 
 !----------------------------------------------------------------------------------
 subroutine Treatment(radiation_dose)
 real(REAL_KIND) :: radiation_dose
@@ -1269,7 +1409,7 @@ do idrug = 1,2
 	ichemo = protocol(idrug)%ichemo
 	if (idrug == 1) then
 !		ichemo_metab = DRUG_A_METAB
-		nmetab = 1
+		nmetab = 2
 	elseif (idrug == 2) then
 !		ichemo_metab = DRUG_B_METAB
 		nmetab = 2
@@ -1322,6 +1462,26 @@ do idrug = 1,2
 enddo	
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+! If the volume removed is Vr, the fraction of constituent mass that is retained
+! in the medium is (Vm - Vr)/Vm.  The calculation does not apply to oxygen.
+! Usually Vr = Ve.
+!-----------------------------------------------------------------------------------------
+subroutine MediumChange(Ve,Ce)
+real(REAL_KIND) :: Ve, Ce(:)
+real(REAL_KIND) :: R, Vm, Vr, Vblob
+
+call SetRadius(Nsites)
+R = Radius*DELTA_X		! cm
+Vblob = (4./3.)*PI*R**3	! cm3
+Vm = total_volume - Vblob
+Vr = min(Vm,Ve)
+chemo(OXYGEN+1:)%medium_M = ((Vm - Vr)/Vm)*chemo(OXYGEN+1:)%medium_M + Vr*Ce(OXYGEN+1:)
+total_volume = Vm - Vr + Ve + Vblob
+chemo(OXYGEN+1:)%medium_Cext = chemo(OXYGEN+1:)%medium_M/(total_volume - Vblob)
+chemo(OXYGEN)%medium_Cext = chemo(OXYGEN)%bdry_conc
+call UpdateCbnd
+end subroutine
 
 !-----------------------------------------------------------------------------------------
 ! Advance simulation through one big time step (DELTA_T)
@@ -1349,18 +1509,22 @@ endif
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
 
+bdry_debug = (istep >= 25000)
 if (use_dropper .and. Ncells >= Ndrop .and. .not.is_dropped) then
     call shaper
     call dropper
 endif
 
+!if (bdry_debug) call CheckBdryList('simulate_step a')
+if (bdry_debug) write(*,*) 'istep, bdry_changed: ',istep,bdry_changed
 if (mod(istep,nthour) == 0) then
 	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
 	call logger(logmsg)
+endif
 	if (bdry_changed) then
-!		write(nflog,*) 'UpdateBdryList'
+		write(nflog,*) 'UpdateBdryList'
 		call UpdateBdrylist
-!		write(nflog,*) 'did UpdateBdryList'
+		write(nflog,*) 'did UpdateBdryList'
 	endif
 	if (mod(istep,6*nthour) == 0) then
 !		write(nflog,*) 'CheckBdryList'
@@ -1369,19 +1533,25 @@ if (mod(istep,nthour) == 0) then
 	endif
 !	write(logmsg,'(a,2e12.3,i6)') 'Oxygen U, Cbnd, Nbnd: ', chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd, Nbnd
 !	call logger(logmsg)
-endif
+!endif
+if (bdry_debug) call CheckBdryList('simulate_step b')
 istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds
-
+radiation_dose = 0
 if (use_treatment) then
 	call treatment(radiation_dose)
-	if (radiation_dose > 0) then
-		write(logmsg,'(a,f6.1)') 'Radiation dose: ',radiation_dose
-		call logger(logmsg)
-	endif
 endif
+if (use_events) then
+	call ProcessEvent(radiation_dose)
+endif
+if (radiation_dose > 0) then
+	write(logmsg,'(a,f6.1)') 'Radiation dose: ',radiation_dose
+	call logger(logmsg)
+endif
+if (bdry_debug) call CheckBdryList('simulate_step c')
 !write(nflog,*) 'GrowCells'
 call GrowCells(radiation_dose,DELTA_T,ok)
+if (bdry_debug) call CheckBdryList('simulate_step d')
 !write(nflog,*) 'did GrowCells'
 if (.not.ok) then
 	res = 3

@@ -47,7 +47,7 @@ void MainWindow::on_cbox_USE_TPZ_DRUG_toggled(bool checked)
     QCheckBox *cbm = findChild<QCheckBox *>("cbox_TPZ_DRUG_SIMULATE_METABOLITE");
     leb->setEnabled(checked);
     cbm->setEnabled(checked);
-    setTreatmentFileUsage();
+//    setTreatmentFileUsage();
     comb_TPZ->setEnabled(checked);
     text_TPZ_DRUG_NAME->setEnabled(checked);
     text_TPZ_DRUG_NAME->setText(comb_TPZ->currentText());
@@ -64,7 +64,7 @@ void MainWindow::on_cbox_USE_DNB_DRUG_toggled(bool checked)
     QCheckBox *cbm = findChild<QCheckBox *>("cbox_DNB_DRUG_SIMULATE_METABOLITE");
     leb->setEnabled(checked);
     cbm->setEnabled(checked);
-    setTreatmentFileUsage();
+//    setTreatmentFileUsage();
     comb_DNB->setEnabled(checked);
     text_DNB_DRUG_NAME->setEnabled(checked);
     text_DNB_DRUG_NAME->setText(comb_DNB->currentText());
@@ -137,19 +137,19 @@ void MainWindow::on_action_FACS_triggered()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_cbox_USE_RADIATION_toggled(bool checked)
 {
-    setTreatmentFileUsage();
+//    setTreatmentFileUsage();
 }
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::setTreatmentFileUsage()
-{
-    if (cbox_USE_TPZ_DRUG->isChecked() || cbox_USE_DNB_DRUG->isChecked() || cbox_USE_RADIATION->isChecked()) {
-        enableUseTreatmentFile();
-    } else {
-        disableUseTreatmentFile();
-    }
-}
+//void MainWindow::setTreatmentFileUsage()
+//{
+//    if (cbox_USE_TPZ_DRUG->isChecked() || cbox_USE_DNB_DRUG->isChecked() || cbox_USE_RADIATION->isChecked()) {
+//        enableUseTreatmentFile();
+//    } else {
+//        disableUseTreatmentFile();
+//    }
+//}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
