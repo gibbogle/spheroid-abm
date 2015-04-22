@@ -224,7 +224,7 @@ do kcell = 1,nlist
 	    if (par_uni(kpar) < kill_prob) then
             cell_list(kcell)%drugA_tag = .true.
             NdrugA_tag = NdrugA_tag + 1
-            write(nflog,'(a,2i6)') 'TPZ tagged: ',kcell,ict
+!            write(nflog,'(a,2i6)') 'TPZ tagged: ',kcell,ict
 		endif
 	endif
 	if (use_DNB_DRUG .and. .not.cell_list(kcell)%drugB_tag) then
