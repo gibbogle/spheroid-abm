@@ -756,8 +756,6 @@ do itime = 1,ntimes
 		read(nf,*) dt
 		read(nf,*) vol
 		read(nf,*) conc
-		write(*,*) line
-		write(*,*) ichemo,t, dt
 		event(kevent)%time = t
 		event(kevent)%ichemo = ichemo
 		event(kevent)%volume = vol
@@ -812,7 +810,7 @@ do kevent = 1,Nevents
 	event(kevent)%time = event(kevent)%time*60*60
 	event(kevent)%volume = event(kevent)%volume*1.0e-3
 	E = event(kevent)
-	write(*,'(a,i3,f8.0,2i3,3f8.4)') 'event: ',kevent,E%time,E%etype,E%ichemo,E%volume,E%conc,E%dose
+!	write(*,'(a,i3,f8.0,2i3,3f8.4)') 'event: ',kevent,E%time,E%etype,E%ichemo,E%volume,E%conc,E%dose
 enddo
 ! Check that events are sequential
 do kevent = 1,Nevents-1
@@ -1352,7 +1350,7 @@ type(event_type) :: E
 do kevent = 1,Nevents
 	E = event(kevent)
 	if (t_simulation >= E%time .and. .not.E%done) then
-	write(*,'(i3,2f8.0,i3,2f10.4)') E%etype,t_simulation,E%time,E%ichemo,E%volume,E%conc
+!	write(*,'(i3,2f8.0,i3,2f10.4)') E%etype,t_simulation,E%time,E%ichemo,E%volume,E%conc
 		if (E%etype == RADIATION_EVENT) then
 			radiation_dose = E%dose
 		elseif (E%etype == MEDIUM_EVENT) then
@@ -1522,9 +1520,9 @@ if (mod(istep,nthour) == 0) then
 	call logger(logmsg)
 endif
 	if (bdry_changed) then
-		write(nflog,*) 'UpdateBdryList'
+!		write(nflog,*) 'UpdateBdryList'
 		call UpdateBdrylist
-		write(nflog,*) 'did UpdateBdryList'
+!		write(nflog,*) 'did UpdateBdryList'
 	endif
 	if (mod(istep,6*nthour) == 0) then
 !		write(nflog,*) 'CheckBdryList'
