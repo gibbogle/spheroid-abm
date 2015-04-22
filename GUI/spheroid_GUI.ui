@@ -2987,57 +2987,6 @@ padding: 8px
              <string>TPZ Type</string>
             </property>
            </widget>
-           <widget class="QMyCheckBox" name="cbox_USE_TREATMENT_FILE">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>240</x>
-              <y>480</y>
-              <width>51</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Used</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="text_TREATMENT_FILE_NAME">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>120</x>
-              <y>480</y>
-              <width>111</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="maximumSize">
-             <size>
-              <width>120</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>treatment.data</string>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_TREATMENT_FILE">
-            <property name="geometry">
-             <rect>
-              <x>20</x>
-              <y>480</y>
-              <width>91</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Treatment data file</string>
-            </property>
-           </widget>
            <widget class="QGroupBox" name="groupBox_DNB_1">
             <property name="geometry">
              <rect>
@@ -4936,6 +4885,27 @@ padding: 8px
             </property>
            </widget>
           </widget>
+          <widget class="QWidget" name="tab_protocol">
+           <attribute name="title">
+            <string>Protocol</string>
+           </attribute>
+           <widget class="QTableWidget" name="tableWidget">
+            <property name="geometry">
+             <rect>
+              <x>10</x>
+              <y>10</y>
+              <width>541</width>
+              <height>511</height>
+             </rect>
+            </property>
+            <attribute name="horizontalHeaderDefaultSectionSize">
+             <number>70</number>
+            </attribute>
+            <attribute name="verticalHeaderDefaultSectionSize">
+             <number>20</number>
+            </attribute>
+           </widget>
+          </widget>
           <widget class="QWidget" name="tab_graphs">
            <attribute name="title">
             <string>Graphs</string>
@@ -5102,7 +5072,7 @@ padding: 8px
              <string>Number</string>
             </property>
            </widget>
-           <widget class="QLabel" name="label_timeseries">
+           <widget class="QLabel" name="alabel_timeseries">
             <property name="geometry">
              <rect>
               <x>20</x>
@@ -5122,7 +5092,7 @@ padding: 8px
              <string>Time-series Plots</string>
             </property>
            </widget>
-           <widget class="QLabel" name="label_profile">
+           <widget class="QLabel" name="alabel_profile">
             <property name="geometry">
              <rect>
               <x>270</x>

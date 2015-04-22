@@ -13,6 +13,7 @@
 #include "myvtk.h"
 #include "field.h"
 #include "transfer.h"
+#include <QDebug>
 
 #include "dialog.h"
 
@@ -125,6 +126,8 @@ MainWindow::MainWindow(QWidget *parent)
     initDrugComboBoxes();
     loadParams();
     LOG_QMSG("Did loadparams");
+
+    SetupProtocol();
     writeout();
 
     timer = new QTimer(this);
@@ -958,16 +961,16 @@ void MainWindow::loadParams()
                         } else {
                             w_cb->setChecked(false);
                         }
-                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
-                        if (p.value == 1) {
-                            w_cb->setChecked(true);
-                            if (use_TREATMENT_FILE)
-                                enableUseTreatmentFile();
-                        } else {
-                            w_cb->setChecked(false);
-                            if (use_TREATMENT_FILE)
-                                disableUseTreatmentFile();
-                        }
+//                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
+//                        if (p.value == 1) {
+//                            w_cb->setChecked(true);
+//                            if (use_TREATMENT_FILE)
+//                                enableUseTreatmentFile();
+//                        } else {
+//                            w_cb->setChecked(false);
+//                            if (use_TREATMENT_FILE)
+//                                disableUseTreatmentFile();
+//                        }
 					} else if (qsname.startsWith("rbut_")) {
 						QRadioButton *w_rb = (QRadioButton *)w;
                         if (int(p.value) == rbutton_case) {
@@ -1061,7 +1064,7 @@ void MainWindow::loadParams()
 			}
 		}
 	}
-    setTreatmentFileUsage();
+//    setTreatmentFileUsage();
     text_GUI_VERSION_NAME->setText(Global::GUI_build_version);
     text_DLL_VERSION_NAME->setText(Global::DLL_build_version);
 }
@@ -1221,16 +1224,16 @@ void MainWindow::reloadParams()
 //                            if (use_DNB)
 //                                disableUseDNB();
                         }
-                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
-                        if (p.value == 1) {
-                            w_cb->setChecked(true);
-                            if (use_TREATMENT_FILE)
-                                enableUseTreatmentFile();
-                        } else {
-                            w_cb->setChecked(false);
-                            if (use_TREATMENT_FILE)
-                                disableUseTreatmentFile();
-                        }
+//                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
+//                        if (p.value == 1) {
+//                            w_cb->setChecked(true);
+//                            if (use_TREATMENT_FILE)
+//                                enableUseTreatmentFile();
+//                        } else {
+//                            w_cb->setChecked(false);
+//                            if (use_TREATMENT_FILE)
+//                                disableUseTreatmentFile();
+//                        }
 					} else if (qsname.startsWith("rbut_")) {
                         QRadioButton *w_rb = (QRadioButton *)w;
                         if (p.value == rbutton_case) {
@@ -1318,6 +1321,7 @@ void MainWindow::writeout()
 		out << line;
 	}
     file.close();
+    SaveProtocol(inputFile);
     paramSaved = true;
 	LOG_MSG("Input data saved");
 }
@@ -1371,6 +1375,14 @@ void MainWindow::readInputFile()
 			parm->set_value(k,data[0].toDouble());
 		}
 	}
+
+//    qDebug() << in.readLine();
+//    qDebug() << in.readLine();
+//    qDebug() << in.readLine();
+//    qDebug() << in.readLine();
+//    qDebug() << in.readLine();
+
+    LoadProtocol(fileName);
 
     reloadParams();
     paramSaved = true;
@@ -2695,16 +2707,16 @@ void MainWindow::changeParam()
                 v = 0;
             }
 
-            bool use_TREATMENT_FILE = wname.contains("USE_TREATMENT_FILE");
-            if (checkBox->isChecked()) {
-                v = 1;
-                if (use_TREATMENT_FILE)
-                    enableUseTreatmentFile();
-            } else {
-                v = 0;
-                if (use_TREATMENT_FILE)
-                    disableUseTreatmentFile();
-            }
+//            bool use_TREATMENT_FILE = wname.contains("USE_TREATMENT_FILE");
+//            if (checkBox->isChecked()) {
+//                v = 1;
+//                if (use_TREATMENT_FILE)
+//                    enableUseTreatmentFile();
+//            } else {
+//                v = 0;
+//                if (use_TREATMENT_FILE)
+//                    disableUseTreatmentFile();
+//            }
 
 			QString wtag = wname.mid(5);
 			for (int k=0; k<parm->nParams; k++) {
@@ -2855,31 +2867,31 @@ void MainWindow::disableUseTracer()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::enableUseTreatmentFile()
-{
-    for (int i=0; i<lineEdit_list.length(); i++) {
-        QLineEdit *w = lineEdit_list[i];
-        QString wname = w->objectName();
-        if (wname.contains("text_TREATMENT_FILE")) {
-            w->setEnabled(true);
-        }
-    }
-    cbox_USE_TREATMENT_FILE->setChecked(true);
-}
+//void MainWindow::enableUseTreatmentFile()
+//{
+//    for (int i=0; i<lineEdit_list.length(); i++) {
+//        QLineEdit *w = lineEdit_list[i];
+//        QString wname = w->objectName();
+//        if (wname.contains("text_TREATMENT_FILE")) {
+//            w->setEnabled(true);
+//        }
+//    }
+//    cbox_USE_TREATMENT_FILE->setChecked(true);
+//}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::disableUseTreatmentFile()
-{
-    for (int i=0; i<lineEdit_list.length(); i++) {
-        QLineEdit *w = lineEdit_list[i];
-        QString wname = w->objectName();
-        if (wname.contains("text_TREATMENT_FILE")) {
-            w->setEnabled(false);
-        }
-    }
-    cbox_USE_TREATMENT_FILE->setChecked(false);
-}
+//void MainWindow::disableUseTreatmentFile()
+//{
+//    for (int i=0; i<lineEdit_list.length(); i++) {
+//        QLineEdit *w = lineEdit_list[i];
+//        QString wname = w->objectName();
+//        if (wname.contains("text_TREATMENT_FILE")) {
+//            w->setEnabled(false);
+//        }
+//    }
+//    cbox_USE_TREATMENT_FILE->setChecked(false);
+//}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------

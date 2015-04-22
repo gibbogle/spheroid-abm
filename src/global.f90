@@ -52,6 +52,10 @@ integer, parameter :: O2_BY_VOL = MAX_CHEMO + 3
 
 integer, parameter :: N_EXTRA = O2_BY_VOL - MAX_CHEMO	! = 3 = total # of variables - MAX_CHEMO
 
+integer, parameter :: DRUG_EVENT = 1
+integer, parameter :: RADIATION_EVENT = 2
+integer, parameter :: MEDIUM_EVENT = 3
+
 integer, parameter :: DIST_NV = 20
 
 !integer, parameter :: SN30000 = DRUG_A
@@ -93,7 +97,7 @@ type cell_type
 	integer :: ID
 	integer :: celltype
 	integer :: site(3)
-	integer :: iv
+	integer :: ivin
 	logical :: active
 	integer :: state
 	real(REAL_KIND) :: conc(MAX_CHEMO)
@@ -215,6 +219,16 @@ type treatment_type
 	logical, allocatable :: ended(:)
 end type
 
+type event_type
+	integer :: etype
+	real(REAL_KIND) :: time
+	integer :: ichemo			! DRUG
+	real(REAL_KIND) :: volume	! DRUG MEDIUM
+	real(REAL_KIND) :: conc		! DRUG
+	real(REAL_KIND) :: dose		! RADIATION
+	logical :: done
+end type	
+
 type LQ_type
 	real(REAL_KIND) :: OER_am, OER_bm
 	real(REAL_KIND) :: alpha_H, beta_H
@@ -225,6 +239,7 @@ type(dist_type) :: divide_dist
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
 type(treatment_type), allocatable :: protocol(:)
+type(event_type), allocatable :: event(:)
 
 character*(12) :: dll_version, dll_run_version
 character*(12) :: gui_version, gui_run_version
@@ -249,9 +264,10 @@ integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: NdrugA_tag, NdrugB_tag, Nradiation_tag, Nanoxia_tag, NdrugA_dead, NdrugB_dead, Nradiation_dead, Nanoxia_dead
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes, ncpu_input
+integer :: Nevents
 integer :: nt_saveprofiledata, it_saveprofiledata
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
-real(REAL_KIND) :: medium_volume0, medium_volume, cell_radius, d_layer
+real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
@@ -287,6 +303,9 @@ logical :: relax
 logical :: use_parallel
 logical :: saveprofiledata
 logical :: dbug = .false.
+logical :: bdry_debug
+
+logical :: use_events = .true.
 
 real(REAL_KIND) :: ysave(100000),dCreactsave(100000)
 
