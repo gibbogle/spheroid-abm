@@ -135,6 +135,7 @@ private slots:
 
     void LoadProtocol(QString);
     void SaveProtocol(QString);
+    void ProtocolChanged(int, int);
 
 public slots:
 	void preConnection();
@@ -164,7 +165,7 @@ public slots:
 //    void on_cbox_TPZ_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
     void on_cbox_USE_DNB_DRUG_toggled(bool checked);
 //    void on_cbox_DNB_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
-    void on_cbox_USE_RADIATION_toggled(bool checked);
+//    void on_cbox_USE_RADIATION_toggled(bool checked);
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
     void radioButtonChanged(QAbstractButton *b);

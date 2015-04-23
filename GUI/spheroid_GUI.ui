@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>4</number>
+           <number>3</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -1261,32 +1261,19 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>20</x>
-              <y>280</y>
+              <y>300</y>
               <width>281</width>
-              <height>181</height>
+              <height>151</height>
              </rect>
             </property>
             <property name="title">
              <string/>
             </property>
-            <widget class="QMyCheckBox" name="cbox_USE_RADIATION">
-             <property name="geometry">
-              <rect>
-               <x>10</x>
-               <y>10</y>
-               <width>91</width>
-               <height>21</height>
-              </rect>
-             </property>
-             <property name="text">
-              <string>Use radiation?</string>
-             </property>
-            </widget>
             <widget class="QWidget" name="gridLayoutWidget_3">
              <property name="geometry">
               <rect>
                <x>10</x>
-               <y>40</y>
+               <y>10</y>
                <width>261</width>
                <height>126</height>
               </rect>
@@ -4882,6 +4869,19 @@ padding: 8px
             </property>
             <property name="text">
              <string>DNB Type</string>
+            </property>
+           </widget>
+           <widget class="QLabel" name="alabel_radiation">
+            <property name="geometry">
+             <rect>
+              <x>20</x>
+              <y>274</y>
+              <width>111</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Radiation parameters</string>
             </property>
            </widget>
           </widget>
