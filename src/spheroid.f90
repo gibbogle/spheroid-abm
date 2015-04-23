@@ -1353,6 +1353,7 @@ do kevent = 1,Nevents
 !	write(*,'(i3,2f8.0,i3,2f10.4)') E%etype,t_simulation,E%time,E%ichemo,E%volume,E%conc
 		if (E%etype == RADIATION_EVENT) then
 			radiation_dose = E%dose
+!			write(*,*) 'radiation_dose: ',radiation_dose
 		elseif (E%etype == MEDIUM_EVENT) then
 			C = 0
 			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc

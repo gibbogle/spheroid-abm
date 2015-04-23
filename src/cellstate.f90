@@ -23,7 +23,8 @@ logical :: ok
 
 !call logger('GrowCells')
 ok = .true.
-if (use_radiation .and. dose > 0) then
+!if (use_radiation .and. dose > 0) then
+if (dose > 0) then
 	call Irradiation(dose, ok)
 	if (.not.ok) return
 endif

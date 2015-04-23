@@ -984,7 +984,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Use parallel O2 relaxation solver",
 "Use over- and under-relaxation to solve reaction-diffusion for oxygen, with parallelized over-relaxation"},
 
-{"USE_RADIATION", 0, 0, 1,
+{"USE_RADIATION", 1, 0, 1,
 "Use radiation?",
 "Treatment with radiation"},
 
