@@ -76,7 +76,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Medium volume",
 "Volume of the medium in which the spheroid is growing."},
 
-{"UNSTIRRED_LAYER", 0.01, 0, 0,
+{"UNSTIRRED_LAYER", 0.001, 0, 0,
 "Unstirred layer width",
 "Thickness of the unstirred layer around the spheroid."},
 
@@ -984,9 +984,9 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Use parallel O2 relaxation solver",
 "Use over- and under-relaxation to solve reaction-diffusion for oxygen, with parallelized over-relaxation"},
 
-{"USE_RADIATION", 1, 0, 1,
-"Use radiation?",
-"Treatment with radiation"},
+//{"USE_RADIATION", 1, 0, 1,
+//"Use radiation?",
+//"Treatment with radiation"},
 
 //{"USE_TREATMENT_FILE", 0, 0, 1,
 //"Use treatment file?",
