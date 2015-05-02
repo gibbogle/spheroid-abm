@@ -174,7 +174,6 @@ do x = 1,NX
     					ODEdiff%cell_index(i) = kcell
     					cell_list(kcell)%ivin = i		! (intracellular) variable index corresponding to kcell
 !						ODEdiff%isite_intra(isite) = i	! intracellular index corresponding to site index isite
-	!					write(nflog,*)kcell,'I ',ODEdiff%varsite(i,:),i
 	    			endif
 	    		endif
 	    	else

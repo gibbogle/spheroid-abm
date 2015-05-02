@@ -299,7 +299,7 @@ call logger('did deallocation')
 NY = NX
 NZ = NX
 ngaps = 0
-max_ngaps = NY*NZ
+!max_ngaps = NY*NZ
 nlist = 0
 
 allocate(zoffset(0:2*Mnodes))
@@ -1181,6 +1181,7 @@ if (randomise_initial_volume) then
 else
 	cell_list(k)%volume = 1.0
 endif
+!write(nflog,'(a,i6,f6.2)') 'volume: ',k,cell_list(k)%volume
 cell_list(k)%t_divide_last = 0		! not used
 cell_list(k)%t_hypoxic = 0
 cell_list(k)%conc = 0
@@ -1494,12 +1495,14 @@ subroutine simulate_step(res) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 integer :: kcell, site(3), hour, nthour, kpar=0
-real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose
+real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo, i
 logical :: ok = .true.
+logical :: dbug
 
 !call logger('simulate_step')
+dbug = .false.
 if (Ncells == 0) then
 	call logger('Ncells = 0')
     res = 3
@@ -1516,24 +1519,21 @@ endif
 
 !if (bdry_debug) call CheckBdryList('simulate_step a')
 if (bdry_debug) write(*,*) 'istep, bdry_changed: ',istep,bdry_changed
-if (mod(istep,nthour) == 0) then
-	write(logmsg,*) 'istep, hour: ',istep,istep/nthour,nlist,ncells,nsites-ncells
+if (dbug .or. mod(istep,nthour) == 0) then
+	diam_um = 2*DELTA_X*Radius*10000
+	write(logmsg,'(a,4i8,f8.1)') 'istep, hour: ',istep,istep/nthour,nlist,ncells,diam_um
 	call logger(logmsg)
 endif
 	if (bdry_changed) then
-!		write(nflog,*) 'UpdateBdryList'
+		if (dbug) write(nflog,*) 'UpdateBdryList'
 		call UpdateBdrylist
 !		write(nflog,*) 'did UpdateBdryList'
 	endif
 	if (mod(istep,6*nthour) == 0) then
-!		write(nflog,*) 'CheckBdryList'
+		if (dbug) write(nflog,*) 'CheckBdryList'
 		call CheckBdryList('simulate_step')
 !		write(nflog,*) 'did CheckBdryList'
 	endif
-!	write(logmsg,'(a,2e12.3,i6)') 'Oxygen U, Cbnd, Nbnd: ', chemo(OXYGEN)%medium_U,chemo(OXYGEN)%medium_Cbnd, Nbnd
-!	call logger(logmsg)
-!endif
-if (bdry_debug) call CheckBdryList('simulate_step b')
 istep = istep + 1
 t_simulation = (istep-1)*DELTA_T	! seconds
 radiation_dose = 0
@@ -1548,7 +1548,7 @@ if (radiation_dose > 0) then
 	call logger(logmsg)
 endif
 if (bdry_debug) call CheckBdryList('simulate_step c')
-!write(nflog,*) 'GrowCells'
+if (dbug) write(nflog,*) 'GrowCells'
 call GrowCells(radiation_dose,DELTA_T,ok)
 if (bdry_debug) call CheckBdryList('simulate_step d')
 !write(nflog,*) 'did GrowCells'
@@ -1558,17 +1558,19 @@ if (.not.ok) then
 endif
 
 ! Update Cbnd using current M, R1 and previous U, Cext
-!write(nflog,*) 'UpdateCbnd'
+if (dbug) write(nflog,*) 'UpdateCbnd'
 call UpdateCbnd
 !write(nflog,*) 'did UpdateCbnd'
 
+if (dbug) write(nflog,*) 'SetupODEdiff'
 call SetupODEdiff
 
 !call check_allstate('before SiteCellToState')
+if (dbug) write(nflog,*) 'SiteCellToState'
 call SiteCellToState
 !call check_allstate('after SiteCellToState')
 
-!write(nflog,*) 'Solver'
+if (dbug) write(nflog,*) 'Solver'
 do it_solve = 1,NT_CONC
 	tstart = (it_solve-1)*dt
 	t_simulation = (istep-1)*DELTA_T + tstart
@@ -1577,13 +1579,14 @@ enddo
 !write(nflog,*) 'did Solver'
 !call check_allstate('after Solver')
 
+if (dbug) write(nflog,*) 'StateToSiteCell'
 call StateToSiteCell
 !call check_allstate('after StateToSiteCell')
 
 res = 0
 
 ! Compute U and update M, Cext, Cbnd
-!write(nflog,*) 'UpdateMedium'
+if (dbug) write(nflog,*) 'UpdateMedium'
 call UpdateMedium(DELTA_T)
 !write(nflog,*) 'did UpdateMedium'
 
