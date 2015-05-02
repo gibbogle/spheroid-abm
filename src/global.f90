@@ -69,7 +69,7 @@ integer, parameter :: DIST_NV = 20
 integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
 integer, parameter :: MAX_CELLTYPES = 4
-integer, parameter :: max_nlist = 500000
+integer, parameter :: max_nlist = 1000000
 
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.

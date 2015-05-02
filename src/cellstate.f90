@@ -52,14 +52,15 @@ real(REAL_KIND) :: C_O2
 integer :: iv, site(3)
 real(REAL_KIND) :: tnow
 
-if (use_extracellular_O2) then
+if (use_extracellular_O2 .and. istep > 1) then		! fix 30/04/2015
 	iv = cell_list(kcell)%ivin
 	if (iv < 1) then
-		write(logmsg,*) 'getO2conc: ',kcell,site,iv
-		call logger(logmsg)
-		stop
-		tnow = istep*DELTA_T
-		C_O2 = BdryConc(OXYGEN,tnow)	! assume that this is a site at the boundary
+		C_O2 = cell_list(kcell)%conc(OXYGEN)		! use this until %ivin is set in SetupODEDiff
+!		write(logmsg,*) 'getO2conc: ',istep,kcell,site,iv
+!		call logger(logmsg)
+!		stop
+!		tnow = istep*DELTA_T
+!		C_O2 = BdryConc(OXYGEN,tnow)	! assume that this is a site at the boundary
 	else
 		C_O2 = allstate(iv-1,OXYGEN)
 	endif
@@ -583,6 +584,7 @@ cell_list(kcell0)%t_hypoxic = 0
 R = par_uni(kpar)
 cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 cell_list(kcell0)%M = cell_list(kcell0)%M/2
+!write(nflog,'(a,i6,2f8.2)') 'divide: ',kcell0,cell_list(kcell0)%volume,cell_list(kcell0)%divide_volume
 !write(logmsg,'(a,f6.1)') 'Divide time: ',tnow/3600
 !call logger(logmsg)
 
@@ -632,16 +634,20 @@ do
 		npath = 0
 		site1 = site0
 		if (site01(3) < zmin) then
-			write(nflog,*) 'CellDivider: OUTSIDE: z < zmin'
-			stop
+			write(logmsg,*) 'CellDivider: OUTSIDE: z < zmin'
+			call logger(logmsg)
+			ok = .false.
+			return
 		endif
 	elseif (bdrylist_present(site01,bdrylist)) then	! site01 is on the boundary
 		npath = 1
 		site1 = site01
 		path(:,1) = site01
 		if (site01(3) < zmin) then
-			write(nflog,*) 'CellDivider: boundary: z < zmin'
-			stop
+			write(logmsg,*) 'CellDivider: boundary: z < zmin'
+			call logger(logmsg)
+			ok = .false.
+			return
 		endif
 	else
 		if (dbug) call logger('ChooseBdrySite')
@@ -649,14 +655,24 @@ do
 		if (dbug) call logger('did ChooseBdrySite')
 		if (.not.ok) return
 		if (site01(3) < zmin) then
-			write(nflog,*) 'CellDivider: chosen: z < zmin'
-			stop
+			write(logmsg,*) 'CellDivider: chosen: z < zmin'
+			call logger(logmsg)
+			ok = .false.
+			return
 		endif
 		if (occupancy(site1(1),site1(2),site1(3))%indx(1) == 0) then
-			write(nflog,*) 'after choose_bdrysite: site1 is VACANT: ',site1
-			stop
+			write(logmsg,*) 'CellDivider: after choose_bdrysite: site1 is VACANT: ',site1
+			call logger(logmsg)
+			ok = .false.
+			return
 		endif
-		call SelectPath(site0,site01,site1,path,npath)
+		call SelectPath(site0,site01,site1,path,npath,ok)
+		if (.not.ok) then
+			write(logmsg,*) 'CellDivider: SelectPath fails with site0, site01: ',site0,site01
+			call logger(logmsg)
+			ok = .false.
+			return
+		endif
 		! path(:,:) goes from site01 to site1, which is a bdry site or adjacent to a vacant site
 	!	if (.not.isbdry(site1)) then
 	!	    call logger('should be bdry or vacant, is not')
@@ -976,6 +992,7 @@ end function
 subroutine test_get_path
 integer :: site0(3), site1(3), site2(3), path(3,200), npath, kpar=0
 integer :: x, y, z, it, k
+logical :: ok
 
 site0 = 0
 do it = 1,10
@@ -993,7 +1010,7 @@ do it = 1,10
 		if (occupancy(x,y,z)%indx(1) > 0) exit
 	enddo
 	site2 = (/x,y,z/)
-	call SelectPath(site0,site1,site2,path,npath)
+	call SelectPath(site0,site1,site2,path,npath,ok)
 	write(nflog,*) 'path: ',npath
 	do k = 1,npath
 		write(nflog,'(i3,2x,3i4)') path(:,k)
@@ -1008,19 +1025,23 @@ end subroutine
 ! is encountered.
 ! How do we avoid choosing a path through the site of the dividing cell? site0
 !-----------------------------------------------------------------------------------------
-subroutine SelectPath(site0,site1,site2,path,npath)
+subroutine SelectPath(site0,site1,site2,path,npath,ok)
 integer :: site0(3),site1(3), site2(3), path(3,200), npath
+logical :: ok
 integer :: v(3), jump(3), site(3), k, j, jmin, indx
+integer, parameter :: maxits = 100
 real(REAL_KIND) :: r, d2, d2min
 logical :: hit
 
 if (occupancy(site2(1),site2(2),site2(3))%indx(1) <= OUTSIDE_TAG) then
-    call logger('site2 is OUTSIDE or UNREACHABLE')
-    stop
+    call logger('SelectPath: site2 is OUTSIDE or UNREACHABLE')
+    ok = .false.
+    return
 endif
 if (occupancy(site2(1),site2(2),site2(3))%indx(1) == 0) then
-    call logger('site2 is VACANT')
-    stop
+    call logger('SelectPath: site2 is VACANT')
+    ok = .false.
+    return
 endif
 
 k = 1
@@ -1052,16 +1073,24 @@ do
 	if (hit) exit
 	if (jmin == 0) then
 	    call logger('get path: stuck')
-	    stop
+		write(logmsg,*) 'SelectPath: stuck for site0,site1,site2: ',site0,site1,site2
+		call logger(logmsg)
+	    ok = .false.
+		return
 	endif
 	site = site + jumpvec(:,jmin)
 	k = k+1
-	if (k==20) stop
+	if (k > maxits) then
+		write(logmsg,*) 'SelectPath: iteration limit exceeded: ',maxits,'  for site0,site1,site2: ',site0,site1,site2
+		call logger(logmsg)
+	    ok = .false.
+		return
+	endif
 	path(:,k) = site
 	if (site(1) == site2(1) .and. site(2) == site2(2) .and. site(3) == site2(3)) exit
 enddo
 npath = k
-
+ok = .true.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1152,6 +1181,7 @@ cell_list(kcell1)%t_hypoxic = 0
 cell_list(kcell1)%conc = cell_list(kcell0)%conc
 cell_list(kcell1)%M = cell_list(kcell0)%M
 occupancy(site1(1),site1(2),site1(3))%indx(1) = kcell1
+!write(nflog,'(a,i6,2f8.2)') 'cloned: ',kcell1,cell_list(kcell1)%volume,cell_list(kcell1)%divide_volume
 end subroutine
 
 !-----------------------------------------------------------------------------------------

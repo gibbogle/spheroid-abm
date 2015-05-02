@@ -153,7 +153,7 @@ MainWindow::MainWindow(QWidget *parent)
     videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
     videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
 
-    tabs->setCurrentIndex(3);
+    tabs->setCurrentIndex(6);
     goToInputs();
 }
 

@@ -84,7 +84,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Nominal divide volume",
 "Nominal multiple of normal cell volume at which division occurs."},
 
-{"DVDIVIDE", 0.05, 0, 0,
+{"DVDIVIDE", 0.1, 0, 0,
 "Divide volume variation",
 "Variation (+/-) about nominal divide volume multiple."},
 
@@ -175,7 +175,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Constant concentration",
  "Extracellular concentration to be held constant everywhere at the specified boundary value"},
 
-{"OXYGEN_CONSUMPTION", 2.3e-16, 0, 0,
+{"OXYGEN_CONSUMPTION", 6.25e-17, 0, 0,
  "Max consumption rate",
  "Maximum rate of consumption of the constituent"},
 
@@ -976,7 +976,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Use extra conc",
 "Use extracellular O2 concentration to determine cell death"},
 
-{"USE_RELAX", 0, 0, 1,
+{"USE_RELAX", 1, 0, 1,
 "Use O2 relaxation solver",
 "Use over- and under-relaxation to solve reaction-diffusion for oxygen"},
 
