@@ -25,7 +25,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "DLL0.00",
  "DLL version number."},
 
-{"NX", 150, 0, 0,
+{"NX", 120, 0, 0,
 "Lattice size",
 "Dimension of the lattice (number of sites in X,Y and Z directions).  Typically 5*BLOB_RADIUS is OK."},
 
@@ -76,15 +76,15 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Medium volume",
 "Volume of the medium in which the spheroid is growing."},
 
-{"UNSTIRRED_LAYER", 0.001, 0, 0,
+{"UNSTIRRED_LAYER", 0.005, 0, 0,
 "Unstirred layer width",
-"Thickness of the unstirred layer around the spheroid."},
+"Thickness of the unstirred layer around the spheroid (cm)."},
 
 {"VDIVIDE0", 1.6, 0, 0,
 "Nominal divide volume",
 "Nominal multiple of normal cell volume at which division occurs."},
 
-{"DVDIVIDE", 0.1, 0, 0,
+{"DVDIVIDE", 0.3, 0, 0,
 "Divide volume variation",
 "Variation (+/-) about nominal divide volume multiple."},
 
