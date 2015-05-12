@@ -87,12 +87,18 @@ void MainWindow::LoadProtocol(QString fileName)
 
 void MainWindow::SaveProtocol(QString fileName)
 {
-    int nTimes;
+    int nTimes, eventType, kevents;
     int err;
-    QString entry;
+    QString entry, hour;
+    QString drugEntry, radiationEntry, mediumEntry;
     QTableWidgetItem *item;
     QTableWidget *table = tableWidget;
+    QMessageBox msgBox;
+    int idrug=1, iradiation=2,imedium=3;
 
+    int row = tableWidget->currentRow();
+    int col = tableWidget->currentColumn();
+    tableWidget->setCurrentCell(row+1,col);
     QFile file(fileName);
     if (!file.open(QFile::WriteOnly | QFile::Text | QIODevice::Append)) {
         QMessageBox::warning(this, tr("Application"),
@@ -121,51 +127,91 @@ void MainWindow::SaveProtocol(QString fileName)
         if (item != 0) {
             entry = item->text();
             if (entry.compare("")) {    // true if <>
-                QString hour = entry;
-                err = getField(table,row,1,&entry);
-                if (entry.compare("")) {   // Entry in DRUG column
+                hour = entry;
+                kevents = 0;
+                err = getField(table,row,1,&drugEntry);
+                if (drugEntry.compare("")) {   // Entry in DRUG column
+                    eventType = idrug;
+                    kevents++;
+                }
+                err = getField(table,row,5,&radiationEntry);
+                if (radiationEntry.compare("")) {   // Entry in RADIATION column
+                    eventType = iradiation;
+                    kevents++;
+                }
+                err = getField(table,row,6,&mediumEntry);
+                if (mediumEntry.compare("")) {   // Entry in MEDIUM column
+                    eventType = imedium;
+                    kevents++;
+                }
+                if (kevents == 0) {
+                    QString msg = "No DRUG, RADIATION or MEDIUM data for event at hour: " + hour;
+                    msgBox.setText(msg);
+                    msgBox.exec();
+                    file.close();
+                    return;
+                }
+                if (kevents > 1) {
+                    QString msg = "More than one event at hour: " + hour;
+                    msgBox.setText(msg);
+                    msgBox.exec();
+                    file.close();
+                    return;
+                }
+                if (eventType == idrug) {
                     out << "DRUG" << "\n";
-                    out << entry << "\n";
+                    out << drugEntry << "\n";
                     out << hour << "\n";
                     err = getField(table,row,2,&entry);
                     if (entry.compare("")) {   // Entry in Duration column
                         out << entry << "\n";
                     } else {
+                        msgBox.setText("Missing entry in Duration column");
+                        msgBox.exec();
                         qDebug() << "Missing entry in Duration column";
+                        file.close();
                         return;
                     }
                     err = getField(table,row,3,&entry);
                     if (entry.compare("")) {   // Entry in Volume column
                         out << entry << "\n";
                     } else {
+                        msgBox.setText("Missing entry in Volume column");
+                        msgBox.exec();
                         qDebug() << "Missing entry in Volume column";
+                        file.close();
                         return;
                     }
                     err = getField(table,row,4,&entry);
                     if (entry.compare("")) {   // Entry in Conc column
                         out << entry << "\n";
                     } else {
+                        msgBox.setText("Missing entry in Conc column");
+                        msgBox.exec();
                         qDebug() << "Missing entry in Conc column";
+                        file.close();
                         return;
                     }
                     continue;
                 }
-                err = getField(table,row,5,&entry);
-                if (entry.compare("")) {   // Entry in RADIATION column
+//                err = getField(table,row,5,&entry);
+//                if (entry.compare("")) {   // Entry in RADIATION column
+                else if (eventType == iradiation) {
                     out << "RADIATION" << "\n";
                     out << hour << "\n";
-                    out << entry << "\n";
+                    out << radiationEntry << "\n";
                     continue;
                 }
-                err = getField(table,row,6,&entry);
-                if (entry.compare("")) {   // Entry in MEDIUM column
+//                err = getField(table,row,6,&entry);
+//                if (entry.compare("")) {   // Entry in MEDIUM column
+                else if (eventType == imedium) {
                     out << "MEDIUM" << "\n";
                     out << hour << "\n";
-                    out << entry << "\n";
+                    out << mediumEntry << "\n";
                     continue;
                 }
-                qDebug() << "No DRUG, RADIATION or MEDIUM data for time";
-                return;
+//                qDebug() << "No DRUG, RADIATION or MEDIUM data for event at hour: " << hour;
+//                return;
             }
         }
     }

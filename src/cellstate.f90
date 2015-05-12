@@ -473,7 +473,7 @@ do kcell = 1,nlist0
 	if (C_option == 1) then
 		! Calculation based on transfer of an extracellular volume dV with constituents, i.e. holding extracellular concentrations constant
 		cell_list(kcell)%conc = (Vin_0*Cin_0 + dV*Cex_0)/(Vin_0 + dV)
-		occupancy(site(1),site(2),site(3))%C = (Vex_0*Cex_0 - dV*Cex_0)/(Vex_0 - dV)
+		occupancy(site(1),site(2),site(3))%C = (Vex_0*Cex_0 - dV*Cex_0)/(Vex_0 - dV)	! = Cex_0
 	elseif (C_option == 2) then
 		! Calculation based on change in volumes without mass transfer of constituents
 		cell_list(kcell)%conc = Vin_0*Cin_0/(Vin_0 + dV)
