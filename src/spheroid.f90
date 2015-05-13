@@ -2715,11 +2715,12 @@ do ichemo = 0,MAX_CHEMO+N_EXTRA
 enddo
 ns = k
 nc = ic
-write(mintag,'(i6)') int(istep*DELTA_T/60)
+! Remove time tag from the filename for download from NeSI
+!write(mintag,'(i6)') int(istep*DELTA_T/60)
 filename = profiledatafilebase
-filename = trim(filename)//'_'
-filename = trim(filename)//trim(adjustl(mintag))
-filename = trim(filename)//'min.dat'
+!filename = trim(filename)//'_'
+!filename = trim(filename)//trim(adjustl(mintag))
+!filename = trim(filename)//'min.dat'
 open(nfprofile,file=filename,status='replace')
 write(nfprofile,'(a,a)') 'GUI version: ',gui_run_version
 write(nfprofile,'(a,a)') 'DLL version: ',dll_run_version
