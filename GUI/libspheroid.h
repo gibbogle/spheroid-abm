@@ -10,7 +10,7 @@ void get_dll_build_version(char *, int *);
 void execute(int *,char *, int *,char *, int *);
 void simulate_step(int *);
 void terminate_run(int *);
-void get_dimensions(int *, int *, int *, int *, double *, int *, int *, bool *, double *);
+void get_dimensions(int *, int *, int *, int *, double *, int *, int *, bool *, double *, double *);
 void get_scene(int *, int *);
 void get_summary(int *, int *, int *);
 void get_concdata(int *, int *, double *, double *);

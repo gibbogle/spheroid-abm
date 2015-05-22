@@ -95,7 +95,7 @@ public:
 	bool nextFrame();
 	void pause();
 	void playon();
-	void saveSnapshot(QString, QString);
+    void saveSnapshot(QString, QString, QString);
     void startRecorder(QString basename, int nframes);
     void stopRecorder();
     void recorder();

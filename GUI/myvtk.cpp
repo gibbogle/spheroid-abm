@@ -314,7 +314,7 @@ void MyVTK::get_cell_positions()
         cp.y = Global::cell_list[j+2];
         cp.z = Global::cell_list[j+3];
         cp.state = Global::cell_list[j+4];
-        cp.diameter = Global::cell_list[j+5]/10.0;
+        cp.diameter = Global::cell_list[j+5]/100.0; // fraction of DELTA_X
         cp.highlight = Global::cell_list[j+6];
         TCpos_list.append(cp);
 //        double r, g, b;
@@ -530,6 +530,7 @@ void MyVTK::process_Tcells()
         ap->actor->GetProperty()->SetOpacity(opacity[cp.state]);
 //        }
         ap->actor->SetPosition(cp.x, cp.y, cp.z);
+        ap->actor->SetScale(cp.diameter);
 	}
     for (int k=0; k<T_Actor_list.length(); k++) {
         ap = &T_Actor_list[k];
@@ -667,7 +668,7 @@ void MyVTK::stop()
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-void MyVTK::saveSnapshot(QString fileName, QString imgType)
+void MyVTK::saveSnapshot(QString fileName, QString imgType, QString locationFileName)
 {
     vtkSmartPointer<vtkWindowToImageFilter> w2img = vtkWindowToImageFilter::New();
 
@@ -700,6 +701,35 @@ void MyVTK::saveSnapshot(QString fileName, QString imgType)
 		bmpwriter->SetFileName((fileName.toStdString()).c_str()); 
 		bmpwriter->Write();
 	}
+    // Optional save of cell locations
+    int np = TCpos_list.length();
+    if (np == 0) return;
+    QString line;
+    QFile file(locationFileName);
+    if (!file.open(QFile::WriteOnly | QFile::Text)) {
+//        QMessageBox::warning(this, QString("Application"),
+//                             QString("Cannot write file %1:\n%2."));
+//                             .arg(locationFileName)
+//                             .arg(file.errorString()));
+        LOG_QMSG("File open failed: " + locationFileName);
+        return;
+    }
+    QTextStream out(&file);
+    LOG_MSG("Cell locations:");
+    double dx = Global::DELTA_X*1.0e4;  // note: DELTA_X is in cm
+    sprintf(msg,"delta_x (um), ncells: %f %d",dx,np);
+    LOG_MSG(msg);
+    out << QString::number(dx) << "\n";
+    out << QString::number(np) << "\n";
+    for (int i=0; i<np; i++) {
+        CELL_POS cp = TCpos_list[i];
+        double r = cp.diameter*dx/2;   // cell radius in um
+        sprintf(msg,"%d %3d %3d %3d %6.2f",cp.state,cp.x,cp.y,cp.z,r);
+        LOG_MSG(msg);
+        line = msg;
+        out << line << "\n";
+    }
+    file.close();
 }
 
 
