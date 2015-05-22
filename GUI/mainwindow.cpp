@@ -1387,6 +1387,7 @@ void MainWindow::readInputFile()
     reloadParams();
     paramSaved = true;
 	inputFile = fileName;
+    alabel_casename->setText(inputFile);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1508,6 +1509,7 @@ bool MainWindow::saveAs()
 		LOG_MSG("Selected file:");
 		LOG_QMSG(fileName);
 		inputFile = fileName;
+        alabel_casename->setText(inputFile);
         writeout();
 //        QDir dir = QDir(fileName);
 //        QString currPath = dir.absoluteFilePath(fileName);
@@ -1691,16 +1693,30 @@ void MainWindow::setSavePosStart()
 void MainWindow::saveSnapshot()
 {
 	LOG_MSG("saveSnapshot");
-	QString fileName = QFileDialog::getSaveFileName(this, tr("Select image file"), ".", 
+    QString imageFileName = QFileDialog::getSaveFileName(this, tr("Select image file"), ".",
 		tr("Image files (*.png *.jpg *.tif *.bmp)"));    
-	if (fileName.compare("") == 0) {
+    if (imageFileName.compare("") == 0) {
 		goToVTK();
 		return;
 	}
-	QFileInfo fi(fileName);
+    QFileInfo fi(imageFileName);
 	QString imgType = fi.suffix();
 	goToVTK();
-	vtk->saveSnapshot(fileName,imgType);
+
+    // Optionally save the snapshot as cell locations in a text file
+    QString locationFileName;
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, "Cell positions", "Save cell positions?", QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::Yes) {
+        qDebug() << "Yes was clicked";
+        locationFileName = QFileDialog::getSaveFileName(this, tr("Select cell location file"), ".",
+            tr("Text files (*.out *.txt)"));
+    } else {
+        qDebug() << "Yes was *not* clicked";
+        locationFileName = "";
+    }
+
+    vtk->saveSnapshot(imageFileName,imgType,locationFileName);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1911,6 +1927,7 @@ void MainWindow::runServer()
     exthread->nsteps = int(hours*60/Global::DELTA_T);
 	exthread->paused = false;
 	exthread->stopped = false;
+    LOG_MSG("exthread->start");
     exthread->start();
 }
 

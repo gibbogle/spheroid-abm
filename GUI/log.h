@@ -48,7 +48,14 @@ void close()
 
 //FIXME: A critical section is required to protect the file writing function in multithreading programms
 void write(char *pType, char *pMsg, char *pFileName, int lineNo)
-{ if(fp != NULL) {fprintf(fp, "%s\t%s\t%s\t%s\t%d\t%s\n", pType, __DATE__, __TIME__, pFileName, lineNo, pMsg); fflush(fp);} }
+{
+    if(fp != NULL) {
+        fprintf(fp, "%s\t%s\t%s\t%s\t%d\t%s\n", pType, __DATE__, __TIME__, pFileName, lineNo, pMsg);
+        fflush(fp);
+//        printf("%s\n",pMsg);
+//        fflush(stdout);
+    }
+}
 
 void qwrite(char *pType, QString qMsg, char *pFileName, int lineNo)
 { 
@@ -56,6 +63,7 @@ void qwrite(char *pType, QString qMsg, char *pFileName, int lineNo)
 		char *pMsg = (qMsg.toAscii()).data();
 		fprintf(fp, "%s\t%s\t%s\t%s\t%d\t%s\n", pType, __DATE__, __TIME__, pFileName, lineNo, pMsg); 
 		fflush(fp);
+//        printf("%s\n",pMsg);
 	} 
 }
 

@@ -285,7 +285,6 @@ real(REAL_KIND) :: d, rr(3)
 
 ok = .false.
 call RngInitialisation
-call logger("did RngInitialisation")
 
 ! These are deallocated here instead of in subroutine wrapup so that when a simulation run ends 
 ! it will still be possible to view the cell distributions and chemokine concentration fields.
@@ -1262,11 +1261,11 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat, maxchemo, nextra, cused, dfraction) BIND(C)
+subroutine get_dimensions(NX_dim, NY_dim, NZ_dim, nsteps_dim, deltat, maxchemo, nextra, cused, dfraction, deltax) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_dimensions
 use, intrinsic :: iso_c_binding
 integer(c_int) :: NX_dim,NY_dim,NZ_dim,nsteps_dim, maxchemo, nextra
-real(c_double) :: deltat, dfraction
+real(c_double) :: deltat, dfraction, deltax
 logical(c_bool) :: cused(*)
 integer :: ichemo
 
@@ -1275,6 +1274,7 @@ NY_dim = NY
 NZ_dim = NZ
 nsteps_dim = nsteps
 deltat = DELTA_T
+deltax = DELTA_X
 maxchemo = MAX_CHEMO
 nextra = N_EXTRA
 do ichemo = 1,MAX_CHEMO
@@ -1624,6 +1624,7 @@ integer(c_int) :: nTC_list, TC_list(*)
 integer :: k, kc, kcell, site(3), j, jb, colour, nlive
 integer :: col(3)
 integer :: x, y, z
+real(REAL_KIND) :: vol, r
 integer :: itcstate, ctype, stage, region, highlight
 integer :: last_id1, last_id2
 logical :: ok, highlighting
@@ -1725,7 +1726,10 @@ do kcell = 1,nlist
 		TC_list(j+1) = kcell + last_id1
 		TC_list(j+2:j+4) = site
 		TC_list(j+5) = colour
-		TC_list(j+6) = (cell_list(kcell)%volume)**(1./3.)	! diameter: 0.928 - 1.17
+		vol = cell_list(kcell)%volume*Vcell_cm3		! cell volume in cm3
+		r = (3*vol/(4*PI))**(1./3.)					! cell radius in cm
+		TC_list(j+6) = 200*r/DELTA_X				! 100*diameter as fraction of DELTA_X
+!		TC_list(j+6) = (cell_list(kcell)%volume)**(1./3.)	! diameter: 0.928 - 1.17
 		TC_list(j+7) = highlight
 		last_id2 = kcell + last_id1
 		nlive = nlive + 1

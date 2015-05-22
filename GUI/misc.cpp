@@ -177,7 +177,8 @@ void ExecThread::run()
     LOG_MSG("call execute");
     execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
     LOG_MSG("did execute");
-    get_dimensions(&Global::NX,&Global::NY,&Global::NZ,&nsteps,&Global::DELTA_T, &Global::MAX_CHEMO, &Global::N_EXTRA, cused, &Global::dfraction);
+    get_dimensions(&Global::NX, &Global::NY, &Global::NZ, &nsteps, &Global::DELTA_T, &Global::MAX_CHEMO, &Global::N_EXTRA,
+                   cused, &Global::dfraction, &Global::DELTA_X);
     summary_interval = int(3600./Global::DELTA_T);
     sprintf(msg,"exthread: nsteps: %d summary_interval: %d",nsteps,summary_interval);
     LOG_MSG(msg);
