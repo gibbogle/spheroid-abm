@@ -1,0 +1,57 @@
+cmake_minimum_required(VERSION 2.8)
+PROJECT(cell_tiffer)
+
+#IF(NOT VTK_BINARY_DIR)
+#FIND_PACKAGE(VTK)
+#IF(NOT VTK_DIR)
+#  MESSAGE(FATAL_ERROR "Please set VTK_DIR.")
+#ENDIF(NOT VTK_DIR)
+#INCLUDE(${VTK_USE_FILE})
+#ENDIF(NOT VTK_BINARY_DIR)
+
+FIND_PACKAGE ( ITK REQUIRED)
+IF ( ITK_FOUND)
+INCLUDE( ${USE_ITK_FILE} )
+ENDIF( ITK_FOUND)
+
+#SET(QT_QMAKE_EXECUTABLE "C:/Qt64/4.8.1/bin/qmake.exe")
+#SET(QT_MOC_EXECUTABLE "C:/Qt64/4.8.1/bin/moc.exe")
+#SET(QT_UIC_EXECUTABLE "C:/Qt64/4.8.1/bin/uic.exe")
+SET(QT_QMAKE_EXECUTABLE "C:/QtSDK/Desktop/Qt/4.8.1/msvc2010/bin/qmake.exe")
+SET(QT_MOC_EXECUTABLE "C:/QtSDK/Desktop/Qt/4.8.1/msvc2010/bin/moc.exe")
+SET(QT_UIC_EXECUTABLE "C:/QtSDK/Desktop/Qt/4.8.1/msvc2010/bin/uic.exe")
+
+FIND_PACKAGE(Qt4 REQUIRED)
+INCLUDE(${QT_USE_FILE})
+# Set your files and resources here
+SET(Main main.cpp mainwindow.cpp cell.cpp tiff.cpp location.h)
+SET(MainUI mainwindow.ui)
+SET(MainH mainwindow.h)
+INCLUDE_DIRECTORIES(
+  ${QT_INCLUDE_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}
+)
+QT4_WRAP_UI(UISrcs ${MainUI})
+QT4_WRAP_CPP(MOCSrcs ${MainH} )
+SOURCE_GROUP("Resources" FILES
+  ${MainUI}
+)
+SOURCE_GROUP("Generated" FILES
+  ${UISrcs}
+  ${MOCSrcs}
+  ${RCS_SOURCES}
+)
+
+set(PROJECTNAME "cell_tiffer")
+#set(BIN_DIR "../../bin")
+
+OPTION(BUILD_SHARED_LIBS "Build package with shared libraries." OFF)
+OPTION(CMAKE_EXE_LINKER_FLAGS "-static")
+
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+ADD_EXECUTABLE( ${PROJECTNAME} ${Main} ${UISrcs} ${MOCSrcs})
+#TARGET_LINK_LIBRARIES( main QVTK ${ITK_LIBRARIES}  )
+TARGET_LINK_LIBRARIES( ${PROJECTNAME} ${ITK_LIBRARIES} ${QT_LIBRARIES} )
+
+#ADD_CUSTOM_COMMAND(TARGET ${PROJECTNAME} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy ${PROJECTNAME}.exe ${BIN_DIR}/.)

@@ -1,0 +1,17 @@
+cell_tiffer
+-----------
+
+The user selects a file that holds cell locations at an instant.
+
+voxelsize - the size of a voxel in um - provides the image scale.
+
+A thick slice is defined by its central z position, and by its thickness.  
+The z position is determined by the distance from the spheroid centre,
+expressed as a fraction of the spheroid radius: -1 < zfraction < 1.
+where 0 corresponds to the centre.
+
+The program determines the 2D projection of this slice, in which
+voxels that fall within a cell are lit (255).  To be precise:
+the pixel value at (x,y) = 255 if for any z in the range(z1,z2)
+(x,y,z) corresponds to a point that is inside a cell, where
+z1 <= z <= z2 defines the range of the slice.

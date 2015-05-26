@@ -1,0 +1,234 @@
+100         NX                                    Lattice size
+1000        INITIAL_COUNT                         Initial number of tumour cells
+24          DIVIDE_TIME_MEDIAN                    Division time median parameter
+1.2         DIVIDE_TIME_SHAPE                     Division time shape parameter
+0           V_DEPENDENT_GROWTH_RATE               V-dependent growth rate
+1           RANDOMISE_INITIAL_V                   Randomise initial cell volumes
+10          NDAYS                                 Number of days
+600         DELTA_T                               Time step
+1           NT_CONC                               Number of ODE solver sub-steps.
+500000      NMM3                                  Cells/cubic mm
+0.5         FLUID_FRACTION                        Fluid fraction
+1           MEDIUM_VOLUME                         Medium volume
+0.01        UNSTIRRED_LAYER                       Unstirred layer width
+1.6         VDIVIDE0                              Nominal divide volume
+0.05        DVDIVIDE                              Divide volume variation
+0.1         MM_THRESHOLD                          Michaelis-Menten O2 threshold
+0.15        ANOXIA_THRESHOLD                      Anoxia threshold
+3           ANOXIA_TAG_TIME                       Anoxic time limit
+3           ANOXIA_DEATH_TIME                     Anoxic death delay time
+0           TEST_CASE                             Test case #
+1234        SEED1                                 First RNG seed
+5678        SEED2                                 Second RNG seed
+4           NCPU                                  Number of CPUs
+2           NCELLTYPES                            Number of cell types
+100         CELLPERCENT_1                         Percentage of cell type 1
+0           CELLPERCENT_2                         Percentage of cell type 2
+1           NT_ANIMATION                          Animation interval (timesteps)
+0           SHOW_PROGENY                          Show descendents of cell #
+1           USE_OXYGEN                            Use Oxygen?
+2e-05       OXYGEN_DIFF_COEF                      Spheroid diffusion coeff
+2.5e-05     OXYGEN_MEDIUM_DIFF                    Medium diffusion coeff
+10          OXYGEN_CELL_DIFF                      Membrane diff constant
+0.18        OXYGEN_BDRY_CONC                      Boundary concentration
+0           OXYGEN_CONSTANT                       Constant concentration
+2.3e-16     OXYGEN_CONSUMPTION                    Max consumption rate
+1.33        OXYGEN_MM_KM                          Michaelis-Menten Km
+1           OXYGEN_HILL_N                         Hill function N
+1           USE_GLUCOSE                           Use Glucose?
+6e-07       GLUCOSE_DIFF_COEF                     Spheroid diffusion coeff
+6e-06       GLUCOSE_MEDIUM_DIFF                   Medium diffusion coeff
+20          GLUCOSE_CELL_DIFF                     Membrane diff constant
+9           GLUCOSE_BDRY_CONC                     Boundary concentration
+0           GLUCOSE_CONSTANT                      Constant concentration
+3.8e-17     GLUCOSE_CONSUMPTION                   Max consumption rate
+1.33        GLUCOSE_MM_KM                         Michaelis-Menten Km
+1           GLUCOSE_HILL_N                        Hill function N
+0           USE_TRACER                            Use Tracer?
+6e-07       TRACER_DIFF_COEF                      Spheroid diffusion coeff
+6e-06       TRACER_MEDIUM_DIFF                    Medium diffusion coeff
+20          TRACER_CELL_DIFF                      Membrane diff constant
+1           TRACER_BDRY_CONC                      Boundary concentration
+1           TRACER_CONSTANT                       Constant concentration
+0           TRACER_CONSUMPTION                    Consumption rate
+0           TRACER_MM_KM                          Michaelis-Menten Km
+0           TRACER_HILL_N                         Hill function N
+1           USE_TPZ_DRUG                          Use TPZ-type?
+SN30000     TPZ_DRUG_NAME                         SN30000
+0           TPZ_DRUG_BDRY_CONC                    Boundary concentration
+0           TPZ_DRUG_CONSTANT                     Constant concentration
+0           TPZ_DRUG_SIMULATE_METABOLITE          Simulate metabolites
+6e-07       TPZ_DIFF_COEF                         Spheroid diffusion coeff
+6e-06       TPZ_MEDIUM_DIFF                       Medium diffusion coeff
+5           TPZ_CELL_DIFF_IN                      Membrane diff (in)
+5           TPZ_CELL_DIFF_OUT                     Membrane diff (out)
+2           TPZ_HALFLIFE                          Half-life
+6e-07       TPZ_DIFF_COEF_MET1                    Spheroid diffusion coeff
+6e-06       TPZ_MEDIUM_DIFF_MET1                  Medium diffusion coeff
+5           TPZ_CELL_DIFF_IN_MET1                 Membrane diff (in)
+5           TPZ_CELL_DIFF_OUT_MET1                Membrane diff (out)
+2           TPZ_HALFLIFE_MET1                     Half-life
+6e-07       TPZ_DIFF_COEF_MET2                    Spheroid diffusion coeff
+6e-06       TPZ_MEDIUM_DIFF_MET2                  Medium diffusion coeff
+5           TPZ_CELL_DIFF_IN_MET2                 Membrane diff (in)
+5           TPZ_CELL_DIFF_OUT_MET2                Membrane diff (out)
+2           TPZ_HALFLIFE_MET2                     Half-life
+1.54        TPZ_KMET0_CELL1                       Kmet0
+1           TPZ_C2_CELL1                          C2
+1.14        TPZ_KO2_CELL1                         KO2
+0           TPZ_VMAX_CELL1                        Vmax
+1           TPZ_KM_CELL1                          Km
+0.001       TPZ_KLESION_CELL1                     Klesion    
+1           TPZ_KILL_MODEL_CELL1                  Kill model
+0           TPZ_KILL_O2_CONC_CELL1                O2 conc
+0.01        TPZ_KILL_DRUG_CONC_CELL1              Drug conc
+60          TPZ_KILL_DURATION_CELL1               Duration
+0.9         TPZ_KILL_FRACTION_CELL1               Kill fraction
+0.5         TPZ_KMET0_CELL1_MET1                  Kmet0
+0           TPZ_C2_CELL1_MET1                     C2
+1           TPZ_KO2_CELL1_MET1                    KO2
+0           TPZ_VMAX_CELL1_MET1                   Vmax
+1           TPZ_KM_CELL1_MET1                     Km
+0.001       TPZ_KLESION_CELL1_MET1                Klesion  
+0.5         TPZ_KMET0_CELL1_MET2                  Kmet0
+0           TPZ_C2_CELL1_MET2                     C2
+1           TPZ_KO2_CELL1_MET2                    KO2
+0           TPZ_VMAX_CELL1_MET2                   Vmax
+1           TPZ_KM_CELL1_MET2                     Km
+0.001       TPZ_KLESION_CELL1_MET2                Klesion  
+1.54        TPZ_KMET0_CELL2                       Kmet0
+1           TPZ_C2_CELL2                          C2
+1.14        TPZ_KO2_CELL2                         KO2
+0           TPZ_VMAX_CELL2                        Vmax
+1           TPZ_KM_CELL2                          Km
+0.001       TPZ_KLESION_CELL2                     Klesion    
+1           TPZ_KILL_MODEL_CELL2                  Kill model
+0           TPZ_KILL_O2_CONC_CELL2                O2 conc
+0.01        TPZ_KILL_DRUG_CONC_CELL2              Drug conc
+60          TPZ_KILL_DURATION_CELL2               Duration
+0.9         TPZ_KILL_FRACTION_CELL2               Kill fraction
+0.5         TPZ_KMET0_CELL2_MET1                  Kmet0
+0           TPZ_C2_CELL2_MET1                     C2
+1           TPZ_KO2_CELL2_MET1                    KO2
+0           TPZ_VMAX_CELL2_MET1                   Vmax
+1           TPZ_KM_CELL2_MET1                     Km
+0.001       TPZ_KLESION_CELL2_MET1                Klesion  
+0.5         TPZ_KMET0_CELL2_MET2                  Kmet0
+0           TPZ_C2_CELL2_MET2                     C2
+1           TPZ_KO2_CELL2_MET2                    KO2
+0           TPZ_VMAX_CELL2_MET2                   Vmax
+1           TPZ_KM_CELL2_MET2                     Km
+0.001       TPZ_KLESION_CELL2_MET2                Klesion  
+0           USE_DNB_DRUG                          Use DNB-type drug?
+PR104A      DNB_DRUG_NAME                         PR104A
+0           DNB_DRUG_BDRY_CONC                    Drug boundary concentration
+0           DNB_DRUG_CONSTANT                     Constant concentration
+0           DNB_DRUG_SIMULATE_METABOLITE          Simulate metabolites
+6e-07       DNB_DIFF_COEF                         Spheroid diffusion coeff
+6e-06       DNB_MEDIUM_DIFF                       Medium diffusion coeff
+5           DNB_CELL_DIFF_IN                      Membrane diff (in)
+5           DNB_CELL_DIFF_OUT                     Membrane diff (out)
+2           DNB_HALFLIFE                          Half-life
+6e-07       DNB_DIFF_COEF_MET1                    Spheroid diffusion coeff
+6e-06       DNB_MEDIUM_DIFF_MET1                  Medium diffusion coeff
+5           DNB_CELL_DIFF_IN_MET1                 Membrane diff (in)
+5           DNB_CELL_DIFF_OUT_MET1                Membrane diff (out)
+2           DNB_HALFLIFE_MET1                     Half-life
+6e-07       DNB_DIFF_COEF_MET2                    Spheroid diffusion coeff
+6e-06       DNB_MEDIUM_DIFF_MET2                  Medium diffusion coeff
+5           DNB_CELL_DIFF_IN_MET2                 Membrane diff (in)
+5           DNB_CELL_DIFF_OUT_MET2                Membrane diff (out)
+2           DNB_HALFLIFE_MET2                     Half-life
+1.54        DNB_KMET0_CELL1                       Kmet0
+1           DNB_C2_CELL1                          C2
+1.14        DNB_KO2_CELL1                         KO2
+0           DNB_VMAX_CELL1                        Vmax
+1           DNB_KM_CELL1                          Km
+0.001       DNB_KLESION_CELL1                     Klesion    
+0           DNB_KILL_MODEL_CELL1                  Kill model
+0           DNB_KILL_O2_CONC_CELL1                O2 conc
+0           DNB_KILL_DRUG_CONC_CELL1              Drug conc
+0           DNB_KILL_DURATION_CELL1               Duration
+0           DNB_KILL_FRACTION_CELL1               Kill fraction
+0.5         DNB_KMET0_CELL1_MET1                  Kmet0
+0           DNB_C2_CELL1_MET1                     C2
+1           DNB_KO2_CELL1_MET1                    KO2
+0           DNB_VMAX_CELL1_MET1                   Vmax
+1           DNB_KM_CELL1_MET1                     Km
+0.001       DNB_KLESION_CELL1_MET1                Klesion  
+4           DNB_KILL_MODEL_CELL1_MET1             Kill model
+0           DNB_KILL_O2_CONC_CELL1_MET1           O2 conc
+0.01        DNB_KILL_DRUG_CONC_CELL1_MET1         Drug conc
+60          DNB_KILL_DURATION_CELL1_MET1          Duration
+0.9         DNB_KILL_FRACTION_CELL1_MET1          Kill fraction
+0.5         DNB_KMET0_CELL1_MET2                  Kmet0
+0           DNB_C2_CELL1_MET2                     C2
+1           DNB_KO2_CELL1_MET2                    KO2
+0           DNB_VMAX_CELL1_MET2                   Vmax
+1           DNB_KM_CELL1_MET2                     Km
+0.001       DNB_KLESION_CELL1_MET2                Klesion  
+4           DNB_KILL_MODEL_CELL1_MET2             Kill model
+0           DNB_KILL_O2_CONC_CELL1_MET2           O2 conc
+0.01        DNB_KILL_DRUG_CONC_CELL1_MET2         Drug conc
+60          DNB_KILL_DURATION_CELL1_MET2          Duration
+0.9         DNB_KILL_FRACTION_CELL1_MET2          Kill fraction
+1.54        DNB_KMET0_CELL2                       Kmet0
+1           DNB_C2_CELL2                          C2
+1.14        DNB_KO2_CELL2                         KO2
+0           DNB_VMAX_CELL2                        Vmax
+1           DNB_KM_CELL2                          Km
+0.001       DNB_KLESION_CELL2                     Klesion    
+0           DNB_KILL_MODEL_CELL2                  Kill model
+0           DNB_KILL_O2_CONC_CELL2                O2 conc
+0           DNB_KILL_DRUG_CONC_CELL2              Drug conc
+0           DNB_KILL_DURATION_CELL2               Duration
+0           DNB_KILL_FRACTION_CELL2               Kill fraction
+0.5         DNB_KMET0_CELL2_MET1                  Kmet0
+0           DNB_C2_CELL2_MET1                     C2
+1           DNB_KO2_CELL2_MET1                    KO2
+0           DNB_VMAX_CELL2_MET1                   Vmax
+1           DNB_KM_CELL2_MET1                     Km
+0.001       DNB_KLESION_CELL2_MET1                Klesion  
+4           DNB_KILL_MODEL_CELL2_MET1             Kill model
+0           DNB_KILL_O2_CONC_CELL2_MET1           O2 conc
+0.01        DNB_KILL_DRUG_CONC_CELL2_MET1         Drug conc
+60          DNB_KILL_DURATION_CELL2_MET1          Duration
+0.9         DNB_KILL_FRACTION_CELL2_MET1          Kill fraction
+0.5         DNB_KMET0_CELL2_MET2                  Kmet0
+0           DNB_C2_CELL2_MET2                     C2
+1           DNB_KO2_CELL2_MET2                    KO2
+0           DNB_VMAX_CELL2_MET2                   Vmax
+1           DNB_KM_CELL2_MET2                     Km
+0.001       DNB_KLESION_CELL2_MET2                Klesion  
+4           DNB_KILL_MODEL_CELL2_MET2             Kill model
+0           DNB_KILL_O2_CONC_CELL2_MET2           O2 conc
+0.01        DNB_KILL_DRUG_CONC_CELL2_MET2         Drug conc
+60          DNB_KILL_DURATION_CELL2_MET2          Duration
+0.9         DNB_KILL_FRACTION_CELL2_MET2          Kill fraction
+0.0473      RADIATION_ALPHA_H                     Alpha (hypoxia)
+0.0017      RADIATION_BETA_H                      Beta (hypoxia)
+2.5         RADIATION_OER_ALPHA                   OER alpha
+3           RADIATION_OER_BETA                    OER beta
+0.0043      RADIATION_KM                          Km for radiosensitivity
+0.1         HYPOXIA_1                             Hypoxia threshold 1
+1           HYPOXIA_2                             Hypoxia threshold 2
+4           HYPOXIA_3                             Hypoxia threshold 3
+0.25        GROWTH_FRACTION_1                     Growth fraction threshold 1
+0.1         GROWTH_FRACTION_2                     Growth fraction threshold 2
+0.01        GROWTH_FRACTION_3                     Growth fraction threshold 3
+200         SPCRAD                                Spectral radius
+0           USE_EXTRA                             Use extra conc
+0           USE_RELAX                             Use O2 relaxation solver
+1           USE_PAR_RELAX                         Use parallel O2 relaxation solver
+1           USE_TREATMENT_FILE                    Use treatment file?
+Rad_SN30K.data TREATMENT_FILE                     Rad_SN30K.data
+0           USE_DROP                              Account for drop deformation
+1000        NDROP                                 Dropping cell count
+0.4         DROP_ALPHA                            Contact_diameter/diameter
+0.6         DROP_BETA                             Height/diameter
+0           SAVE_PROFILE_DATA                     Save profile data
+profile_data SAVE_PROFILE_DATA_FILE               profile_data
+0           SAVE_PROFILE_DATA_INTERVAL            Interval
+1           SAVE_PROFILE_DATA_NUMBER              Number
+0           DUMMY_HYPOXIA_THRESHOLD               Hypoxia threshold
+0           DUMMY_GROWTH_FRACTION                 Growth fraction
