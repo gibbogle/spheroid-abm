@@ -1,4 +1,5 @@
-build/**
+build/*
+build/Release/
 Calibration/**
 cell_tiffer-builder/**
 check/
