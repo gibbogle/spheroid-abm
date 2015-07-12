@@ -1,5 +1,6 @@
 build/**/*
 Calibration/
+cell_tiffer-builder/
 cell_tiffer-builder/**/*
 check/
 DLLs-4.7.4/**/*
@@ -16,3 +17,7 @@ spheroid_GUI-build/**/*
 test-vs8/**/*
 test-vs10/**/*
 ToDo/
+/GUI/spheroid_GUI.pro.user
+/GUI/spheroid_GUI.pro
+/Cell_tiffer/cell_tiffer.pro
+/Cell_tiffer/cell_tiffer.pro.user

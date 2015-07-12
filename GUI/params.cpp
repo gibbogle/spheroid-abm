@@ -33,12 +33,21 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Initial number of tumour cells",
 "Initial number of tumour cells"},
 
-{"DIVIDE_TIME_MEDIAN", 24, 0, 0,
+{"DIVIDE_TIME_1_MEDIAN", 24, 0, 0,
+"Median (h)",
+"The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters. \n\
+[hours]"},
+
+{"DIVIDE_TIME_1_SHAPE", 1.2, 0, 0,
+"Shape parameter",
+"The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters."},
+
+{"DIVIDE_TIME_2_MEDIAN", 24, 0, 0,
 "Division time median parameter",
 "The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters. \n\
 [hours]"},
 
-{"DIVIDE_TIME_SHAPE", 1.2, 0, 0,
+{"DIVIDE_TIME_2_SHAPE", 1.2, 0, 0,
 "Division time shape parameter",
 "The time taken for tumour cell division has a lognormal distribution, described by the median and shape parameters."},
 
@@ -923,26 +932,53 @@ The shape value must be greater than 1, and values close to 1 give distributions
 // Radiotherapy parameters
 //==========================
 
-{"RADIATION_ALPHA_H", 0.0473, 0, 0,
+{"RADIATION_ALPHA_H_1", 0.0473, 0, 0,
 "Alpha (hypoxia)",
 "alpha for irradiation of cells under anoxia (zero oxygen)"},
 
-{"RADIATION_BETA_H", 0.0017, 0, 0,
+{"RADIATION_BETA_H_1", 0.0017, 0, 0,
 "Beta (hypoxia)",
 "beta for irradiation of cells under anoxia (zero oxygen)"},
 
-{"RADIATION_OER_ALPHA", 2.5, 0, 0,
+{"RADIATION_OER_ALPHA_1", 2.5, 0, 0,
 "OER alpha",
 "Maximum oxygen enhancement ratio for alpha component of radiosensitivity "},
 
-{"RADIATION_OER_BETA", 3.0, 0, 0,
+{"RADIATION_OER_BETA_1", 3.0, 0, 0,
 "OER beta",
 "Maximum oxygen enhancement ratio for beta component of radiosensitivity"},
 
-{"RADIATION_KM", 4.3e-3, 0, 0,
+{"RADIATION_KM_1", 4.3e-3, 0, 0,
 "Km for radiosensitivity",
 "Oxygen concentration for half maximal radiosensitivity relative to hypoxic cell exposure"},
 
+{"RADIATION_DEATH_PROB_1", 1.0, 0, 0,
+"Death prob",
+"Probability of death at mitosis for a cell tagged for damage by radiation"},
+
+{"RADIATION_ALPHA_H_2", 0.0473, 0, 0,
+"Alpha (hypoxia)",
+"alpha for irradiation of cells under anoxia (zero oxygen)"},
+
+{"RADIATION_BETA_H_2", 0.0017, 0, 0,
+"Beta (hypoxia)",
+"beta for irradiation of cells under anoxia (zero oxygen)"},
+
+{"RADIATION_OER_ALPHA_2", 2.5, 0, 0,
+"OER alpha",
+"Maximum oxygen enhancement ratio for alpha component of radiosensitivity "},
+
+{"RADIATION_OER_BETA_2", 3.0, 0, 0,
+"OER beta",
+"Maximum oxygen enhancement ratio for beta component of radiosensitivity"},
+
+{"RADIATION_KM_2", 4.3e-3, 0, 0,
+"Km for radiosensitivity",
+"Oxygen concentration for half maximal radiosensitivity relative to hypoxic cell exposure"},
+
+{"RADIATION_DEATH_PROB_2", 1.0, 0, 0,
+"Death prob",
+"Probability of death at mitosis for a cell tagged for damage by radiation"},
 
 {"HYPOXIA_1", 0.1, 0, 0,
 "Hypoxia threshold 1",

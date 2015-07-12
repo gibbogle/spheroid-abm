@@ -62,7 +62,7 @@ MainWindow::MainWindow(QWidget *parent)
     nDistPts = 200;
 	nTicks = 1000;
 	tickVTK = 100;	// timer tick for VTK in milliseconds
-    ndistplots = 1;
+    ndistplots = 2;
     paramSaved = false;
 	paused = false;
 	posdata = false;
@@ -324,8 +324,10 @@ void MainWindow::createLists()
 
 	QwtPlot *qp;
 
-    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE_TIME");
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE_TIME_1");
     distplot_list[0] = qp;
+    qp = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_DIVIDE_TIME_2");
+    distplot_list[1] = qp;
 }
 
 
@@ -441,11 +443,15 @@ void MainWindow:: drawDistPlots()
 		qp = distplot_list[j];
         QString name = qp->objectName();
         if (j == 0) {
-            qp->setTitle("Tumour cell division time (hrs)");
-            median_qstr = line_DIVIDE_TIME_MEDIAN->text();
-            shape_qstr = line_DIVIDE_TIME_SHAPE->text();
+            qp->setTitle("Type 1 division time (hrs)");
+            median_qstr = line_DIVIDE_TIME_1_MEDIAN->text();
+            shape_qstr = line_DIVIDE_TIME_1_SHAPE->text();
+        } else if (j == 1) {
+            qp->setTitle("Type 2 division time (hrs)");
+            median_qstr = line_DIVIDE_TIME_2_MEDIAN->text();
+            shape_qstr = line_DIVIDE_TIME_2_SHAPE->text();
         }
-		median = median_qstr.toDouble();
+        median = median_qstr.toDouble();
 		shape = shape_qstr.toDouble();
         create_lognorm_dist(median,shape,nDistPts,x,prob);
 
@@ -1001,9 +1007,9 @@ void MainWindow::loadParams()
                     QString labelText = p.label;
                     
                     // Hardcode the distribution label names for now
-                    if (wtag.compare("DIVIDE_TIME_MEDIAN") == 0)
+                    if (wtag.compare("DIVIDE_TIME_MEDIAN_1") == 0)
                         labelText = "Median";
-                    else if (wtag.compare("DIVIDE_TIME_SHAPE") == 0)
+                    else if (wtag.compare("DIVIDE_TIME_SHAPE_1") == 0)
                         labelText = "Shape";
 
 					bool is_slider = false;
@@ -2930,7 +2936,7 @@ void MainWindow::redrawDistPlot()
         QString tag = qp->objectName().mid(8);
         QString tag_m = tag + "_MEDIAN";
         QString tag_s = tag + "_SHAPE";
-		if (sname.endsWith(tag_m) || sname.endsWith(tag_s)) {   
+        if (sname.endsWith(tag_m) || sname.endsWith(tag_s)) {
 			for (int i=0; i<nWidgets; i++) {
 				QString wname = widget_list[i]->objectName();
                 if (wname.endsWith(tag_m))

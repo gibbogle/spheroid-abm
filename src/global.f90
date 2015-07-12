@@ -109,6 +109,7 @@ type cell_type
 	real(REAL_KIND) :: t_hypoxic
 	real(REAL_KIND) :: t_anoxia_die
 	real(REAL_KIND) :: M
+	real(REAL_KIND) :: p_death
 	logical :: radiation_tag, drugA_tag, drugB_tag, anoxia_tag
 	logical :: exists
 end type
@@ -233,9 +234,10 @@ type LQ_type
 	real(REAL_KIND) :: OER_am, OER_bm
 	real(REAL_KIND) :: alpha_H, beta_H
 	real(REAL_KIND) :: K_ms
+	real(REAL_KIND) :: death_prob
 end type
 
-type(dist_type) :: divide_dist
+type(dist_type) :: divide_dist(MAX_CELLTYPES)
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable :: cell_list(:)
 type(treatment_type), allocatable :: protocol(:)
@@ -259,9 +261,10 @@ logical :: is_dropped
 
 integer :: jumpvec(3,27)
 
-integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes
+integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes, Ncells_type(MAX_CELLTYPES)
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
-integer :: NdrugA_tag, NdrugB_tag, Nradiation_tag, Nanoxia_tag, NdrugA_dead, NdrugB_dead, Nradiation_dead, Nanoxia_dead
+integer :: NdrugA_tag(MAX_CELLTYPES), NdrugB_tag(MAX_CELLTYPES), Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
+integer :: NdrugA_dead(MAX_CELLTYPES), NdrugB_dead(MAX_CELLTYPES), Nradiation_dead(MAX_CELLTYPES), Nanoxia_dead(MAX_CELLTYPES)
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes, ncpu_input
 integer :: Nevents
@@ -271,7 +274,7 @@ real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
-real(REAL_KIND) :: divide_time_median, divide_time_shape, divide_time_mean, dt_saveprofiledata
+real(REAL_KIND) :: divide_time_median(MAX_CELLTYPES), divide_time_shape(MAX_CELLTYPES), divide_time_mean(MAX_CELLTYPES), dt_saveprofiledata
 real(REAL_KIND) :: t_simulation, execute_t1
 real(REAL_KIND) :: O2cutoff(3)
 real(REAL_KIND) :: growthcutoff(3)
@@ -282,7 +285,7 @@ type(TPZ_type) :: TPZ
 type(DNB_type) :: DNB
 
 logical :: bdry_changed
-type(LQ_type) :: LQ
+type(LQ_type) :: LQ(MAX_CELLTYPES)
 character*(128) :: inputfile
 character*(128) :: treatmentfile
 character*(128) :: outputfile
@@ -526,14 +529,15 @@ end subroutine
 
 !--------------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------------
-real(REAL_KIND) function DivideTime()
+real(REAL_KIND) function DivideTime(ityp)
+integer :: ityp
 real(REAL_KIND) :: p1, p2
 integer :: kpar = 0
 
 dividetime = 0
-p1 = divide_dist%p1
-p2 = divide_dist%p2
-select case (divide_dist%class)
+p1 = divide_dist(ityp)%p1
+p2 = divide_dist(ityp)%p2
+select case (divide_dist(ityp)%class)
 case (NORMAL_DIST)
 	DivideTime = rv_normal(p1,p2,kpar)
 case (LOGNORMAL_DIST)
@@ -545,11 +549,12 @@ end function
 
 !--------------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------------
-real function DivisionTime()
+real function DivisionTime(ityp)
+integer :: ityp
 integer :: kpar = 0
 real(REAL_KIND), parameter :: rndfraction = 0.2
 
-DivisionTime = rv_lognormal(divide_dist%p1,divide_dist%p2,kpar)
+DivisionTime = rv_lognormal(divide_dist(ityp)%p1,divide_dist(ityp)%p2,kpar)
 end function
 
 !--------------------------------------------------------------------------------------

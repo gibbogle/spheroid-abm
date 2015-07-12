@@ -75,8 +75,9 @@ end subroutine
 subroutine Irradiation(dose,ok)
 real(REAL_KIND) :: dose
 logical :: ok
-integer :: kcell, site(3), iv, kpar=0
-real(REAL_KIND) :: C_O2, OER_alpha_d, OER_beta_d, expon, kill_prob, R
+integer :: kcell, site(3), iv, ityp, kpar=0
+real(REAL_KIND) :: C_O2, p_death, p_recovery, R, kill_prob
+!real(REAL_KIND) :: OER_alpha_d, OER_beta_d, expon
 
 ok = .true.
 call logger('Irradiation')
@@ -88,17 +89,58 @@ call logger('Irradiation')
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	if (cell_list(kcell)%radiation_tag) cycle	! we do not tag twice (yet)
+	ityp = cell_list(kcell)%celltype
 	call getO2conc(kcell,C_O2)
-	OER_alpha_d = dose*(LQ%OER_am*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
-	OER_beta_d = dose*(LQ%OER_bm*C_O2 + LQ%K_ms)/(C_O2 + LQ%K_ms)
-	expon = LQ%alpha_H*OER_alpha_d + LQ%beta_H*OER_alpha_d**2
-	kill_prob = 1 - exp(-expon)
+!	OER_alpha_d = dose*(LQ(ityp)%OER_am*C_O2 + LQ(ityp)%K_ms)/(C_O2 + LQ(ityp)%K_ms)
+!	OER_beta_d = dose*(LQ(ityp)%OER_bm*C_O2 + LQ(ityp)%K_ms)/(C_O2 + LQ(ityp)%K_ms)
+!	expon = LQ(ityp)%alpha_H*OER_alpha_d + LQ(ityp)%beta_H*OER_alpha_d**2
+!	kill_prob = 1 - exp(-expon)
+	call get_kill_probs(ityp,dose,C_O2,p_recovery,p_death)
+	kill_prob = 1 - p_recovery
 	R = par_uni(kpar)
 	if (R < kill_prob) then
 		cell_list(kcell)%radiation_tag = .true.
-		Nradiation_tag = Nradiation_tag + 1
+		Nradiation_tag(ityp) = Nradiation_tag(ityp) + 1
+		cell_list(kcell)%p_death = p_death
 	endif
 enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! A cell that receives a dose of radiation either recovers completely before reaching 
+! mitosis or retains damage that has a probability of causing cell death during mitosis.
+! A damaged cell that does not die at this point passes the damage on to the progeny cells.
+! The probability of complete recovery = p_recovery = p_r
+! The probability of death for a famaged cell at mitosis = p_death = p_d
+! To ensure that the short-term death probability is consistent with the previous
+! LQ formulation, we require p_d(1-p_r) = kill_prob as previously calculated.
+! If p_d is determined (currently it is fixed), then 1-p_r = kill_prob/p_d,
+! therefore p_r = 1 - kill_prob/p_d
+!-----------------------------------------------------------------------------------------
+subroutine get_kill_probs(ityp,dose,C_O2,p_recovery,p_death)
+integer :: ityp
+real(REAL_KIND) :: dose, C_O2, p_recovery, p_death
+real(REAL_KIND) :: OER_alpha_d, OER_beta_d, expon, kill_prob_orig
+
+OER_alpha_d = dose*(LQ(ityp)%OER_am*C_O2 + LQ(ityp)%K_ms)/(C_O2 + LQ(ityp)%K_ms)
+OER_beta_d = dose*(LQ(ityp)%OER_bm*C_O2 + LQ(ityp)%K_ms)/(C_O2 + LQ(ityp)%K_ms)
+expon = LQ(ityp)%alpha_H*OER_alpha_d + LQ(ityp)%beta_H*OER_alpha_d**2
+kill_prob_orig = 1 - exp(-expon)
+call get_pdeath(ityp,dose,C_O2,p_death)
+p_recovery = 1 - kill_prob_orig/p_death
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! This is the probability of death at time of division of cell that received a dose of 
+! radiation and did not recover.
+! In general one would expect this to depend of damage, i.e. on dose and C_O2, but
+! for now it is a constant for a cell type
+!-----------------------------------------------------------------------------------------
+subroutine get_pdeath(ityp,dose,C_O2,p_death)
+integer :: ityp
+real(REAL_KIND) :: dose, C_O2, p_death
+
+p_death = LQ(ityp)%death_prob
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -164,7 +206,7 @@ end function
 subroutine CellDeath(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
-integer :: kcell, ict, nlist0, site(3), i, im, kpar=0 
+integer :: kcell, ict, nlist0, site(3), i, im, ityp, kpar=0 
 real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, kill_prob, tnow
 logical :: use_TPZ_DRUG, use_DNB_DRUG
 
@@ -176,6 +218,7 @@ tnow = istep*DELTA_T	! seconds
 nlist0 = nlist
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
+	ityp = cell_list(kcell)%celltype
 	call getO2conc(kcell,C_O2)
 	if (cell_list(kcell)%anoxia_tag) then
 !		write(logmsg,*) 'anoxia_tag: ',kcell,cell_list(kcell)%state,tnow,cell_list(kcell)%t_anoxia_die
@@ -183,15 +226,15 @@ do kcell = 1,nlist
 		if (tnow >= cell_list(kcell)%t_anoxia_die) then
 !			call logger('cell dies')
 			call CellDies(kcell)
-			Nanoxia_dead = Nanoxia_dead + 1
+			Nanoxia_dead(ityp) = Nanoxia_dead(ityp) + 1
 			if (cell_list(kcell)%drugA_tag) then
-				NdrugA_tag = NdrugA_tag - 1
+				NdrugA_tag(ityp) = NdrugA_tag(ityp) - 1
 			endif
 			if (cell_list(kcell)%drugB_tag) then
-				NdrugB_tag = NdrugB_tag - 1
+				NdrugB_tag(ityp) = NdrugB_tag(ityp) - 1
 			endif
 			if (cell_list(kcell)%radiation_tag) then
-				Nradiation_tag = Nradiation_tag - 1
+				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
 			endif
 			cycle
 		endif
@@ -201,7 +244,7 @@ do kcell = 1,nlist
 			if (cell_list(kcell)%t_hypoxic > t_anoxic_limit) then
 				cell_list(kcell)%anoxia_tag = .true.						! tagged to die later
 				cell_list(kcell)%t_anoxia_die = tnow + anoxia_death_delay	! time that the cell will die
-				Nanoxia_tag = Nanoxia_tag + 1
+				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) + 1
 			endif
 		else
 			cell_list(kcell)%t_hypoxic = 0
@@ -225,7 +268,7 @@ do kcell = 1,nlist
 		endif
 	    if (par_uni(kpar) < kill_prob) then
             cell_list(kcell)%drugA_tag = .true.
-            NdrugA_tag = NdrugA_tag + 1
+            NdrugA_tag(ityp) = NdrugA_tag(ityp) + 1
 !            write(nflog,'(a,2i6)') 'TPZ tagged: ',kcell,ict
 		endif
 	endif
@@ -249,7 +292,7 @@ do kcell = 1,nlist
 		enddo
 	    if (par_uni(kpar) < kill_prob) then
             cell_list(kcell)%drugB_tag = .true.
-            NdrugB_tag = NdrugB_tag + 1
+            NdrugB_tag(ityp) = NdrugB_tag(ityp) + 1
             write(nflog,'(a,2i6)') 'DNB tagged: ',kcell,ict
 		endif
 	endif
@@ -277,12 +320,14 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine CellDies(kcell)
 integer :: kcell
-integer :: site(3)
+integer :: site(3), ityp
 real(REAL_KIND) :: V
 
 cell_list(kcell)%state = DEAD
 cell_list(kcell)%exists = .false.
+ityp = cell_list(kcell)%celltype
 Ncells = Ncells - 1
+Ncells_type(ityp) = Ncells_type(ityp) - 1
 site = cell_list(kcell)%site
 occupancy(site(1),site(2),site(3))%indx(1) = 0
 if (associated(occupancy(site(1),site(2),site(3))%bdry)) then
@@ -430,9 +475,9 @@ end subroutine
 subroutine CellGrowth(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
-integer :: kcell, nlist0, site(3)
+integer :: kcell, nlist0, site(3), ityp, kpar=0
 integer :: divide_list(10000), ndivide, i
-real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean, c_rate
+real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean(2), c_rate(2)
 real(REAL_KIND) :: Vin_0, Vex_0, dV
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
@@ -442,18 +487,19 @@ integer :: C_option = 1
 ok = .true.
 nlist0 = nlist
 tnow = istep*DELTA_T
-c_rate = log(2.0)/divide_time_mean		! Note: to randomise divide time need to use random number, not mean!
-r_mean = Vdivide0/(2*divide_time_mean)
+c_rate(1:2) = log(2.0)/divide_time_mean(1:2)		! Note: to randomise divide time need to use random number, not mean!
+r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
 ndivide = 0
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
+	ityp = cell_list(kcell)%celltype
 	C_O2 = cell_list(kcell)%conc(OXYGEN)
 	metab = O2_metab(C_O2)
 !	metab = metabolic_rate(OXYGEN,C_O2)
 	if (use_V_dependence) then
-		dVdt = c_rate*cell_list(kcell)%volume*metab
+		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
 	else
-		dVdt = r_mean*metab
+		dVdt = r_mean(ityp)*metab
 	endif
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0
@@ -479,40 +525,42 @@ do kcell = 1,nlist0
 		cell_list(kcell)%conc = Vin_0*Cin_0/(Vin_0 + dV)
 		occupancy(site(1),site(2),site(3))%C = Vex_0*Cex_0/(Vex_0 - dV)
 	endif
-	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then
+	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then	! time to divide
 		if (cell_list(kcell)%radiation_tag) then
-			call CellDies(kcell)
-			Nradiation_dead = Nradiation_dead + 1
+			if (par_uni(kpar) < cell_list(kcell)%p_death) then
+				call CellDies(kcell)
+				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
+			endif
 			if (cell_list(kcell)%drugA_tag) then
-				NdrugA_tag = NdrugA_tag - 1
+				NdrugA_tag(ityp) = NdrugA_tag(ityp) - 1
 			endif
 			if (cell_list(kcell)%drugB_tag) then
-				NdrugB_tag = NdrugB_tag - 1
+				NdrugB_tag(ityp) = NdrugB_tag(ityp) - 1
 			endif
 			if (cell_list(kcell)%anoxia_tag) then
-				Nanoxia_tag = Nanoxia_tag - 1
+				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
 			endif
 			cycle
 		endif
 		if (cell_list(kcell)%drugA_tag) then
 			call CellDies(kcell)
-			NdrugA_dead = NdrugA_dead + 1
+			NdrugA_dead(ityp) = NdrugA_dead(ityp) + 1
 			if (cell_list(kcell)%anoxia_tag) then
-				Nanoxia_tag = Nanoxia_tag - 1
+				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
 			endif
 			if (cell_list(kcell)%radiation_tag) then
-				Nradiation_tag = Nradiation_tag - 1
+				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
 			endif
 			cycle
 		endif
 		if (cell_list(kcell)%drugB_tag) then
 			call CellDies(kcell)
-			NdrugB_dead = NdrugB_dead + 1
+			NdrugB_dead(ityp) = NdrugB_dead(ityp) + 1
 			if (cell_list(kcell)%anoxia_tag) then
-				Nanoxia_tag = Nanoxia_tag - 1
+				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
 			endif
 			if (cell_list(kcell)%radiation_tag) then
-				Nradiation_tag = Nradiation_tag - 1
+				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
 			endif
 			cycle
 		endif
@@ -531,19 +579,20 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine SetInitialGrowthRate
-integer :: kcell
-real(REAL_KIND) :: c_rate, r_mean, C_O2, metab, dVdt 
+integer :: kcell, ityp
+real(REAL_KIND) :: c_rate(2), r_mean(2), C_O2, metab, dVdt 
 
-c_rate = log(2.0)/divide_time_mean
-r_mean = Vdivide0/(2*divide_time_mean)
+c_rate(1:2) = log(2.0)/divide_time_mean(1:2)
+r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
+	ityp = cell_list(kcell)%celltype
 	C_O2 = chemo(OXYGEN)%bdry_conc
 	metab = O2_metab(C_O2)
 	if (use_V_dependence) then
-		dVdt = c_rate*cell_list(kcell)%volume*metab
+		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
 	else
-		dVdt = r_mean*metab
+		dVdt = r_mean(ityp)*metab
 	endif
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0
@@ -1143,7 +1192,7 @@ end subroutine
 ! The concentrations of constituents must be halved NOT TRUE!!!!!!!!!!!!
 !-----------------------------------------------------------------------------------------
 subroutine CloneCell(kcell0,kcell1,site1,ok)
-integer :: kcell0, kcell1, site1(3)
+integer :: kcell0, kcell1, site1(3), ityp
 logical :: ok
 integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
@@ -1156,14 +1205,18 @@ if (nlist > max_nlist) then
 	ok = .false.
 	return
 endif
+ityp = cell_list(kcell0)%celltype
 Ncells = Ncells + 1
+Ncells_type(ityp) = Ncells_type(ityp) + 1
 kcell1 = nlist
 cell_list(kcell1)%celltype = cell_list(kcell0)%celltype
 cell_list(kcell1)%state = cell_list(kcell0)%state
 cell_list(kcell1)%site = site1
 !cell_list(kcell1)%ID = lastID
 cell_list(kcell1)%ID = cell_list(kcell0)%ID
-cell_list(kcell1)%radiation_tag = .false.
+!cell_list(kcell1)%radiation_tag = .false.
+cell_list(kcell1)%p_death = cell_list(kcell0)%p_death
+cell_list(kcell1)%radiation_tag = cell_list(kcell0)%radiation_tag
 cell_list(kcell1)%drugA_tag = .false.
 cell_list(kcell1)%drugB_tag = .false.
 cell_list(kcell1)%anoxia_tag = .false.

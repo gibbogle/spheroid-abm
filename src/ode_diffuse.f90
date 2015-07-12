@@ -1484,27 +1484,6 @@ enddo
 end subroutine
 
 !----------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------
-subroutine TestSolver
-integer :: nvars, nt, ichemo, it, ncells
-real(REAL_KIND) :: tstart, dt
-real(REAL_KIND) :: timer1, timer2
-real(REAL_KIND) :: trun = 400
-
-nt = 20
-ncells = 1000
-dt = trun/nt
-timer1 = wtime()
-tstart = 0
-do it = 1,nt
-	tstart = (it-1)*dt
-	call Solver(it,tstart,dt,ncells)
-enddo
-timer2 = wtime()
-stop
-end subroutine
-
-!----------------------------------------------------------------------------------
 ! In this version the diffusion/decay of each constituent is solved by a separate
 ! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
 ! Note that this required modifications to the way r4_rkf45 handles SAVEd variables,
