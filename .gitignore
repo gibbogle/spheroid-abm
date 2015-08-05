@@ -5,8 +5,12 @@ cell_tiffer-builder/**/*
 check/
 DLLs-4.7.4/**/*
 DLLs-4.8.1/**/*
+Docs/
 Docs/**/*
+execution/
 execution/**/*
+Experiments/
+Experiments/**/*
 Gene/
 gfortran/
 Linux/

@@ -95,6 +95,12 @@ end function
 ! concentration	mM where 1 mM = 1.0e-6 mol.cm^-3
 ! consumption	mol.cell^-1.s^-1
 ! production	mol.cell^-1.s^-1
+! Changed 28/07/2015 to use mumol for mass, mumol/s for flux
+!-----------------------------------------------------------
+! mass			mumol = 10^-6 mol
+! flux			mumol/s
+! concentration	mM where 1 mM = 1 mumol.cm^-3
+! Note: concentration*volume = mM*cm3 = mumol
 !----------------------------------------------------------------------------------------
 subroutine SetupChemo
 integer :: ichemo

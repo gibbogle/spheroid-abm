@@ -279,6 +279,7 @@ real(REAL_KIND) :: t_simulation, execute_t1
 real(REAL_KIND) :: O2cutoff(3)
 real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
+real(REAL_KIND) :: total_dMdt
 
 !type(SN30K_type) :: SN30K
 type(TPZ_type) :: TPZ
@@ -317,6 +318,11 @@ integer :: divide_option = DIVIDE_USE_CLEAR_SITE
 integer :: idbug = 0
 integer :: Nbnd
 integer :: seed(2)
+
+! Off-lattice parameters, unused
+integer :: NXB
+real(REAL_KIND) :: a_separation
+real(REAL_KIND) :: a_force, b_force, c_force, x0_force, x1_force, kdrag, frandom
 
 real(REAL_KIND), allocatable :: omp_x(:), omp_y(:), omp_z(:)
 

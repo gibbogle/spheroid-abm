@@ -500,6 +500,8 @@ do kcell = 1,nlist0
 		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
 	else
 		dVdt = r_mean(ityp)*metab
+!		write(*,'(a,2e12.3)') 'Vdivide0,divide_time_mean: ',Vdivide0,divide_time_mean(ityp)
+!		write(*,'(a,3e12.3)') 'r_mean, metab, dVdt: ',r_mean(ityp), metab, dVdt
 	endif
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0

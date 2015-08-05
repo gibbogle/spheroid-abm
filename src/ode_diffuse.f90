@@ -587,24 +587,24 @@ do i = 1,neqn
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
-!			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))*Vsite_cm3	! just a scaling.  We should account for change in surface area
-			membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*Cin(ichemo))*Vsite_cm3	! just a scaling.
+!			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))	! We should account for change in surface area
+			membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*Cin(ichemo))
 		else
 		    membrane_flux = 0
 		endif
     	dydt(i) = dCsum - membrane_flux/vol_cm3
 	else
 		C = Cin(ichemo)
-!		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)*Vsite_cm3		! just a scaling.  We should account for change in surface area
-		membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*C)*Vsite_cm3	! just a scaling.
+!		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)		! We should account for change in surface area
+		membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*C)
 		dCreact = 0
 		select case (ichemo)
 		case (OXYGEN)
 			metab = O2_metab(C)
-			dCreact = (-metab*chemo(ichemo)%max_cell_rate*1.0e6 + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*chemo(ichemo)%max_cell_rate + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
 		case (GLUCOSE)
 			metab = C**Ng/(chemo(ichemo)%MM_C0**Ng + C**Ng)
-			dCreact = (-metab*chemo(ichemo)%max_cell_rate*1.0e6 + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*chemo(ichemo)%max_cell_rate + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
 		case (TRACER)
 			dCreact = membrane_flux/vol_cm3
 		case (TPZ_DRUG)
@@ -1225,12 +1225,10 @@ if (ichemo == OXYGEN) then
     vol = Vextra_cm3	! the current extracellular volume should be used I think !!!!!!!!!!!!!!!
 	if (use_Cex_Cin) then
 		Cin = getCin(ichemo,Cex)
-!		flux = chemo(ichemo)%membrane_diff*(Cex - Cin)*Vsite_cm3
-		flux = (chemo(ichemo)%membrane_diff_in*Cex - chemo(ichemo)%membrane_diff_out*Cin)*Vsite_cm3
+!		flux = chemo(ichemo)%membrane_diff*(Cex - Cin)
+		flux = (chemo(ichemo)%membrane_diff_in*Cex - chemo(ichemo)%membrane_diff_out*Cin)
 	else	! 
-		flux = O2_metab(Cex)*chemo(ichemo)%max_cell_rate*1.0d6
-!		flux = metabolic_rate(ichemo,Cex)*chemo(ichemo)%max_cell_rate*1.0d6
-!		flux = metab*1.0e6	! /vol	! convert mass rate (mol/s) to concentration rate (mM/s) (note: now = V*mM/s)
+		flux = O2_metab(Cex)*chemo(ichemo)%max_cell_rate
 	endif
 	if (dbug) write(nfout,'(a,2e12.4)') 'Cex, flux: ',Cex,flux
 	UptakeRate = flux/vol	! concentration rate (mM/s)
@@ -1262,8 +1260,8 @@ if (ichemo /= OXYGEN) then
 endif
 !ichemo = OXYGEN
 !K1 = chemo(OXYGEN)%membrane_diff*(Vsite_cm3 - Vextra_cm3)
-K1 = chemo(ichemo)%membrane_diff_in*Vsite_cm3		! just a scaling
-K2 = chemo(ichemo)%max_cell_rate*1.0d6
+K1 = chemo(ichemo)%membrane_diff_in
+K2 = chemo(ichemo)%max_cell_rate
 K2K1 = K2/K1
 C0 = chemo(ichemo)%MM_C0
 if (chemo(ichemo)%Hill_N == 2) then
@@ -1351,7 +1349,9 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine UpdateCbnd
 integer :: ichemo
-real(REAL_KIND) :: R1, R2, a
+real(REAL_KIND) :: R1, R2, a, Vblob, Vm
+
+return
 
 call SetRadius(Nsites)
 R1 = Radius*DELTA_X		! cm
@@ -1370,6 +1370,10 @@ do ichemo = 1,MAX_CHEMO
 		stop
 	endif
 enddo
+Vblob = (4./3.)*PI*R1**3	! cm3
+Vm = total_volume - Vblob
+write(*,'(a,4e12.3)') 'UpdateCbnd: ext glucose conc, mass: ', &
+chemo(GLUCOSE)%medium_Cext,chemo(GLUCOSE)%medium_Cbnd,chemo(GLUCOSE)%medium_Cext*Vm,chemo(GLUCOSE)%medium_M
 !write(nflog,'(a,i6,2f10.6)') 'UpdateCbnd: istep,R1,R2: ',istep,R1,R2
 !write(nflog,'(a,4e12.3)') 'UpdateCbnd: medium_Cext,medium_U: ',chemo(OXYGEN)%medium_Cext,chemo(GLUCOSE)%medium_Cext, &
 !																chemo(OXYGEN)%medium_U,chemo(GLUCOSE)%medium_U
@@ -1382,8 +1386,10 @@ end subroutine
 ! Compute U and update M, Cext, Cbnd.
 ! Note that for O2 Cext is fixed.
 ! Need to include decay
+! PROBLEM: For glucose, U ia about 20x the total cell uptake flux
+! !! Nbnd > Ncells, but r resulting Csum/Nbnd is  reasonable estimate of the conc.
 !----------------------------------------------------------------------------------
-subroutine UpdateMedium(dt)
+subroutine UpdateMedium1(dt)
 real(REAL_KIND) :: dt
 integer :: i, k, ichemo, ntvars
 integer :: ichemo_log
@@ -1422,7 +1428,6 @@ do i = 1,ntvars
 		if (ODEdiff%icoef(i,k) < 0) then	! boundary with medium ???????????????????????????????????????????????????????????????????
 			Nbnd = Nbnd + 1
 			do ichemo = 1,MAX_CHEMO
-!				if (.not.chemo(ichemo)%used) cycle
 				if (.not.chemo(ichemo)%present) cycle
 !				U(ichemo) = U(ichemo) + dA*chemo(ichemo)%diff_coef*(chemo(ichemo)%medium_Cbnd - allstate(i,ichemo))/DELTA_X
 				Csum(ichemo) = Csum(ichemo) + allstate(i,ichemo)
@@ -1438,6 +1443,8 @@ enddo
 !!!U = (dA*chemo(:)%diff_coef/DELTA_X)*(Nbnd*chemo(:)%medium_Cbnd - Csum(:))	! Note: this is an approximation
 
 chemo(:)%medium_Cbnd = (chemo(:)%medium_Cext - Csum(:)*b*a(:))/(1 - Nbnd*b*a(:))
+
+write(*,'(a,2i6,2e12.3)') 'UpdateMedium: glucose Csum/Nbnd: ',Nbnd,Ncells,Csum(GLUCOSE)/Nbnd,chemo(GLUCOSE)%medium_Cbnd
 U(:) = (chemo(:)%medium_Cbnd - chemo(:)%medium_Cext)/a(:)
 
 !write(nflog,'(a,2i6,4e12.3)') 'updateMedium: ',istep,Nbnd,chemo(ichemo_log)%medium_Cext,Csum(ichemo_log),U(ichemo_log),chemo(ichemo_log)%medium_Cbnd
@@ -1463,6 +1470,113 @@ chemo(:)%medium_U = U(:)
 !write(nflog,'(a,4e12.3)') 'UpdateMedium: medium_Cext,medium_U: ',chemo(OXYGEN)%medium_Cext,chemo(GLUCOSE)%medium_Cext, &
 !																chemo(OXYGEN)%medium_U,chemo(GLUCOSE)%medium_U
 !write(nflog,'(a,2e12.3)') 'UpdateMedium: medium_Cbnd: ',chemo(OXYGEN)%medium_Cbnd,chemo(GLUCOSE)%medium_Cbnd
+write(*,'(a,2e12.3)') 'UpdateMedium: glucose U: ',U(GLUCOSE),U(GLUCOSE)*dt
+!!!!!!!!! Problem: U is about 20x sum_dMdt
+end subroutine
+
+!----------------------------------------------------------------------------------
+! The medium concentrations are updated explicitly, assuming a sphere with 
+! known total uptake rate U.
+! Compute U and update M, Cext, Cbnd.
+! Note that for O2 Cext is fixed.
+! Need to include decay
+! Need to estimate U in a different way.
+! Use the total cell uptake and decay within the blob.
+! The change in total mass in the medium M is minus the sum of decay and U.dt
+! The far-field concentration Cext is inferred from M.
+! If the blob radius is R1 and the radius of the boundary layer is R2 = R1 + d_layer,
+! then the concentration distribution in the layer at radius r is:
+! C(r) = Cext + U/(4.pi.K).(1/R2 - 1/r)
+! where K = diffusion coefficient in the unstirred layer
+! By integrating C(r) and adding the portion at Cext we find the total mass is:
+! M = Cext.Vmedium + (U/K)[(R2^3-R1^3)/(3R2) + (R2^2 - R1^2)/2)]
+! which can be solved for Cext when U, M, R1 and R2 are known.
+! Note that Vmedium = total_volume - Vblob = total_volume - (4/3)pi.R1^3
+! From Cext, Cbnd = Cext + U/(4.pi.K).(1/R2 - 1/R1)
+!----------------------------------------------------------------------------------
+subroutine UpdateMedium(dt)
+real(REAL_KIND) :: dt
+integer :: i, k, ichemo, ntvars
+real(REAL_KIND) :: R1, R2, U(MAX_CHEMO)
+real(REAL_KIND) :: a, Rlayer(MAX_CHEMO)
+integer :: kcell, Nh, Nc
+real(REAL_KIND) :: C, metab, dMdt, asum
+real(REAL_KIND) :: Kin, Kout, decay_rate, vol_cm3, Cin, Cex
+
+! Start by looking at a conservative constituent (e.g. glucose)
+! Contribution from cell uptake
+U = 0
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%present) cycle
+	if (chemo(ichemo)%constant) then
+		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
+		cycle
+	endif
+	if (ichemo == OXYGEN .or. ichemo == GLUCOSE) then
+		Nh = chemo(ichemo)%Hill_N
+		asum = 0
+		Nc = 0
+		do kcell = 1,nlist
+			if (cell_list(kcell)%state == DEAD) cycle
+			Nc = Nc + 1
+			C = cell_list(kcell)%conc(ichemo)
+			metab = C**Nh/(chemo(ichemo)%MM_C0**Nh + C**Nh)
+			dMdt = metab*chemo(ichemo)%max_cell_rate 
+			asum = asum + dMdt
+		enddo
+		U(ichemo) = asum
+	else
+		! need to sum cell uptake and decay, and extracellular decay
+		decay_rate = chemo(ichemo)%decay_rate
+		Kin = chemo(ichemo)%membrane_diff_in
+		Kout = chemo(ichemo)%membrane_diff_out
+		asum = 0	
+		ntvars = ODEdiff%nextra + ODEdiff%nintra
+		do i = 1,ntvars
+			if (ODEdiff%vartype(i) == EXTRA) then
+				if (decay_rate == 0) cycle	! currently there is no distinction between intra- and extracellular decay rate
+				vol_cm3 = Vsite_cm3
+				Cex = allstate(i,ichemo)
+				if (i < ntvars) then
+					if (ODEdiff%vartype(i+1) == INTRA) then
+						kcell = ODEdiff%cell_index(i+1)		! for access to cell-specific parameters (note that the intra variable follows the extra variable)
+						vol_cm3 = Vsite_cm3 - Vcell_cm3*cell_list(kcell)%volume	! accounting for cell volume change
+					endif
+				endif
+				asum = asum + vol_cm3*Cex*decay_rate
+			else
+				Cin = allstate(i,ichemo)
+				kcell = ODEdiff%cell_index(i)
+				vol_cm3 = Vcell_cm3*cell_list(kcell)%volume
+				asum = asum + vol_cm3*Cin*decay_rate
+				! add cell uptake rate
+				Cex = allstate(i-1,ichemo)
+				asum = asum + Kin*Cex - Kout*Cin
+			endif
+		enddo
+		U(ichemo) = asum
+	endif
+enddo
+chemo(:)%medium_U = U(:)
+
+! First need the spheroid radius
+call SetRadius(Nsites)
+R1 = Radius*DELTA_X		! cm
+Rlayer(:) = R1 + chemo(:)%medium_dlayer
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%present) cycle
+	if (chemo(ichemo)%constant) cycle
+	R2 = Rlayer(ichemo)
+	if (ichemo /= OXYGEN) then	! update %medium_M, then %medium_Cext
+		chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
+		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)*R2) &
+			*(R1*R1*(3*R2 - 2*R1) - R2*R2*R2))/(total_volume - 4*PI*R1*R1*R1/3.)
+	endif
+	a = (1/R2 - 1/R1)/(4*PI*chemo(ichemo)%medium_diff_coef)
+	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
+enddo
+
+!write(*,'(a,2e12.3)') 'UpdateMedium: glucose U: ',U(GLUCOSE),U(GLUCOSE)*dt
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -1835,7 +1949,7 @@ dC = ODEdiff%deltaC_soft
 MM0 = chemo(OXYGEN)%MM_C0
 rmax = chemo(OXYGEN)%max_cell_rate
 V = Vsite_cm3 - Vextra_cm3
-r = rmax*1.0e6/V
+r = rmax/V
 Ks = ODEdiff%k_soft
 Kd = chemo(OXYGEN)%membrane_diff_in
 

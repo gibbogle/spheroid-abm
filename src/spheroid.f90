@@ -120,6 +120,7 @@ NdrugB_dead = 0
 Nanoxia_dead = 0
 t_simulation = 0
 it_saveprofiledata = 1
+total_dMdt = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
@@ -374,8 +375,20 @@ read(nfcell,*) iV_depend
 read(nfcell,*) iV_random
 read(nfcell,*) days							! number of days to simulate
 read(nfcell,*) DELTA_T						! time step size (sec)
+read(nfcell,*) NXB							! size of coarse grid
+read(nfcell,*) DELTA_X						! grid size (um)
+read(nfcell,*) a_separation
+read(nfcell,*) a_force
+read(nfcell,*) c_force
+read(nfcell,*) x0_force
+read(nfcell,*) x1_force
+read(nfcell,*) kdrag
+read(nfcell,*) frandom
 read(nfcell,*) NT_CONC						! number of subdivisions of DELTA_T for diffusion computation
 read(nfcell,*) Nmm3							! number of cells/mm^3
+DXmm = 1.0/(Nmm3**(1./3))
+DELTA_X = DXmm/10							! mm -> cm
+Vsite_cm3 = DELTA_X*DELTA_X*DELTA_X			! total site volume (cm^3)
 read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is fluid
 read(nfcell,*) medium_volume0				! initial total volume (medium + spheroid) (cm^3)
 read(nfcell,*) d_layer						! thickness of the unstirred layer around the spheroid (cm)
@@ -402,31 +415,33 @@ read(nfcell,*) iuse_oxygen		! chemo(OXYGEN)%used
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%medium_diff_coef
 read(nfcell,*) chemo(OXYGEN)%membrane_diff_in
-chemo(OXYGEN)%membrane_diff_in = chemo(OXYGEN)%membrane_diff_in/60		! /min -> /sec
+chemo(OXYGEN)%membrane_diff_in = chemo(OXYGEN)%membrane_diff_in*Vsite_cm3/60		! /min -> /sec
 chemo(OXYGEN)%membrane_diff_out = chemo(OXYGEN)%membrane_diff_in
 read(nfcell,*) chemo(OXYGEN)%bdry_conc
 read(nfcell,*) iconstant
 chemo(OXYGEN)%constant = (iconstant == 1)
 read(nfcell,*) chemo(OXYGEN)%max_cell_rate
+chemo(OXYGEN)%max_cell_rate = chemo(OXYGEN)%max_cell_rate*1.0e6					! mol/cell/s -> mumol/cell/s
 read(nfcell,*) chemo(OXYGEN)%MM_C0
 read(nfcell,*) chemo(OXYGEN)%Hill_N
 read(nfcell,*) iuse_glucose		!chemo(GLUCOSE)%used
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%medium_diff_coef
 read(nfcell,*) chemo(GLUCOSE)%membrane_diff_in
-chemo(GLUCOSE)%membrane_diff_in = chemo(GLUCOSE)%membrane_diff_in/60	! /min -> /sec
+chemo(GLUCOSE)%membrane_diff_in = chemo(GLUCOSE)%membrane_diff_in*Vsite_cm3/60	! /min -> /sec
 chemo(GLUCOSE)%membrane_diff_out = chemo(GLUCOSE)%membrane_diff_in
 read(nfcell,*) chemo(GLUCOSE)%bdry_conc
 read(nfcell,*) iconstant
 chemo(GLUCOSE)%constant = (iconstant == 1)
 read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
+chemo(GLUCOSE)%max_cell_rate = chemo(GLUCOSE)%max_cell_rate*1.0e6					! mol/cell/s -> mumol/cell/s
 read(nfcell,*) chemo(GLUCOSE)%MM_C0
 read(nfcell,*) chemo(GLUCOSE)%Hill_N
 read(nfcell,*) iuse_tracer		!chemo(TRACER)%used
 read(nfcell,*) chemo(TRACER)%diff_coef
 read(nfcell,*) chemo(TRACER)%medium_diff_coef
 read(nfcell,*) chemo(TRACER)%membrane_diff_in
-chemo(TRACER)%membrane_diff_in = chemo(TRACER)%membrane_diff_in/60		! /min -> /sec
+chemo(TRACER)%membrane_diff_in = chemo(TRACER)%membrane_diff_in*Vsite_cm3/60		! /min -> /sec
 chemo(TRACER)%membrane_diff_out = chemo(TRACER)%membrane_diff_in
 read(nfcell,*) chemo(TRACER)%bdry_conc
 read(nfcell,*) iconstant
@@ -468,9 +483,9 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 			read(nfcell,*) TPZ%diff_coef(im)
 			read(nfcell,*) TPZ%medium_diff_coef(im)
 			read(nfcell,*) TPZ%membrane_diff_in(im)
-			TPZ%membrane_diff_in(im) = TPZ%membrane_diff_in(im)/60		! /min -> /sec
+			TPZ%membrane_diff_in(im) = TPZ%membrane_diff_in(im)*Vsite_cm3/60		! /min -> /sec
 			read(nfcell,*) TPZ%membrane_diff_out(im)
-			TPZ%membrane_diff_out(im) = TPZ%membrane_diff_out(im)/60	! /min -> /sec
+			TPZ%membrane_diff_out(im) = TPZ%membrane_diff_out(im)*Vsite_cm3/60	! /min -> /sec
 			read(nfcell,*) TPZ%halflife(im)
 			ichemo = idrug + im
 			if (im > 0) then
@@ -512,9 +527,9 @@ do i = 1,2			! currently allowing for just two different drugs: 1 = TPZ-type, 2 
 			read(nfcell,*) DNB%diff_coef(im)
 			read(nfcell,*) DNB%medium_diff_coef(im)
 			read(nfcell,*) DNB%membrane_diff_in(im)
-			DNB%membrane_diff_in(im) = DNB%membrane_diff_in(im)/60		! /min -> /sec
+			DNB%membrane_diff_in(im) = DNB%membrane_diff_in(im)*Vsite_cm3/60		! /min -> /sec
 			read(nfcell,*) DNB%membrane_diff_out(im)
-			DNB%membrane_diff_out(im) = DNB%membrane_diff_out(im)/60	! /min -> /sec
+			DNB%membrane_diff_out(im) = DNB%membrane_diff_out(im)*Vsite_cm3/60	! /min -> /sec
 			read(nfcell,*) DNB%halflife(im)
 			ichemo = idrug + im
 			if (im > 0) then
@@ -640,9 +655,6 @@ randomise_initial_volume = (iV_random == 1)
 use_extracellular_O2 = (iuse_extra == 1)
 t_anoxic_limit = 60*60*anoxia_tag_hours				! hours -> seconds
 anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
-DXmm = 1.0/(Nmm3**(1./3))
-DELTA_X = DXmm/10									! mm -> cm
-Vsite_cm3 = DELTA_X*DELTA_X*DELTA_X					! total site volume (cm^3)
 Vextra_cm3 = fluid_fraction*Vsite_cm3				! extracellular volume in a site (cm^3)
 cell_radius = (3*(1-fluid_fraction)*Vsite_cm3/(4*PI))**(1./3.)
 ! In a well-oxygenated tumour the average cell fractional volume is intermediate between vdivide0/2 and vdivide0.
@@ -1490,7 +1502,7 @@ R = Radius*DELTA_X		! cm
 Vblob = (4./3.)*PI*R**3	! cm3
 Vm = total_volume - Vblob
 Vr = min(Vm,Ve)
-chemo(OXYGEN+1:)%medium_M = ((Vm - Vr)/Vm)*chemo(OXYGEN+1:)%medium_M + Vr*Ce(OXYGEN+1:)
+chemo(OXYGEN+1:)%medium_M = ((Vm - Vr)/Vm)*chemo(OXYGEN+1:)%medium_M + Ve*Ce(OXYGEN+1:)
 total_volume = Vm - Vr + Ve + Vblob
 chemo(OXYGEN+1:)%medium_Cext = chemo(OXYGEN+1:)%medium_M/(total_volume - Vblob)
 chemo(OXYGEN)%medium_Cext = chemo(OXYGEN)%bdry_conc
@@ -1512,6 +1524,8 @@ integer :: kcell, site(3), hour, nthour, kpar=0
 real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um
 !integer, parameter :: NT_CONC = 6
 integer :: nchemo, i
+integer :: nvars, ns
+real(REAL_KIND) :: dxc, ex_conc(120*O2_BY_VOL+1)		! just for testing
 logical :: ok = .true.
 logical :: dbug
 
@@ -1625,6 +1639,9 @@ if (saveprofiledata) then
 			saveprofiledata = .false.
 		endif
 	endif
+endif
+if (.not.use_TCP .and. (mod(istep,6) == 0)) then
+	call get_concdata(nvars, ns, dxc, ex_conc)
 endif
 end subroutine
 
@@ -1864,6 +1881,7 @@ TNtagged_anoxia = sum(Ntagged_anoxia(1:Ncelltypes))
 TNtagged_drugA = sum(Ntagged_drugA(1:Ncelltypes))
 TNtagged_drugB = sum(Ntagged_drugB(1:Ncelltypes))
 TNtagged_radiation = sum(Ntagged_radiation(1:Ncelltypes))
+Tplate_eff_10 = sum(plate_eff_10(1:Ncelltypes))
 summaryData(1:20) = [ istep, Ncells, TNanoxia_dead, TNdrugA_dead, TNdrugB_dead, TNradiation_dead, &
     TNtagged_anoxia, TNtagged_drugA, TNtagged_drugB, TNtagged_radiation, &
 	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, Tplate_eff_10, &
@@ -1874,6 +1892,38 @@ write(nfres,'(2a12,i8,2e12.4,19i7,13e12.4)') gui_run_version, dll_run_version, i
 	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), (Nsites-Ncells)/real(Nsites), plate_eff(1:2), &
 	chemo(OXYGEN)%medium_Cext, chemo(GLUCOSE)%medium_Cext, chemo(TPZ_DRUG)%medium_Cext, chemo(DNB_DRUG)%medium_Cext
 		
+call sum_dMdt(GLUCOSE)
+end subroutine
+
+!--------------------------------------------------------------------------------
+! Compute total uptake rate for a constituent
+!--------------------------------------------------------------------------------
+subroutine sum_dMdt(ichemo)
+integer :: ichemo
+integer :: kcell, Nh, Nc
+real(REAL_KIND) :: C, metab, dMdt, asum, msum, Csum
+
+if (ichemo > GLUCOSE) then
+	write(*,*) 'Error: sum_dMdt: only for oxygen and glucose'
+	stop
+endif
+Nh = chemo(ichemo)%Hill_N
+asum = 0
+Csum = 0
+msum = 0
+Nc = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	Nc = Nc + 1
+	C = cell_list(kcell)%conc(ichemo)
+	Csum = Csum + C
+	metab = C**Nh/(chemo(ichemo)%MM_C0**Nh + C**Nh)
+	msum = msum + metab
+	dMdt = metab*chemo(ichemo)%max_cell_rate 
+	asum = asum + dMdt
+enddo
+total_dMdt = total_dMdt + asum
+write(*,'(a,2i6,2e12.3)') 'sum_dMdt: ',ichemo,Nc,asum,total_dMdt*3600
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -2064,7 +2114,7 @@ real(c_double) :: dx, ex_conc(0:*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z, x1, x2, offset
 
-!call logger('get_concdata')
+call logger('get_concdata')
 nvars = 1 + MAX_CHEMO + N_EXTRA
 dx = DELTA_X
 rng(:,1) = Centre(:) - (adrop*Radius + 2)
@@ -2177,6 +2227,9 @@ enddo
 !! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
 !    endif
 !enddo
+ichemo = GLUCOSE
+offset = ichemo*ns
+write(*,'(10f7.3)') ex_conc(offset:offset+ns-1)
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -2280,6 +2333,7 @@ do ic = 1,nvars
     endif
 enddo
 end subroutine
+
 !--------------------------------------------------------------------------------
 ! Returns the distribution of cell volume.
 ! nv is passed from the GUI

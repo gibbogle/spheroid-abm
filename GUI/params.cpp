@@ -69,6 +69,60 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Length of main time step, for cell death, division, etc.  Should be a divisor of 3600. \n\
 [mins]"},
 
+{"NXB", 35, 0, 0,
+"Coarse grid size",
+"Dimension of the coarse grid (number of grid pts in X,Y and Z directions).  Grid spacing is 4 times fine grid spacing."},
+
+{"DELTA_X", 30, 0, 0,
+"Fine grid spacing",
+"Grid-cell size in um.  Constituent transport and consumption/production is computed on this grid."},
+
+{"A_SEPARATION", 1.0, 0, 0,
+"Separation force factor",
+"During mitosis the two capped spheres are effectively connected by a nonlinear spring. \n\
+The length of the spring s is determined by the mitosis level, and if the centre-centre distance is d \n\
+the contribution to the force of repulsion between the spheres is a_separation*(s-d)^3."},
+
+{"A_FORCE", 1., 0, 0,
+"Repulsion force factor 'a'",
+"The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
+
+{"C_FORCE", 0.2, 0, 0,
+"Attraction force factor 'c'",
+"The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
+
+{"X0_FORCE", 0.7, 0, 0,
+"Left asymptote 'x0'",
+"The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
+
+{"X1_FORCE", 1.3, 0, 0,
+"Right asymptote 'x1'",
+"The cell-cell force is a function of x = distance/(sum of radii): x = d/(R1+R2). \n\
+The force function is: F(x) = a/((x-x0)(x1-x)) + b, where x0 and x1 are the locations of the bounding asymptotes. \n\
+The parameter 'b' is calculated by setting the minimum value of F(x) (which occurs at x = (x0+x1)/2 ) equal to -c, this is the maximum attraction force. \n\
+The function F(x) is zero at two points, xc1 and xc2.  There is a hysteresis loop for x > xc1: for two cells not in contact, the force is zero for x > xc1. \n\
+After contact is made the force is non-zero until x > xc2 - this is the effect of cell-cell adhesion."},
+
+{"KDRAG", 5, 0, 0,
+ "Drag factor",
+ "Displacement = dt*F/drag"},
+
+{"FRANDOM",0.02, 0, 0,
+ "Random force factor",
+ "Magnitude of random additive force"},
+
 {"NT_CONC", 1, 0, 0,
 "Number of ODE solver sub-steps.",
 "The number of subdivisions of the major time step, for the ODE diffusion-reaction solver."},
@@ -81,11 +135,11 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Fluid fraction",
 "Fraction of non-necrotic tumour that is extracellular fluid."},
 
-{"MEDIUM_VOLUME", 1.0, 0, 0,
+{"MEDIUM_VOLUME", 0.074, 0, 0,
 "Medium volume",
 "Volume of the medium in which the spheroid is growing."},
 
-{"UNSTIRRED_LAYER", 0.005, 0, 0,
+{"UNSTIRRED_LAYER", 0.001, 0, 0,
 "Unstirred layer width",
 "Thickness of the unstirred layer around the spheroid (cm)."},
 
@@ -200,7 +254,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
 "Use Glucose?",
 "Glucose is simulated"},
 
-{"GLUCOSE_DIFF_COEF", 6.0e-7, 0, 0,
+{"GLUCOSE_DIFF_COEF", 3.0e-6, 0, 0,
  "Spheroid diffusion coeff",
  "GLUCOSE diffusion coefficient"},
 
@@ -208,7 +262,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "Medium diffusion coeff",
  "Constituent diffusion coefficient in the medium"},
 
-{"GLUCOSE_CELL_DIFF", 1200, 0, 0,
+{"GLUCOSE_CELL_DIFF", 100, 0, 0,
  "Membrane diff constant",
  "Cell membrane diffusion coefficient Kd"},
 
