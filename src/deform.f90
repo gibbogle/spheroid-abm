@@ -52,11 +52,11 @@ X(2) = 0.9
 X(3) = 0.05
 
 CALL NLEQ1E(N,X,RTOL,nfout,IERR)
-write(*,*) 'Returned: ierr: ', ierr
-write(*,'(3f12.6)') (X(i),i=1,N)	    
-write(*,*) 'Check:'
+!write(*,*) 'Returned: ierr: ', ierr
+!write(*,'(3f12.6)') (X(i),i=1,N)	    
+!write(*,*) 'Check:'
 call FCN(N,X,F,IERR)
-write(*,'(3f12.6)') (F(i),i=1,N)
+!write(*,'(3f12.6)') (F(i),i=1,N)
 adrop = x(1)
 bdrop = x(2)
 cdrop = x(3)    

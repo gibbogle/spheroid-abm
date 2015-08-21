@@ -120,14 +120,17 @@ end subroutine
 subroutine get_kill_probs(ityp,dose,C_O2,p_recovery,p_death)
 integer :: ityp
 real(REAL_KIND) :: dose, C_O2, p_recovery, p_death
-real(REAL_KIND) :: OER_alpha_d, OER_beta_d, expon, kill_prob_orig
+real(REAL_KIND) :: OER_alpha_d, OER_beta_d, expon, kill_prob_orig, expon_err
 
 OER_alpha_d = dose*(LQ(ityp)%OER_am*C_O2 + LQ(ityp)%K_ms)/(C_O2 + LQ(ityp)%K_ms)
 OER_beta_d = dose*(LQ(ityp)%OER_bm*C_O2 + LQ(ityp)%K_ms)/(C_O2 + LQ(ityp)%K_ms)
-expon = LQ(ityp)%alpha_H*OER_alpha_d + LQ(ityp)%beta_H*OER_alpha_d**2
+!expon_err = LQ(ityp)%alpha_H*OER_alpha_d + LQ(ityp)%beta_H*OER_alpha_d**2	! 07/08/2015
+expon = LQ(ityp)%alpha_H*OER_alpha_d + LQ(ityp)%beta_H*OER_beta_d**2
 kill_prob_orig = 1 - exp(-expon)
 call get_pdeath(ityp,dose,C_O2,p_death)
 p_recovery = 1 - kill_prob_orig/p_death
+!write(nflog,'(a,4e12.3)') 'get_kill_probs: OER_alpha_d,OER_beta_d,expon,expon_err: ',OER_alpha_d,OER_beta_d,expon,expon_err
+!write(nflog,*) 'kill_prob, kill_prob_err: ',kill_prob_orig,1 - exp(-expon_err)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -199,11 +202,12 @@ real(REAL_KIND) :: C(:)
 SiteValue = C(OXYGEN)
 end function
 
+#if 0
 !-----------------------------------------------------------------------------------------
 ! Cells can be tagged to die, or finally die of anoxia, or they can be tagged for death 
 ! at division time if the drug is effective.
 !-----------------------------------------------------------------------------------------
-subroutine CellDeath(dt,ok)
+subroutine CellDeath1(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
 integer :: kcell, ict, nlist0, site(3), i, im, ityp, kpar=0 
@@ -296,6 +300,145 @@ do kcell = 1,nlist
             write(nflog,'(a,2i6)') 'DNB tagged: ',kcell,ict
 		endif
 	endif
+enddo
+end subroutine
+#endif
+
+!-----------------------------------------------------------------------------------------
+! Cells can be tagged to die, or finally die of anoxia, or they can be tagged for death 
+! at division time if the drug is effective.
+!-----------------------------------------------------------------------------------------
+subroutine CellDeath(dt,ok)
+real(REAL_KIND) :: dt
+logical :: ok
+integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, kpar=0 
+real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, killmodel, kill_prob, tnow
+!logical :: use_TPZ_DRUG, use_DNB_DRUG
+type(drug_type), pointer :: dp
+
+!call logger('CellDeath')
+ok = .true.
+!use_TPZ_DRUG = chemo(TPZ_DRUG)%used
+!use_DNB_DRUG = chemo(DNB_DRUG)%used
+tnow = istep*DELTA_T	! seconds
+nlist0 = nlist
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	ityp = cell_list(kcell)%celltype
+	call getO2conc(kcell,C_O2)
+	if (cell_list(kcell)%anoxia_tag) then
+!		write(logmsg,*) 'anoxia_tag: ',kcell,cell_list(kcell)%state,tnow,cell_list(kcell)%t_anoxia_die
+!		call logger(logmsg)
+		if (tnow >= cell_list(kcell)%t_anoxia_die) then
+!			call logger('cell dies')
+			call CellDies(kcell)
+			Nanoxia_dead(ityp) = Nanoxia_dead(ityp) + 1
+!			if (cell_list(kcell)%drugA_tag) then
+!				NdrugA_tag(ityp) = NdrugA_tag(ityp) - 1
+!			endif
+!			if (cell_list(kcell)%drugB_tag) then
+!				NdrugB_tag(ityp) = NdrugB_tag(ityp) - 1
+!			endif
+			do idrug = 1,ndrugs_used
+				if (cell_list(kcell)%drug_tag(idrug)) then
+					Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) - 1
+				endif
+			enddo
+			if (cell_list(kcell)%radiation_tag) then
+				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
+			endif
+			cycle
+		endif
+	else
+		if (C_O2 < ANOXIA_THRESHOLD) then
+			cell_list(kcell)%t_hypoxic = cell_list(kcell)%t_hypoxic + dt
+			if (cell_list(kcell)%t_hypoxic > t_anoxic_limit) then
+				cell_list(kcell)%anoxia_tag = .true.						! tagged to die later
+				cell_list(kcell)%t_anoxia_die = tnow + anoxia_death_delay	! time that the cell will die
+				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) + 1
+			endif
+		else
+			cell_list(kcell)%t_hypoxic = 0
+		endif
+	endif
+	
+	do idrug = 1,ndrugs_used	
+		dp => drug(idrug)
+		ichemo = TRACER + 1 + 3*(idrug-1)	
+		kill_prob = 0
+		do im = 0,2
+			if (.not.dp%kills(ityp,im)) cycle
+			killmodel = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
+			Kd = dp%Kd(ityp,im)
+			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)/(dp%KO2(ityp,im) + C_O2))*dp%Kmet0(ityp,im)
+			dMdt = kmet*cell_list(kcell)%conc(ichemo + im)
+			if (killmodel == 1) then
+				kill_prob = kill_prob + Kd*dMdt*dt
+			elseif (killmodel == 2) then
+				kill_prob = kill_prob + Kd*dMdt*cell_list(kcell)%conc(ichemo + im)*dt
+			elseif (killmodel == 3) then
+				kill_prob = kill_prob + Kd*dMdt**2*dt
+			elseif (killmodel == 4) then
+				kill_prob = kill_prob + Kd*cell_list(kcell)%conc(ichemo + im)*dt
+			elseif (killmodel == 5) then
+				kill_prob = kill_prob + Kd*(cell_list(kcell)%conc(ichemo + im)**2)*dt
+			endif
+		enddo
+	    if (par_uni(kpar) < kill_prob) then
+!            cell_list(kcell)%drugB_tag = .true.			! actually either drugA_tag or drugB_tag
+!            NdrugB_tag(ityp) = NdrugB_tag(ityp) + 1
+			cell_list(kcell)%drug_tag(idrug) = .true.
+            Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1
+		endif
+	enddo
+
+	
+!	if (use_TPZ_DRUG .and. .not.cell_list(kcell)%drugA_tag) then	
+!		ict = cell_list(kcell)%celltype
+!		Kd = TPZ%Kd(ict)
+!	    kmet = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + C_O2))*TPZ%Kmet0(ict,0)
+!	    dMdt = kmet*cell_list(kcell)%conc(TPZ_DRUG)
+!	    if (TPZ%kill_model(ict) == 1) then
+!		    kill_prob = Kd*dMdt*dt
+!	    elseif (TPZ%kill_model(ict) == 2) then
+!		    kill_prob = Kd*dMdt*cell_list(kcell)%conc(TPZ_DRUG)*dt
+!	    elseif (TPZ%kill_model(ict) == 3) then
+!		    kill_prob = Kd*dMdt**2*dt
+!	    elseif (TPZ%kill_model(ict) == 4) then
+!		    kill_prob = Kd*cell_list(kcell)%conc(TPZ_DRUG)*dt
+!	    elseif (TPZ%kill_model(ict) == 5) then
+!		    kill_prob = Kd*cell_list(kcell)%conc(TPZ_DRUG)**2*dt
+!		endif
+!	    if (par_uni(kpar) < kill_prob) then
+!            cell_list(kcell)%drugA_tag = .true.
+!            NdrugA_tag(ityp) = NdrugA_tag(ityp) + 1
+!!            write(nflog,'(a,2i6)') 'TPZ tagged: ',kcell,ict
+!		endif
+!	endif
+!	if (use_DNB_DRUG .and. .not.cell_list(kcell)%drugB_tag) then
+!		ict = cell_list(kcell)%celltype
+!!	    kmet = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + C_O2))*TPZ%Kmet0(ict,0)
+!!	    dMdt = kmet*cell_list(kcell)%conc(TPZ_DRUG)
+!	    if (DNB%kill_model(ict,1) < 4 .or. DNB%kill_model(ict,2) < 4) then
+!			write(logmsg,*) 'Error: CellDeath: DNB kill model must be 4 or 5, not: ',DNB%kill_model(ict,1),DNB%kill_model(ict,2)
+!			call logger(logmsg)
+!			ok = .false.
+!			return
+!		endif
+!		kill_prob = 0
+!		do im = 1,2
+!			if (DNB%kill_model(ict,im) == 4) then
+!				kill_prob = kill_prob + DNB%Kd(ict,im)*cell_list(kcell)%conc(DNB_DRUG + im)*dt
+!			elseif (DNB%kill_model(ict,im) == 5) then
+!				kill_prob = kill_prob + DNB%Kd(ict,im)*(cell_list(kcell)%conc(DNB_DRUG + im)**2)*dt
+!			endif
+!		enddo
+!	    if (par_uni(kpar) < kill_prob) then
+!            cell_list(kcell)%drugB_tag = .true.
+!            NdrugB_tag(ityp) = NdrugB_tag(ityp) + 1
+!            write(nflog,'(a,2i6)') 'DNB tagged: ',kcell,ict
+!		endif
+!	endif
 enddo
 end subroutine
 
@@ -475,12 +618,13 @@ end subroutine
 subroutine CellGrowth(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
-integer :: kcell, nlist0, site(3), ityp, kpar=0
+integer :: kcell, nlist0, site(3), ityp, idrug, kpar=0
 integer :: divide_list(10000), ndivide, i
 real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean(2), c_rate(2)
 real(REAL_KIND) :: Vin_0, Vex_0, dV
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
+logical :: drugkilled
 integer :: C_option = 1
 
 !call logger('CellGrowth')
@@ -533,39 +677,60 @@ do kcell = 1,nlist0
 				call CellDies(kcell)
 				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
 			endif
-			if (cell_list(kcell)%drugA_tag) then
-				NdrugA_tag(ityp) = NdrugA_tag(ityp) - 1
-			endif
-			if (cell_list(kcell)%drugB_tag) then
-				NdrugB_tag(ityp) = NdrugB_tag(ityp) - 1
-			endif
+!			if (cell_list(kcell)%drugA_tag) then
+!				NdrugA_tag(ityp) = NdrugA_tag(ityp) - 1
+!			endif
+!			if (cell_list(kcell)%drugB_tag) then
+!				NdrugB_tag(ityp) = NdrugB_tag(ityp) - 1
+!			endif
+			do idrug = 1,ndrugs_used
+				if (cell_list(kcell)%drug_tag(idrug)) then
+					Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) - 1
+				endif
+			enddo
 			if (cell_list(kcell)%anoxia_tag) then
 				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
 			endif
 			cycle
 		endif
-		if (cell_list(kcell)%drugA_tag) then
-			call CellDies(kcell)
-			NdrugA_dead(ityp) = NdrugA_dead(ityp) + 1
-			if (cell_list(kcell)%anoxia_tag) then
-				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
+!		if (cell_list(kcell)%drugA_tag) then
+!			call CellDies(kcell)
+!			NdrugA_dead(ityp) = NdrugA_dead(ityp) + 1
+!			if (cell_list(kcell)%anoxia_tag) then
+!				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
+!			endif
+!			if (cell_list(kcell)%radiation_tag) then
+!				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
+!			endif
+!			cycle
+!		endif
+!		if (cell_list(kcell)%drugB_tag) then
+!			call CellDies(kcell)
+!			NdrugB_dead(ityp) = NdrugB_dead(ityp) + 1
+!			if (cell_list(kcell)%anoxia_tag) then
+!				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
+!			endif
+!			if (cell_list(kcell)%radiation_tag) then
+!				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
+!			endif
+!			cycle
+!		endif
+		drugkilled = .false.
+		do idrug = 1,ndrugs_used
+			if (cell_list(kcell)%drug_tag(idrug)) then
+				call CellDies(kcell)
+				Ndrug_dead(idrug,ityp) = Ndrug_dead(idrug,ityp) + 1
+				if (cell_list(kcell)%anoxia_tag) then
+					Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
+				endif
+				if (cell_list(kcell)%radiation_tag) then
+					Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
+				endif
+				drugkilled = .true.
+				exit
 			endif
-			if (cell_list(kcell)%radiation_tag) then
-				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
-			endif
-			cycle
-		endif
-		if (cell_list(kcell)%drugB_tag) then
-			call CellDies(kcell)
-			NdrugB_dead(ityp) = NdrugB_dead(ityp) + 1
-			if (cell_list(kcell)%anoxia_tag) then
-				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
-			endif
-			if (cell_list(kcell)%radiation_tag) then
-				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
-			endif
-			cycle
-		endif
+		enddo
+		if (drugkilled) cycle
 	    ndivide = ndivide + 1
 	    divide_list(ndivide) = kcell
 	endif
@@ -1219,8 +1384,9 @@ cell_list(kcell1)%ID = cell_list(kcell0)%ID
 !cell_list(kcell1)%radiation_tag = .false.
 cell_list(kcell1)%p_death = cell_list(kcell0)%p_death
 cell_list(kcell1)%radiation_tag = cell_list(kcell0)%radiation_tag
-cell_list(kcell1)%drugA_tag = .false.
-cell_list(kcell1)%drugB_tag = .false.
+!cell_list(kcell1)%drugA_tag = .false.
+!cell_list(kcell1)%drugB_tag = .false.
+cell_list(kcell1)%drug_tag = .false.
 cell_list(kcell1)%anoxia_tag = .false.
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%active = .true.

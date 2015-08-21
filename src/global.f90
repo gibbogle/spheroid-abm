@@ -45,13 +45,19 @@ integer, parameter :: DRUG_B = DRUG_A + 3
 integer, parameter :: DNB_DRUG = DRUG_B
 integer, parameter :: DNB_DRUG_METAB_1 = DNB_DRUG + 1
 integer, parameter :: DNB_DRUG_METAB_2 = DNB_DRUG + 2
-integer, parameter :: MAX_CHEMO = DNB_DRUG_METAB_2
+!integer, parameter :: DRUG_C = DRUG_B + 3
+!integer, parameter :: NIM_DRUG = DRUG_C
+!integer, parameter :: NIM_DRUG_METAB_1 = NIM_DRUG + 1
+!integer, parameter :: NIM_DRUG_METAB_2 = NIM_DRUG + 2
+integer, parameter :: MAX_CHEMO = DRUG_B + 3
 integer, parameter :: GROWTH_RATE = MAX_CHEMO + 1	! (not used here, used in the GUI)
 integer, parameter :: CELL_VOLUME = MAX_CHEMO + 2
 integer, parameter :: O2_BY_VOL = MAX_CHEMO + 3
 
 integer, parameter :: N_EXTRA = O2_BY_VOL - MAX_CHEMO	! = 3 = total # of variables - MAX_CHEMO
 
+integer, parameter :: TPZ_CLASS = 1
+integer, parameter :: DNB_CLASS = 2
 integer, parameter :: DRUG_EVENT = 1
 integer, parameter :: RADIATION_EVENT = 2
 integer, parameter :: MEDIUM_EVENT = 3
@@ -69,6 +75,7 @@ integer, parameter :: DIST_NV = 20
 integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
 integer, parameter :: MAX_CELLTYPES = 4
+integer, parameter :: MAX_DRUGTYPES = 2
 integer, parameter :: max_nlist = 1000000
 
 logical, parameter :: use_ODE_diffusion = .true.
@@ -110,7 +117,8 @@ type cell_type
 	real(REAL_KIND) :: t_anoxia_die
 	real(REAL_KIND) :: M
 	real(REAL_KIND) :: p_death
-	logical :: radiation_tag, drugA_tag, drugB_tag, anoxia_tag
+	logical :: radiation_tag, anoxia_tag	!, drugA_tag, drugB_tag
+	logical :: drug_tag(MAX_DRUGTYPES)
 	logical :: exists
 end type
 
@@ -122,10 +130,8 @@ type SN30K_type
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: metabolite_halflife
 	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES)
-!	real(REAL_KIND) :: C1(MAX_CELLTYPES)
 	real(REAL_KIND) :: C2(MAX_CELLTYPES)
 	real(REAL_KIND) :: KO2(MAX_CELLTYPES)
-!	real(REAL_KIND) :: gamma(MAX_CELLTYPES)
 	real(REAL_KIND) :: Klesion(MAX_CELLTYPES)
 	integer         :: kill_model(MAX_CELLTYPES)
 	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES)
@@ -133,6 +139,36 @@ type SN30K_type
 	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES)
 	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES)
 	real(REAL_KIND) :: Kd(MAX_CELLTYPES)
+end type
+
+type drug_type
+	character*(3)   :: classname
+	integer         :: drugclass
+	character*(16)  :: name
+	integer         :: nmetabolites
+	logical         :: use_metabolites
+	real(REAL_KIND) :: diff_coef(0:2)
+	real(REAL_KIND) :: medium_diff_coef(0:2)
+	real(REAL_KIND) :: membrane_diff_in(0:2)
+	real(REAL_KIND) :: membrane_diff_out(0:2)
+	real(REAL_KIND) :: halflife(0:2)
+	logical         :: kills(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: KO2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Vmax(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Km(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Klesion(MAX_CELLTYPES,0:2)
+	integer         :: kill_model(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: Kd(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES,0:2)
+	logical         :: sensitises(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: SER_max(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: SER_Km(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: SER_KO2(MAX_CELLTYPES,0:2)
 end type
 
 type TPZ_type
@@ -223,7 +259,8 @@ end type
 type event_type
 	integer :: etype
 	real(REAL_KIND) :: time
-	integer :: ichemo			! DRUG
+	integer :: idrug			! DRUG
+	integer :: ichemo			! DRUG CHEMO INDEX
 	real(REAL_KIND) :: volume	! DRUG MEDIUM
 	real(REAL_KIND) :: conc		! DRUG
 	real(REAL_KIND) :: dose		! RADIATION
@@ -263,8 +300,13 @@ integer :: jumpvec(3,27)
 
 integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes, Ncells_type(MAX_CELLTYPES)
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
-integer :: NdrugA_tag(MAX_CELLTYPES), NdrugB_tag(MAX_CELLTYPES), Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
-integer :: NdrugA_dead(MAX_CELLTYPES), NdrugB_dead(MAX_CELLTYPES), Nradiation_dead(MAX_CELLTYPES), Nanoxia_dead(MAX_CELLTYPES)
+integer :: Ndrugs_used
+integer :: Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
+!integer :: NdrugA_tag(MAX_CELLTYPES), NdrugB_tag(MAX_CELLTYPES)
+integer :: Ndrug_tag(MAX_DRUGTYPES,MAX_CELLTYPES)
+!integer :: NdrugA_dead(MAX_CELLTYPES), NdrugB_dead(MAX_CELLTYPES)
+integer :: Nradiation_dead(MAX_CELLTYPES), Nanoxia_dead(MAX_CELLTYPES)
+integer :: Ndrug_dead(MAX_DRUGTYPES,MAX_CELLTYPES)
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
 integer :: Mnodes, ncpu_input
 integer :: Nevents
@@ -284,6 +326,7 @@ real(REAL_KIND) :: total_dMdt
 !type(SN30K_type) :: SN30K
 type(TPZ_type) :: TPZ
 type(DNB_type) :: DNB
+type(drug_type), allocatable, target :: drug(:)
 
 logical :: bdry_changed
 type(LQ_type) :: LQ(MAX_CELLTYPES)

@@ -24,7 +24,6 @@ type chemokine_type
 	logical :: present
 	logical :: use_secretion
 	logical :: constant
-	real(REAL_KIND) :: bdry_rate
 	real(REAL_KIND) :: bdry_conc
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: membrane_diff_in
@@ -32,8 +31,6 @@ type chemokine_type
 	logical :: decay
 	real(REAL_KIND) :: halflife
 	real(REAL_KIND) :: decay_rate
-!	real(REAL_KIND) :: bdry_halflife
-!	real(REAL_KIND) :: bdry_decay_rate
 	real(REAL_KIND) :: max_cell_rate	! Vmax
 	real(REAL_KIND) :: MM_C0			! Km
 	real(REAL_KIND) :: Hill_N
