@@ -15,6 +15,9 @@
 #define DRUG_B_PARENT 7
 #define DRUG_B_METAB_1 8
 #define DRUG_B_METAB_2 9
+//#define NIM_DRUG_PARENT 10
+//#define NIM_DRUG_METAB_1 11
+//#define NIM_DRUG_METAB_2 12
 #define GROWTH_RATE 10      // we pretend that this is a concentration
 #define CELL_VOLUME 11
 #define O2_BY_VOL 12

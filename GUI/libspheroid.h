@@ -1,5 +1,5 @@
-#ifndef LIBBCELL32_H
-#define LIBBCELL32_H
+#ifndef LIBSPHEROID_H
+#define LIBSPHEROID_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,10 +25,12 @@ void get_constituents(int *, int *, int *, char *, int *);
 
 //void get_profile_oxygen(double *, double *, int *);
 
+void get_string(char **);
+
 //
 //
 #ifdef __cplusplus
 }
 #endif
 
-#endif // LIBBCELL32_H
+#endif // LIBSPHEROID2_H

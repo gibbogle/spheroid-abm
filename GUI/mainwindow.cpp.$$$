@@ -49,8 +49,6 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_MSG("did setupUi");
     showMaximized();
 
-    tab_force->setEnabled(false);
-
     QString currPath = QDir::currentPath();
     LOG_QMSG("starting path: " + currPath);
     QString newPath = currPath + "/execution";
@@ -196,12 +194,12 @@ void MainWindow::createActions()
     connect(checkBox_FACS_log_y, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
     connect(buttonGroup_histo, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(histo_update()));
 
-//    connect(line_TPZ_KILL_MODEL_CELL1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_TPZ_KILL_MODEL_CELL2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_DNB_KILL_MODEL_CELL1_MET1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_DNB_KILL_MODEL_CELL1_MET2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_DNB_KILL_MODEL_CELL2_MET1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_DNB_KILL_MODEL_CELL2_MET2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_TPZ_KILL_MODEL_CELL1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_TPZ_KILL_MODEL_CELL2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_DNB_KILL_MODEL_CELL1_MET1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_DNB_KILL_MODEL_CELL1_MET2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_DNB_KILL_MODEL_CELL2_MET1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
+    connect(line_DNB_KILL_MODEL_CELL2_MET2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
 
     connect(this,SIGNAL(pause_requested()),SLOT(pauseServer()));
 
@@ -2793,7 +2791,6 @@ void MainWindow::changeParam()
 	}
 }
 
-/*
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::killModelChanged()
@@ -2818,7 +2815,6 @@ void MainWindow::killModelChanged()
         }
     }
 }
-*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -3206,10 +3202,6 @@ void MainWindow::on_action_show_gradient2D_triggered()
 //
 // GUI_to_DLL_index[ivar], ivar=0,..,nvars_used-1 = base DLL index (0,MAX_CHEMO+NEXTRA)
 // DLL_to_GUI_index[ichemo],ichemo=0,..,MAX_CHEMO+NEXTRA = index in list of variables in use (0,nvars_used-1)
-//
-// Note that while the cell constituents have DLL index values ranging from 0 to MAX_CHEMO+N_EXTRA,
-// the field constituent DLL indexes are in the range 1 to MAX_CHEMO, since the extra
-// variables not applicable in the extracellular compartment.
 //-----------------------------------------------------------------------------------------
 void MainWindow::setupConstituents()
 {

@@ -137,6 +137,8 @@ private slots:
     void SaveProtocol(QString);
     void ProtocolChanged(int, int);
 
+    void on_pushButton_savedrugdata_clicked();
+
 public slots:
 	void preConnection();
 	void outputData(QString);
@@ -161,21 +163,24 @@ public slots:
 	void textEdited_fraction(QString text);
     void setupConstituents();
 
-    void on_cbox_USE_TPZ_DRUG_toggled(bool checked);
-//    void on_cbox_TPZ_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
-    void on_cbox_USE_DNB_DRUG_toggled(bool checked);
-//    void on_cbox_DNB_DRUG_SIMULATE_METABOLITE_toggled(bool checked);
-//    void on_cbox_USE_RADIATION_toggled(bool checked);
+//    void on_cbox_USE_TPZ_DRUG_toggled(bool checked);
+//    void on_cbox_USE_DNB_DRUG_toggled(bool checked);
+//    void on_comb_TPZ_currentIndexChanged(int);
+//    void on_comb_DNB_currentIndexChanged(int);
+    void on_cbox_USE_DRUG_A_toggled(bool checked);
+    void on_cbox_USE_DRUG_B_toggled(bool checked);
+    void on_comb_DRUG_A_currentIndexChanged(int);
+    void on_comb_DRUG_B_currentIndexChanged(int);
+
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
     void radioButtonChanged(QAbstractButton *b);
-    void killModelChanged();
+//    void killModelChanged();
     void on_buttonGroup_celltype_buttonClicked(QAbstractButton* button);
     void on_buttonGroup_histotype_buttonClicked(QAbstractButton* button);
     void on_checkBox_histo_logscale_toggled();
+    void on_buttonGroup_drug_buttonClicked(QAbstractButton* button);
 
-    void on_comb_TPZ_currentIndexChanged(int);
-    void on_comb_DNB_currentIndexChanged(int);
 // For Kd computed in the GUI
 //    void on_pushButton_SN30K_Kd_1_clicked();
 //    void on_pushButton_SN30K_Kd_2_clicked();
@@ -257,6 +262,12 @@ private:
     void SetupProtocol();
     void setField(QTableWidget *, int, int, QString);
     int getField(QTableWidget *, int, int, QString *);
+    void readDrugParams(int idrug, QString filename);
+    void writeDrugParams(QTextStream *out, int idrug);
+    void populateDrugTable(int idrug);
+    void makeDrugFileLists();
+    void changeDrugParam(QObject *);
+    void extractDrugname(QString *);
 
     QPlainTextEdit *textEdit;
     QString curFile;
@@ -366,6 +377,8 @@ private:
 
     QVideoOutput   *videoVTK;
     QVideoOutput   *videoFACS;
+
+    QStringList Drug_FilesList;
 
 signals:
     void pause_requested();
