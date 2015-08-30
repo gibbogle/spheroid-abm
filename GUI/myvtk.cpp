@@ -355,6 +355,7 @@ void MyVTK::cleanup()
 //---------------------------------------------------------------------------------------------
 void MyVTK::renderCells()
 {
+    double p[3];
     process_Tcells();
 	if (first_VTK) {
 		LOG_MSG("Initializing the renderer");
@@ -368,6 +369,12 @@ void MyVTK::renderCells()
 //    if (record) {
 //        recorder();
 //    }
+//    ren->GetActiveCamera()->GetPosition(p);
+//    sprintf(msg,"camera position: %6.1f %6.1f %6.1f",p[0],p[1],p[2]);
+//    LOG_MSG(msg);
+//    ren->GetActiveCamera()->GetFocalPoint(p);
+//    sprintf(msg,"camera focal pt: %6.1f %6.1f %6.1f",p[0],p[1],p[2]);
+//    LOG_MSG(msg);
 }
 
 //---------------------------------------------------------------------------------------------

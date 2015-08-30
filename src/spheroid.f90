@@ -1157,7 +1157,7 @@ integer :: kevent, ichemo, idrug, im, nmetab
 real(REAL_KIND) :: V, C(MAX_CHEMO)
 type(event_type) :: E
 
-write(*,*) 'ProcessEvent'
+!write(*,*) 'ProcessEvent'
 do kevent = 1,Nevents
 	E = event(kevent)
 	if (t_simulation >= E%time .and. .not.E%done) then
@@ -1323,7 +1323,7 @@ real(REAL_KIND) :: dxc, ex_conc(120*O2_BY_VOL+1)		! just for testing
 logical :: ok = .true.
 logical :: dbug
 
-call logger('simulate_step')
+!call logger('simulate_step')
 dbug = .false.
 if (Ncells == 0) then
 	call logger('Ncells = 0')
@@ -1362,7 +1362,6 @@ radiation_dose = 0
 if (use_treatment) then
 	call treatment(radiation_dose)
 endif
-write(*,*) 'istep: ',istep,use_events
 if (use_events) then
 	call ProcessEvent(radiation_dose)
 endif
@@ -1920,7 +1919,7 @@ real(c_double) :: dx, ex_conc(0:*)
 real(REAL_KIND) :: cbnd, cmin = 1.0e-6
 integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z, x1, x2, offset
 
-call logger('get_concdata')
+!call logger('get_concdata')
 nvars = 1 + MAX_CHEMO + N_EXTRA
 dx = DELTA_X
 rng(:,1) = Centre(:) - (adrop*Radius + 2)

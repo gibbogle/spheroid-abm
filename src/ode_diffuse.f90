@@ -513,6 +513,7 @@ do i = 1,neqn
 	    if (cell_exists) then
 !			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))	! We should account for change in surface area
 			membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*Cin(ichemo))
+!			if (ichemo == OXYGEN .and. kcell == 1) write(*,'(a,2e12.3)') 'O2, O2 flux: ',Cex,membrane_flux
 		else
 		    membrane_flux = 0
 		endif
@@ -1476,7 +1477,7 @@ integer :: kcell, Nh, Nc
 real(REAL_KIND) :: C, metab, dMdt, asum
 real(REAL_KIND) :: Kin, Kout, decay_rate, vol_cm3, Cin, Cex
 
-write(*,*) 'UpdateMedium'
+!write(*,*) 'UpdateMedium'
 ! Start by looking at a conservative constituent (e.g. glucose)
 ! Contribution from cell uptake
 U = 0
@@ -1529,7 +1530,7 @@ do ichemo = 1,MAX_CHEMO
 			endif
 		enddo
 		U(ichemo) = asum
-		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: ',ichemo,asum
+!		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: ',ichemo,asum
 	endif
 enddo
 chemo(:)%medium_U = U(:)
@@ -1543,18 +1544,18 @@ do ichemo = 1,MAX_CHEMO
 	if (chemo(ichemo)%constant) cycle
 	R2 = Rlayer(ichemo)
 	if (ichemo /= OXYGEN) then	! update %medium_M, then %medium_Cext
-		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_M: ',ichemo,chemo(ichemo)%medium_M
+!		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_M: ',ichemo,chemo(ichemo)%medium_M
 		chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
-		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_M: ',ichemo,chemo(ichemo)%medium_M
+!		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_M: ',ichemo,chemo(ichemo)%medium_M
 		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)*R2) &
 			*(R1*R1*(3*R2 - 2*R1) - R2*R2*R2))/(total_volume - 4*PI*R1*R1*R1/3.)
-		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_Cext: ',ichemo,chemo(ichemo)%medium_Cext,(total_volume - 4*PI*R1*R1*R1/3.)
+!		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_Cext: ',ichemo,chemo(ichemo)%medium_Cext,(total_volume - 4*PI*R1*R1*R1/3.)
 	endif
 	a = (1/R2 - 1/R1)/(4*PI*chemo(ichemo)%medium_diff_coef)
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
 enddo
 
-write(*,'(a,10e12.3)') 'UpdateMedium: ',chemo(:)%medium_Cbnd
+!write(*,'(a,10e12.3)') 'UpdateMedium: ',chemo(:)%medium_Cbnd
 end subroutine
 
 !----------------------------------------------------------------------------------
