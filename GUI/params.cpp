@@ -25,9 +25,9 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "DLL0.00",
  "DLL version number."},
 
-{"NX", 120, 0, 0,
-"Lattice size",
-"Dimension of the lattice (number of sites in X,Y and Z directions).  Typically 5*BLOB_RADIUS is OK."},
+{"NX", 33, 0, 0,
+"Fine grid size",
+"Dimension of the fine grid (number of grid pts in X,Y and Z directions).  Must = 1 + multiple of 8."},
 
 {"INITIAL_COUNT", 1000, 0, 0,
 "Initial number of tumour cells",
@@ -71,10 +71,10 @@ The shape value must be greater than 1, and values close to 1 give distributions
 
 {"NXB", 35, 0, 0,
 "Coarse grid size",
-"Dimension of the coarse grid (number of grid pts in X,Y and Z directions).  Grid spacing is 4 times fine grid spacing."},
+"Dimension of the coarse grid (number of grid pts in X,Y and Z directions).  Grid spacing is 4 times fine grid spacing.  Must be odd"},
 
 {"DELTA_X", 30, 0, 0,
-"Fine grid spacing",
+"Fine grid spacing (um)",
 "Grid-cell size in um.  Constituent transport and consumption/production is computed on this grid."},
 
 {"A_SEPARATION", 1.0, 0, 0,
@@ -488,8 +488,8 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
     {"platingefficiency",         0, 0,1,"","Percentage of live cells that are viable"},
     {"mediumoxygen",              0, 0,1,"","Average concentration of oxygen in the medium (far-field)"},
     {"mediumglucose",             0, 0,1,"","Average concentration of glucose in the medium (far-field)"},
-    {"mediumTPZdrug",             0, 0,1,"","Average concentration of TPZ drug in the medium (far-field)"},
-    {"mediumDNBdrug",             0, 0,1,"","Average concentration of DNB drug in the medium (far-field)"},
+    {"mediumdrugA",               0, 0,1,"","Average concentration of drug A in the medium (far-field)"},
+    {"mediumdrugB",               0, 0,1,"","Average concentration of drug B in the medium (far-field)"},
 
 // Profile plots
     {"MULTI",                     1, 0,1,"","Selected constituent on a line through the blob centre"},
