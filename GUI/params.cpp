@@ -25,7 +25,7 @@ The shape value must be greater than 1, and values close to 1 give distributions
  "DLL0.00",
  "DLL version number."},
 
-{"NX", 33, 0, 0,
+{"NX", 120, 0, 0,
 "Fine grid size",
 "Dimension of the fine grid (number of grid pts in X,Y and Z directions).  Must = 1 + multiple of 8."},
 

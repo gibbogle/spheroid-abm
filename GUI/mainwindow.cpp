@@ -49,8 +49,16 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_MSG("did setupUi");
     showMaximized();
 
+    // This section configures the GUI for spheroid vs scell
     tab_force->setEnabled(false);
-
+    groupBox_force->setEnabled(false);
+    line_DELTA_X->setEnabled(false);
+    line_NXB->setEnabled(false);
+    line_NT_CONC->setEnabled(true);
+    line_NMM3->setEnabled(true);
+    line_UNSTIRRED_LAYER->setEnabled(true);
+    line_FLUID_FRACTION->setEnabled(true);
+    groupBox_drop->setEnabled(true);
     QString currPath = QDir::currentPath();
     LOG_QMSG("starting path: " + currPath);
     QString newPath = currPath + "/execution";

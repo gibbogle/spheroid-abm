@@ -56,9 +56,8 @@ contains
 ! is specified.
 ! Now uses %medium_Cbnd, no t dependence here.
 !----------------------------------------------------------------------------------
-real(REAL_KIND) function BdryConc(ichemo,t)
+real(REAL_KIND) function BdryConc(ichemo)
 integer :: ichemo
-real(REAL_KIND) :: t
 
 BdryConc = chemo(ichemo)%medium_Cbnd
 end function
@@ -443,7 +442,7 @@ DX2 = DELTA_X*DELTA_X
 decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
-cbnd = BdryConc(ichemo,t_simulation)
+cbnd = BdryConc(ichemo)
 membrane_kin = chemo(ichemo)%membrane_diff_in
 membrane_kout = chemo(ichemo)%membrane_diff_out
 !TPZ_metabolised(:,:) = (TPZ%Kmet0(:,:) > 0)	
@@ -821,7 +820,7 @@ integer :: iemin = 500
 DX2 = DELTA_X*DELTA_X
 nvar = ODEdiff%nextra
 Kdiff = chemo(ichemo)%diff_coef
-cbnd = BdryConc(ichemo,t_simulation)
+cbnd = BdryConc(ichemo)
 
 ! Allocate y0(:), ydiff(:) and copy y(:) to y0(:), ydiff(:)
 allocate(y0(nvar))
@@ -978,7 +977,7 @@ logical, parameter :: interleave = .false.
 DX2 = DELTA_X*DELTA_X
 nexvar = ODEdiff%nextra
 Kdiff = chemo(ichemo)%diff_coef
-cbnd = BdryConc(ichemo,t_simulation)
+cbnd = BdryConc(ichemo)
 
 ! Allocate y0(:), ydiff(:) and copy y(:) to y0(:), ydiff(:)
 allocate(y0(nexvar))
@@ -2125,7 +2124,7 @@ ichemo = icase
 DX2 = DELTA_X*DELTA_X
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 !+ decay_rate
-cbnd = BdryConc(ichemo,t_simulation)
+cbnd = BdryConc(ichemo)
 !$omp parallel do private(vol, dCsum, k, kv, dCdiff, val) default(shared) schedule(static)
 do ie = 1,neqn
 	vol = Vextra_cm3			!!!!!! need to worry about volume !!!!
@@ -2261,7 +2260,7 @@ if (kv > 0) then
 endif
 
 do ichemo = 1,MAX_CHEMO
-    csum(ichemo) = csum(ichemo) + (6-nb)*BdryConc(ichemo,t_simulation)
+    csum(ichemo) = csum(ichemo) + (6-nb)*BdryConc(ichemo)
 enddo
 allstate(n,:) = csum/6
 end subroutine

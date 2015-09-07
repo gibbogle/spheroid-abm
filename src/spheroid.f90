@@ -1333,7 +1333,7 @@ endif
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
 
-bdry_debug = (istep >= 25000)
+bdry_debug = (istep >= 250000)
 if (use_dropper .and. Ncells >= Ndrop .and. .not.is_dropped) then
     call shaper
     call dropper
@@ -1345,6 +1345,7 @@ if (dbug .or. mod(istep,nthour) == 0) then
 	diam_um = 2*DELTA_X*Radius*10000
 	write(logmsg,'(a,4i8,f8.1)') 'istep, hour: ',istep,istep/nthour,nlist,ncells,diam_um
 	call logger(logmsg)
+	write(nflog,'(a,2f8.4)') 'bdryconc: O2, glucose: ',bdryconc(OXYGEN),bdryconc(GLUCOSE)
 endif
 	if (bdry_changed) then
 		if (dbug) write(nflog,*) 'UpdateBdryList'
@@ -2111,13 +2112,13 @@ do ic = 1,nvars
 	elseif (ichemo <= MAX_CHEMO) then
 		k = ic
 		if (chemo(ichemo)%used) then
-			ex_conc(k) = BdryConc(ichemo,t_simulation)
+			ex_conc(k) = BdryConc(ichemo)
 		else
 			ex_conc(k) = 0
 		endif      
 		k = (ns-1)*nvars + ic
 		if (chemo(ichemo)%used) then
-			ex_conc(k) = BdryConc(ichemo,t_simulation)
+			ex_conc(k) = BdryConc(ichemo)
 		else
 			ex_conc(k) = 0
 		endif      
@@ -2540,7 +2541,7 @@ do ichemo = 0,MAX_CHEMO+N_EXTRA
 		if (.not.chemo(ichemo)%used) cycle
 		ic = ic + 1
 		title(ic) = chemo(ichemo)%name
-	    cbnd = BdryConc(ichemo,t_simulation)
+	    cbnd = BdryConc(ichemo)
 	elseif (ichemo == GROWTH_RATE) then
 		ic = ic + 1
 		title(ic) = 'Growth_rate'
