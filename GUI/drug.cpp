@@ -70,9 +70,9 @@ void MainWindow::readDrugParams(int idrug, QString fileName)
                     drug[idrug].param[kset].kill[ictyp].iparam[i-NDKILLPARAMS] = ival;
                 }
                 drug[idrug].param[kset].kill[ictyp].info[i] = (line.mid(data[0].size())).trimmed();
-                if (kset == 0) {
-                    LOG_QMSG(drug[idrug].param[kset].kill[ictyp].info[i]);
-                }
+//                if (kset == 0) {
+//                    LOG_QMSG(drug[idrug].param[kset].kill[ictyp].info[i]);
+//                }
             }
         }
     }
@@ -143,6 +143,15 @@ void MainWindow::writeDrugParams(QTextStream *out, int idrug)
 void MainWindow::on_pushButton_savedrugdata_clicked()
 {
     int idrug;
+
+    if (radioButton_drugA->isChecked()) {
+        idrug = 0;
+    } else if (radioButton_drugB->isChecked()) {
+        idrug = 1;
+    } else {
+        return;
+    }
+
     const QString fileName = QFileDialog::getSaveFileName(this, tr("Select Drug File"), ".", tr("Drug Data Files (*.drugdata)"));
     if (fileName.compare("") != 0) {
         LOG_MSG("Selected drug file:");
@@ -157,10 +166,7 @@ void MainWindow::on_pushButton_savedrugdata_clicked()
             return;
         }
         QTextStream out(&file);
-        if (radioButton_drugA->isChecked())
-            idrug = 0;
-        else
-            idrug = 1;
+
         writeDrugParams(&out,idrug);
         file.close();
     }
@@ -228,15 +234,24 @@ void MainWindow::populateDrugTable(int idrug)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_buttonGroup_drug_buttonClicked(QAbstractButton* button)
 {
+    int idrug;
     QString drugname;
     LOG_MSG("on_buttonGroup_drug_buttonClicked");
 //    int id = buttonGroup_drug->checkedId();
     QRadioButton *rb = (QRadioButton *)button;
-    drugname = rb->text();
-    LOG_QMSG("drugname: " + drugname);
+//    drugname = rb->text();
+//    LOG_QMSG("drugname: " + drugname);
 //    if (id == 1) {
 //        drugname =
 //    }
+//    if (rb->objectName().contains("drugA"))
+//        idrug = 0;
+//    else if (rb->objectName().contains("drugB"))
+//        idrug = 1;
+    if (radioButton_drugA->isChecked())
+        populateDrugTable(0);
+    if (radioButton_drugB->isChecked())
+        populateDrugTable(1);
 }
 
 
@@ -245,7 +260,57 @@ void MainWindow::on_buttonGroup_drug_buttonClicked(QAbstractButton* button)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::changeDrugParam(QObject *w)
 {
-
+    int idrug, kset, ict, ictyp, i, ii;
+    // get idrug
+    if (radioButton_drugA->isChecked()) {
+        idrug = 0;
+    } else if (radioButton_drugB->isChecked()) {
+        idrug = 1;
+    } else {
+        return;
+    }
+    QString name = w->objectName();
+    // get number i
+    QStringList data = name.split("_");
+    int n = data.size();
+    QString numstr = data[n-1];
+    i = numstr.toInt();
+    ii = i - NDKILLPARAMS;
+    if (name.contains("PARENT")) {
+        kset = 0;
+    } else if (name.contains("METAB1")) {
+        kset = 1;
+    } else if (name.contains("METAB2")) {
+        kset = 2;
+    }
+    if (name.contains("_CT1")) {            // cell type 1  data
+        ict = 1;
+    } else if (name.contains("_CT2")) {     // cell type 2  data
+        ict = 2;
+    } else {                                // basic data
+        ict = 0;
+    }
+    if (ict == 0) {
+        QLineEdit *lineEdit = (QLineEdit *)w;
+        drug[idrug].param[kset].dparam[i] = lineEdit->text().toDouble();
+        return;
+    }
+    ictyp = ict-1;
+    if (name.contains("line_")) {
+        QLineEdit *lineEdit = (QLineEdit *)w;
+        if (i == 14)      // kill model
+            drug[idrug].param[kset].kill[ictyp].iparam[ii] = lineEdit->text().toInt();
+        else
+            drug[idrug].param[kset].kill[ictyp].dparam[i] = lineEdit->text().toDouble();
+    } else if (name.contains("cbox_")) {
+        QCheckBox *cbox = (QCheckBox *)w;
+        int val;
+        if (cbox->isChecked())
+            val = 1;
+        else
+            val = 0;
+        drug[idrug].param[kset].kill[ictyp].iparam[ii] = val;
+    }
 }
 
 
@@ -306,3 +371,30 @@ void MainWindow::initDrugComboBoxes()
 
 }
 
+void MainWindow::readDrugData(QTextStream *in)
+{
+    QString line;
+
+    line = in->readLine();
+    QStringList data = line.split(" ",QString::SkipEmptyParts);
+    int ndrugs = data[0].toInt();
+    for (int idrug=0; idrug<ndrugs; idrug++) {
+        line = in->readLine();
+//        QStringList data = line.split(" ",QString::SkipEmptyParts);     // CLASS_NAME
+        line = in->readLine();
+        QStringList data = line.split(" ",QString::SkipEmptyParts);     // DRUG_NAME
+        QString drugname = data[0];
+        QString fileName = drugname + ".drugdata";
+        readDrugParams(idrug, fileName);
+        if (idrug == 0) {
+            text_DRUG_A_NAME->setText(drugname);
+            cbox_USE_DRUG_A->setChecked(true);
+        } else if (idrug == 1) {
+            text_DRUG_B_NAME->setText(drugname);
+            cbox_USE_DRUG_B->setChecked(true);
+        }
+        for (int k=0; k<113; k++) {
+            line = in->readLine();
+        }
+    }
+}

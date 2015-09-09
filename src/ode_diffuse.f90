@@ -239,7 +239,6 @@ enddo
 
 nchemo = 0
 do ichemo = 1,MAX_CHEMO
-!	if (chemo(ichemo)%used) then
 	if (chemo(ichemo)%present) then
 		nchemo = nchemo + 1
 		chemomap(nchemo) = ichemo
@@ -429,10 +428,10 @@ if (ichemo > TRACER) then
 	im = ichemo - TRACER - 1 - 3*(idrug-1)		! 0 = drug, 1 = metab1, 2 = metab2
 	dp => drug(idrug)
 	metabolised(:,:) = (dp%Kmet0(:,:) > 0)
-	if (im == 0) then
-		write(*,*) 'f_rkc: ichemo,idrug,im: ',ichemo,idrug,im
-		write(*,*) 'metabolised: ',metabolised(:,:)
-	endif
+!	if (im == 0) then
+!		write(*,*) 'f_rkc: ichemo,idrug,im: ',ichemo,idrug,im
+!		write(*,*) 'metabolised: ',metabolised(:,:)
+!	endif
 else
 	idrug = 0
 	metabolised(:,:) = .false.
@@ -445,8 +444,6 @@ dc6 = 6*dc1 + decay_rate
 cbnd = BdryConc(ichemo)
 membrane_kin = chemo(ichemo)%membrane_diff_in
 membrane_kout = chemo(ichemo)%membrane_diff_out
-!TPZ_metabolised(:,:) = (TPZ%Kmet0(:,:) > 0)	
-!DNB_metabolised(:,:) = (DNB%Kmet0(:,:) > 0)	
 
 !write(*,*) 'f_rkc: neqn: ',neqn
 !$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, kcell, ict, membrane_flux, KmetC, area_factor) default(shared) schedule(static)
@@ -510,16 +507,13 @@ do i = 1,neqn
 		    dCsum = dCsum + dCdiff*val
 	    enddo
 	    if (cell_exists) then
-!			membrane_flux = chemo(ichemo)%membrane_diff*(Cex - Cin(ichemo))	! We should account for change in surface area
 			membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*Cin(ichemo))
-!			if (ichemo == OXYGEN .and. kcell == 1) write(*,'(a,2e12.3)') 'O2, O2 flux: ',Cex,membrane_flux
 		else
 		    membrane_flux = 0
 		endif
     	dydt(i) = dCsum - membrane_flux/vol_cm3
 	else
 		C = Cin(ichemo)
-!		membrane_flux = chemo(ichemo)%membrane_diff*(Cex - C)		! We should account for change in surface area
 		membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*C)
 		dCreact = 0
 		if (ichemo == OXYGEN) then
@@ -538,7 +532,6 @@ do i = 1,neqn
 				endif
 				dCreact = -(1 - dp%C2(ict,0) + dp%C2(ict,0)*dp%KO2(ict,0)/(dp%KO2(ict,0) + Cin(OXYGEN)))*KmetC
 			endif
-!			write(*,'(a,2i6,4e12.3)') 'dCreact: ',im,i,dCreact,membrane_flux/vol_cm3,yy,decay_rate
 			dCreact = dCreact + membrane_flux/vol_cm3
 		elseif (im == 1) then	! ichemo-1 is the PARENT drug
 			if (metabolised(ict,0) .and. Cin(ichemo-1) > 0) then
@@ -547,7 +540,6 @@ do i = 1,neqn
 			if (metabolised(ict,1) .and. C > 0) then
 				dCreact = dCreact - (1 - dp%C2(ict,1) + dp%C2(ict,1)*dp%KO2(ict,1)/(dp%KO2(ict,1) + Cin(OXYGEN)))*dp%Kmet0(ict,1)*C
 			endif
-!			write(*,'(a,2i6,2e12.3)') 'dCreact: ',im,i,dCreact,membrane_flux/vol_cm3
 			dCreact = dCreact + membrane_flux/vol_cm3
 		elseif (im == 2) then	! ichemo-1 is the METAB1
 			if (metabolised(ict,1) .and. Cin(ichemo-1) > 0) then
@@ -556,75 +548,8 @@ do i = 1,neqn
 			if (metabolised(ict,2) .and. C > 0) then
 				dCreact = dCreact - (1 - dp%C2(ict,2) + dp%C2(ict,2)*dp%KO2(ict,2)/(dp%KO2(ict,2) + Cin(OXYGEN)))*dp%Kmet0(ict,2)*C
 			endif
-!			write(*,'(a,2i6,2e12.3)') 'dCreact: ',im,i,dCreact,membrane_flux/vol_cm3
 			dCreact = dCreact + membrane_flux/vol_cm3
 		endif
-!		select case (ichemo)
-!		case (OXYGEN)
-!			metab = O2_metab(C)
-!			dCreact = (-metab*chemo(ichemo)%max_cell_rate + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
-!		case (GLUCOSE)
-!			metab = C**Ng/(chemo(ichemo)%MM_C0**Ng + C**Ng)
-!			dCreact = (-metab*chemo(ichemo)%max_cell_rate + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
-!		case (TRACER)
-!			dCreact = membrane_flux/vol_cm3
-!		case (TPZ_DRUG)
-!		    if (TPZ_metabolised(ict,0) .and. C > 0) then
-!				KmetC = TPZ%Kmet0(ict,0)*C
-!				if (TPZ%Vmax(ict,0) > 0) then
-!					KmetC = KmetC + TPZ%Vmax(ict,0)*C/(TPZ%Km(ict,0) + C)
-!					KmetC = KmetC + DNB%Vmax(ict,0)*C/(DNB%Km(ict,0) + C)
-!				endif
-!				dCreact = -(1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + Cin(OXYGEN)))*KmetC
-!				dCreact = -(1 - DNB%C2(ict,0) + DNB%C2(ict,0)*DNB%KO2(ict,0)/(DNB%KO2(ict,0) + Cin(OXYGEN)))*KmetC
-!			endif
-!			dCreact = dCreact + membrane_flux/vol_cm3
-!		case (TPZ_DRUG_METAB_1)
-!			if (TPZ_metabolised(ict,0) .and. Cin(TPZ_DRUG) > 0) then
-!				dCreact = (1 - TPZ%C2(ict,0) + TPZ%C2(ict,0)*TPZ%KO2(ict,0)/(TPZ%KO2(ict,0) + Cin(OXYGEN)))*TPZ%Kmet0(ict,0)*Cin(TPZ_DRUG)
-!				dCreact = (1 - DNB%C2(ict,0) + DNB%C2(ict,0)*DNB%KO2(ict,0)/(DNB%KO2(ict,0) + Cin(OXYGEN)))*DNB%Kmet0(ict,0)*Cin(DNB_DRUG)
-!			endif
-!			if (TPZ_metabolised(ict,1) .and. C > 0) then
-!				dCreact = dCreact - (1 - TPZ%C2(ict,1) + TPZ%C2(ict,1)*TPZ%KO2(ict,1)/(TPZ%KO2(ict,1) + Cin(OXYGEN)))*TPZ%Kmet0(ict,1)*C
-!				dCreact = dCreact - (1 - DNB%C2(ict,1) + DNB%C2(ict,1)*DNB%KO2(ict,1)/(DNB%KO2(ict,1) + Cin(OXYGEN)))*DNB%Kmet0(ict,1)*C
-!			endif
-!			dCreact = dCreact + membrane_flux/vol_cm3
-!		case (TPZ_DRUG_METAB_2)
-!			if (TPZ_metabolised(ict,1) .and. Cin(TPZ_DRUG_METAB_1) > 0) then
-!				dCreact = (1 - TPZ%C2(ict,1) + TPZ%C2(ict,1)*TPZ%KO2(ict,1)/(TPZ%KO2(ict,1) + Cin(OXYGEN)))*TPZ%Kmet0(ict,1)*Cin(TPZ_DRUG_METAB_1)
-!				dCreact = (1 - DNB%C2(ict,1) + DNB%C2(ict,1)*DNB%KO2(ict,1)/(DNB%KO2(ict,1) + Cin(OXYGEN)))*DNB%Kmet0(ict,1)*Cin(DNB_DRUG_METAB_1)
-!			endif
-!			if (TPZ_metabolised(ict,2) .and. C > 0) then
-!				dCreact = dCreact - (1 - TPZ%C2(ict,2) + TPZ%C2(ict,2)*TPZ%KO2(ict,2)/(TPZ%KO2(ict,2) + Cin(OXYGEN)))*TPZ%Kmet0(ict,2)*C
-!				dCreact = dCreact - (1 - DNB%C2(ict,2) + DNB%C2(ict,2)*DNB%KO2(ict,2)/(DNB%KO2(ict,2) + Cin(OXYGEN)))*DNB%Kmet0(ict,2)*C
-!			endif
-!			dCreact = dCreact + membrane_flux/vol_cm3
-!		case (DNB_DRUG)
-!		    if (DNB_metabolised(ict,0) .and. C > 0) then
-!				KmetC = DNB%Kmet0(ict,0)*C
-!				if (DNB%Vmax(ict,0) > 0) then
-!					KmetC = KmetC + DNB%Vmax(ict,0)*C/(DNB%Km(ict,0) + C)
-!				endif
-!				dCreact = -(1 - DNB%C2(ict,0) + DNB%C2(ict,0)*DNB%KO2(ict,0)/(DNB%KO2(ict,0) + Cin(OXYGEN)))*KmetC
-!			endif
-!			dCreact = dCreact + membrane_flux/vol_cm3
-!		case (DNB_DRUG_METAB_1)
-!			if (DNB_metabolised(ict,0) .and. Cin(DNB_DRUG) > 0) then
-!				dCreact = (1 - DNB%C2(ict,0) + DNB%C2(ict,0)*DNB%KO2(ict,0)/(DNB%KO2(ict,0) + Cin(OXYGEN)))*DNB%Kmet0(ict,0)*Cin(DNB_DRUG)
-!			endif
-!			if (DNB_metabolised(ict,1) .and. C > 0) then
-!				dCreact = dCreact - (1 - DNB%C2(ict,1) + DNB%C2(ict,1)*DNB%KO2(ict,1)/(DNB%KO2(ict,1) + Cin(OXYGEN)))*DNB%Kmet0(ict,1)*C
-!			endif
-!			dCreact = dCreact + membrane_flux/vol_cm3
-!		case (DNB_DRUG_METAB_2)
-!			if (DNB_metabolised(ict,1) .and. Cin(DNB_DRUG_METAB_1) > 0) then
-!				dCreact = (1 - DNB%C2(ict,1) + DNB%C2(ict,1)*DNB%KO2(ict,1)/(DNB%KO2(ict,1) + Cin(OXYGEN)))*DNB%Kmet0(ict,1)*Cin(DNB_DRUG_METAB_1)
-!			endif
-!			if (DNB_metabolised(ict,2) .and. C > 0) then
-!				dCreact = dCreact - (1 - DNB%C2(ict,2) + DNB%C2(ict,2)*DNB%KO2(ict,2)/(DNB%KO2(ict,2) + Cin(OXYGEN)))*DNB%Kmet0(ict,2)*C
-!			endif
-!			dCreact = dCreact + membrane_flux/vol_cm3
-!		end select
 	    dydt(i) = dCreact - yy*decay_rate
 		if (isnan(dydt(i))) then
 			write(nflog,*) 'f_rkc: dydt isnan: ',i,ichemo,dydt(i)
@@ -653,17 +578,9 @@ do z = z1,NZ/2+9
 	z2 = z
 	if (ODEdiff%cell_index(1) > 0) then
 	    Cin(z) = v(i+1)
-!	    kcell = occupancy(x,y,z)%indx(1)
-!	    drugM(z) = cell_list(kcell)%M
 	else
 	    Cin(z) = 0
 	endif
-!	ki = intra_index(i)
-!	if (ki > 0) then
-!    	Ce(z) = v(ki+ODEdiff%nextra)
-!    else
-!        Ce(z) = 0
-!    endif
 enddo
 !write(logmsg,'(a,2f7.4)') 'Medium: ',chemo(DRUG_A)%bdry_conc,chemo(DRUG_METAB_A)%bdry_conc
 !call logger(logmsg)
@@ -748,7 +665,6 @@ do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	if (relax .and. ichemo == OXYGEN) cycle
 	if (chemo(ichemo)%constant) cycle
-	
 	idid = 0
 	t = tstart
 	tend = t + dt
@@ -1353,99 +1269,6 @@ Vm = total_volume - Vblob
 !write(nflog,'(a,2e12.3)') 'UpdateCbnd: medium_Cbnd: ',chemo(OXYGEN)%medium_Cbnd,chemo(GLUCOSE)%medium_Cbnd
 end subroutine
 
-!----------------------------------------------------------------------------------
-! The medium concentrations are updated explicitly, assuming a sphere with 
-! known total uptake rate U.
-! Compute U and update M, Cext, Cbnd.
-! Note that for O2 Cext is fixed.
-! Need to include decay
-! PROBLEM: For glucose, U ia about 20x the total cell uptake flux
-! !! Nbnd > Ncells, but r resulting Csum/Nbnd is  reasonable estimate of the conc.
-!----------------------------------------------------------------------------------
-subroutine UpdateMedium1(dt)
-real(REAL_KIND) :: dt
-integer :: i, k, ichemo, ntvars
-integer :: ichemo_log
-real(REAL_KIND) :: dA, R1, R2, V0, Csum(MAX_CHEMO), U(MAX_CHEMO), tracer_C, tracer_N
-real(REAL_KIND) :: a(MAX_CHEMO), b(MAX_CHEMO), Rlayer(MAX_CHEMO)
-logical :: bnd
-
-ichemo_log = OXYGEN
-! First need the spheroid radius
-call SetRadius(Nsites)
-dA = DELTA_X*DELTA_X	! cm2
-R1 = Radius*DELTA_X		! cm
-V0 = total_volume		! cm3
-!V0 = medium_volume0		! cm3
-Rlayer(:) = R1 + chemo(:)%medium_dlayer
-b = dA*chemo(:)%medium_diff_coef/DELTA_X
-a = (1/Rlayer(:) - 1/R1)/(4*PI*chemo(:)%medium_diff_coef)
-U = 0
-! This could/should be done using sites in bdrylist
-ntvars = ODEdiff%nextra + ODEdiff%nintra
-tracer_C = 0
-tracer_N = 0
-Nbnd = 0
-Csum = 0
-do i = 1,ntvars
-	if (ODEdiff%vartype(i) /= EXTRA) cycle
-	bnd = .false.
-	do k = 1,7
-		if (ODEdiff%icoef(i,k) < 0) then
-			bnd = .true.
-			exit
-		endif
-	enddo
-	if (.not.bnd) cycle
-	do k = 1,7
-		if (ODEdiff%icoef(i,k) < 0) then	! boundary with medium ???????????????????????????????????????????????????????????????????
-			Nbnd = Nbnd + 1
-			do ichemo = 1,MAX_CHEMO
-				if (.not.chemo(ichemo)%present) cycle
-!				U(ichemo) = U(ichemo) + dA*chemo(ichemo)%diff_coef*(chemo(ichemo)%medium_Cbnd - allstate(i,ichemo))/DELTA_X
-				Csum(ichemo) = Csum(ichemo) + allstate(i,ichemo)
-				if (ichemo == TRACER) then
-					tracer_C = tracer_C + allstate(i,ichemo)
-					tracer_N = tracer_N + 1
-				endif
-			enddo
-		endif
-	enddo
-enddo
-
-!!!U = (dA*chemo(:)%diff_coef/DELTA_X)*(Nbnd*chemo(:)%medium_Cbnd - Csum(:))	! Note: this is an approximation
-
-chemo(:)%medium_Cbnd = (chemo(:)%medium_Cext - Csum(:)*b*a(:))/(1 - Nbnd*b*a(:))
-
-!write(*,'(a,2i6,2e12.3)') 'UpdateMedium: glucose Csum/Nbnd: ',Nbnd,Ncells,Csum(GLUCOSE)/Nbnd,chemo(GLUCOSE)%medium_Cbnd
-U(:) = (chemo(:)%medium_Cbnd - chemo(:)%medium_Cext)/a(:)
-
-!write(nflog,'(a,2i6,4e12.3)') 'updateMedium: ',istep,Nbnd,chemo(ichemo_log)%medium_Cext,Csum(ichemo_log),U(ichemo_log),chemo(ichemo_log)%medium_Cbnd
-
-do ichemo = 1,MAX_CHEMO
-!	if (.not.chemo(ichemo)%used) cycle
-	if (.not.chemo(ichemo)%present) cycle
-	if (chemo(ichemo)%constant) then
-		chemo(ichemo)%medium_Cext = chemo(ichemo)%bdry_conc
-	else
-		R2 = Rlayer(ichemo)
-		if (ichemo /= OXYGEN) then
-			chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
-			chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)*R2) &
-				*(R1*R1*(3*R2 - 2*R1) - R2*R2*R2))/(V0 - 4*PI*R1*R1*R1/3.)
-		endif
-	endif
-enddo	
-!!!U = b(:)*(Nbnd*chemo(:)%medium_Cext - Csum(:))/(1 - b(:)*Nbnd*a(:))
-!!!!chemo(:)%medium_Cbnd = chemo(:)%medium_Cext + (U(:)/(4*PI*chemo(:)%medium_diff_coef))*(1/Rlayer(:) - 1/R1)
-chemo(:)%medium_U = U(:)
-!write(nflog,'(a,i6,2f10.6)') 'UpdateMedium: istep,R1,R2: ',istep,R1,R2
-!write(nflog,'(a,4e12.3)') 'UpdateMedium: medium_Cext,medium_U: ',chemo(OXYGEN)%medium_Cext,chemo(GLUCOSE)%medium_Cext, &
-!																chemo(OXYGEN)%medium_U,chemo(GLUCOSE)%medium_U
-!write(nflog,'(a,2e12.3)') 'UpdateMedium: medium_Cbnd: ',chemo(OXYGEN)%medium_Cbnd,chemo(GLUCOSE)%medium_Cbnd
-!write(*,'(a,2e12.3)') 'UpdateMedium: glucose U: ',U(GLUCOSE),U(GLUCOSE)*dt
-!!!!!!!!! Problem: U is about 20x sum_dMdt
-end subroutine
 
 !----------------------------------------------------------------------------------
 ! The medium concentrations are updated explicitly, assuming a sphere with 
@@ -1529,7 +1352,6 @@ do ichemo = 1,MAX_CHEMO
 			endif
 		enddo
 		U(ichemo) = asum
-!		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: ',ichemo,asum
 	endif
 enddo
 chemo(:)%medium_U = U(:)
@@ -1543,18 +1365,15 @@ do ichemo = 1,MAX_CHEMO
 	if (chemo(ichemo)%constant) cycle
 	R2 = Rlayer(ichemo)
 	if (ichemo /= OXYGEN) then	! update %medium_M, then %medium_Cext
-!		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_M: ',ichemo,chemo(ichemo)%medium_M
 		chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
-!		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_M: ',ichemo,chemo(ichemo)%medium_M
 		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)*R2) &
 			*(R1*R1*(3*R2 - 2*R1) - R2*R2*R2))/(total_volume - 4*PI*R1*R1*R1/3.)
-!		if (ichemo == DRUG_A) write(*,*) 'UpdateMedium: medium_Cext: ',ichemo,chemo(ichemo)%medium_Cext,(total_volume - 4*PI*R1*R1*R1/3.)
 	endif
 	a = (1/R2 - 1/R1)/(4*PI*chemo(ichemo)%medium_diff_coef)
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
 enddo
 
-!write(*,'(a,10e12.3)') 'UpdateMedium: ',chemo(:)%medium_Cbnd
+!write(nflog,'(a,10e12.3)') 'UpdateMedium: ',chemo(:)%medium_Cbnd
 end subroutine
 
 !----------------------------------------------------------------------------------

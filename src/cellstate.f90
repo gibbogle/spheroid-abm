@@ -639,21 +639,14 @@ do kcell = 1,nlist0
 	ityp = cell_list(kcell)%celltype
 	C_O2 = cell_list(kcell)%conc(OXYGEN)
 	metab = O2_metab(C_O2)
-!	metab = metabolic_rate(OXYGEN,C_O2)
 	if (use_V_dependence) then
 		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
 	else
 		dVdt = r_mean(ityp)*metab
-!		write(*,'(a,2e12.3)') 'Vdivide0,divide_time_mean: ',Vdivide0,divide_time_mean(ityp)
-!		write(*,'(a,3e12.3)') 'r_mean, metab, dVdt: ',r_mean(ityp), metab, dVdt
 	endif
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0
 	endif
-!	if (istep > 1 .and. dVdt == 0) then
-!		write(nflog,'(a,2i6,5e12.3)') 'dVdt: ',istep,kcell,r_mean,c_rate,C_O2,metab,dVdt
-!		stop
-!	endif
 	site = cell_list(kcell)%site
 	Cin_0 = cell_list(kcell)%conc
 	Cex_0 = occupancy(site(1),site(2),site(3))%C

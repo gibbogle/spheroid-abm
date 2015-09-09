@@ -488,7 +488,7 @@ read(nfcell,*) nt_saveprofiledata
 read(nfcell,*) Ndrugs_used
 call ReadDrugData(nfcell)
 
-if (use_events) then
+if (use_events .and. ndrugs_used > 0) then
 	call ReadProtocol(nfcell)
 	use_treatment = .false.
 endif
@@ -599,6 +599,8 @@ integer :: nf
 integer :: idrug, im, ictyp, ival
 character*(16) :: drugname
 
+write(logmsg,*) 'ReadDrugData'
+call logger(logmsg)
 if (allocated(drug)) then
 	deallocate(drug)
 endif
@@ -615,13 +617,15 @@ do idrug = 1,Ndrugs_used
 		if (im == 0) then
 			drug(idrug)%name = drugname
 		endif
-		drug(idrug)%nmetabolites = 2		! currently all drugs have 2 metabolites
+		drug(idrug)%nmetabolites = 2			! currently all drugs have 2 metabolites
+		drug(idrug)%use_metabolites = .true.	! currently simulate metabolites
 		read(nf,*) drug(idrug)%diff_coef(im)
 		read(nf,*) drug(idrug)%medium_diff_coef(im)
 		read(nf,*) drug(idrug)%membrane_diff_in(im)
 		read(nf,*) drug(idrug)%membrane_diff_out(im)
 		read(nf,*) drug(idrug)%halflife(im)
-		
+		drug(idrug)%membrane_diff_in(im) = drug(idrug)%membrane_diff_in(im)*Vsite_cm3/60	! /min -> /sec
+		drug(idrug)%membrane_diff_out(im) = drug(idrug)%membrane_diff_out(im)*Vsite_cm3/60	! /min -> /sec
 		do ictyp = 1,ncelltypes
             read(nf,*) drug(idrug)%Kmet0(ictyp,im)
             read(nf,*) drug(idrug)%C2(ictyp,im)
@@ -642,6 +646,9 @@ do idrug = 1,Ndrugs_used
             drug(idrug)%kill_model(ictyp,im) = ival
             read(nf,*) ival
             drug(idrug)%sensitises(ictyp,im) = (ival == 1)
+            drug(idrug)%Kmet0(ictyp,im) = drug(idrug)%Kmet0(ictyp,im)/60					! /min -> /sec
+            drug(idrug)%KO2(ictyp,im) = 1.0e-3*drug(idrug)%KO2(ictyp,im)					! um -> mM
+            drug(idrug)%kill_duration(ictyp,im) = 60*drug(idrug)%kill_duration(ictyp,im)	! min -> sec
 		enddo
     enddo
     write(nflog,*) 'drug: ',idrug,drug(idrug)%classname,'  ',drug(idrug)%name
@@ -660,12 +667,18 @@ character*(1)  :: numstr
 real(REAL_KIND) :: t, dt, vol, conc, dose
 type(event_type) :: E
 
+write(logmsg,*) 'ReadProtocol'
+call logger(logmsg)
 chemo(TRACER+1:)%used = .false.
 do
 	read(nf,'(a)') line
 	if (trim(line) == 'PROTOCOL') exit
 enddo
 read(nf,*) ntimes
+if (ntimes == 0) then
+	Nevents = 0
+	return
+endif
 if (allocated(event)) deallocate(event)
 allocate(event(2*ntimes))
 kevent = 0
@@ -700,7 +713,13 @@ do itime = 1,ntimes
 		event(kevent)%conc = conc
 		event(kevent)%dose = 0
 		chemo(ichemo)%used = .true.
-		write(*,*) 'define DRUG_EVENT: volume: ',event(kevent)%volume
+		write(nflog,*) 'define DRUG_EVENT: volume: ',event(kevent)%volume
+		if (drug(idrug)%use_metabolites) then
+			do im = 1,drug(idrug)%nmetabolites
+				chemo(ichemo+im)%used = .true.
+			enddo
+		endif
+
 !		if (ichemo == TPZ_DRUG .and. TPZ%use_metabolites) then
 !			do im = 1,TPZ%nmetabolites
 !				chemo(ichemo+im)%used = .true.
@@ -718,7 +737,7 @@ do itime = 1,ntimes
 		event(kevent)%volume = medium_volume0	!*1.0e3		! -> uL for consistency!!!  ??????????????????????
 		event(kevent)%conc = 0
 		event(kevent)%dose = 0
-		write(*,*) 'define MEDIUM_EVENT: volume: ',event(kevent)%volume
+		write(nflog,*) 'define MEDIUM_EVENT: volume: ',event(kevent)%volume
 	elseif (trim(line) == 'MEDIUM') then
 		kevent = kevent + 1
 		event(kevent)%etype = MEDIUM_EVENT
@@ -1124,9 +1143,6 @@ integer :: i, kcell, site(3), ntvars
 real(REAL_KIND) :: c0
 
 ntvars = ODEdiff%nextra + ODEdiff%nintra
-write(logmsg,*) 'InitConcs: ',ichemo,ntvars
-call logger(logmsg)
-
 if (istep == 0) then
 	if (ichemo == OXYGEN .or. ichemo == GLUCOSE .or. ichemo == TRACER) then
 		c0 = chemo(ichemo)%bdry_conc
@@ -1157,14 +1173,14 @@ integer :: kevent, ichemo, idrug, im, nmetab
 real(REAL_KIND) :: V, C(MAX_CHEMO)
 type(event_type) :: E
 
-!write(*,*) 'ProcessEvent'
+!write(logmsg,*) 'ProcessEvent'
+!call logger(logmsg)
 do kevent = 1,Nevents
 	E = event(kevent)
 	if (t_simulation >= E%time .and. .not.E%done) then
-	write(*,'(i3,2f8.0,i3,2f10.4)') E%etype,t_simulation,E%time,E%ichemo,E%volume,E%conc
+		write(nflog,'(i3,2f8.0,i3,2f10.4)') E%etype,t_simulation,E%time,E%ichemo,E%volume,E%conc
 		if (E%etype == RADIATION_EVENT) then
 			radiation_dose = E%dose
-!			write(*,*) 'radiation_dose: ',radiation_dose
 		elseif (E%etype == MEDIUM_EVENT) then
 			C = 0
 			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
@@ -1177,15 +1193,11 @@ do kevent = 1,Nevents
 			idrug = E%idrug
 			C(ichemo) = E%conc
 			V = E%volume
-			write(*,*) 'DRUG_EVENT: volume: ',E%volume
+			write(logmsg,'(a,2f8.3)') 'DRUG_EVENT: volume, conc: ',E%volume,E%conc
+			call logger(logmsg)
 			! set %present
 			chemo(ichemo)%present = .true.
 			chemo(ichemo)%bdry_conc = 0
-!			if (ichemo == TPZ_DRUG) then
-!				nmetab = TPZ%nmetabolites
-!			elseif (ichemo == DNB_DRUG) then
-!				nmetab = DNB%nmetabolites
-!			endif
 			nmetab = drug(idrug)%nmetabolites
 			do im = 1,nmetab
 				if (chemo(ichemo + im)%used) then
@@ -1194,6 +1206,7 @@ do kevent = 1,Nevents
 				endif
 			enddo
 			call MediumChange(V,C)
+			call UpdateMedium(0.0d0)
 		endif
 		event(kevent)%done = .true.
 	endif
@@ -1284,22 +1297,22 @@ subroutine MediumChange(Ve,Ce)
 real(REAL_KIND) :: Ve, Ce(:)
 real(REAL_KIND) :: R, Vm, Vr, Vblob
 
-write(*,*) 'MediumChange:'
-write(*,'(a,f8.4)') 'Ve: ',Ve
-write(*,'(a,13f8.4)') 'Ce: ',Ce
-write(*,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
+write(nflog,*) 'MediumChange:'
+write(nflog,'(a,f8.4)') 'Ve: ',Ve
+write(nflog,'(a,13f8.4)') 'Ce: ',Ce
+write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
 call SetRadius(Nsites)
 R = Radius*DELTA_X		! cm
 Vblob = (4./3.)*PI*R**3	! cm3
 Vm = total_volume - Vblob
 Vr = min(Vm,Ve)
-write(*,'(a,4f8.4)') 'total_volume, Vblob, Vm, Vr: ',total_volume, Vblob, Vm, Vr
+write(nflog,'(a,4f8.4)') 'total_volume, Vblob, Vm, Vr: ',total_volume, Vblob, Vm, Vr
 chemo(OXYGEN+1:)%medium_M = ((Vm - Vr)/Vm)*chemo(OXYGEN+1:)%medium_M + Ve*Ce(OXYGEN+1:)
 total_volume = Vm - Vr + Ve + Vblob
 chemo(OXYGEN+1:)%medium_Cext = chemo(OXYGEN+1:)%medium_M/(total_volume - Vblob)
 chemo(OXYGEN)%medium_Cext = chemo(OXYGEN)%bdry_conc
-write(*,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
-write(*,'(a,13f8.4)') 'medium_Cext ',chemo(OXYGEN+1:)%medium_Cext
+write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
+write(nflog,'(a,13f8.4)') 'medium_Cext ',chemo(OXYGEN+1:)%medium_Cext
 !call UpdateCbnd
 end subroutine
 
@@ -1339,7 +1352,6 @@ if (use_dropper .and. Ncells >= Ndrop .and. .not.is_dropped) then
     call dropper
 endif
 
-!if (bdry_debug) call CheckBdryList('simulate_step a')
 if (bdry_debug) write(*,*) 'istep, bdry_changed: ',istep,bdry_changed
 if (dbug .or. mod(istep,nthour) == 0) then
 	diam_um = 2*DELTA_X*Radius*10000
@@ -1641,7 +1653,7 @@ integer(c_int) :: summaryData(*), i_hypoxia_cutoff,i_growth_cutoff
 integer :: Ntagged_anoxia(MAX_CELLTYPES), Ntagged_drugA(MAX_CELLTYPES), Ntagged_drugB(MAX_CELLTYPES), Ntagged_radiation(MAX_CELLTYPES)
 integer :: Nviable(MAX_CELLTYPES), plate_eff_10(MAX_CELLTYPES)
 integer :: diam_um, vol_mm3_1000, nhypoxic(3), ngrowth(3), hypoxic_percent_10, growth_percent_10, necrotic_percent_10, &
-    medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000
+    medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000, npmm3
 integer :: TNanoxia_dead, TNdrugA_dead, TNdrugB_dead, TNradiation_dead, &
            TNtagged_anoxia, TNtagged_drugA, TNtagged_drugB, TNtagged_radiation, Tplate_eff_10
     
@@ -1652,6 +1664,7 @@ vol_cm3 = Vsite_cm3*Nsites			! total volume in cm^3
 vol_mm3 = vol_cm3*1000				! volume in mm^3
 vol_mm3_1000 = vol_mm3*1000			! 1000 * volume in mm^3
 diam_um = 2*DELTA_X*Radius*10000
+npmm3 = Ncells/vol_mm3
 Ntagged_anoxia = Nanoxia_tag - Nanoxia_dead				! number currently tagged by anoxia
 !Ntagged_drugA = NdrugA_tag - NdrugA_dead				! number currently tagged by drugA
 !Ntagged_drugB = NdrugB_tag - NdrugB_dead				! number currently tagged by drugB
@@ -1681,10 +1694,10 @@ TNtagged_drugA = sum(Ntagged_drugA(1:Ncelltypes))
 TNtagged_drugB = sum(Ntagged_drugB(1:Ncelltypes))
 TNtagged_radiation = sum(Ntagged_radiation(1:Ncelltypes))
 Tplate_eff_10 = sum(plate_eff_10(1:Ncelltypes))
-summaryData(1:20) = [ istep, Ncells, TNanoxia_dead, TNdrugA_dead, TNdrugB_dead, TNradiation_dead, &
+summaryData(1:21) = [ istep, Ncells, TNanoxia_dead, TNdrugA_dead, TNdrugB_dead, TNradiation_dead, &
     TNtagged_anoxia, TNtagged_drugA, TNtagged_drugB, TNtagged_radiation, &
 	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, Tplate_eff_10, &
-	medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000 ]
+	medium_oxygen_100, medium_glucose_100, medium_TPZ_drug_1000, medium_DNB_drug_1000, npmm3 ]
 write(nfres,'(2a12,i8,2e12.4,19i7,13e12.4)') gui_run_version, dll_run_version, istep, hour, vol_mm3, diam_um, Ncells_type(1:2), &
 !    Nanoxia_dead(1:2), NdrugA_dead(1:2), NdrugB_dead(1:2), Nradiation_dead(1:2), &
     Nanoxia_dead(1:2), Ndrug_dead(1,1:2), Ndrug_dead(2,1:2), Nradiation_dead(1:2), &
@@ -1931,6 +1944,7 @@ z = Centre(3) + 0.5
 
 ! First need to establish the range of x that is inside the blob: (x1,x2)
 x1 = 0
+x2 = 0
 do x = rng(1,1),rng(1,2)
 	kcell = occupancy(x,y,z)%indx(1)
 	if (kcell <= OUTSIDE_TAG) then
@@ -1944,6 +1958,10 @@ do x = rng(1,1),rng(1,2)
 	endif
 	x2 = x
 enddo
+if (x2 == 0) then
+	call logger('Blob is destroyed!')
+	return
+endif
 
 ns = x2 - x1 + 1 
 do ichemo = 0,nvars-1
@@ -1994,45 +2012,7 @@ do ichemo = 0,nvars-1
 		endif
     enddo
 enddo
-! Add concentrations at the two boundaries 
-! At ns=1, at at ns=ns+1
-!ns = ns+1
-!do ic = 1,nvars
-!	ichemo = ic - 1
-!	if (ichemo == 0) then	! CFSE
-!		k = ic	
-!		ex_conc(k) = 0
-!        k = (ns-1)*nvars + ic
-!        ex_conc(k) = 0	
-!	elseif (ichemo <= MAX_CHEMO) then
-!		k = ic
-!		if (chemo(ichemo)%used) then
-!			ex_conc(k) = BdryConc(ichemo,t_simulation)
-!		else
-!			ex_conc(k) = 0
-!		endif      
-!		k = (ns-1)*nvars + ic
-!		if (chemo(ichemo)%used) then
-!			ex_conc(k) = BdryConc(ichemo,t_simulation)
-!		else
-!			ex_conc(k) = 0
-!		endif      
-!    elseif (ichemo == MAX_CHEMO+1) then	! growth rate
-!		k = ic
-!		ex_conc(k) = 0
-!! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,1,i,k,ex_conc(k)
-!        k = (ns-1)*nvars + ic
-!        ex_conc(k) = 0
-!! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
-!    elseif (ichemo == MAX_CHEMO+2) then	! cell volume
-!		k = ic
-!		ex_conc(k) = 0
-!! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,1,i,k,ex_conc(k)
-!        k = (ns-1)*nvars + ic
-!        ex_conc(k) = 0
-!! 			write(nflog,'(a,4i6,f8.3)') 'Growth rate: ',x,ns,i,k,ex_conc(k)
-!    endif
-!enddo
+
 ichemo = GLUCOSE
 offset = ichemo*ns
 !write(*,'(10f7.3)') ex_conc(offset:offset+ns-1)

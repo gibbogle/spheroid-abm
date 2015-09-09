@@ -1285,6 +1285,7 @@ void MainWindow::showMore(QString moreText)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::writeout()
 {
+    int ndrugs;
 	QString line;
     QFile file(inputFile);
     if (!file.open(QFile::WriteOnly | QFile::Text)) {
@@ -1321,25 +1322,29 @@ void MainWindow::writeout()
         line += "\n";
 		out << line;
         if (p.tag.contains("SAVE_PROFILE_DATA_NUMBER")) {   // insert the drug data here, before plot data
-            int ndrugs = 0;
-            if (cbox_USE_DRUG_A->isChecked()) ndrugs++;
-            if (cbox_USE_DRUG_B->isChecked()) ndrugs++;
+            ndrugs = 0;
+            if (ProtocolUsesDrug()) {
+                if (cbox_USE_DRUG_A->isChecked()) ndrugs++;
+                if (cbox_USE_DRUG_B->isChecked()) ndrugs++;
+            }
             line = QString::number(ndrugs);
             int nch = line.length();
             for (int k=0; k<max(16-nch,1); k++)
                 line += " ";
             line += "NDRUGS_USED\n";
             out << line;
-            if (cbox_USE_DRUG_A->isChecked()) {
-                writeDrugParams(&out,DRUG_A);
-            }
-            if (cbox_USE_DRUG_B->isChecked()) {
-                writeDrugParams(&out,DRUG_B);
+            if (ndrugs > 0) {
+                if (cbox_USE_DRUG_A->isChecked()) {
+                    writeDrugParams(&out,DRUG_A);
+                }
+                if (cbox_USE_DRUG_B->isChecked()) {
+                    writeDrugParams(&out,DRUG_B);
+                }
             }
         }
 	}
+    SaveProtocol(&out,ndrugs);
     file.close();
-    SaveProtocol(inputFile);
     paramSaved = true;
 	LOG_MSG("Input data saved");
 }
@@ -1392,7 +1397,10 @@ void MainWindow::readInputFile()
         } else {
 			parm->set_value(k,data[0].toDouble());
 		}
-	}
+        if (p.tag.contains("SAVE_PROFILE_DATA_NUMBER")) {   // drug data follows, before plot data
+            readDrugData(&in);
+        }
+    }
 
 //    qDebug() << in.readLine();
 //    qDebug() << in.readLine();

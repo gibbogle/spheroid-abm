@@ -227,6 +227,7 @@ void Field::setSliceChanged()
 //------------------------------------------------------------------------------------------------
 void Field::setSaveImages(bool save)
 {
+    LOG_QMSG("setSaveImages");
     save_images = save;
 }
 
@@ -373,6 +374,8 @@ void Field::displayField(int hr, int *res)
         sprintf(numstr,"%04d",hour);
         for (int i=0; i<4; i++)
             filename[11+i] = numstr[i];
+        LOG_QMSG("image.save");
+        LOG_MSG(filename);
         image.save(filename);
     }
 }
