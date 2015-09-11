@@ -24,9 +24,14 @@ Field::Field(QWidget *aParent) : QWidget(aParent)
     pGoxy = NULL;
     ifield = 0;
     view = new MyQGraphicsView(field_page);
-    constituent_rb_list = NULL;
-    vbox_constituent = NULL;
-    buttonGroup_constituent = new QButtonGroup;
+    vbox_cell_constituent = NULL;
+    vbox_field_constituent = NULL;
+    vbox_cell_max_concentration = NULL;
+    buttonGroup_cell_constituent = new QButtonGroup;
+    buttonGroup_field_constituent = new QButtonGroup;
+//    constituent_rb_list = NULL;
+//    vbox_constituent = NULL;
+//    buttonGroup_constituent = new QButtonGroup;
     data = NULL;
 }
 
@@ -79,6 +84,218 @@ void Field::setOxyPlot(bool status)
 }
 
 //------------------------------------------------------------------------------------------------
+// To create the group of radiobuttons for cell constituent selection.
+// This uses information about active constituents fetched from the DLL.
+// Need to distinguish field constituent from cell constituent, because for the cell we are
+// interested in CFSE, volume, O2byvol in addition to the dissolved constituents:
+// oxygen, glucose, drugA, drugB, metabolites...
+//------------------------------------------------------------------------------------------------
+void Field::setCellConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QList<QRadioButton *> *rb_list, QString tag)
+{
+    int ivar;
+    QString name, str;
+    QRadioButton *rb;
+
+    LOG_QMSG("setCellConstituentButtons: " + tag);
+    if (rb_list->length() != 0) {
+        LOG_MSG("rb_list not NULL, delete it");
+        for (ivar=0; ivar<rb_list->length(); ivar++) {
+            rb = (*rb_list)[ivar];
+            bg->removeButton(rb);
+            delete rb;
+        }
+        rb_list->clear();
+    }
+    if (!*vbox) {
+        LOG_MSG("vbox = NULL, create it");
+        *vbox = new QVBoxLayout;
+        gbox->setLayout(*vbox);
+    }
+    name = "rb_cell_constituent_"+tag;
+    LOG_QMSG(name);
+    for (ivar=0; ivar<Global::nvars_used; ivar++) {
+        str = Global::var_string[ivar];
+        rb = new QRadioButton;
+        rb->setText(str);
+        rb->setObjectName(name+ivar);
+        (*vbox)->addWidget(rb);
+        rb->setEnabled(true);
+        bg->addButton(rb,ivar);
+        rb_list->append(rb);
+    }
+    LOG_MSG("added buttons");
+    if (tag.contains("FACS")) {
+        (*rb_list)[0]->setChecked(true);   // CFSE
+    } else {
+        (*rb_list)[1]->setChecked(true);   // Oxygen
+    }
+    QRect rect = gbox->geometry();
+    rect.setHeight(25*Global::nvars_used);
+    gbox->setGeometry(rect);
+    gbox->show();
+    LOG_MSG("completed");
+}
+
+
+//------------------------------------------------------------------------------------------------
+// To create the group of radiobuttons for field constituent selection.
+// This uses information about active constituents fetched from the DLL.
+// Need to distinguish field constituent from cell constituent, because for the
+// field we have only the dissolved constituents:
+// oxygen, glucose, drugA, drugB, metabolites...
+//------------------------------------------------------------------------------------------------
+void Field::setFieldConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QList<QRadioButton *> *rb_list, QString tag)
+{
+    int ivar;
+    QString name, str;
+    QRadioButton *rb;
+
+    Global::nfieldvars_used = Global::nvars_used - Global::N_EXTRA;
+    LOG_QMSG("setFieldConstituentButtons: " + tag);
+    if (rb_list->length() != 0) {
+        LOG_MSG("rb_list not NULL, delete it");
+        for (ivar=0; ivar<rb_list->length(); ivar++) {
+            rb = (*rb_list)[ivar];
+            bg->removeButton(rb);
+            delete rb;
+        }
+        rb_list->clear();
+    }
+    if (!*vbox) {
+        LOG_MSG("vbox = NULL, create it");
+        *vbox = new QVBoxLayout;
+        gbox->setLayout(*vbox);
+    }
+    name = "rb_field_constituent_"+tag;
+    LOG_QMSG(name);
+    for (ivar=0; ivar<Global::nfieldvars_used; ivar++) {
+        str = Global::var_string[ivar+1];
+        rb = new QRadioButton;
+        rb->setText(str);
+        rb->setObjectName(name+ivar);
+        (*vbox)->addWidget(rb);
+        rb->setEnabled(true);
+        bg->addButton(rb,ivar);
+        rb_list->append(rb);
+    }
+    (*rb_list)[0]->setChecked(true);   // Oxygen
+    QRect rect = gbox->geometry();
+    rect.setHeight(25*(Global::nfieldvars_used + 1));
+    gbox->setGeometry(rect);
+    gbox->show();
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void Field::setMaxConcentrations(QGroupBox *gbox)
+{
+    int ivar;
+    QLineEdit *line_maxConc;
+
+    if (!vbox_cell_max_concentration) {
+        LOG_MSG("vbox_cell_max_concentration = NULL, create it");
+        vbox_cell_max_concentration = new QVBoxLayout;
+        gbox->setLayout(vbox_cell_max_concentration);
+    }
+
+    if (line_maxConc_list.length() != 0) {
+        for (ivar=0; ivar < line_maxConc_list.length(); ivar++) {
+            line_maxConc = line_maxConc_list[ivar];
+            vbox_cell_max_concentration->removeWidget(line_maxConc);
+        }
+    }
+    line_maxConc_list.clear();
+
+    for (ivar=0; ivar<Global::nvars_used; ivar++) {
+        line_maxConc = new QLineEdit;
+        line_maxConc->setObjectName("maxConc"+ivar);
+        line_maxConc->setText("1.0");
+        line_maxConc->setMaximumWidth(50);
+        line_maxConc->setEnabled(true);
+        vbox_cell_max_concentration->addWidget(line_maxConc);
+        line_maxConc_list.append(line_maxConc);
+    }
+
+    line_maxConc_list[OXYGEN]->setText("0.18");
+    line_maxConc_list[GLUCOSE]->setText("9.0");
+    QRect rect = gbox->geometry();
+    rect.setHeight(25*Global::nvars_used);
+    gbox->setGeometry(rect);
+    gbox->show();
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void Field::selectCellConstituent()
+{
+    int iconst, res;
+    QStringList items;
+
+    LOG_MSG("selectCellConstituent");
+    for (iconst=0; iconst<Global::nvars_used; iconst++) {
+        if (iconst == cell_constituent) continue;
+        items << Global::var_string[iconst];
+    }
+    bool ok;
+    QString item = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+                                          tr("Constituent:"), items, 0, false, &ok);
+    if (ok && !item.isEmpty()) {
+        for (iconst=0; iconst<Global::nvars_used; iconst++) {
+            if (item == Global::var_string[iconst]) {
+                cell_constituent = iconst;
+            }
+        }
+    }
+}
+
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void Field::setCellConstituent(QAbstractButton *button)
+{
+    int res;
+//    QMessageBox msgBox;
+//    msgBox.setText("setConstituent");
+//    msgBox.exec();
+    LOG_MSG("setCellConstituent");
+    int prev_constituent = cell_constituent;
+    QString text = button->text();
+    for (int ivar=0; ivar<Global::nvars_used; ivar++) {
+        if (text == Global::var_string[ivar]) {
+            cell_constituent = ivar;
+        }
+    }
+
+    if (cell_constituent != prev_constituent) {
+        LOG_MSG("setCellConstituent");
+        displayField(hour,&res);
+    }
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void Field::setFieldConstituent(QAbstractButton *button)
+{
+    int res;
+//    QMessageBox msgBox;
+//    msgBox.setText("setConstituent");
+//    msgBox.exec();
+    LOG_MSG("setFieldConstituent");
+    int prev_constituent = field_constituent;
+    QString text = button->text();
+    for (int ivar=0; ivar<Global::nfieldvars_used; ivar++) {
+        if (text == Global::var_string[ivar+1]) {
+            field_constituent = ivar+1;
+        }
+    }
+
+    if (field_constituent != prev_constituent) {
+        LOG_MSG("setFieldConstituent");
+        displayField(hour,&res);
+    }
+}
+
+//------------------------------------------------------------------------------------------------
 // To create the group of radiobuttons for constituent selection.
 // This uses information about active constituents fetched from the DLL.
 //------------------------------------------------------------------------------------------------
@@ -90,6 +307,8 @@ void Field::setConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout
     QRadioButton **p;
     QRadioButton *rb;
 
+    return;     // not working
+
     p = *rb_list;
     LOG_QMSG("setConstituentButtons: " + tag);
     if (p) {
@@ -100,6 +319,7 @@ void Field::setConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout
             delete rb;
         }
         delete p;
+        LOG_MSG("deleted");
     }
     if (!*vbox) {
         LOG_MSG("vbox = NULL, create it");

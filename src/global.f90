@@ -302,9 +302,7 @@ integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes, Ncells_type(M
 integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
 integer :: Ndrugs_used
 integer :: Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
-!integer :: NdrugA_tag(MAX_CELLTYPES), NdrugB_tag(MAX_CELLTYPES)
 integer :: Ndrug_tag(MAX_DRUGTYPES,MAX_CELLTYPES)
-!integer :: NdrugA_dead(MAX_CELLTYPES), NdrugB_dead(MAX_CELLTYPES)
 integer :: Nradiation_dead(MAX_CELLTYPES), Nanoxia_dead(MAX_CELLTYPES)
 integer :: Ndrug_dead(MAX_DRUGTYPES,MAX_CELLTYPES)
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny

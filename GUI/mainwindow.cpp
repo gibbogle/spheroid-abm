@@ -108,13 +108,16 @@ MainWindow::MainWindow(QWidget *parent)
     field = new Field(page_2D);
     grph = new Graphs();
 //    pal = new Colours();
-    histo_rb_list = NULL;
+//    histo_rb_list = NULL;
+    histo_rb_list.clear();
     vbox_histo = NULL;
     buttonGroup_histo = new QButtonGroup;
-    FACS_x_vars_rb_list = NULL;
+//    FACS_x_vars_rb_list = NULL;
+    FACS_x_vars_rb_list.clear();
     vbox_FACS_x_vars = NULL;
     buttonGroup_FACS_x_vars = new QButtonGroup;
-    FACS_y_vars_rb_list = NULL;
+//    FACS_y_vars_rb_list = NULL;
+    FACS_y_vars_rb_list.clear();
     vbox_FACS_y_vars = NULL;
     buttonGroup_FACS_y_vars = new QButtonGroup;
 
@@ -246,7 +249,11 @@ void MainWindow::createActions()
 
 //    connect(action_show_gradient3D, SIGNAL(triggered()), this, SLOT(showGradient3D()));
 //    connect(action_show_gradient2D, SIGNAL(triggered()), this, SLOT(showGradient2D()));
-    connect(field->buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
+//    connect(field->buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
+
+    connect(field->buttonGroup_cell_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_cell_constituent(QAbstractButton*)));
+    connect(field->buttonGroup_field_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_field_constituent(QAbstractButton*)));
+
     connect(buttonGroup_plane, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_plane(QAbstractButton*)));
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
 //	  connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
@@ -2173,20 +2180,9 @@ void MainWindow::showSummary(int hr)
 	QString hourstr = QString::number(int(hour));
 	hour_display->setText(hourstr);
 
-	QString casename = newR->casename;
+    Global::casename = newR->casename;
     newR->tnow[step] = step;
-/*
-    if (field->isConcPlot()) {
-        field->updateConcPlot();
-    }
 
-    if (field->isVolPlot()) {
-        field->updateVolPlot();
-    }
-    if (field->isOxyPlot()) {
-        field->updateOxyPlot();
-    }
-*/
     // TS plots
 	for (int i=0; i<nGraphs; i++) {
         if (!grph->isTimeseries(i)) continue;
@@ -2197,11 +2193,13 @@ void MainWindow::showSummary(int hr)
         tag = grph->get_tag(i);
 //        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
         double yscale = grph->get_yscale(i);
-        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag, yscale, false);
+        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, Global::casename, tag, yscale, false);
     }
 //    LOG_QMSG("did ts graphs");
 
     // Profile plots
+    updateProfilePlots();
+    /*
 //    int nvars = 1 + Global::MAX_CHEMO + Global::N_EXTRA;
     int ivar=0;
     int nvars = Global::conc_nvars;
@@ -2238,9 +2236,10 @@ void MainWindow::showSummary(int hr)
 //            }
             pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Distance (microns)");
             pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
-            pGraph[i]->redraw(x, y, n, casename, tag, yscale, true);
+            pGraph[i]->redraw(x, y, n, Global::casename, tag, yscale, true);
         }
     }
+    */
 //    LOG_QMSG("did profile graphs");
     /*
     // Distribution plots
@@ -2286,6 +2285,53 @@ void MainWindow::showSummary(int hr)
     exthread->mutex1.unlock();
     exthread->summary_done.wakeOne();
 }
+
+//--------------------------------------------------------------------------------------------------------
+// nvars = 1 + Global::MAX_CHEMO + Global::N_EXTRA;
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::updateProfilePlots()
+{
+    if (Global::casename == "") return;
+    int ivar=0;
+    for (int i=0; i<nGraphs; i++) {
+        if (!grph->isActive(i)) continue;
+        if (Global::conc_nc > 0 && grph->isProfile(i)) {
+            double x[100], y[100];
+            double xscale, yscale;
+            QString tag = grph->get_tag(i);
+            int k = grph->get_dataIndex(i);
+            if (k == MULTI) {
+//                ivar = field->cell_constituent;
+                ivar = field->constituent;
+                QString title;
+                field->getTitle(ivar,&title);
+                pGraph[i]->setTitle(title);
+                k = Global::GUI_to_DLL_index[ivar];
+            }
+            int n = Global::conc_nc;
+            int offset = k*n;
+            for (int j=0; j<n; j++) {
+                x[j] = j*Global::conc_dx*1.0e4;
+                y[j] = Global::concData[offset+j];
+            }
+            xscale = grph->get_xscale(x[n-1]);
+            double maxval = 0;
+            for (int j=0; j<n; j++) {
+                if (y[j] > maxval) maxval = y[j];
+            }
+            yscale = pGraph[i]->calc_yscale(maxval);
+            pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
+            pGraph[i]->setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
+//            if (k == CFSE){
+//                pGraph[i]->setAxisScale(QwtPlot::xBottom, -20.0, 1.0, 0);
+//            }
+            pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Distance (microns)");
+            pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
+            pGraph[i]->redraw(x, y, n, Global::casename, tag, yscale, true);
+        }
+    }
+}
+
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::outputData(QString qdata)
@@ -3255,6 +3301,8 @@ void MainWindow::setupConstituents()
     }
     free(name_array);
     LOG_MSG("set up Global");
+//    return;     // not working
+    /*
     tag = "field";
     field->setConstituentButtons(groupBox_constituent,field->buttonGroup_constituent,&field->vbox_constituent,&field->constituent_rb_list,tag);
     LOG_MSG("did setConstituentButtons: field");
@@ -3268,6 +3316,29 @@ void MainWindow::setupConstituents()
     tag = "FACS_y";
     field->setConstituentButtons(groupBox_FACS_y_vars,buttonGroup_FACS_y_vars,&vbox_FACS_y_vars,&FACS_y_vars_rb_list,tag);
     LOG_MSG("did setConstituentButtons: FACS_y");
+    */
+
+    sprintf(msg,"field->vbox_cell_constituent: %p",field->vbox_cell_constituent);
+    LOG_MSG(msg);
+    tag = "cell";
+    field->setCellConstituentButtons(groupBox_cell_constituent, field->buttonGroup_cell_constituent, &field->vbox_cell_constituent, &field->cell_constituent_rb_list, tag);
+    LOG_MSG("did setCellCellConstituentButtons: cell");
+    tag = "field";
+    field->setFieldConstituentButtons(groupBox_field_constituent, field->buttonGroup_field_constituent, &field->vbox_field_constituent, &field->field_constituent_rb_list, tag);
+    LOG_MSG("did setCellCellConstituentButtons: field");
+    tag = "histo";
+    field->setCellConstituentButtons(groupBox_Histo_y_vars, buttonGroup_histo, &vbox_histo, &histo_rb_list, tag);
+    LOG_MSG("did setCellConstituentButtons: histo");
+    tag = "FACS_x";
+    field->setCellConstituentButtons(groupBox_FACS_x_vars, buttonGroup_FACS_x_vars, &vbox_FACS_x_vars, &FACS_x_vars_rb_list, tag);
+    LOG_MSG("did setCellConstituentButtons: FACS_x");
+//    FACS_x_vars_rb_list[0]->setChecked(true);
+    tag = "FACS_y";
+    field->setCellConstituentButtons(groupBox_FACS_y_vars, buttonGroup_FACS_y_vars, &vbox_FACS_y_vars, &FACS_y_vars_rb_list, tag);
+    LOG_MSG("did setCellConstituentButtons: FACS_y");
+    field->setMaxConcentrations(groupBox_maxconc);
+    LOG_MSG("did setMaxConcentrations");
+
 }
 
 //--------------------------------------------------------------------------------------------------------

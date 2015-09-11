@@ -57,11 +57,14 @@ public:
 //    void makeOxyPlot(QMdiArea *);
 //    void updateOxyPlot();
     void selectConstituent();
+    void selectCellConstituent();
     void setExecuting(bool);
     void setSaveImages(bool);
     void setUseLogScale(bool);
 //    void setConstUsage(int, int *);
     void setConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QRadioButton ***rb_list, QString tag);
+    void setCellConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QList<QRadioButton *> *rb_list, QString tag);
+    void setFieldConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QList<QRadioButton *> *rb_list, QString tag);
 
     QWidget *field_page;
     bool save_images;
@@ -78,6 +81,8 @@ public:
     QString const_name[16];
     QString constituentText;
     int constituent;
+    int cell_constituent;
+    int field_constituent;
     bool slice_changed;
 	bool constituent_changed;
     bool useConcPlot;
@@ -88,13 +93,25 @@ public:
     bool executing;
     char msg[1024];
 
-    QButtonGroup *buttonGroup_constituent;
-    QVBoxLayout *vbox_constituent;
-    QRadioButton **constituent_rb_list;
+//    QButtonGroup *buttonGroup_constituent;
+//    QVBoxLayout *vbox_constituent;
+//    QRadioButton **constituent_rb_list;
+
+    QButtonGroup *buttonGroup_cell_constituent;
+    QButtonGroup *buttonGroup_field_constituent;
+    QVBoxLayout *vbox_cell_constituent;
+    QVBoxLayout *vbox_field_constituent;
+    QList<QRadioButton *> cell_constituent_rb_list;
+    QList<QRadioButton *> field_constituent_rb_list;
+    QList<QLineEdit *> line_maxConc_list;
+    QVBoxLayout *vbox_cell_max_concentration;
 
     void setConstituent(QAbstractButton* button);
     void setPlane(QAbstractButton* button);
 	void setFraction(QString text);
+    void setCellConstituent(QAbstractButton* button);
+    void setFieldConstituent(QAbstractButton* button);
+    void setMaxConcentrations(QGroupBox *gbox);
 };
 
 #endif // FIELD_H

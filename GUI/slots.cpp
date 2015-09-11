@@ -317,6 +317,18 @@ void MainWindow::buttonClick_constituent(QAbstractButton* button)
     field->setConstituent(button);
 }
 
+void MainWindow::buttonClick_cell_constituent(QAbstractButton* button)
+{
+    LOG_MSG("buttonClick_cell_constituent");
+    field->setCellConstituent(button);
+}
+
+void MainWindow::buttonClick_field_constituent(QAbstractButton* button)
+{
+    LOG_MSG("buttonClick_field_constituent");
+    field->setFieldConstituent(button);
+}
+
 void MainWindow::buttonClick_plane(QAbstractButton* button)
 {
     LOG_MSG("buttonClick_plane");
