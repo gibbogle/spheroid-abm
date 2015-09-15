@@ -3110,3 +3110,40 @@ chemo(:)%medium_U = U(:)
 !!!!!!!!! Problem: U is about 20x sum_dMdt
 end subroutine
 
+!----------------------------------------------------------------------------------
+! Update Cbnd using current M, R1 and previous U, Cext
+! No longer needed, with revised UpdateMedium
+!----------------------------------------------------------------------------------
+subroutine UpdateCbnd
+integer :: ichemo
+real(REAL_KIND) :: R1, R2, a, Vblob, Vm
+
+return
+
+call SetRadius(Nsites)
+R1 = Radius*DELTA_X		! cm
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%present) cycle
+	if (chemo(ichemo)%constant) then
+		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
+	else
+		R2 = R1 + chemo(ichemo)%medium_dlayer
+		a = (1/R2 - 1/R1)/(4*PI*chemo(ichemo)%medium_diff_coef)
+		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
+	endif
+	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd < 0) then
+		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateCbnd: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
+		call logger(logmsg)
+		stop
+	endif
+enddo
+Vblob = (4./3.)*PI*R1**3	! cm3
+Vm = total_volume - Vblob
+!write(*,'(a,4e12.3)') 'UpdateCbnd: ext glucose conc, mass: ', &
+!chemo(GLUCOSE)%medium_Cext,chemo(GLUCOSE)%medium_Cbnd,chemo(GLUCOSE)%medium_Cext*Vm,chemo(GLUCOSE)%medium_M
+!write(nflog,'(a,i6,2f10.6)') 'UpdateCbnd: istep,R1,R2: ',istep,R1,R2
+!write(nflog,'(a,4e12.3)') 'UpdateCbnd: medium_Cext,medium_U: ',chemo(OXYGEN)%medium_Cext,chemo(GLUCOSE)%medium_Cext, &
+!																chemo(OXYGEN)%medium_U,chemo(GLUCOSE)%medium_U
+!write(nflog,'(a,2e12.3)') 'UpdateCbnd: medium_Cbnd: ',chemo(OXYGEN)%medium_Cbnd,chemo(GLUCOSE)%medium_Cbnd
+end subroutine
+

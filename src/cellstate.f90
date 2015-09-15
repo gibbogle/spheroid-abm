@@ -111,7 +111,7 @@ end subroutine
 ! mitosis or retains damage that has a probability of causing cell death during mitosis.
 ! A damaged cell that does not die at this point passes the damage on to the progeny cells.
 ! The probability of complete recovery = p_recovery = p_r
-! The probability of death for a famaged cell at mitosis = p_death = p_d
+! The probability of death for a damaged cell at mitosis = p_death = p_d
 ! To ensure that the short-term death probability is consistent with the previous
 ! LQ formulation, we require p_d(1-p_r) = kill_prob as previously calculated.
 ! If p_d is determined (currently it is fixed), then 1-p_r = kill_prob/p_d,
@@ -124,13 +124,15 @@ real(REAL_KIND) :: OER_alpha_d, OER_beta_d, expon, kill_prob_orig, expon_err
 
 OER_alpha_d = dose*(LQ(ityp)%OER_am*C_O2 + LQ(ityp)%K_ms)/(C_O2 + LQ(ityp)%K_ms)
 OER_beta_d = dose*(LQ(ityp)%OER_bm*C_O2 + LQ(ityp)%K_ms)/(C_O2 + LQ(ityp)%K_ms)
-!expon_err = LQ(ityp)%alpha_H*OER_alpha_d + LQ(ityp)%beta_H*OER_alpha_d**2	! 07/08/2015
+expon_err = LQ(ityp)%alpha_H*OER_alpha_d + LQ(ityp)%beta_H*OER_alpha_d**2	! 07/08/2015
 expon = LQ(ityp)%alpha_H*OER_alpha_d + LQ(ityp)%beta_H*OER_beta_d**2
 kill_prob_orig = 1 - exp(-expon)
 call get_pdeath(ityp,dose,C_O2,p_death)
-p_recovery = 1 - kill_prob_orig/p_death
+!p_recovery = 1 - kill_prob_orig/p_death
+p_recovery = 1 - kill_prob_orig
 !write(nflog,'(a,4e12.3)') 'get_kill_probs: OER_alpha_d,OER_beta_d,expon,expon_err: ',OER_alpha_d,OER_beta_d,expon,expon_err
-!write(nflog,*) 'kill_prob, kill_prob_err: ',kill_prob_orig,1 - exp(-expon_err)
+!write(nflog,'(a,2e12.3)') 'kill_prob, kill_prob_err: ',kill_prob_orig,1 - exp(-expon_err)
+!write(nflog,'(a,e12.3)') 'p_recovery: ',p_recovery
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -575,7 +577,7 @@ real(REAL_KIND) :: dt
 logical :: ok
 integer :: kcell, nlist0, site(3), ityp, idrug, kpar=0
 integer :: divide_list(10000), ndivide, i
-real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean(2), c_rate(2)
+real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean(2), c_rate(2), R
 real(REAL_KIND) :: Vin_0, Vex_0, dV
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
@@ -621,48 +623,24 @@ do kcell = 1,nlist0
 	endif
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then	! time to divide
 		if (cell_list(kcell)%radiation_tag) then
-			if (par_uni(kpar) < cell_list(kcell)%p_death) then
+			R = par_uni(kpar)
+!			if (cell_list(kcell)%generation > 1) then
+!				write(*,'(a,2i6,2f8.4)') 'Radiation-tagged cell: generation, R, p_death: ',kcell,cell_list(kcell)%generation,R,cell_list(kcell)%p_death
+!			endif
+			if (R < cell_list(kcell)%p_death) then
 				call CellDies(kcell)
 				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
-			endif
-!			if (cell_list(kcell)%drugA_tag) then
-!				NdrugA_tag(ityp) = NdrugA_tag(ityp) - 1
-!			endif
-!			if (cell_list(kcell)%drugB_tag) then
-!				NdrugB_tag(ityp) = NdrugB_tag(ityp) - 1
-!			endif
-			do idrug = 1,ndrugs_used
-				if (cell_list(kcell)%drug_tag(idrug)) then
-					Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) - 1
+				do idrug = 1,ndrugs_used
+					if (cell_list(kcell)%drug_tag(idrug)) then
+						Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) - 1
+					endif
+				enddo
+				if (cell_list(kcell)%anoxia_tag) then
+					Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
 				endif
-			enddo
-			if (cell_list(kcell)%anoxia_tag) then
-				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
+				cycle
 			endif
-			cycle
 		endif
-!		if (cell_list(kcell)%drugA_tag) then
-!			call CellDies(kcell)
-!			NdrugA_dead(ityp) = NdrugA_dead(ityp) + 1
-!			if (cell_list(kcell)%anoxia_tag) then
-!				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
-!			endif
-!			if (cell_list(kcell)%radiation_tag) then
-!				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
-!			endif
-!			cycle
-!		endif
-!		if (cell_list(kcell)%drugB_tag) then
-!			call CellDies(kcell)
-!			NdrugB_dead(ityp) = NdrugB_dead(ityp) + 1
-!			if (cell_list(kcell)%anoxia_tag) then
-!				Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
-!			endif
-!			if (cell_list(kcell)%radiation_tag) then
-!				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
-!			endif
-!			cycle
-!		endif
 		drugkilled = .false.
 		do idrug = 1,ndrugs_used
 			if (cell_list(kcell)%drug_tag(idrug)) then
@@ -1324,30 +1302,39 @@ ityp = cell_list(kcell0)%celltype
 Ncells = Ncells + 1
 Ncells_type(ityp) = Ncells_type(ityp) + 1
 kcell1 = nlist
+!if (cell_list(kcell0)%generation > 1 .and. cell_list(kcell0)%radiation_tag) then
+!	write(*,*) 'radiation-tagged cell gen > 1 divides: ',kcell0,cell_list(kcell0)%generation 
+!	stop
+!endif
+cell_list(kcell0)%generation = cell_list(kcell0)%generation + 1
 cell_list(kcell1)%celltype = cell_list(kcell0)%celltype
 cell_list(kcell1)%state = cell_list(kcell0)%state
+cell_list(kcell1)%generation = cell_list(kcell0)%generation
 cell_list(kcell1)%site = site1
 !cell_list(kcell1)%ID = lastID
 cell_list(kcell1)%ID = cell_list(kcell0)%ID
-!cell_list(kcell1)%radiation_tag = .false.
+!if (cell_list(kcell0)%ID == 582) then
+!	write(*,*) 'New cell with ID=582: ',kcell1
+!endif
 cell_list(kcell1)%p_death = cell_list(kcell0)%p_death
 cell_list(kcell1)%radiation_tag = cell_list(kcell0)%radiation_tag
-!cell_list(kcell1)%drugA_tag = .false.
-!cell_list(kcell1)%drugB_tag = .false.
+if (cell_list(kcell1)%radiation_tag) then
+	Nradiation_tag(ityp) = Nradiation_tag(ityp) + 1
+endif
 cell_list(kcell1)%drug_tag = .false.
 cell_list(kcell1)%anoxia_tag = .false.
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%active = .true.
 cell_list(kcell1)%t_divide_last = tnow
-!cell_list(kcell1)%t_divide_next = tnow + DivideTime()
 cell_list(kcell1)%dVdt = cell_list(kcell0)%dVdt
 cell_list(kcell1)%volume = cell_list(kcell0)%volume
 R = par_uni(kpar)
 cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 cell_list(kcell1)%t_hypoxic = 0
-!cell_list(kcell0)%conc = cell_list(kcell0)%conc/2	! 25/03/2015 conc should be unchanged
-!cell_list(kcell0)%M = cell_list(kcell0)%M/2		! 25/03/2015 M has already been halved in the calling program
 cell_list(kcell1)%conc = cell_list(kcell0)%conc
+cell_list(kcell1)%Cex = cell_list(kcell0)%Cex
+cell_list(kcell1)%dCdt = cell_list(kcell0)%dCdt
+cell_list(kcell1)%dMdt = cell_list(kcell0)%dMdt
 cell_list(kcell1)%M = cell_list(kcell0)%M
 occupancy(site1(1),site1(2),site1(3))%indx(1) = kcell1
 !write(nflog,'(a,i6,2f8.2)') 'cloned: ',kcell1,cell_list(kcell1)%volume,cell_list(kcell1)%divide_volume

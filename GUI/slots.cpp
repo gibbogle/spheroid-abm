@@ -292,23 +292,33 @@ void MainWindow::on_line_CELLPERCENT_2_textEdited(QString pc2_str)
 
 //------------------------------------------------------------------------------------------------------
 // This should be used for any radioButtonGroups for model input parameters
+// The thing tp remember about radiobuttons is that ->setChecked(false) programmatically does nothing
+// when the radiobutton is one of a groupBox collection.
+// This is because in general there may be more than two members of the group, and therefore it is
+// impossible to know which one should be set checked.
 //------------------------------------------------------------------------------------------------------
 void MainWindow::radioButtonChanged(QAbstractButton *b)
 {
     QString wtag = b->objectName();
+    LOG_QMSG("radioButtonChanged: " + wtag);
     int rbutton_case;
-    if (b->isChecked()) {
+//    if (b->isChecked()) {
         QString ptag = parse_rbutton(wtag,&rbutton_case);
         // Now need to reflect the change in the workingParameterList
         // Need to locate ptag
+        LOG_QMSG("ptag: " + ptag);
+        wtag = wtag.mid(5);
         for (int k=0; k<nParams; k++) {
             PARAM_SET p = parm->get_param(k);
-            if (ptag.compare(p.tag) == 0) {
+            if (wtag.compare(p.tag) == 0) {
                 parm->set_value(k,double(rbutton_case));
+                LOG_QMSG("found: ",wtag);
+                sprintf(msg,"parm->set_value: %d",rbutton_case);
+                LOG_MSG(msg);
                 break;
             }
         }
-    }
+//    }
 }
 
 void MainWindow::buttonClick_constituent(QAbstractButton* button)

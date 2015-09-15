@@ -42,7 +42,6 @@ real(REAL_KIND), allocatable :: allstate(:,:)
 real(REAL_KIND), allocatable :: allstatep(:,:)
 real(REAL_KIND), allocatable :: work_rkc(:)
 
-integer :: nchemo, chemomap(MAX_CHEMO)
 integer :: ivdbug
 
 real(REAL_KIND) :: ichemo_sol
@@ -1233,42 +1232,77 @@ write(nfout,'(10f7.4)') y(1:n)
 end subroutine
 
 !----------------------------------------------------------------------------------
-! Update Cbnd using current M, R1 and previous U, Cext
-! No longer needed, with revised UpdateMedium
 !----------------------------------------------------------------------------------
-subroutine UpdateCbnd
-integer :: ichemo
-real(REAL_KIND) :: R1, R2, a, Vblob, Vm
+subroutine UpdateCbnd(dt)
+real(REAL_KIND) :: dt
 
-return
-
-call SetRadius(Nsites)
-R1 = Radius*DELTA_X		! cm
-do ichemo = 1,MAX_CHEMO
-	if (.not.chemo(ichemo)%present) cycle
-	if (chemo(ichemo)%constant) then
-		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%bdry_conc
-	else
-		R2 = R1 + chemo(ichemo)%medium_dlayer
-		a = (1/R2 - 1/R1)/(4*PI*chemo(ichemo)%medium_diff_coef)
-		chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
-	endif
-	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd < 0) then
-		write(logmsg,'(a,2e12.3,a,e12.3)') 'UpdateCbnd: O2 < 0: Cext: ',chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_Cext,' U: ',chemo(ichemo)%medium_U
-		call logger(logmsg)
-		stop
-	endif
-enddo
-Vblob = (4./3.)*PI*R1**3	! cm3
-Vm = total_volume - Vblob
-!write(*,'(a,4e12.3)') 'UpdateCbnd: ext glucose conc, mass: ', &
-!chemo(GLUCOSE)%medium_Cext,chemo(GLUCOSE)%medium_Cbnd,chemo(GLUCOSE)%medium_Cext*Vm,chemo(GLUCOSE)%medium_M
-!write(nflog,'(a,i6,2f10.6)') 'UpdateCbnd: istep,R1,R2: ',istep,R1,R2
-!write(nflog,'(a,4e12.3)') 'UpdateCbnd: medium_Cext,medium_U: ',chemo(OXYGEN)%medium_Cext,chemo(GLUCOSE)%medium_Cext, &
-!																chemo(OXYGEN)%medium_U,chemo(GLUCOSE)%medium_U
-!write(nflog,'(a,2e12.3)') 'UpdateCbnd: medium_Cbnd: ',chemo(OXYGEN)%medium_Cbnd,chemo(GLUCOSE)%medium_Cbnd
+if (use_FD) then
+	call UpdateCbnd_FD(dt)
+else
+	call UpdateCbnd_mixed(dt)
+endif
 end subroutine
 
+!--------------------------------------------------------------------------------------
+! Interpolate to obtain concentrations at p(:) = (x,y,z) from chemo(:)%Cave_b(:,:,:)
+!--------------------------------------------------------------------------------------
+subroutine getConc(cb,c)
+real(REAL_KIND) :: cb(3), c(:)
+integer :: ixb, iyb, izb, grid(3), i, ic, ichemo
+real(REAL_KIND) :: alfa(3)
+real(REAL_KIND), pointer :: Cextra(:,:,:)
+
+ixb = cb(1)/DXB + 1
+iyb = cb(2)/DXB + 1
+izb = cb(3)/DXB + 1
+grid = [ixb, iyb, izb]
+do i = 1,3
+	alfa(i) = (cb(i) - (grid(i)-1)*DXB)/DXB
+enddo
+c = 0
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
+	Cextra => chemo(ichemo)%Cave_b
+	c(ichemo) = (1-alfa(1))*(1-alfa(2))*(1-alfa(3))*Cextra(ixb,iyb,izb)  &
+			+ (1-alfa(1))*alfa(2)*(1-alfa(3))*Cextra(ixb,iyb+1,izb)  &
+			+ (1-alfa(1))*alfa(2)*alfa(3)*Cextra(ixb,iyb+1,izb+1)  &
+			+ (1-alfa(1))*(1-alfa(2))*alfa(3)*Cextra(ixb,iyb,izb+1)  &
+			+ alfa(1)*(1-alfa(2))*(1-alfa(3))*Cextra(ixb+1,iyb,izb)  &
+			+ alfa(1)*alfa(2)*(1-alfa(3))*Cextra(ixb+1,iyb+1,izb)  &
+			+ alfa(1)*alfa(2)*alfa(3)*Cextra(ixb+1,iyb+1,izb+1)  &
+			+ alfa(1)*(1-alfa(2))*alfa(3)*Cextra(ixb+1,iyb,izb+1)
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------
+! Was set_bdry_conc
+!----------------------------------------------------------------------------------
+subroutine UpdateCbnd_FD(dt)
+real(REAL_KIND) :: dt
+integer :: kpar = 0
+real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO)
+integer :: i, ic, ichemo, n = 100
+
+call SetRadius(Nsites)
+rad = Radius*DELTA_X
+csum = 0
+do i = 1,n
+	z = -rad + 2*rad*par_uni(kpar)
+	phi = 2*PI*par_uni(kpar)
+	theta = asin(z/rad)
+	x = xb0 + rad*cos(theta)*cos(phi)
+	y = yb0 + rad*cos(theta)*sin(phi)
+	z = zb0 + z
+	p = [x, y, z]
+	call getConc(p,c)
+	csum = csum + c
+enddo
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
+	chemo(ichemo)%medium_Cbnd = csum(ichemo)/n
+!	write(*,'(a,i2,f8.4)') 'medium_Cbnd: ',ichemo,chemo(ichemo)%medium_Cbnd
+enddo
+end subroutine
 
 !----------------------------------------------------------------------------------
 ! The medium concentrations are updated explicitly, assuming a sphere with 
@@ -1290,7 +1324,7 @@ end subroutine
 ! Note that Vmedium = total_volume - Vblob = total_volume - (4/3)pi.R1^3
 ! From Cext, Cbnd = Cext + U/(4.pi.K).(1/R2 - 1/R1)
 !----------------------------------------------------------------------------------
-subroutine UpdateMedium(dt)
+subroutine UpdateCbnd_mixed(dt)
 real(REAL_KIND) :: dt
 integer :: i, k, ichemo, ntvars
 real(REAL_KIND) :: R1, R2, U(MAX_CHEMO)
@@ -1299,7 +1333,7 @@ integer :: kcell, Nh, Nc
 real(REAL_KIND) :: C, metab, dMdt, asum
 real(REAL_KIND) :: Kin, Kout, decay_rate, vol_cm3, Cin, Cex
 
-!write(*,*) 'UpdateMedium'
+!write(*,*) 'UpdateCbnd_mixed'
 ! Start by looking at a conservative constituent (e.g. glucose)
 ! Contribution from cell uptake
 U = 0
@@ -1373,7 +1407,7 @@ do ichemo = 1,MAX_CHEMO
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
 enddo
 
-!write(nflog,'(a,10e12.3)') 'UpdateMedium: ',chemo(:)%medium_Cbnd
+!write(nflog,'(a,10e12.3)') 'UpdateCbnd_mixed: ',chemo(:)%medium_Cbnd
 end subroutine
 
 !----------------------------------------------------------------------------------

@@ -3,15 +3,15 @@
 module global
 
 use omp_lib
+use real_kind_mod
 use par_zig_mod
 use winsock
 use, intrinsic :: ISO_C_BINDING
 
 implicit none
 
-!INTEGER,  PARAMETER  ::  DP=SELECTED_REAL_KIND( 12, 60 )
-INTEGER,  PARAMETER  ::  SP = kind(1.0), DP = kind(1.0d0)
-integer, parameter :: REAL_KIND = DP
+#include "itsol_interface.f90"															+++add to spheroid
+
 integer, parameter :: TCP_PORT_0 = 5000		! main communication port (logging)
 integer, parameter :: TCP_PORT_1 = 5001		! data transfer port (plotting)
 integer, parameter :: NORMAL_DIST      = 1
@@ -77,6 +77,7 @@ integer, parameter :: INTRA = 2
 integer, parameter :: MAX_CELLTYPES = 4
 integer, parameter :: MAX_DRUGTYPES = 2
 integer, parameter :: max_nlist = 1000000
+integer, parameter :: NRF = 4
 
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
@@ -93,6 +94,7 @@ logical, parameter :: suppress_growth = .false.
 
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 real(REAL_KIND), parameter :: CFSE_std = 0.05
+real(REAL_KIND), parameter :: small_d = 0.1e-4          ! 0.1 um -> cm
 
 type occupancy_type
 	integer :: indx(2)
@@ -107,7 +109,11 @@ type cell_type
 	integer :: ivin
 	logical :: active
 	integer :: state
+	integer :: generation
 	real(REAL_KIND) :: conc(MAX_CHEMO)
+	real(REAL_KIND) :: Cex(MAX_CHEMO)
+	real(REAL_KIND) :: dCdt(MAX_CHEMO)
+	real(REAL_KIND) :: dMdt(MAX_CHEMO)      ! mumol/s
 	real(REAL_KIND) :: CFSE
 	real(REAL_KIND) :: dVdt
 	real(REAL_KIND) :: volume			! fractional volume (fraction of nominal cell volume Vcell_cm3)
@@ -120,6 +126,8 @@ type cell_type
 	logical :: radiation_tag, anoxia_tag	!, drugA_tag, drugB_tag
 	logical :: drug_tag(MAX_DRUGTYPES)
 	logical :: exists
+	integer :: cnr(3,8)
+	real(REAL_KIND) :: wt(8)
 end type
 
 type SN30K_type
@@ -276,18 +284,21 @@ end type
 
 type(dist_type) :: divide_dist(MAX_CELLTYPES)
 type(occupancy_type), allocatable :: occupancy(:,:,:)
-type(cell_type), allocatable :: cell_list(:)
+type(cell_type), allocatable, target :: cell_list(:)
 type(treatment_type), allocatable :: protocol(:)
 type(event_type), allocatable :: event(:)
 
 character*(12) :: dll_version, dll_run_version
 character*(12) :: gui_version, gui_run_version
-integer :: NX, NY, NZ
+integer :: NX, NY, NZ, NXB, NYB, NZB
+integer :: ixb0, iyb0, izb0
 integer :: initial_count
 integer, allocatable :: zdomain(:),zoffset(:)
 integer :: blobrange(3,2)
 real(REAL_KIND) :: Radius, Centre(3)		! sphere radius and centre
 real(REAL_KIND) :: x0,y0,z0					! sphere centre in global coordinates (units = grids)
+real(REAL_KIND) :: Centre_b(3)              ! sphere centre in coarse grid axes
+real(REAL_KIND) :: xb0,yb0,zb0              ! sphere centre in coarse grid axes
 
 logical :: use_dropper
 integer :: Ndrop
@@ -305,11 +316,12 @@ integer :: Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
 integer :: Ndrug_tag(MAX_DRUGTYPES,MAX_CELLTYPES)
 integer :: Nradiation_dead(MAX_CELLTYPES), Nanoxia_dead(MAX_CELLTYPES)
 integer :: Ndrug_dead(MAX_DRUGTYPES,MAX_CELLTYPES)
-integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny
+integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny, ichemo_curr
 integer :: Mnodes, ncpu_input
 integer :: Nevents
 integer :: nt_saveprofiledata, it_saveprofiledata
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
+real(REAL_KIND) :: dxb, dxb3, dxf, dx3
 real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
@@ -344,6 +356,7 @@ logical :: use_radiation, use_treatment
 logical :: use_extracellular_O2
 logical :: use_V_dependence
 logical :: randomise_initial_volume
+logical :: use_FD = .true.
 logical :: relax
 logical :: use_parallel
 logical :: saveprofiledata
@@ -360,8 +373,7 @@ integer :: idbug = 0
 integer :: Nbnd
 integer :: seed(2)
 
-! Off-lattice parameters, unused
-integer :: NXB
+! Off-lattice parameters, in the input file but unused here
 real(REAL_KIND) :: a_separation
 real(REAL_KIND) :: a_force, b_force, c_force, x0_force, x1_force, kdrag, frandom
 

@@ -265,6 +265,8 @@ void MainWindow::createActions()
 // For Kd computed in the GUI
 //    connect(buttonGroup_SN30K_killmodel_1, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
 //    connect(buttonGroup_SN30K_killmodel_2, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
+
+    connect(buttonGroup_farfield, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -884,7 +886,12 @@ void MainWindow::loadParams()
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
 //				parse_rbutton(wtag,&rbutton_case);
-                wtag = parse_rbutton(qsname,&rbutton_case);
+
+//                wtag = parse_rbutton(qsname,&rbutton_case);
+//                LOG_QMSG("wtag: " + wtag);
+//                sprintf(msg,"rbutton_case: %d",rbutton_case);
+//                LOG_MSG(msg);
+
             }
             // Find corresponding data in workingParameterList
             bool found = false;
@@ -980,15 +987,13 @@ void MainWindow::loadParams()
 //                                disableUseTreatmentFile();
 //                        }
 					} else if (qsname.startsWith("rbut_")) {
-						QRadioButton *w_rb = (QRadioButton *)w;
+                        parse_rbutton(qsname,&rbutton_case);
+                        QRadioButton *w_rb = (QRadioButton *)w;
                         if (int(p.value) == rbutton_case) {
 							w_rb->setChecked(true);
-							LOG_QMSG("loadParams: setChecked true")
 						} else {
 							w_rb->setChecked(false);
-							LOG_QMSG("loadParams: setChecked false")
 						}
-						setLineEditVisibility(qsname,int(p.value));
 					} else if (qsname.startsWith("text_")) {
 						QLineEdit *w_l = (QLineEdit *)w;
 						w_l->setText(p.label);
@@ -1149,7 +1154,7 @@ void MainWindow::reloadParams()
 			int rbutton_case = 0;
 			if (qsname.startsWith("rbut_")) {
 //				parse_rbutton(wtag,&rbutton_case);
-                wtag = parse_rbutton(qsname,&rbutton_case);
+//                wtag = parse_rbutton(qsname,&rbutton_case);
             }
             // Find corresponding data in workingParameterList
             bool found = false;
@@ -1212,42 +1217,24 @@ void MainWindow::reloadParams()
                             if (use_TRACER)
                                 disableUseTracer();
                         }
-//                        bool use_TPZ = qsname.contains("USE_TPZ_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-//                            if (use_TPZ)
-//                                enableUseTPZ();
                         } else {
                             w_cb->setChecked(false);
-//                            if (use_TPZ)
-//                                disableUseTPZ();
                         }
-//                        bool use_DNB = qsname.contains("USE_DNB_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
-//                            if (use_DNB)
-//                                enableUseDNB();
                         } else {
                             w_cb->setChecked(false);
-//                            if (use_DNB)
-//                                disableUseDNB();
                         }
-//                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
-//                        if (p.value == 1) {
-//                            w_cb->setChecked(true);
-//                            if (use_TREATMENT_FILE)
-//                                enableUseTreatmentFile();
-//                        } else {
-//                            w_cb->setChecked(false);
-//                            if (use_TREATMENT_FILE)
-//                                disableUseTreatmentFile();
-//                        }
 					} else if (qsname.startsWith("rbut_")) {
-                        QRadioButton *w_rb = (QRadioButton *)w;
-                        if (p.value == rbutton_case) {
-                            w_rb->setChecked(true);
-                        } else {
-                            w_rb->setChecked(false);
+                        wtag = parse_rbutton(qsname,&rbutton_case);
+                        if (wtag.compare("FD_SOLVER")==0) {     // need to special-case radiobuttons
+                            if (p.value == 0) {
+                                rbut_FD_SOLVER_0->setChecked(true);
+                            } else {
+                                rbut_FD_SOLVER_1->setChecked(true);
+                            }
                         }
 					}
 				}

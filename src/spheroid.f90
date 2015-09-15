@@ -3,6 +3,7 @@ use global
 use boundary
 use chemokine
 use cellstate
+use react_diff
 use winsock  
 use deform
 use drop
@@ -78,26 +79,9 @@ if (.not.ok) return
 
 call CreateBdryList
 
-!chemo_N = 8
-!call ChemoSetup
-!call MakeSplit(.true.)
-!call init_counters
-!if (save_input) then
-!    call save_inputfile(inputfile)
-!    call save_parameters
-!	call save_inputfile(treatmentfile)
-!endif
-!call AllocateConcArrays
-!call ChemoSteadystate
-!firstSummary = .true.
-!initialized = .true.
-!call checkcellcount(ok)
-
-!if (use_ODE_diffusion) then
-!	call SetupODEDiff
-!	call TestODEDiffusion
-!	call TestSolver
-!endif
+if (use_FD) then
+	call setup_react_diff
+endif
 istep = 0
 call SetupODEdiff
 allocate(allstate(MAX_VARS,MAX_CHEMO))
@@ -309,7 +293,7 @@ allocate(zdomain(NZ))
 x0 = (NX + 1.0)/2.        ! global value
 y0 = (NY + 1.0)/2.
 z0 = (NZ + 1.0)/2.
-Centre = (/x0,y0,z0/)   ! now, actually the global centre (units = grids)
+Centre = [x0,y0,z0]   ! now, actually the global centre (units = grids)
 call SetRadius(initial_count)
 write(logmsg,*) 'Initial radius, nc0, max_nlist: ',Radius, initial_count, max_nlist
 call logger(logmsg)
@@ -349,7 +333,7 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine ReadCellParams(ok)
 logical :: ok
-integer :: i, idrug, imetab, nmetab, im, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax
+integer :: i, idrug, imetab, nmetab, im, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax, iuse_FD
 integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, iV_depend, iV_random
 !integer ::  idrug_decay, imetab_decay
 integer :: ictype, idisplay, isconstant
@@ -476,6 +460,7 @@ read(nfcell,*) spcrad_value
 read(nfcell,*) iuse_extra
 read(nfcell,*) iuse_relax
 read(nfcell,*) iuse_par_relax
+read(nfcell,*) iuse_FD
 read(nfcell,*) iuse_drop
 read(nfcell,*) Ndrop
 read(nfcell,*) alpha_shape
@@ -510,6 +495,7 @@ ANOXIA_THRESHOLD = ANOXIA_THRESHOLD/1000			! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
 relax = (iuse_relax == 1)
 use_parallel = (iuse_par_relax == 1)
+use_FD = (iuse_FD == 1)
 chemo(OXYGEN)%used = (iuse_oxygen == 1)
 chemo(GLUCOSE)%used = (iuse_glucose == 1)
 chemo(TRACER)%used = (iuse_tracer == 1)
@@ -559,6 +545,8 @@ if (itestcase /= 0) then
 endif
 
 if (mod(NX,2) /= 0) NX = NX+1					! ensure that NX is even
+NYB = NXB
+NZB = NXB
 
 open(nfout,file=outputfile,status='replace')
 write(nfout,'(a,a)') 'GUI version: ',gui_run_version
@@ -991,6 +979,7 @@ ityp = cell_list(k)%celltype
 Ncells_type(ityp) = Ncells_type(ityp) + 1
 cell_list(k)%site = site
 cell_list(k)%state = 1
+cell_list(k)%generation = 1
 !cell_list(k)%drugA_tag = .false.
 !cell_list(k)%drugB_tag = .false.
 cell_list(k)%drug_tag = .false.
@@ -1208,7 +1197,7 @@ do kevent = 1,Nevents
 				endif
 			enddo
 			call MediumChange(V,C)
-			call UpdateMedium(0.0d0)
+			call UpdateCbnd(0.0d0)
 		endif
 		event(kevent)%done = .true.
 	endif
@@ -1315,7 +1304,6 @@ chemo(OXYGEN+1:)%medium_Cext = chemo(OXYGEN+1:)%medium_M/(total_volume - Vblob)
 chemo(OXYGEN)%medium_Cext = chemo(OXYGEN)%bdry_conc
 write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
 write(nflog,'(a,13f8.4)') 'medium_Cext ',chemo(OXYGEN+1:)%medium_Cext
-!call UpdateCbnd
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1330,9 +1318,9 @@ subroutine simulate_step(res) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 integer :: kcell, site(3), hour, nthour, kpar=0
-real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um
+real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um, framp
 !integer, parameter :: NT_CONC = 6
-integer :: nchemo, i
+integer :: i, ic, ichemo, ndt
 integer :: nvars, ns
 real(REAL_KIND) :: dxc, ex_conc(120*O2_BY_VOL+1)		! just for testing
 logical :: ok = .true.
@@ -1393,12 +1381,10 @@ if (.not.ok) then
 	res = 3
 	return
 endif
-
-! Update Cbnd using current M, R1 and previous U, Cext
-!if (dbug) write(nflog,*) 'UpdateCbnd'
-!call UpdateCbnd
-!write(nflog,*) 'did UpdateCbnd'
-
+if (use_FD) then
+	call diff_solver(DELTA_T, framp)
+	call UpdateCbnd(DELTA_T)
+endif
 if (dbug) write(nflog,*) 'SetupODEdiff'
 call SetupODEdiff
 
@@ -1419,13 +1405,12 @@ enddo
 if (dbug) write(nflog,*) 'StateToSiteCell'
 call StateToSiteCell
 !call check_allstate('after StateToSiteCell')
+if (.not.use_FD) then
+	call UpdateCbnd(DELTA_T)		! need to check placements of Update_Cbnd
+!	write(nflog,*) 'did UpdateCbnd'
+endif
 
 res = 0
-
-! Compute U and update M, Cext, Cbnd
-if (dbug) write(nflog,*) 'UpdateMedium'
-call UpdateMedium(DELTA_T)
-!write(nflog,*) 'did UpdateMedium'
 
 if (mod(istep,60) == -1) then
 	rmax = 0

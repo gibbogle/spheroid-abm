@@ -40,9 +40,14 @@ type chemokine_type
 	real(REAL_KIND) :: medium_U			! total blob uptake rate
 	real(REAL_KIND) :: medium_Cext		! far-field concentration
 	real(REAL_KIND) :: medium_Cbnd		! boundary concentration
+	real(REAL_KIND) :: diff_reduction_factor
 	real(REAL_KIND), allocatable :: coef(:,:)
 	real(REAL_KIND), allocatable :: conc(:,:,:)
 	real(REAL_KIND), allocatable :: grad(:,:,:,:)
+	real(REAL_KIND), allocatable :: Cave_b(:,:,:)
+	real(REAL_KIND), allocatable :: Cprev_b(:,:,:)
+	real(REAL_KIND), allocatable :: Fprev_b(:,:,:)
+	real(REAL_KIND), allocatable :: Fcurr_b(:,:,:)
 end type
 type(chemokine_type), target :: chemo(MAX_CHEMO)
 
@@ -66,6 +71,8 @@ type ODEdiff_type
 	real(REAL_KIND) :: C1_soft
 end type
 type(ODEdiff_type) :: ODEdiff
+
+integer :: nchemo, chemomap(MAX_CHEMO)
 
 contains
 
@@ -109,8 +116,6 @@ chemo(OXYGEN)%decay_rate = 0
 chemo(GLUCOSE)%decay_rate = 0
 chemo(TRACER)%decay_rate = 0
 
-!chemo(DRUG_A)%name = 'Drug_A'
-!chemo(DRUG_B)%name = 'Drug_B'
 do ichemo = 1,MAX_CHEMO
 	chemo(ichemo)%present = .false.
 	if (chemo(ichemo)%used) then
@@ -121,7 +126,21 @@ do ichemo = 1,MAX_CHEMO
 	endif
 enddo
 call AllocateConcArrays
-!call SetMMParameters
+if (use_FD) then
+	do ichemo = 1,MAX_CHEMO
+		if (.not.chemo(ichemo)%used) cycle
+		if (allocated(chemo(ichemo)%Cave_b)) deallocate(chemo(ichemo)%Cave_b)
+		if (allocated(chemo(ichemo)%Cprev_b)) deallocate(chemo(ichemo)%Cprev_b)
+		if (allocated(chemo(ichemo)%Fprev_b)) deallocate(chemo(ichemo)%Fprev_b)
+		if (allocated(chemo(ichemo)%Fcurr_b)) deallocate(chemo(ichemo)%Fcurr_b)
+		allocate(chemo(ichemo)%Cave_b(NXB,NYB,NZB))
+		allocate(chemo(ichemo)%Cprev_b(NXB,NYB,NZB))
+		allocate(chemo(ichemo)%Fprev_b(NXB,NYB,NZB))
+		allocate(chemo(ichemo)%Fcurr_b(NXB,NYB,NZB))
+		chemo(ichemo)%diff_reduction_factor = 0.5               ! default value, may need to be adjusted
+	enddo
+endif
+chemo(OXYGEN)%diff_reduction_factor = 0.3
 end subroutine
 
 !----------------------------------------------------------------------------------------
