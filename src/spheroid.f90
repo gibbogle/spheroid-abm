@@ -1675,10 +1675,10 @@ vol_mm3_1000 = vol_mm3*1000			! 1000 * volume in mm^3
 diam_um = diam_cm*10000
 npmm3 = Ncells/vol_mm3
 
-Ntagged_anoxia(:) = Nanoxia_tag(:) - Nanoxia_dead(:)			! number currently tagged by anoxia
-Ntagged_radiation(:) = Nradiation_tag(:) - Nradiation_dead(:)	! number currently tagged by radiation
-Ntagged_drug(1,:) = Ndrug_tag(1,:) - Ndrug_dead(1,:)				! number currently tagged by drugA
-Ntagged_drug(2,:) = Ndrug_tag(2,:) - Ndrug_dead(2,:)				! number currently tagged by drugA
+Ntagged_anoxia(:) = Nanoxia_tag(:)			! number currently tagged by anoxia
+Ntagged_radiation(:) = Nradiation_tag(:)	! number currently tagged by radiation
+Ntagged_drug(1,:) = Ndrug_tag(1,:)			! number currently tagged by drugA
+Ntagged_drug(2,:) = Ndrug_tag(2,:)			! number currently tagged by drugA
 
 TNtagged_anoxia = sum(Ntagged_anoxia(1:Ncelltypes))
 TNtagged_radiation = sum(Ntagged_radiation(1:Ncelltypes))
@@ -1694,7 +1694,11 @@ call getHypoxicCount(nhypoxic)
 hypoxic_percent_10 = (1000*nhypoxic(i_hypoxia_cutoff))/Ncells
 call getGrowthCount(ngrowth)
 growth_percent_10 = (1000*ngrowth(i_growth_cutoff))/Ncells
-call getNecroticFraction(necrotic_fraction,vol_cm3)
+if (TNanoxia_dead > 0) then
+	call getNecroticFraction(necrotic_fraction,vol_cm3)
+else
+	necrotic_fraction = 0
+endif
 necrotic_percent_10 = 1000*necrotic_fraction
 call getNviable(Nviable)
 plate_eff = real(Nviable)/Ncells

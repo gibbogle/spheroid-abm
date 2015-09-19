@@ -6888,7 +6888,7 @@ padding: 8px
               <rect>
                <x>70</x>
                <y>50</y>
-               <width>82</width>
+               <width>111</width>
                <height>18</height>
               </rect>
              </property>
@@ -8127,10 +8127,10 @@ padding: 8px
  </resources>
  <connections/>
  <buttongroups>
+  <buttongroup name="buttonGroup_farfield"/>
   <buttongroup name="buttonGroup_histotype"/>
   <buttongroup name="buttonGroup_plane"/>
   <buttongroup name="buttonGroup_celltype"/>
   <buttongroup name="buttonGroup_drug"/>
-  <buttongroup name="buttonGroup_farfield"/>
  </buttongroups>
 </ui>
