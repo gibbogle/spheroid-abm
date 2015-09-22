@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>7</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -1303,6 +1303,118 @@ padding: 8px
              </layout>
             </widget>
            </widget>
+           <widget class="QGroupBox" name="groupBox_glucosedepletion">
+            <property name="geometry">
+             <rect>
+              <x>540</x>
+              <y>60</y>
+              <width>181</width>
+              <height>131</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QLabel" name="alabel">
+             <property name="geometry">
+              <rect>
+               <x>40</x>
+               <y>10</y>
+               <width>91</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Glucose depletion</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="lineEdit_glucose_ncells">
+             <property name="geometry">
+              <rect>
+               <x>112</x>
+               <y>40</y>
+               <width>50</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="inputMask">
+              <string/>
+             </property>
+             <property name="text">
+              <string>100000</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QLabel" name="alabel_2">
+             <property name="geometry">
+              <rect>
+               <x>30</x>
+               <y>40</y>
+               <width>81</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Number of cells</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="pushButton_glucose_0">
+             <property name="geometry">
+              <rect>
+               <x>70</x>
+               <y>100</y>
+               <width>51</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Plot</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="lineEdit_glucose_ndays">
+             <property name="geometry">
+              <rect>
+               <x>110</x>
+               <y>70</y>
+               <width>50</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>50</width>
+               <height>16777215</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>10</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QLabel" name="alabel_5">
+             <property name="geometry">
+              <rect>
+               <x>30</x>
+               <y>70</y>
+               <width>81</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Number of days</string>
+             </property>
+            </widget>
+           </widget>
           </widget>
           <widget class="QWidget" name="tab_treatment">
            <attribute name="title">
@@ -1314,7 +1426,7 @@ padding: 8px
               <x>490</x>
               <y>30</y>
               <width>341</width>
-              <height>211</height>
+              <height>231</height>
              </rect>
             </property>
             <property name="title">
@@ -1326,7 +1438,7 @@ padding: 8px
                <x>10</x>
                <y>15</y>
                <width>321</width>
-               <height>181</height>
+               <height>200</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_GLGL7">
@@ -1534,6 +1646,32 @@ padding: 8px
                <widget class="QLabel" name="alabel_radiation">
                 <property name="text">
                  <string>Radiation parameters</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <widget class="QPushButton" name="pushButton_SF_1">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Plot</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="2">
+               <widget class="QPushButton" name="pushButton_SF_2">
+                <property name="maximumSize">
+                 <size>
+                  <width>50</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Plot</string>
                 </property>
                </widget>
               </item>

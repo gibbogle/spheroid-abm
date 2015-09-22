@@ -31,7 +31,7 @@ use rkc_90
 
 implicit none
 
-integer, parameter :: MAX_VARS = 2*max_nlist
+integer, parameter :: MAX_VARS = max_nlist	! was 2*
 
 integer, parameter :: RKF45_SOLVE = 1
 integer, parameter :: RKSUITE_SOLVE = 2
@@ -350,6 +350,10 @@ do i = 1,ODEdiff%nvars
     site = ODEdiff%varsite(i,:)
     if (ODEdiff%vartype(i) == EXTRA) then
         occupancy(site(1),site(2),site(3))%C(:) = allstate(i,:)
+        if (ODEdiff%vartype(i+1) == INTRA) then
+			kcell = ODEdiff%cell_index(i+1)		! for access to cell-specific parameters (note that the intra variable follows the extra variable)
+			cell_list(kcell)%Cex(:) = allstate(i,:)
+		endif
     else
 !        kcell = occupancy(site(1),site(2),site(3))%indx(1)
         kcell = ODEdiff%cell_index(i)
@@ -1300,7 +1304,7 @@ enddo
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	chemo(ichemo)%medium_Cbnd = csum(ichemo)/n
-!	write(*,'(a,i2,f8.4)') 'medium_Cbnd: ',ichemo,chemo(ichemo)%medium_Cbnd
+!	write(nflog,'(a,i2,f8.4)') 'UpdateCbnd: ',ichemo,chemo(ichemo)%medium_Cbnd
 enddo
 end subroutine
 
@@ -1428,213 +1432,6 @@ do i = 1,ODEdiff%nvars
 enddo
 end subroutine
 
-!----------------------------------------------------------------------------------
-! In this version the diffusion/decay of each constituent is solved by a separate
-! OMP thread.  Obviously this requires at least as many CPUs as there are constituents.
-! Note that this required modifications to the way r4_rkf45 handles SAVEd variables,
-! to avoid collisions between different threads.
-!----------------------------------------------------------------------------------
-subroutine TestODEDiffusion
-integer flag, i, j, k, ichemo
-real(REAL_KIND) :: tstart, tend, t, relerr, abserr
-!real(REAL_KIND), allocatable :: allstate(:,:), allstatep(:,:)
-real(REAL_KIND), allocatable :: state(:), statep(:)
-real(REAL_KIND), parameter :: dt = 10.0
-real(REAL_KIND) :: res(10)
-integer :: x, y, z, dx, dy, dz, xmid, ymid, zmid, ibnd, k0, site(3), nchemo, imax, nvars
-real(REAL_KIND) :: grad(3)
-real(REAL_KIND) :: amp, r, ctemp(10), dvmax
-real(REAL_KIND) :: t1, t2
-integer :: nt = 60
-logical :: ok
-integer :: flag_par(MAX_CHEMO)
-real(REAL_KIND) :: abserr_par(MAX_CHEMO), relerr_par(MAX_CHEMO)
-integer, parameter :: SOLVER = RKC_SOLVE
-
-! Variables for RKSUITE
-!type(rk_comm_real_1d) :: comm
-real(REAL_KIND) :: t_start, t_end, tolerance, t_want, t_inc, t_got
-real(REAL_KIND), allocatable :: thresholds(:)
-
-! Variables for RKC
-real(REAL_KIND), allocatable :: work(:,:)
-integer :: info(4), idid
-real(REAL_KIND) :: rtol, atol(1)
-type(rkc_comm) :: comm_rkc(MAX_CHEMO)
-
-write(logmsg,*) 'TestODEDiffusion: nvars: ',ODEdiff%nextra
-call logger(logmsg)
-nchemo = 2	!MAX_CHEMO
-nvars = ODEdiff%nextra
-!allocate(prev_state(ODEdiff%nextra))
-!allocate(allstate(MAX_VARS,MAX_CHEMO))
-!allocate(allstatep(MAX_VARS,MAX_CHEMO))
-allocate(allstate(nvars,MAX_CHEMO))
-allocate(allstatep(nvars,MAX_CHEMO))
-allocate(work(8+5*nvars,MAX_CHEMO))
-xmid = NX/2
-ymid = NY/2
-zmid = NZ/2
-k0 = ODEdiff%ivar(xmid,ymid,zmid)
-tstart = 0
-do ichemo = 1,nchemo
-	if (.not.chemo(ichemo)%used) cycle
-	call InitState(ichemo,allstate(1:nvars,ichemo))
-	allstatep(:,ichemo) = 0
-	if (SOLVER == RKF45_SOLVE) then
-!		call deriv(tstart,allstate(1:nvars,ichemo),allstatep(1:nvars,ichemo),ichemo)
-	elseif (SOLVER == RKSUITE_SOLVE) then
-		t_end = 10000
-		tolerance = 1.0e-4
-		allocate(thresholds(nvars))
-		thresholds = 0.1
-!		call rk_setup(comm, tstart, allstate(1:nvars,ichemo), t_end,  tolerance, thresholds)
-	elseif (SOLVER == RKC_SOLVE) then
-		info(1) = 1
-		info(2) = 1
-		info(3) = 1
-		info(4) = 0
-		rtol = 1d-2
-		atol = rtol
-		idid = 0
-	endif
-enddo
-
-t1 = wtime()
-flag_par = 1
-do k = 1,nt
-
-	!$omp parallel do private(tstart, tend, state, statep, flag, relerr, abserr, site, idid)
-	do ichemo = 1,nchemo
-		if (.not.chemo(ichemo)%used) cycle
-		allocate(state(nvars))
-		allocate(statep(nvars))
-		state = allstate(1:nvars,ichemo)
-		statep = allstatep(1:nvars,ichemo)
-		if (ichemo == 1) then
-			call showresults(state)
-		endif
-		if (k == 1) then
-			abserr = 10*sqrt ( epsilon ( abserr ) )
-			abserr_par(ichemo) = abserr
-			relerr = 10*sqrt ( epsilon ( relerr ) )
-			relerr_par(ichemo) = relerr
-		else
-			abserr = abserr_par(ichemo)
-			relerr = relerr_par(ichemo)
-		endif
-		tstart = (k-1)*dt
-		tend = tstart + dt
-		flag = flag_par(ichemo)
-		if (SOLVER == RKF45_SOLVE) then
-			if (REAL_KIND == SP) then
-!				call r4_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
-			else
-!				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
-			endif
-			if (flag /= 2) then
-				write(logmsg,*) 'Bad flag: ',flag
-				call logger(logmsg)
-				stop
-!				call r8_rkf45 ( deriv, nvars, state, statep, tstart, tend, relerr, abserr, flag, ichemo )
-				flag = 2
-			endif
-			flag_par(ichemo) = flag
-			abserr_par(ichemo) = abserr
-			relerr_par(ichemo) = relerr
-		elseif (SOLVER == RKSUITE_SOLVE) then
-!			call range_integrate(comm, f_deriv, tend, t_got, state, statep, flag)
-			if (flag /= 1 .and. flag /= 3 .and. flag /= 4) then
-				write(logmsg,*) 'Bad flag: ',flag
-				call logger(logmsg)
-				stop
-			endif
-		elseif (SOLVER == RKC_SOLVE) then
-			idid = 0
-			call rkc(comm_rkc(ichemo),nvars,f_rkc,state,tstart,tend,rtol,atol,info,work(:,ichemo),idid,ichemo)
-			if (idid /= 1) then
-				stop
-			endif
-		endif
-!		do i = 1,ODEdiff%nextra
-!			site = ODEdiff%varsite(i,:)
-!			chemo(ichemo)%conc(site(1),site(2),site(3)) = state(i)
-!		enddo
-		allstate(1:nvars,ichemo) = state
-		allstatep(1:nvars,ichemo) = statep
-! To test derivs
-!		call deriv(tend,state,statep,ichemo)
-!		dvmax = 0
-!		do i = 1,ODEdiff%nextra
-!			if (abs(statep(i)) > dvmax) then
-!				dvmax = abs(statep(i))
-!				imax = i
-!			endif
-!		enddo
-		deallocate(state)
-		deallocate(statep)
-	enddo
-!	call TestAddSite
-!   nvars = ODEdiff%nextra
-!		prev_state = state
-enddo
-
-t2 = wtime()
-
-!	do x = 1,NX
-!		do y = 1,NY
-!			do z = 1,NZ
-!				if (occupancy(x,y,z)%indx(1) < 0) cycle
-!				i = ODEdiff%ivar(x,y,z)
-!				chemo(ichemo)%conc(x,y,z) = state(i)
-!				call compute_gradient(state,x,y,z,grad)
-!				chemo(ichemo)%grad(:,x,y,z) = grad
-!			enddo
-!		enddo
-!	enddo
-!enddo
-!deallocate(state)
-!deallocate(prev_state)
-!deallocate(statep)
-end subroutine
-
-!----------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------
-subroutine TestAddSite
-integer :: i, j, x, y, z, site(3), kpar=0
-
-do
-	i = random_int(1,ODEdiff%nextra,kpar)
-	do j = 1,7
-		if (ODEdiff%icoef(i,j) == 0) then
-			site = ODEdiff%varsite(i,:)
-			x = site(1)
-			y = site(2)
-			z = site(3)
-			if (j == 2) then
-				x = x-1
-			elseif (j == 3) then
-				x = x+1
-			elseif (j == 4) then
-				y = y-1
-			elseif (j == 5) then
-				y = y+1
-			elseif (j == 6) then
-				z = z-1
-			elseif (j == 7) then
-				z = z+1
-			endif
-			if (ODEdiff%ivar(x,y,z) /= 0) then
-				write(nflog,*) 'Error: TestAddSite: ',ODEdiff%ivar(x,y,z)
-				stop
-			endif
-			site = (/x,y,z/)
-			call ExtendODEDiff(site)
-			return
-		endif
-	enddo
-enddo
-end subroutine
 
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------

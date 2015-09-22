@@ -18,6 +18,7 @@
 #include "dialog.h"
 #include "drug.h"
 #include "global.h"
+#include "plotwin.h"
 
 #include "../src/version.h"
 
@@ -166,6 +167,7 @@ MainWindow::MainWindow(QWidget *parent)
     videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
 
     tabs->setCurrentIndex(9);
+    setupPopup();
     goToInputs();
 }
 
@@ -1626,10 +1628,11 @@ void MainWindow::goToField()
     Global::showingVTK = false;
     Global::showingFACS = false;
     LOG_MSG("goToField");
-//    field->displayField(hour,&res);
-//    if (res != 0) {
-//        stopServer();
-//    }
+    field->setSliceChanged();
+    if (step > 0 && !action_field->isEnabled()) {
+        int res;
+        field->displayField(hour,&res);
+    }
 }
 
 //-------------------------------------------------------------
@@ -2178,96 +2181,21 @@ void MainWindow::showSummary(int hr)
         val = Global::summaryData[k];
         newR->pData[i][step] = val*grph->get_scaling(i);
         tag = grph->get_tag(i);
-//        pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, casename, tag);
         double yscale = grph->get_yscale(i);
         pGraph[i]->redraw(newR->tnow, newR->pData[i], step+1, Global::casename, tag, yscale, false);
     }
-//    LOG_QMSG("did ts graphs");
 
     // Profile plots
     updateProfilePlots();
-    /*
-//    int nvars = 1 + Global::MAX_CHEMO + Global::N_EXTRA;
-    int ivar=0;
-    int nvars = Global::conc_nvars;
-    for (int i=0; i<nGraphs; i++) {
-        if (!grph->isActive(i)) continue;
-        if (Global::conc_nc > 0 && grph->isProfile(i)) {
-            double x[100], y[100];
-            double xscale, yscale;
-            tag = grph->get_tag(i);
-            int k = grph->get_dataIndex(i);
-            if (k == MULTI) {
-                ivar = field->constituent;
-                QString title;
-                field->getTitle(ivar,&title);
-                pGraph[i]->setTitle(title);
-                k = Global::GUI_to_DLL_index[ivar];
-            }
-            n = Global::conc_nc;
-            int offset = k*n;
-            for (int j=0; j<n; j++) {
-                x[j] = j*Global::conc_dx*1.0e4;
-                y[j] = Global::concData[offset+j];
-            }
-            xscale = grph->get_xscale(x[n-1]);
-            double maxval = 0;
-            for (int j=0; j<n; j++) {
-                if (y[j] > maxval) maxval = y[j];
-            }
-            yscale = pGraph[i]->calc_yscale(maxval);
-            pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
-            pGraph[i]->setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
-//            if (k == CFSE){
-//                pGraph[i]->setAxisScale(QwtPlot::xBottom, -20.0, 1.0, 0);
-//            }
-            pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Distance (microns)");
-            pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
-            pGraph[i]->redraw(x, y, n, Global::casename, tag, yscale, true);
-        }
-    }
-    */
-//    LOG_QMSG("did profile graphs");
-    /*
-    // Distribution plots
-    for (int i=0; i<nGraphs; i++) {
-        if (!grph->isActive(i)) continue;
-        if (grph->isDistribution(i)) {
-            double x[100], y[100];
-            double yscale;
-            QString tag = grph->get_tag(i);
-            int k = grph->get_dataIndex(i);
-            double v1 = Global::distData[k].v0 - Global::distData[k].dv/2;
-            double v2 = Global::distData[k].v0 + (Global::dist_nv-0.5)*Global::distData[k].dv;
-            pGraph[i]->setAxisScale(QwtPlot::xBottom, v1, v2, 0);
-            n = Global::dist_nv;
-
-            double pmax = 0;
-            for (int j=0; j<n; j++) {
-                x[j] = Global::distData[k].v0 + j*Global::distData[k].dv;
-                y[j] = Global::distData[k].prob[j];
-                pmax = MAX(pmax,y[j]);
-            }
-            int j = pmax/0.1;
-            pmax = (j+1)*0.1;
-            yscale = pmax;
-            pGraph[i]->setAxisScale(QwtPlot::yLeft, 0, pmax, 0);
-            pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Concentration");
-            pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
-            pGraph[i]->redraw(x, y, n, casename, tag, yscale, true);
-        }
-    }
-    */
-//    LOG_QMSG("did distribution graphs");
 
     field->setSliceChanged();
     if (step > 0 && !action_field->isEnabled()) {
         field->displayField(hour,&res);
-        if (res != 0) {
-            sprintf(msg,"displayField returned res: %d",res);
-            LOG_MSG(msg);
-            stopServer();
-        }
+//        if (res != 0) {
+//            sprintf(msg,"displayField returned res: %d",res);
+//            LOG_MSG(msg);
+//            stopServer();
+//        }
     }
     exthread->mutex1.unlock();
     exthread->summary_done.wakeOne();

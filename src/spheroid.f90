@@ -75,8 +75,6 @@ write(logmsg,*) 'did PlaceCells: Ncells: ',Ncells,Radius
 call logger(logmsg)
 if (.not.ok) return
 
-!call test_get_path
-
 call CreateBdryList
 
 if (use_FD) then
@@ -95,13 +93,9 @@ enddo
 call AdjustMM
 call SetInitialGrowthRate
 Nradiation_tag = 0
-!NdrugA_tag = 0
-!NdrugB_tag = 0
 Ndrug_tag = 0
 Nanoxia_tag = 0
 Nradiation_dead = 0
-!NdrugA_dead = 0
-!NdrugB_dead = 0
 Ndrug_dead = 0
 Nanoxia_dead = 0
 t_simulation = 0
@@ -559,13 +553,17 @@ write(nflog,'(a,a)') 'DLL version: ',dll_run_version
 write(nflog,*)
 
 open(nfres,file='spheroid_ts.out',status='replace')
-write(nfres,'(a,a)') 'GUI version: ',gui_run_version
-write(nfres,'(a,a)') 'DLL version: ',dll_run_version
-write(nfres,*)
-write(nfres,'(a)') 'istep hour vol_mm3 diam_um Ncells(2) &
-Nanoxia_dead(2) NdrugA_dead(2) NdrugB_dead(2) Nradiation_dead(2) &
-Ntagged_anoxia(2) Ntagged_drugA(2) Ntagged_drugB(2) Ntagged_radiation(2) &
-f_hypox(3) f_growth(3) f_necrot plating_efficiency(2) &
+!write(nfres,'(a,a)') 'GUI version: ',gui_run_version
+!write(nfres,'(a,a)') 'DLL version: ',dll_run_version
+!write(nfres,*)
+write(nfres,'(a)') 'GUI_version DLL_version &
+istep hour vol_mm3 diam_um Ncells(1) Ncells(2) &
+Nanoxia_dead(1) Nanoxia_dead(2) NdrugA_dead(1) NdrugA_dead(2) &
+NdrugB_dead(1) NdrugB_dead(2) Nradiation_dead(1) Nradiation_dead(2) &
+Ntagged_anoxia(1) Ntagged_anoxia(2) Ntagged_drugA(1) Ntagged_drugA(2) &
+Ntagged_drugB(1) Ntagged_drugB(2) Ntagged_radiation(1) Ntagged_radiation(2) &
+f_hypox(1) f_hypox(2) f_hypox(3) f_growth(1) f_growth(2) f_growth(3) &
+f_necrot plating_efficiency(1) plating_efficiency(2) &
 medium_oxygen medium_glucose medium_drugA medium_drugB'
 
 write(logmsg,*) 'Opened nfout: ',outputfile
@@ -1287,6 +1285,7 @@ end subroutine
 subroutine MediumChange(Ve,Ce)
 real(REAL_KIND) :: Ve, Ce(:)
 real(REAL_KIND) :: R, Vm, Vr, Vblob
+integer :: ichemo
 
 write(nflog,*) 'MediumChange:'
 write(nflog,'(a,f8.4)') 'Ve: ',Ve
@@ -1304,6 +1303,14 @@ chemo(OXYGEN+1:)%medium_Cext = chemo(OXYGEN+1:)%medium_M/(total_volume - Vblob)
 chemo(OXYGEN)%medium_Cext = chemo(OXYGEN)%bdry_conc
 write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
 write(nflog,'(a,13f8.4)') 'medium_Cext ',chemo(OXYGEN+1:)%medium_Cext
+if (use_FD) then	! need to set medium concentrations in Cave
+	do ichemo = OXYGEN+1,MAX_CHEMO
+		if (chemo(ichemo)%used) then
+			chemo(ichemo)%Cave_b = chemo(ichemo)%medium_Cext
+		endif
+	enddo
+endif
+
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1382,6 +1389,7 @@ if (.not.ok) then
 	return
 endif
 if (use_FD) then
+	framp = 1
 	call diff_solver(DELTA_T, framp)
 	call UpdateCbnd(DELTA_T)
 endif
@@ -1630,7 +1638,8 @@ end function
 !-----------------------------------------------------------------------------------------
 subroutine getMediumConc(cmedium)
 real(REAL_KIND) :: cmedium(:)
-cmedium(:) = chemo(:)%medium_Cext
+cmedium(:) = chemo(:)%medium_Cbnd
+!cmedium(:) = chemo(:)%medium_Cext
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1714,17 +1723,26 @@ summaryData(1:21) = [ istep, Ncells, TNanoxia_dead, TNdrug_dead(1), TNdrug_dead(
     TNtagged_anoxia, TNtagged_drug(1), TNtagged_drug(2), TNtagged_radiation, &
 	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, Tplate_eff_10, &
 	medium_oxygen_1000, medium_glucose_1000, medium_drug_1000(1), medium_drug_1000(2), npmm3 ]
-write(nfres,'(2a12,i8,2e12.4,19i7,13e12.4)') gui_run_version, dll_run_version, istep, hour, vol_mm3, diam_um, Ncells_type(1:2), &
-    Nanoxia_dead(1:2), Ndrug_dead(1,1:2), Ndrug_dead(2,1:2), Nradiation_dead(1:2), &
-    Ntagged_anoxia(1:2), Ntagged_drug(1,1:2), Ntagged_drug(2,1:2), Ntagged_radiation(1:2), &
-	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), necrotic_fraction, plate_eff(1:2), &
+write(nfres,'(2a12,i8,2e12.4,19i7,13e12.4)') gui_run_version, dll_run_version, &
+	istep, hour, vol_mm3, diam_um, Ncells_type(1:2), &
+    Nanoxia_dead(1:2), Ndrug_dead(1,1:2), &
+    Ndrug_dead(2,1:2), Nradiation_dead(1:2), &
+    Ntagged_anoxia(1:2), Ntagged_drug(1,1:2), &
+    Ntagged_drug(2,1:2), Ntagged_radiation(1:2), &
+	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), &
+	necrotic_fraction, plate_eff(1:2), &
 	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A), cmedium(DRUG_B)
 
-!write(nfres,'(a)') 'istep hour vol_mm3 diam_um Ncells(2) &
-!Nanoxia_dead(2) NdrugA_dead(2) NdrugB_dead(2) Nradiation_dead(2) &
-!Ntagged_anoxia(2) Ntagged_drugA(2) Ntagged_drugB(2) Ntagged_radiation(2) &
-!f_hypox(3) f_growth(3) f_necrot plating_efficiency(2) &
+!write(nfres,'(a)') 'GUI_version DLL_version &
+!istep hour vol_mm3 diam_um Ncells(1) Ncells(2) &
+!Nanoxia_dead(1) Nanoxia_dead(2) NdrugA_dead(1) NdrugA_dead(2) &
+!NdrugB_dead(1) NdrugB_dead(2) Nradiation_dead(1) Nradiation_dead(2) &
+!Ntagged_anoxia(1) Ntagged_anoxia(2) Ntagged_drugA(1) Ntagged_drugA(2) &
+!Ntagged_drugB(1) Ntagged_drugB(2) Ntagged_radiation(1) Ntagged_radiation(2) &
+!f_hypox(1) f_hypox(2) f_hypox(3) f_growth(1) f_growth(2) f_growth(3) &
+!f_necrot plating_efficiency(1) plating_efficiency(2) &
 !medium_oxygen medium_glucose medium_drugA medium_drugB'
+
 		
 call sum_dMdt(GLUCOSE)
 end subroutine
@@ -1830,6 +1848,10 @@ real(c_double) :: fraction
 integer rng(3,2), ichemo, kcell, x, y, z
 
 !call logger('get_fieldinfo')
+if (.not.allocated(occupancy)) then
+	res = -1
+	return
+endif
 res = 0
 nxx = NX
 nc = MAX_CHEMO
@@ -1898,6 +1920,10 @@ do z = rng(3,1),rng(3,2)
 !            write(nflog,*) x,y,z,kcell
             ns = ns + 1
 	        i = ODEdiff%ivar(x,y,z)
+	        if (i < 1) then
+				res = -1
+				return
+			endif
             fdata(ns)%site = (/x,y,z/)
             fdata(ns)%state = 1
             if (kcell > 0) then

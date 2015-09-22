@@ -50,24 +50,12 @@ contains
 subroutine setup_react_diff
 integer :: ix, iy, iz, ic, maxnz, ichemo
 real(REAL_KIND) :: C0, total_flux
-!character*(10) :: emapfile
-!real(REAL_KIND), pointer :: Cprev(:,:,:), Fprev(:,:,:), Fcurr(:,:,:)
 character*(10) :: bmapfile
 real(REAL_KIND), pointer :: Cave_b(:,:,:), Cprev_b(:,:,:), Fprev_b(:,:,:), Fcurr_b(:,:,:)
 logical :: zero
 logical :: ok
 
 write(nflog,*) 'setup_react_diff: NXB: ',NXB
-!dxf = DELTA_X
-!dx3 = dxf*dxf*dxf
-!nrow = (NX-2)*(NY-2)*(NZ-1)		! embedded map, Dirichlet conditions on ix=1,NX, iy=1,NY, iz=NZ
-!maxnz = MAX_CHEMO*nrow
-!if (allocated(amap)) deallocate(amap)
-!if (allocated(ja)) deallocate(ja)
-!if (allocated(ia)) deallocate(ia)
-!allocate(amap(maxnz,0:3))
-!allocate(ja(maxnz))
-!allocate(ia(nrow+1))
 DXB = 120
 DXB = 1.0e-4*DXB	! um -> cm
 ixb0 = (1 + NXB)/2
@@ -86,12 +74,6 @@ if (allocated(ia_b)) deallocate(ia_b)
 allocate(amap_b(maxnz,0:3))
 allocate(ja_b(maxnz))
 allocate(ia_b(nrow_b+1))
-
-!emapfile = ''
-!write(emapfile,'(a,i2.0,a)') 'emap',NX,'.dat'
-!write(nflog,*) 'setup_react_diff: ',emapfile
-!call make_sparse_emap(emapfile,.true.)
-!write(nflog,*) 'made emapfile: ',emapfile
 
 bmapfile = ''
 write(bmapfile,'(a,i2.0,a)') 'bmap',NXB,'.dat'
@@ -427,20 +409,14 @@ do kcell = 1,nlist
 	if (cp%state == DEAD) cycle
 	cp%dMdt(ichemo) = Kin*cp%Cex(ichemo) - Kout*cp%conc(ichemo)
 	total_flux = total_flux + cp%dMdt(ichemo)
-	if (kcell == 1) then
-		write(nflog,'(a,i4,5e12.5)') 'getF_const: Cin, Cex, dMdt: ',ichemo, cp%conc(ichemo), cp%Cex(ichemo),cp%dMdt(ichemo),Kin,Kout
-	endif
-!	if (cp%dMdt(ichemo) < 0) then
-!		write(*,'(a,2i6,3e12.3)') 'getF_const: dMdt< 0: ',ichemo,kcell,cp%conc(ichemo), cp%Cex(ichemo),cp%dMdt(ichemo)
-!		stop
+!	if (kcell == 1) then
+!		write(nflog,'(a,i4,5e12.5)') 'getF_const: Cin, Cex, dMdt: ',ichemo, cp%conc(ichemo), cp%Cex(ichemo),cp%dMdt(ichemo),Kin,Kout
 !	endif
 enddo
 !!$omp end parallel do
-write(nflog,'(a,2i4,e12.3)') 'total_flux: ',istep,ichemo,total_flux
+!write(nflog,'(a,2i4,e12.3)') 'total_flux: ',istep,ichemo,total_flux
 zero = (total_flux == 0)
 !if (ichemo == OXYGEN) write(*,'(a,2e12.3)') 'Cex(O2), O2 flux: ',cell_list(1)%Cex(ichemo),cell_list(1)%dMdt(ichemo)
-! Estimate grid pt flux values F
-!call make_grid_flux(ichemo, Cflux_const, zero)
 end subroutine
 
 !-------------------------------------------------------------------------------------------
@@ -911,8 +887,8 @@ do ic = 1,nchemo
 	Cprev_b => chemo(ichemo)%Cprev_b
 	Fprev_b => chemo(ichemo)%Fprev_b
 	Fcurr_b => chemo(ichemo)%Fcurr_b
-!	write(*,*) 'Cave_b:'
-!	write(*,'(5e15.6)') Cave_b(NXB/2,NYB/2,:)
+!	write(nflog,*) 'Cave_b:'
+!	write(nflog,'(5e15.6)') Cave_b(NXB/2,NYB/2,:)
 		
 	Fprev_b = Fcurr_b
 	call getF_const(ichemo,total_flux,zeroC(ichemo))
@@ -967,13 +943,14 @@ do ic = 1,nchemo
 				k = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
 				Cave_b(ixb,iyb,izb) = fdecay*x(k)
 				msum = msum + x(k)*dxb3		! this sums the mass of constituent in mumols
-				if (x(k) < 0) then
-					write(nflog,*) 'Cave_b < 0: ',ixb,iyb,izb,x(k)
-				endif 
+!				if (x(k) < 0) then
+!					write(logmsg,*) 'Cave_b < 0: ',ichemo,ixb,iyb,izb,x(k)
+!					call logger(logmsg)
+!					stop
+!				endif 
 			enddo
 		enddo
 	enddo
-	! interpolate Cave_b on blob boundary
 	deallocate(a_b, x, rhs)
 enddo
 !$omp end parallel do

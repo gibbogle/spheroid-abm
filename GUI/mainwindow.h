@@ -36,6 +36,9 @@ using namespace std;
 #include <qwt_interval_data.h>
 #include "histogram_item.h"
 
+#include "qcustomplot.h"
+#include "plotwin.h"
+
 QT_BEGIN_NAMESPACE
 class QAction;
 class QMenu;
@@ -185,6 +188,10 @@ public slots:
     void on_checkBox_histo_logscale_toggled();
     void on_buttonGroup_drug_buttonClicked(QAbstractButton* button);
 
+    void pushButton_clicked();
+    void makeSFPlot(QString, double, double, QVector<double> *x, QVector<double> *y);
+    void makeGlucosePlot(double *ndays, QVector<double> *x, QVector<double> *y);
+
 // For Kd computed in the GUI
 //    void on_pushButton_SN30K_Kd_1_clicked();
 //    void on_pushButton_SN30K_Kd_2_clicked();
@@ -273,6 +280,8 @@ private:
     void changeDrugParam(QObject *);
     void extractDrugname(QString *);
     void readDrugData(QTextStream *in);
+    void setupPopup();
+
     QPlainTextEdit *textEdit;
     QString curFile;
 	QList<QLineEdit *> lineEdit_list;
@@ -386,6 +395,8 @@ private:
     QVideoOutput   *videoFACS;
 
     QStringList Drug_FilesList;
+
+    PlotWin *plotwin;
 
 signals:
     void pause_requested();
