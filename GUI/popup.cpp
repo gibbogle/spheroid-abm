@@ -118,9 +118,8 @@ void MainWindow::pushButton_clicked()
                 cellTypeStr = "METAB2";
             }
             QVector<double> x0(NPLOT), y0(NPLOT);
-            double C_O2 = 0.18;
             double maxdrug;
-            makeDrugPlot(drugTypeStr, cellTypeStr, C_O2, &maxdrug, &x0, &y0);
+            makeDrugPlot(drugTypeStr, cellTypeStr, &maxdrug, &x0, &y0);
             // create graph and assign data to it:
             popup_plot->addGraph();
             popup_plot->graph(0)->setData(x0, y0);
@@ -258,12 +257,12 @@ void MainWindow::makeSFPlot(QString cellTypeStr, double C_O2, double maxdose, QV
 //
 // Note that Kmet0, KO2, kill_duration need to be scaled to time units of sec
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::makeDrugPlot(QString drugTypeStr, QString cellTypeStr, double C_O2, double *maxdose, QVector<double> *x, QVector<double> *y)
+void MainWindow::makeDrugPlot(QString drugTypeStr, QString cellTypeStr, double *maxdose, QVector<double> *x, QVector<double> *y)
 {
     QLineEdit *line;
     QString objName0, objName;
     int killmodel;
-    double C2, Kmet0, KO2, Ckill_O2, f, T, Ckill, Kd, dt;
+    double C_O2, C2, Kmet0, KO2, Ckill_O2, f, T, Ckill, Kd, dt;
     double Cdrug, kmet, dMdt, SF, kill_prob;
 
     objName = "cbox_" + drugTypeStr + "_" + cellTypeStr + "_13";
@@ -312,8 +311,11 @@ void MainWindow::makeDrugPlot(QString drugTypeStr, QString cellTypeStr, double C
         Kd = -log(1-f)/(T*pow(Ckill,2));
     }
 
+    line = findChild<QLineEdit *>("lineEdit_drug_O2");
+    C_O2 = line->text().toDouble();
     line = findChild<QLineEdit *>("lineEdit_maxdrugconc");
     *maxdose = line->text().toDouble();
+
     dt = 60;    // 60 sec = 1 min
     for (int i=0; i<NPLOT; i++) {
         Cdrug = (i*(*maxdose)/(NPLOT-1));

@@ -234,6 +234,7 @@ real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, killmodel, kill_prob, tnow
 type(drug_type), pointer :: dp
 
 !call logger('CellDeath')
+write(nflog,*) 'CellDeath: ',istep
 ok = .true.
 !use_TPZ_DRUG = chemo(TPZ_DRUG)%used
 !use_DNB_DRUG = chemo(DNB_DRUG)%used
@@ -293,6 +294,7 @@ do kcell = 1,nlist
 			dMdt = kmet*cell_list(kcell)%conc(ichemo + im)
 			if (killmodel == 1) then
 				kill_prob = kill_prob + Kd*dMdt*dt
+				write(nflog,'(2i4,5e12.3)') kcell,im,cell_list(kcell)%conc(ichemo + im),Kd,kmet,dMdt,kill_prob/dt
 			elseif (killmodel == 2) then
 				kill_prob = kill_prob + Kd*dMdt*cell_list(kcell)%conc(ichemo + im)*dt
 			elseif (killmodel == 3) then

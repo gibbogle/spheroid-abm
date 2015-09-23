@@ -490,7 +490,7 @@ do i = 1,neqn
 	    Cin(ichemo) = yy
 	    ict = cell_list(kcell)%celltype
 	endif
-	if (.not.intracellular) then
+	if (.not.intracellular) then	! extracellular
 		! Need to check diffusion eqtn. when Vextra_cm3 < Vsite_cm3 = DX^3 !!!!!!!!!!!!!!!!!!!!!!
 	    dCsum = 0
 	    do k = 1,7
@@ -515,7 +515,7 @@ do i = 1,neqn
 		    membrane_flux = 0
 		endif
     	dydt(i) = dCsum - membrane_flux/vol_cm3
-	else
+	else							! intracellular
 		C = Cin(ichemo)
 		membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*C)
 		dCreact = 0
@@ -1411,7 +1411,7 @@ do ichemo = 1,MAX_CHEMO
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
 enddo
 
-!write(nflog,'(a,10e12.3)') 'UpdateCbnd_mixed: ',chemo(:)%medium_Cbnd
+write(nflog,'(a,10e12.3)') 'UpdateCbnd_mixed: ',chemo(:)%medium_Cbnd
 end subroutine
 
 !----------------------------------------------------------------------------------
