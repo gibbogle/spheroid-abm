@@ -1,5 +1,7 @@
 *.pro
 *.user
+*/*.pro
+*/*.user
 differences/
 build/**/*
 Calibration/
