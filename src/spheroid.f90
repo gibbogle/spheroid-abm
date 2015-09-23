@@ -1638,8 +1638,13 @@ end function
 !-----------------------------------------------------------------------------------------
 subroutine getMediumConc(cmedium)
 real(REAL_KIND) :: cmedium(:)
-cmedium(:) = chemo(:)%medium_Cbnd
-!cmedium(:) = chemo(:)%medium_Cext
+logical :: bdry = .true.
+
+if (bdry) then
+	cmedium(:) = chemo(:)%medium_Cbnd
+else
+	cmedium(:) = chemo(:)%medium_Cext
+endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------

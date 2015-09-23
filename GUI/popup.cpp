@@ -14,6 +14,7 @@ void MainWindow::setupPopup()
     connect(pushButton_SF_1,SIGNAL(clicked()),this,SLOT(pushButton_clicked()));
     connect(pushButton_SF_2,SIGNAL(clicked()),this,SLOT(pushButton_clicked()));
     connect(pushButton_glucose_0,SIGNAL(clicked()),this,SLOT(pushButton_clicked()));
+    connect(pushButton_drug_0,SIGNAL(clicked()),this,SLOT(pushButton_clicked()));
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -38,84 +39,109 @@ void MainWindow::pushButton_clicked()
     // generate data:
     // Extract plot type and cell type from senderObjName
     QStringList list = senderObjName.split("_");
-    if (list.size() != 3) return;
-    plotType = list[1];
-    cellType = list[2].toInt();
-    if (plotType == "SF") {
-        plotName = "Survival Fraction cell type " + list[2];
-        plotwin->setWindowTitle(plotName);
-        double C_O2;
-        double maxdose = 50;
-        C_O2 = 0;
-        QVector<double> x0(NPLOT), y0(NPLOT); // initialize with entries 0..100
-        makeSFPlot(list[2], C_O2, maxdose, &x0, &y0);
-        // create graph and assign data to it:
-        popup_plot->addGraph();
-        popup_plot->graph(0)->setData(x0, y0);
-        popup_plot->graph(0)->setPen(QPen(Qt::red));
-        popup_plot->graph(0)->setName("O2 = 0%");
+    if (list.size() < 3) return;
+    if (list.size() == 3) {
+        plotType = list[1];
+        cellType = list[2].toInt();
+        if (plotType == "SF") {
+            plotName = "Survival Fraction cell type " + list[2];
+            plotwin->setWindowTitle(plotName);
+            double C_O2;
+            double maxdose = 50;
+            C_O2 = 0;
+            QVector<double> x0(NPLOT), y0(NPLOT); // initialize with entries 0..100
+            makeSFPlot(list[2], C_O2, maxdose, &x0, &y0);
+            // create graph and assign data to it:
+            popup_plot->addGraph();
+            popup_plot->graph(0)->setData(x0, y0);
+            popup_plot->graph(0)->setPen(QPen(Qt::red));
+            popup_plot->graph(0)->setName("O2 = 0%");
 
-        C_O2 = 0.18;
-        QVector<double> x1(NPLOT), y1(NPLOT); // initialize with entries 0..100
-        makeSFPlot(list[2], C_O2, maxdose, &x1, &y1);
-        // create graph and assign data to it:
-        popup_plot->addGraph();
-        popup_plot->graph(1)->setData(x1, y1);
-        popup_plot->graph(1)->setPen(QPen(Qt::blue));
-        popup_plot->graph(1)->setName("O2 = 20%");
+            C_O2 = 0.18;
+            QVector<double> x1(NPLOT), y1(NPLOT); // initialize with entries 0..100
+            makeSFPlot(list[2], C_O2, maxdose, &x1, &y1);
+            // create graph and assign data to it:
+            popup_plot->addGraph();
+            popup_plot->graph(1)->setData(x1, y1);
+            popup_plot->graph(1)->setPen(QPen(Qt::blue));
+            popup_plot->graph(1)->setName("O2 = 20%");
 
-        // give the axes some labels:
-        popup_plot->xAxis->setLabel("Dose (Gy)");
-        popup_plot->yAxis->setLabel("SF");
-        // set axes ranges
-        popup_plot->xAxis->setRange(0, maxdose);
-//        popup_plot->xAxis->setAutoSubTicks(false);
-//        popup_plot->xAxis->setSubTickCount(5);
-//        popup_plot->xAxis->setAutoTickCount(6);
-//        popup_plot->xAxis->setTickStep(5);
-        popup_plot->yAxis->setRange(1.e-5, 1);
-        popup_plot->yAxis->setScaleType(QCPAxis::stLogarithmic);
-        popup_plot->yAxis->setScaleLogBase(10);
-        popup_plot->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
-        popup_plot->yAxis->setNumberPrecision(0); // makes sure "1*10^4" is displayed only as "10^4"
-        popup_plot->legend->setVisible(true);
-    } else if (plotType == "glucose") {
-        plotName = "Medium Glucose Depletion";
-        plotwin->setWindowTitle(plotName);
-        double ndays;
-        double C_O2;
-        C_O2 = 0.18;
-        QVector<double> x0(NPLOT), y0(NPLOT); // initialize with entries 0..100
-        makeGlucosePlot(&ndays, &x0, &y0);
-        // create graph and assign data to it:
-        popup_plot->addGraph();
-        popup_plot->graph(0)->setData(x0, y0);
-        popup_plot->graph(0)->setPen(QPen(Qt::blue));
-        // give the axes some labels:
-        popup_plot->xAxis->setLabel("Day");
-        popup_plot->yAxis->setLabel("Concentration (mM)");
-        // set axes ranges
-        popup_plot->xAxis->setRange(0, ndays);
-        popup_plot->yAxis->setRange(0, 10);
-//        popup_plot->yAxis->setScaleType(QCPAxis::stLogarithmic);
-//        popup_plot->yAxis->setScaleLogBase(10);
-//        popup_plot->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
-//        popup_plot->yAxis->setNumberPrecision(0); // makes sure "1*10^4" is displayed only as "10^4"
-//        popup_plot->legend->setVisible(true);
-//        popup_plot->graph(0)->setName("O2 = 0%");
-
+            // give the axes some labels:
+            popup_plot->xAxis->setLabel("Dose (Gy)");
+            popup_plot->yAxis->setLabel("SF");
+            // set axes ranges
+            popup_plot->xAxis->setAutoTickStep(false);
+            popup_plot->xAxis->setTickStep(5);
+            popup_plot->xAxis->setRange(0, maxdose);
+            popup_plot->yAxis->setRange(1.e-5, 1);
+            popup_plot->yAxis->setScaleType(QCPAxis::stLogarithmic);
+            popup_plot->yAxis->setScaleLogBase(10);
+            popup_plot->yAxis->setNumberFormat("eb"); // e = exponential, b = beautiful decimal powers
+            popup_plot->yAxis->setNumberPrecision(0); // makes sure "1*10^4" is displayed only as "10^4"
+            popup_plot->legend->setVisible(true);
+        } else if (plotType == "glucose") {
+            plotName = "Medium Glucose Depletion";
+            plotwin->setWindowTitle(plotName);
+            double ndays;
+            double C_O2;
+            C_O2 = 0.18;
+            QVector<double> x0(NPLOT), y0(NPLOT); // initialize with entries 0..100
+            makeGlucosePlot(&ndays, &x0, &y0);
+            // create graph and assign data to it:
+            popup_plot->addGraph();
+            popup_plot->graph(0)->setData(x0, y0);
+            popup_plot->graph(0)->setPen(QPen(Qt::blue));
+            // give the axes some labels:
+            popup_plot->xAxis->setLabel("Day");
+            popup_plot->yAxis->setLabel("Concentration (mM)");
+            // set axes ranges
+            popup_plot->xAxis->setAutoTickStep(false);
+            popup_plot->xAxis->setTickStep(1);
+            popup_plot->xAxis->setRange(0, ndays);
+            popup_plot->yAxis->setAutoTickStep(false);
+            popup_plot->yAxis->setTickStep(2);
+            popup_plot->yAxis->setRange(0, 10);
+        } else if (plotType == "drug") {
+            plotName = "Drug Kill Fraction";
+            plotwin->setWindowTitle(plotName);
+            QString cellTypeStr, drugTypeStr;
+            if (radioButton_drugcelltype_1->isChecked()) {
+                cellTypeStr = "CT1";
+            } else {
+                cellTypeStr = "CT2";
+            }
+            if (radioButton_drugtype_1->isChecked()) {
+                drugTypeStr = "PARENT";
+            } else if (radioButton_drugtype_2->isChecked()) {
+                cellTypeStr = "METAB1";
+            } else {
+                cellTypeStr = "METAB2";
+            }
+            QVector<double> x0(NPLOT), y0(NPLOT);
+            double C_O2 = 0.18;
+            double maxdrug;
+            makeDrugPlot(drugTypeStr, cellTypeStr, C_O2, &maxdrug, &x0, &y0);
+            // create graph and assign data to it:
+            popup_plot->addGraph();
+            popup_plot->graph(0)->setData(x0, y0);
+            popup_plot->graph(0)->setPen(QPen(Qt::blue));
+            // give the axes some labels:
+            popup_plot->xAxis->setLabel("Drug concentration (mM)");
+            popup_plot->yAxis->setLabel("Kill fraction/hour");
+            // set axes ranges
+            popup_plot->xAxis->setAutoTickStep(false);
+            popup_plot->xAxis->setTickStep(maxdrug/5);
+            popup_plot->xAxis->setRange(0, maxdrug);
+            popup_plot->yAxis->setAutoTickStep(false);
+            popup_plot->yAxis->setTickStep(0.2);
+            popup_plot->yAxis->setRange(0, 1);
+        }
     }
-
-    //    for (int i=0; i<101; ++i)
-    //    {
-    //      x[i] = i/50.0 - 1; // x goes from -1 to 1
-    //      y[i] = x[i]*x[i];  // let's plot a quadratic function
-    //    }
-
     plotwin->show();
 }
 
 //--------------------------------------------------------------------------------------------------------
+// No O2 dependence of glucose consumption
 // (NPLOT-1)*nt*dt = ndays*24*60*60 ==> number of time steps nt
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::makeGlucosePlot(double *ndays, QVector<double> *x, QVector<double> *y)
@@ -213,3 +239,141 @@ void MainWindow::makeSFPlot(QString cellTypeStr, double C_O2, double maxdose, QV
 
 }
 
+//--------------------------------------------------------------------------------------------------------
+// drugTypeStr = "PARENT", "METAB1", "METAB2"
+// cellTypeStr = "CT1", "CT2"
+//
+// Parameter objectname numbers:
+//      Kmet0           0
+//      C2              1
+//      KO2             2
+//      Vmax            3
+//      Km              4
+//      Klesion         5
+//      kill_O2         6
+//      kill_drug       7
+//      kill_duration   8
+//      kill_fraction   9
+//      Killmodel       14
+//
+// Note that Kmet0, KO2, kill_duration need to be scaled to time units of sec
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::makeDrugPlot(QString drugTypeStr, QString cellTypeStr, double C_O2, double *maxdose, QVector<double> *x, QVector<double> *y)
+{
+    QLineEdit *line;
+    QString objName0, objName;
+    int killmodel;
+    double C2, Kmet0, KO2, Ckill_O2, f, T, Ckill, Kd, dt;
+    double Cdrug, kmet, dMdt, SF, kill_prob;
+
+    objName = "cbox_" + drugTypeStr + "_" + cellTypeStr + "_13";
+    QCheckBox *cbox = findChild<QCheckBox *>(objName);
+    if (!cbox->isChecked()) return;     // Does not kill
+
+    objName0 = "line_" + drugTypeStr + "_" + cellTypeStr + "_";
+    objName = objName0 + "14";
+    line = findChild<QLineEdit *>(objName);
+    killmodel = line->text().toInt();
+    objName = objName0 + "0";
+    line = findChild<QLineEdit *>(objName);
+    Kmet0 = line->text().toDouble();
+    Kmet0 = Kmet0/60;                       // /min -> /sec
+    objName = objName0 + "1";
+    line = findChild<QLineEdit *>(objName);
+    C2 = line->text().toDouble();
+    objName = objName0 + "2";
+    line = findChild<QLineEdit *>(objName);
+    KO2 = line->text().toDouble();
+    KO2 = 1.0e-3*KO2;                       // um -> mM
+    objName = objName0 + "6";
+    line = findChild<QLineEdit *>(objName);
+    Ckill_O2 = line->text().toDouble();     // kill_O2
+    objName = objName0 + "7";
+    line = findChild<QLineEdit *>(objName);
+    Ckill = line->text().toDouble();        // kill_drug
+    objName = objName0 + "8";
+    line = findChild<QLineEdit *>(objName);
+    T = line->text().toDouble();            // kill_duration
+    T = 60*T;                               // min -> sec
+    objName = objName0 + "9";
+    line = findChild<QLineEdit *>(objName);
+    f = line->text().toDouble();            // kill_fraction
+
+    kmet = (1 - C2 + C2*KO2/(KO2 + Ckill_O2))*Kmet0;
+    if (killmodel == 1) {
+        Kd = -log(1-f)/(T*kmet*Ckill);
+    } else if (killmodel == 2) {
+        Kd = -log(1-f)/(T*kmet*pow(Ckill,2));
+    } else if (killmodel == 3) {
+        Kd = -log(1-f)/(T*pow(kmet*Ckill,2));
+    } else if (killmodel == 4) {
+        Kd = -log(1-f)/(T*Ckill);
+    } else if (killmodel == 5) {
+        Kd = -log(1-f)/(T*pow(Ckill,2));
+    }
+
+    line = findChild<QLineEdit *>("lineEdit_maxdrugconc");
+    *maxdose = line->text().toDouble();
+    dt = 60;    // 60 sec = 1 min
+    for (int i=0; i<NPLOT; i++) {
+        Cdrug = (i*(*maxdose)/(NPLOT-1));
+        kmet = (1 - C2 + C2*KO2/(KO2 + C_O2))*Kmet0;
+        dMdt = kmet*Cdrug;
+        SF = 1;
+        for (int k=0; k<60; k++) {      // calculate survival fraction after 60 kill intervals of 1 min = 1 hour
+            if (killmodel == 1) {
+                kill_prob = Kd*dMdt*dt;
+            } else if (killmodel == 2) {
+                kill_prob = Kd*dMdt*Cdrug*dt;
+            } else if (killmodel == 3) {
+                kill_prob = Kd*pow(dMdt,2)*dt;
+            } else if (killmodel == 4) {
+                kill_prob = Kd*Cdrug*dt;
+            } else if (killmodel == 5) {
+                kill_prob = Kd*pow(Cdrug,2)*dt;
+            }
+            kill_prob = min(kill_prob,1.0);
+            SF = SF*(1 - kill_prob);
+        }
+        (*x)[i] = Cdrug;
+        (*y)[i] = (1 - SF);
+    }
+/*
+killmodel = dp%kill_model(ityp,im)		// could use %drugclass to separate kill modes
+
+            drug(idrug)%Kmet0(ictyp,im) = drug(idrug)%Kmet0(ictyp,im)/60					! /min -> /sec
+            drug(idrug)%KO2(ictyp,im) = 1.0e-3*drug(idrug)%KO2(ictyp,im)					! um -> mM
+            drug(idrug)%kill_duration(ictyp,im) = 60*drug(idrug)%kill_duration(ictyp,im)	! min -> sec
+
+                Ckill_O2 = drug(idrug)%kill_O2(ictyp,im)
+                f = drug(idrug)%kill_fraction(ictyp,im)
+                T = drug(idrug)%kill_duration(ictyp,im)
+                Ckill = drug(idrug)%kill_drug(ictyp,im)
+                kmet = (1 - C2 + C2*KO2/(KO2 + Ckill_O2))*Kmet0
+                if (kill_model == 1) then
+                    Kd = -log(1-f)/(T*kmet*Ckill)
+                elseif (kill_model == 2) then
+                    Kd = -log(1-f)/(T*kmet*Ckill**2)
+                elseif (kill_model == 3) then
+                    Kd = -log(1-f)/(T*(kmet*Ckill)**2)
+                elseif (kill_model == 4) then
+                    Kd = -log(1-f)/(T*Ckill)
+                elseif (kill_model == 5) then
+                    Kd = -log(1-f)/(T*Ckill**2)
+                endif
+
+kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)/(dp%KO2(ityp,im) + C_O2))*dp%Kmet0(ityp,im)
+dMdt = kmet*cell_list(kcell)%conc(ichemo + im)
+if (killmodel == 1) then
+    kill_prob = kill_prob + Kd*dMdt*dt
+elseif (killmodel == 2) then
+    kill_prob = kill_prob + Kd*dMdt*cell_list(kcell)%conc(ichemo + im)*dt
+elseif (killmodel == 3) then
+    kill_prob = kill_prob + Kd*dMdt**2*dt
+elseif (killmodel == 4) then
+    kill_prob = kill_prob + Kd*cell_list(kcell)%conc(ichemo + im)*dt
+elseif (killmodel == 5) then
+    kill_prob = kill_prob + Kd*(cell_list(kcell)%conc(ichemo + im)**2)*dt
+endif
+*/
+}

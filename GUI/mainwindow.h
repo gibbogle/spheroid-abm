@@ -170,10 +170,6 @@ public slots:
 	void textEdited_fraction(QString text);
     void setupConstituents();
 
-//    void on_cbox_USE_TPZ_DRUG_toggled(bool checked);
-//    void on_cbox_USE_DNB_DRUG_toggled(bool checked);
-//    void on_comb_TPZ_currentIndexChanged(int);
-//    void on_comb_DNB_currentIndexChanged(int);
     void on_cbox_USE_DRUG_A_toggled(bool checked);
     void on_cbox_USE_DRUG_B_toggled(bool checked);
     void on_comb_DRUG_A_currentIndexChanged(int);
@@ -182,7 +178,6 @@ public slots:
     void on_line_CELLPERCENT_1_textEdited(QString pc1_str);
     void on_line_CELLPERCENT_2_textEdited(QString pc2_str);
     void radioButtonChanged(QAbstractButton *b);
-//    void killModelChanged();
     void on_buttonGroup_celltype_buttonClicked(QAbstractButton* button);
     void on_buttonGroup_histotype_buttonClicked(QAbstractButton* button);
     void on_checkBox_histo_logscale_toggled();
@@ -191,10 +186,7 @@ public slots:
     void pushButton_clicked();
     void makeSFPlot(QString, double, double, QVector<double> *x, QVector<double> *y);
     void makeGlucosePlot(double *ndays, QVector<double> *x, QVector<double> *y);
-
-// For Kd computed in the GUI
-//    void on_pushButton_SN30K_Kd_1_clicked();
-//    void on_pushButton_SN30K_Kd_2_clicked();
+    void makeDrugPlot(QString drugTypeStr, QString cellTypeStr, double C_O2, double *maxdose, QVector<double> *x, QVector<double> *y);
 
     void processGroupBoxClick(QString);
 signals:
@@ -219,15 +211,6 @@ private:
     void disableUseGlucose();
     void enableUseTracer();
     void disableUseTracer();
-//    void enableUseSN30K();
-//    void disableUseSN30K();
-//    void enableUseTPZ();
-//    void disableUseTPZ();
-//    void enableUseDNB();
-//    void disableUseDNB();
-//    void enableUseTreatmentFile();
-//    void disableUseTreatmentFile();
-//    void setTreatmentFileUsage();
 
 	void writeout();
 	void execute_para();
