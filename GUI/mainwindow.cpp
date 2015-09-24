@@ -3330,34 +3330,6 @@ void MainWindow::setupGraphSelector()
     int row[3];
     row[0] = row[1] = row[2] = -1;
 
-/* // superceded by profile plots
-    checkBox_conc = new QMyCheckBox();
-    checkBox_conc->setText("Concentration Profile");
-    checkBox_conc->setChecked(field->isConcPlot());
-    checkBox_conc->setObjectName("checkBox_conc");
-    checkBox_conc->description = "Concentration along a line through the centre of the blob";
-    row[0]++;
-    grid->addWidget(checkBox_conc,row[0],0);
-    connect((QObject *)checkBox_conc, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-
-    checkBox_vol = new QMyCheckBox();
-    checkBox_vol->setText("Cell Volume Distribution");
-    checkBox_vol->setChecked(field->isVolPlot());
-    checkBox_vol->setObjectName("checkBox_vol");
-    checkBox_vol->description = "Probability distribution (histogram) of cell volume";
-    row[0]++;
-    grid->addWidget(checkBox_vol,row[0],0);
-    connect((QObject *)checkBox_vol, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-
-    checkBox_oxy = new QMyCheckBox();
-    checkBox_oxy->setText("Cell Oxygen Distribution");
-    checkBox_oxy->setChecked(field->isOxyPlot());
-    checkBox_oxy->setObjectName("checkBox_oxy");
-    checkBox_oxy->description = "Probability distribution (histogram) of cell oxygen concentration";
-    row[0]++;
-    grid->addWidget(checkBox_oxy,row[0],0);
-    connect((QObject *)checkBox_oxy, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-*/
     cbox_ts = new QMyCheckBox*[grph->n_tsGraphs];
     for (int i=0; i<grph->n_tsGraphs; i++) {
         int col = grph->tsGraphs[i].type;

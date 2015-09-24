@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>6</number>
+           <number>4</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -1998,7 +1998,7 @@ padding: 8px
            <widget class="QGroupBox" name="groupBox_Drug_GB2">
             <property name="geometry">
              <rect>
-              <x>590</x>
+              <x>580</x>
               <y>10</y>
               <width>561</width>
               <height>411</height>
