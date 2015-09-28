@@ -113,10 +113,6 @@ namespace Global
     extern int cell_list[N_CELLINFO*MAX_CELLS];
     extern int ncell_list;
 
-//    extern double *profile_x[20];
-//    extern double *profile_y[20];
-//    extern int profile_n[20];
-
     extern bool showingVTK;
     extern bool recordingVTK;
     extern bool showingFACS;

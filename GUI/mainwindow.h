@@ -123,9 +123,6 @@ private slots:
     void showGradient2D();
     void setSavePosStart();
 
-//    void on_radioButton_oxygen_clicked();
-//    void on_radioButton_glucose_clicked(bool checked);
-
     void onSelectConstituent();
 
     void on_verticalSliderTransparency_sliderMoved(int position);
@@ -161,7 +158,6 @@ public slots:
     void stopRecorderFACS();
     bool getVideoFileInfo(int *nframes, QString *itemFormat, QString *itemCodec, QString *videoFileName);
 
-    void buttonClick_constituent(QAbstractButton* button);
     void buttonClick_cell_constituent(QAbstractButton* button);
     void buttonClick_field_constituent(QAbstractButton* button);
     void buttonClick_plane(QAbstractButton* button);
@@ -186,7 +182,7 @@ public slots:
     void pushButton_clicked();
     void makeSFPlot(QString, double, double, QVector<double> *x, QVector<double> *y);
     void makeGlucosePlot(double *ndays, QVector<double> *x, QVector<double> *y);
-    void makeDrugPlot(QString drugTypeStr, QString cellTypeStr, double *maxdose, QVector<double> *x, QVector<double> *y);
+    void makeDrugPlot(QString drugTypeStr, QString cellTypeStr, double *maxdose, QString plotStr, QVector<double> *x, QVector<double> *y);
 
     void processGroupBoxClick(QString);
 signals:
@@ -330,15 +326,6 @@ private:
 
 	RESULT_SET *newR;
 
-//	Plot *graph_act;
-//	Plot *graph_ntot_LN;
-//	Plot *graph_ncog_PER;
-//	Plot *graph_ncog_LN;
-//	Plot *graph_ncog;
-//	Plot *graph_ncogseed;
-//	Plot *graph_nDC;
-//	Plot *graph_teffgen;
-//	Plot *graph_nbnd;
 	Plot *graph_dummy;	// placeholder
 
     Plot *pGraph[32];
@@ -346,19 +333,15 @@ private:
     QMyCheckBox *checkBox_vol;
     QMyCheckBox *checkBox_oxy;
     QMyCheckBox **cbox_ts;
-//    QCheckBox **cbox_ts;  // GRAPHS_CHANGE
 
     QButtonGroup *buttonGroup_histo;
     QVBoxLayout *vbox_histo;
-//    QRadioButton **histo_rb_list;
     QList<QRadioButton *> histo_rb_list;
     QButtonGroup *buttonGroup_FACS_x_vars;
     QVBoxLayout *vbox_FACS_x_vars;
-//    QRadioButton **FACS_x_vars_rb_list;
     QList<QRadioButton *> FACS_x_vars_rb_list;
     QButtonGroup *buttonGroup_FACS_y_vars;
     QVBoxLayout *vbox_FACS_y_vars;
-//    QRadioButton **FACS_y_vars_rb_list;
     QList<QRadioButton *> FACS_y_vars_rb_list;
 
 	QString graphCaseName[Plot::ncmax];

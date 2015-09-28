@@ -23,6 +23,7 @@ Papers
 Papers/
 Papers/**/*
 spheroid_GUI-build/**/*
+spheroid_GUI-static-768-build/**/*
 test-vs8/**/*
 test-vs10/**/*
 ToDo/
@@ -42,3 +43,4 @@ ToDo/
 /GUI/spheroid_GUI-backup-12-08-15.ui
 /src/ode_diffuse-28-07-2015.f90
 /src/spheroid-28-07-2015.f90
+/VBA/test/*

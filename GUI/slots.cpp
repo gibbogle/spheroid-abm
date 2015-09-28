@@ -3,14 +3,6 @@
 #include "mainwindow.h"
 #include "log.h"
 #include "params.h"
-//#include "graphs.h"
-//#include "misc.h"
-//#include "plot.h"
-//#include "myvtk.h"
-//#include "field.h"
-//#include "transfer.h"
-//#include "dialog.h"
-
 #include "global.h"
 
 #ifdef linux
@@ -22,57 +14,6 @@
 LOG_USE();
 
 extern Params *parm;	// I don't believe this is the right way, but it works
-
-/*
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::on_comb_TPZ_currentIndexChanged(int index)
-{
-    text_TPZ_DRUG_NAME->setText(comb_TPZ->currentText());
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::on_comb_DNB_currentIndexChanged(int index)
-{
-    text_DNB_DRUG_NAME->setText(comb_DNB->currentText());
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_USE_TPZ_DRUG_toggled(bool checked)
-{
-    LOG_MSG("cbox_use_TPZ_DRUG toggled");
-    QLineEdit *leb = findChild<QLineEdit *>("line_TPZ_DRUG_BDRY_CONC");
-//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_TPZ_DRUG_DECAY");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_TPZ_DRUG_SIMULATE_METABOLITE");
-    leb->setEnabled(checked);
-    cbm->setEnabled(checked);
-//    setTreatmentFileUsage();
-    comb_TPZ->setEnabled(checked);
-    text_TPZ_DRUG_NAME->setEnabled(checked);
-//    int indexTPZ = comb_TPZ->currentIndex();
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow::on_cbox_USE_DNB_DRUG_toggled(bool checked)
-{
-//    LOG_MSG("cbox_use_DNB_drug toggled");
-    QLineEdit *leb = findChild<QLineEdit *>("line_DNB_DRUG_BDRY_CONC");
-//    QCheckBox *cbd = findChild<QCheckBox *>("cbox_DNB_DRUG_DECAY");
-    QCheckBox *cbm = findChild<QCheckBox *>("cbox_DNB_DRUG_SIMULATE_METABOLITE");
-    leb->setEnabled(checked);
-    cbm->setEnabled(checked);
-//    setTreatmentFileUsage();
-    comb_DNB->setEnabled(checked);
-    text_DNB_DRUG_NAME->setEnabled(checked);
-    QString drugname = comb_DRUG_A->currentText();
-    extractDrugname(&drugname);
-    text_DNB_DRUG_NAME->setText(drugname);
-//    int indexDNB = comb_DNB->currentIndex();
-}
-*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -122,7 +63,6 @@ void MainWindow::on_comb_DRUG_B_currentIndexChanged(int index)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::extractDrugname(QString *drugname)
 {
-//    *drugname = drugname->mid(4);
     int i = drugname->indexOf('.');
     *drugname = drugname->remove(i,9);
 }
@@ -193,9 +133,7 @@ void MainWindow::on_cbox_USE_DRUG_B_toggled(bool checked)
 void MainWindow::on_checkBox_CELLDISPLAY_1_toggled(bool display)
 {
     vtk->display_celltype[1] = display;
-//    vtk->cleanup();
     vtk->renderCells();
-//    LOG_QMSG("toggled display_celltype[1]");
 }
 
 //-----------------------------------------------------------------------------------------
@@ -211,7 +149,6 @@ void MainWindow::on_checkBox_CELLDISPLAY_2_toggled(bool display)
 void MainWindow::on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index)
 {
     QColor qcolor;
-//    vtk->celltype_colour[1] = comboBox_CELLCOLOUR_1->currentText();
     qcolor = comboColour[index];
     vtk->celltype_colour[1] = qcolor;
     vtk->renderCells();
@@ -223,7 +160,6 @@ void MainWindow::on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index)
 //-----------------------------------------------------------------------------------------
 void MainWindow::on_comboBox_CELLCOLOUR_2_currentIndexChanged(int index)
 {
-//    vtk->celltype_colour[2] = comboBox_CELLCOLOUR_2->currentText();
     vtk->celltype_colour[2] = comboColour[index];
     vtk->renderCells();
 }
@@ -250,24 +186,6 @@ void MainWindow::on_action_FACS_triggered()
     action_FACS->setEnabled(false);
     Global::showingFACS = true;
 }
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-//void MainWindow::on_cbox_USE_RADIATION_toggled(bool checked)
-//{
-//    setTreatmentFileUsage();
-//}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-//void MainWindow::setTreatmentFileUsage()
-//{
-//    if (cbox_USE_TPZ_DRUG->isChecked() || cbox_USE_DNB_DRUG->isChecked() || cbox_USE_RADIATION->isChecked()) {
-//        enableUseTreatmentFile();
-//    } else {
-//        disableUseTreatmentFile();
-//    }
-//}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
@@ -312,19 +230,13 @@ void MainWindow::radioButtonChanged(QAbstractButton *b)
             PARAM_SET p = parm->get_param(k);
             if (wtag.compare(p.tag) == 0) {
                 parm->set_value(k,double(rbutton_case));
-                LOG_QMSG("found: ",wtag);
+                LOG_QMSG("found: " + wtag);
                 sprintf(msg,"parm->set_value: %d",rbutton_case);
                 LOG_MSG(msg);
                 break;
             }
         }
 //    }
-}
-
-void MainWindow::buttonClick_constituent(QAbstractButton* button)
-{
-    LOG_MSG("buttonClick_constituent");
-    field->setConstituent(button);
 }
 
 void MainWindow::buttonClick_cell_constituent(QAbstractButton* button)
@@ -365,7 +277,8 @@ void MainWindow::textEdited_fraction(QString text)
 void MainWindow::onSelectConstituent()
 {
     if (exthread != NULL)
-        field->selectConstituent();
+        field->selectCellConstituent();     //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+        updateProfilePlots();
 }
 
 void MainWindow::on_verticalSliderTransparency_sliderMoved(int position)
@@ -373,7 +286,3 @@ void MainWindow::on_verticalSliderTransparency_sliderMoved(int position)
     vtk->setOpacity(position);
 }
 
-//void MainWindow::on_pushButton_chooseDrug_clicked()
-//{
-
-//}

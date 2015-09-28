@@ -209,32 +209,37 @@ void MainWindow::createActions()
     connect(checkBox_FACS_log_y, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
     connect(buttonGroup_histo, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(histo_update()));
 
-//    connect(line_TPZ_KILL_MODEL_CELL1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_TPZ_KILL_MODEL_CELL2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_DNB_KILL_MODEL_CELL1_MET1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_DNB_KILL_MODEL_CELL1_MET2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_DNB_KILL_MODEL_CELL2_MET1,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-//    connect(line_DNB_KILL_MODEL_CELL2_MET2,SIGNAL(textChanged(QString)),this,SLOT(killModelChanged()));
-
     connect(this,SIGNAL(pause_requested()),SLOT(pauseServer()));
 
-	for (int i=0; i<nLabels; i++) {
+    for (int i=0; i<parm->nInfolabel; i++) {
+        QString tag;
+        parm->get_labeltag(i, &tag);
+        QString objName = "infolabel_" + tag;
+        QLabel *label = findChild<QLabel *>(objName);
+        connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
+    }
+/*
+    for (int i=0; i<parm->nInfocheckbox; i++) {
+        QString tag;
+        parm->get_checkboxtag(i, &tag);
+        QString objName = "infocbox_" + tag;
+        QCheckBox *cbox = findChild<QCheckbox *>(objName);
+        connect((QObject *)cbox, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
+    }
+*/
+    for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
-//		LOG_QMSG(label_str);
-		if (label_str.startsWith("label_")) {
+        if (label_str.startsWith("label_")) {
 			connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
-//			LOG_QMSG(label_str);
 		}
 	}
 
     for (int i=0; i<nCheckBoxes; i++) {
         QCheckBox *cbox = checkbox_list[i];
         QString cbox_str = cbox->objectName();
-//		LOG_QMSG(label_str);
         if (cbox_str.startsWith("cbox_")) {
             connect((QObject *)cbox, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-//			LOG_QMSG(label_str);
         }
     }
 
@@ -2216,8 +2221,8 @@ void MainWindow::updateProfilePlots()
             QString tag = grph->get_tag(i);
             int k = grph->get_dataIndex(i);
             if (k == MULTI) {
-//                ivar = field->cell_constituent;
-                ivar = field->constituent;
+                ivar = field->cell_constituent;
+//                ivar = field->constituent;    //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 QString title;
                 field->getTitle(ivar,&title);
                 pGraph[i]->setTitle(title);
@@ -3215,23 +3220,6 @@ void MainWindow::setupConstituents()
         LOG_QMSG(name);
     }
     free(name_array);
-    LOG_MSG("set up Global");
-//    return;     // not working
-    /*
-    tag = "field";
-    field->setConstituentButtons(groupBox_constituent,field->buttonGroup_constituent,&field->vbox_constituent,&field->constituent_rb_list,tag);
-    LOG_MSG("did setConstituentButtons: field");
-    tag = "histo";
-    field->setConstituentButtons(groupBox_Histo_y_vars,buttonGroup_histo,&vbox_histo,&histo_rb_list,tag);
-    LOG_MSG("did setConstituentButtons: histo");
-    tag = "FACS_x";
-    field->setConstituentButtons(groupBox_FACS_x_vars,buttonGroup_FACS_x_vars,&vbox_FACS_x_vars,&FACS_x_vars_rb_list,tag);
-    FACS_x_vars_rb_list[0]->setChecked(true);
-    LOG_MSG("did setConstituentButtons: FACS_x");
-    tag = "FACS_y";
-    field->setConstituentButtons(groupBox_FACS_y_vars,buttonGroup_FACS_y_vars,&vbox_FACS_y_vars,&FACS_y_vars_rb_list,tag);
-    LOG_MSG("did setConstituentButtons: FACS_y");
-    */
 
     sprintf(msg,"field->vbox_cell_constituent: %p",field->vbox_cell_constituent);
     LOG_MSG(msg);
@@ -3247,7 +3235,6 @@ void MainWindow::setupConstituents()
     tag = "FACS_x";
     field->setCellConstituentButtons(groupBox_FACS_x_vars, buttonGroup_FACS_x_vars, &vbox_FACS_x_vars, &FACS_x_vars_rb_list, tag);
     LOG_MSG("did setCellConstituentButtons: FACS_x");
-//    FACS_x_vars_rb_list[0]->setChecked(true);
     tag = "FACS_y";
     field->setCellConstituentButtons(groupBox_FACS_y_vars, buttonGroup_FACS_y_vars, &vbox_FACS_y_vars, &FACS_y_vars_rb_list, tag);
     LOG_MSG("did setCellConstituentButtons: FACS_y");

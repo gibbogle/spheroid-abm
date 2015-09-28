@@ -234,7 +234,6 @@ real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, killmodel, kill_prob, tnow
 type(drug_type), pointer :: dp
 
 !call logger('CellDeath')
-write(nflog,*) 'CellDeath: ',istep
 ok = .true.
 !use_TPZ_DRUG = chemo(TPZ_DRUG)%used
 !use_DNB_DRUG = chemo(DNB_DRUG)%used

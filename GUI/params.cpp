@@ -1,21 +1,46 @@
 #include <qstring.h>
 #include "params.h"
+#include "QDebug"
 
 Params::Params()
 {
+    static infoStruct label_info[] = {
+        {"PARENT_0", "Diffusion coefficient within the blob."},
+        {"PARENT_1", "Diffusion coefficient in the medium."},
+        {"PARENT_2", "Cell influx parameter Kin.  The rate of mass transport into the cell is Kin.Cex - Kout.Cin (currently no dependence on cell surface area)."},
+        {"PARENT_3", "Cell efflux parameter Kout.  The rate of mass transport into the cell is Kin.Cex - Kout.Cin (currently no dependence on cell surface area)."},
+        {"PARENT_4", "Half-life of the compound, used to calculate the decay rate.  This is the same in the cell and in the medium."},
+        {"PARENT_CT1_0", "Kmet0 is the maximum rate of metabolism.  The actual rate is the product of drug concentration Cdrug, Kmet0 and a sigmoid function of O2 concentration C_O2, with parameters C2 and KO2:\n\
+metabolism rate = dMdt = Cdrug.(1 - C2 + C2.KO2/(KO2 + C_O2)).Kmet0   If Vmax > 0, Kmet0 is replaced by (Kmet0 + Vmax/(Km + Cdrug)) \n\
+This the rate of transformation of parent drug to metabolite 1, or of metabolite 1 to metabolite 2, or removal of metabolite 2"},
+        {"PARENT_CT1_1", "C2 is one of the two parameters of the basic sigmoid function of C_O2 that determines metabolism rate.  When C_O2 = 0, the function = 1, when C_O2 >> KO2, the function = 1 - C2: \n\
+metabolism rate = dMdt = Cdrug.(1 - C2 + C2.KO2/(KO2 + C_O2)).Kmet0   If Vmax > 0, Kmet0 is replaced by (Kmet0 + Vmax/(Km + Cdrug)) \n\
+This the rate of transformation of parent drug to metabolite 1, or of metabolite 1 to metabolite 2, or removal of metabolite 2"},
+        {"PARENT_CT1_2",  "KO2 is one of the two parameters of the basic sigmoid function of C_O2 that determines metabolism rate: \n\
+metabolism rate = dMdt = Cdrug.(1 - C2 + C2.KO2/(KO2 + C_O2)).Kmet0   If Vmax > 0, Kmet0 is replaced by (Kmet0 + Vmax/(Km + Cdrug)) \n\
+This the rate of transformation of parent drug to metabolite 1, or of metabolite 1 to metabolite 2, or removal of metabolite 2"},
+        {"PARENT_CT1_3", "Vmax and Km are parameters that determine the dependence of the maximum rate of metabolism on drug concentration: \n\
+metabolism rate = dMdt = Cdrug.(1 - C2 + C2.KO2/(KO2 + C_O2)).Kmet0   If Vmax > 0, Kmet0 is replaced by (Kmet0 + Vmax/(Km + Cdrug)) "},
+         {"PARENT_CT1_4", "Vmax and Km are parameters that determine the dependence of the maximum rate of metabolism on drug concentration: \n\
+metabolism rate = dMdt = Cdrug.(1 - C2 + C2.KO2/(KO2 + C_O2)).Kmet0   If Vmax > 0, Kmet0 is replaced by (Kmet0 + Vmax/(Km + Cdrug)) "},
+        {"PARENT_CT1_5", "Klesion is currently unused."},
+        {"PARENT_CT1_6", "The O2 concentration in the kill experiment."},
+        {"PARENT_CT1_7", "The drug concentration in the kill experiment."},
+        {"PARENT_CT1_8", "The duration the kill experiment."},
+        {"PARENT_CT1_9", "The kill fraction achieved in the kill experiment (1 - SF)."},
+        {"PARENT_CT1_10", "Sensitisation of the cells to radiation is determined by three parameters.  The usual radiation kill parameters OER_alpha and OER_beta are multiplied by the sensitisation enhancement ratio SER: \n\
+         SER = (C_O2 + SER_KO2*(Cdrug*SER_max + SER_Km)/(Cdrug + SER_Km))/(C_O2 + SER_KO2)"},
+        {"PARENT_CT1_11", "Sensitisation of the cells to radiation is determined by three parameters.  The usual radiation kill parameters OER_alpha and OER_beta are multiplied by the sensitisation enhancement ratio SER: \n\
+         SER = (C_O2 + SER_KO2*(Cdrug*SER_max + SER_Km)/(Cdrug + SER_Km))/(C_O2 + SER_KO2)"},
+        {"PARENT_CT1_12", "Sensitisation of the cells to radiation is determined by three parameters.  The usual radiation kill parameters OER_alpha and OER_beta are multiplied by the sensitisation enhancement ratio SER: \n\
+         SER = (C_O2 + SER_KO2*(Cdrug*SER_max + SER_Km)/(Cdrug + SER_Km))/(C_O2 + SER_KO2)"},
+        {"PARENT_CT1_13", "This box is ticked if the drug is cytotoxic and kill parameters are provided."},
+         {"PARENT_CT1_14", "Using Kd derived from the kill experiment(different for each model), then dMdt = Cdrug*(1 - C2 + C2*KO2/(KO2 + C_O2))*Kmet0, the kill probability Pkill in time dt for each model is: \n\
+1. Kd*dMdt*dt  2. Kd*Cdrug*dMdt*dt  3. Kd*dMdt^2*dt  4. Kd*Cdrug*dt  5. Kd*Cdrug^2*dt"},
+        {"PARENT_CT1_15", "This box is ticked if the drug sensitises the cells to radiation."},
+    };
+
     PARAM_SET params[] = {
-
-/*
-{"BC_AVIDITY_MEDIAN", 1.0, 0.1, 10.0,
-"BCR avidity median parameter",
-"BCR avidity has a lognormal distribution, described by the median and shape parameters.\n\
-(BCR stimulation rate is proportional to the product of BC avidity and antigen load.)"},
-
-{"BC_AVIDITY_SHAPE", 1.1, 1.01, 3.0,
-"BCR avidity shape parameter",
-"BCR avidity has a lognormal distribution, described by the median and shape parameters.\n\
-The shape value must be greater than 1, and values close to 1 give distributions that are close to normal."},
-*/
 
 {"GUI_VERSION_NAME", 0, 0, 0,
  "GUI0.00",
@@ -194,17 +219,9 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
 "Percentage of cell type 1",
 "Percentage of cell type 1"},
 
-//{"CELLDISPLAY_1", 1, 0, 1,
-//"Display cell type 1",
-//"Display cell type 1"},
-
 {"CELLPERCENT_2", 0, 0, 100,
 "Percentage of cell type 2",
 "Percentage of cell type 2"},
-
-//{"CELLDISPLAY_2", 1, 0, 1,
-//"Display cell type 2",
-//"Display cell type 2"},
 
 {"NT_ANIMATION", 1, 0, 0,
  "Animation interval (timesteps)",
@@ -509,6 +526,19 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
 	for (int i=0; i<nParams; i++) {
 		workingParameterList[i] = params[i];
 	}
+
+    nInfolabel = sizeof(label_info)/sizeof(INFOSTRUCT);
+    workingInfolabelList = new INFOSTRUCT[nInfolabel];
+    for (int i=0; i<nInfolabel; i++) {
+        workingInfolabelList[i] = label_info[i];
+    }
+    /*
+    nInfocheckbox = sizeof(checkbox_info)/sizeof(INFOSTRUCT);
+    workingInfocheckboxList = new INFOSTRUCT[nInfocheckbox];
+    for (int i=0; i<nInfocheckbox; i++) {
+        workingInfocheckboxList[i] = checkbox_info[i];
+    }
+    */
 }
 
 
@@ -526,3 +556,21 @@ void Params::set_label(int k, QString str)
 {
 	workingParameterList[k].label = str;
 }
+
+void Params::get_labeltag(int i, QString *tag)
+{
+    *tag = workingInfolabelList[i].tag;
+}
+
+void Params::infoLabelInfo(QString tag, QString *info)
+{
+    for (int i=0; i<nInfolabel; i++) {
+        if (tag == workingInfolabelList[i].tag) {
+            *info = workingInfolabelList[i].info;
+            return;
+        } else {
+            *info = "";
+        }
+    }
+}
+

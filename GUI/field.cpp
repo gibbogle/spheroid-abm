@@ -7,14 +7,13 @@ LOG_USE();
 
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
-//Field::Field(QWidget *page2D)
 Field::Field(QWidget *aParent) : QWidget(aParent)
 {
-//	field_page = page2D;
     field_page = aParent;
     axis = Z_AXIS;
     fraction = 0;
-    constituent = OXYGEN;
+    cell_constituent = OXYGEN;
+    field_constituent = OXYGEN;
     slice_changed = true;
     setConcPlot(false);
     setVolPlot(false);
@@ -29,9 +28,9 @@ Field::Field(QWidget *aParent) : QWidget(aParent)
     vbox_cell_max_concentration = NULL;
     buttonGroup_cell_constituent = new QButtonGroup;
     buttonGroup_field_constituent = new QButtonGroup;
-//    constituent_rb_list = NULL;
-//    vbox_constituent = NULL;
-//    buttonGroup_constituent = new QButtonGroup;
+    line_maxConc_list.clear();
+    cell_constituent_rb_list.clear();
+    field_constituent_rb_list.clear();
     data = NULL;
 }
 
@@ -113,6 +112,8 @@ void Field::setCellConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLa
     }
     name = "rb_cell_constituent_"+tag;
     LOG_QMSG(name);
+    sprintf(msg,"rb_list: %p vbox: %p bg: %p nvars_used: %d",rb_list,*vbox,bg,Global::nvars_used);
+    LOG_MSG(msg);
     for (ivar=0; ivar<Global::nvars_used; ivar++) {
         str = Global::var_string[ivar];
         rb = new QRadioButton;
@@ -254,9 +255,6 @@ void Field::selectCellConstituent()
 void Field::setCellConstituent(QAbstractButton *button)
 {
     int res;
-//    QMessageBox msgBox;
-//    msgBox.setText("setConstituent");
-//    msgBox.exec();
     LOG_MSG("setCellConstituent");
     int prev_constituent = cell_constituent;
     QString text = button->text();
@@ -277,9 +275,6 @@ void Field::setCellConstituent(QAbstractButton *button)
 void Field::setFieldConstituent(QAbstractButton *button)
 {
     int res;
-//    QMessageBox msgBox;
-//    msgBox.setText("setConstituent");
-//    msgBox.exec();
     LOG_MSG("setFieldConstituent");
     int prev_constituent = field_constituent;
     QString text = button->text();
@@ -295,119 +290,12 @@ void Field::setFieldConstituent(QAbstractButton *button)
     }
 }
 
-//------------------------------------------------------------------------------------------------
-// To create the group of radiobuttons for constituent selection.
-// This uses information about active constituents fetched from the DLL.
-//------------------------------------------------------------------------------------------------
-void Field::setConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QRadioButton ***rb_list, QString tag)
-{
-    int ivar;
-    QString name, str;
-    int **ip;
-    QRadioButton **p;
-    QRadioButton *rb;
-
-    return;     // not working
-
-    p = *rb_list;
-    LOG_QMSG("setConstituentButtons: " + tag);
-    if (p) {
-        LOG_MSG("rb_list not NULL, delete it");
-        for (ivar=0; ivar<Global::nvars_used; ivar++) {
-            rb = p[ivar];
-            bg->removeButton(rb);
-            delete rb;
-        }
-        delete p;
-        LOG_MSG("deleted");
-    }
-    if (!*vbox) {
-        LOG_MSG("vbox = NULL, create it");
-        *vbox = new QVBoxLayout;
-        gbox->setLayout(*vbox);
-    }
-    name = "rb_constituent_"+tag;
-    LOG_QMSG(name);
-    *rb_list = new QRadioButton*[Global::nvars_used];
-    p = *rb_list;
-//    sprintf(msg,"rb_list: %p vbox: %p bg: %p nvars_used: %d",p,*vbox,bg,Global::nvars_used);
-//    LOG_MSG(msg);
-    for (ivar=0; ivar<Global::nvars_used; ivar++) {
-        str = Global::var_string[ivar];
-        p[ivar] = new QRadioButton;
-        p[ivar]->setText(str);
-        p[ivar]->setObjectName(name+ivar);
-        (*vbox)->addWidget(p[ivar]);
-        p[ivar]->setEnabled(true);
-        bg->addButton(p[ivar],ivar);
-    }
-    p[1]->setChecked(true);   // Oxygen
-    QRect rect = gbox->geometry();
-    rect.setHeight(25*Global::nvars_used);
-    gbox->setGeometry(rect);
-    gbox->show();
-}
-
-//------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------
-void Field::selectConstituent()
-{
-    int iconst, res;
-    QStringList items;
-
-    LOG_MSG("selectConstituent");
-    for (iconst=0; iconst<Global::nvars_used; iconst++) {
-        if (iconst == constituent) continue;
-        items << Global::var_string[iconst];
-    }
-    bool ok;
-    QString item = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
-                                          tr("Constituent:"), items, 0, false, &ok);
-    if (ok && !item.isEmpty()) {
-        for (iconst=0; iconst<Global::nvars_used; iconst++) {
-            if (item == Global::var_string[iconst]) {
-                constituent = iconst;
-//                if (useConcPlot)
-//                    updateConcPlot();
-//                break;
-            }
-        }
-    }
-}
-
-
-//------------------------------------------------------------------------------------------------
-//------------------------------------------------------------------------------------------------
-void Field::setConstituent(QAbstractButton *button)
-{
-    int res;
-//    QMessageBox msgBox;
-//    msgBox.setText("setConstituent");
-//    msgBox.exec();
-    LOG_MSG("setConstituent");
-    int prev_constituent = constituent;
-    QString text = button->text();
-    for (int ivar=0; ivar<Global::nvars_used; ivar++) {
-        if (text == Global::var_string[ivar]) {
-            constituent = ivar;
-        }
-    }
-
-    if (constituent != prev_constituent) {
-        constituent_changed = true;
-        LOG_MSG("setConstituent");
-        displayField(hour,&res);
-    }
-}
 
 //------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------
 void Field::setPlane(QAbstractButton *button)
 {
     int res;
-//    QMessageBox msgBox;
-//    msgBox.setText("setPlane");
-//    msgBox.exec();
     LOG_MSG("setPlane");
     QString text = button->text();
 	int prev_axis = axis;
@@ -447,7 +335,6 @@ void Field::setSliceChanged()
 //------------------------------------------------------------------------------------------------
 void Field::setSaveImages(bool save)
 {
-    LOG_QMSG("setSaveImages");
     save_images = save;
 }
 
@@ -456,6 +343,87 @@ void Field::setSaveImages(bool save)
 void Field::setUseLogScale(bool use_logscale)
 {
     use_log = use_logscale;
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logscale, int rgbcol[])
+{
+    double f, denom, logcmin, logc;
+    int rgb_lo[3], rgb_hi[3], i;
+
+    if (use_logscale) {
+        if (cmin == cmax) {
+            f = 1;
+        } else {
+//            if (cmin > 0.0001)
+//                logcmin = log(cmin);
+//            else
+//                logcmin = 1.0e6;
+//            if (c > 0.0001)
+//                logc = log(c);
+//            else
+//                logc = 1.0e6;
+            cmin = max(cmin, 0.00001);
+            c = max(c, 0.00001);
+            denom = (log(cmax) - log(cmin));
+            if (denom < 0.001)
+                f = 1;
+            else
+                f = (log(c) - log(cmin))/denom;
+        }
+    } else {
+        f = c/cmax;
+    }
+    if (cell_constituent == OXYGEN) {
+        rgb_hi[0] =   0; rgb_hi[1] =   0; rgb_hi[2] = 0;
+        rgb_lo[0] = 255; rgb_lo[1] =   0; rgb_lo[2] = 0;
+        for (i=0; i<3; i++) {
+            rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
+            if (rgbcol[i] < 0 || rgbcol[i] > 255) {
+                sprintf(msg,"chooseFieldColor: %f %f %f %f %d %d",c,cmin,cmax,f,i,rgbcol[i]);
+                LOG_MSG(msg);
+                exit(1);
+            }
+        }
+    } else {
+        rgb_hi[0] =   0; rgb_hi[1] =   255; rgb_hi[2] = 255;
+        rgb_lo[0] =   0; rgb_lo[1] =   0; rgb_lo[2] = 0;
+        for (i=0; i<3; i++) {
+            rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
+            if (rgbcol[i] < 0 || rgbcol[i] > 255) {
+                sprintf(msg,"chooseFieldColor: %f %f %f %f %d %d",c,cmin,cmax,f,i,rgbcol[i]);
+                LOG_MSG(msg);
+                exit(1);
+            }
+        }
+    }
+}
+
+//-----------------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------
+void Field::chooseRateColor(double f, int rgbcol[])
+{
+    int rgb_lo[3], rgb_hi[3], i;
+
+    rgb_hi[0] = 0; rgb_hi[1] = 255; rgb_hi[2] = 0;
+    rgb_lo[0] = 0; rgb_lo[1] =  64; rgb_lo[2] = 0;
+    for (i=0; i<3; i++) {
+        rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
+    }
+}
+
+//-----------------------------------------------------------------------------------------
+// Now 'constituent' is an index of the active constituents: 0 - nvars_used
+//-----------------------------------------------------------------------------------------
+void Field::getTitle(int iconst, QString *title)
+{
+    QString name = Global::var_string[iconst];
+    if (Global::GUI_to_DLL_index[iconst] <= Global::MAX_CHEMO) {
+        *title = name + " Concentration";
+    } else {
+        *title = name;
+    }
 }
 
 //-----------------------------------------------------------------------------------------
@@ -470,8 +438,8 @@ void Field::displayField(int hr, int *res)
     double a, b, Wc;
     int Nc;
 
-    ichemo = Global::GUI_to_DLL_index[constituent];
-    LOG_QMSG("displayField: " + QString::number(constituent) + "-->" + QString::number(ichemo));
+    ichemo = Global::GUI_to_DLL_index[cell_constituent];
+    LOG_QMSG("displayField: " + QString::number(cell_constituent) + "-->" + QString::number(ichemo));
     use_log = false;    // temporary
     *res = 0;
     hour = hr;
@@ -559,7 +527,7 @@ void Field::displayField(int hr, int *res)
         xp = int(a*ix + b - w);
         yp = int(a*iy + b - w);
         chooseFieldColor(data[i].conc[ichemo],cmin,cmax,use_log,rgbcol);
-//        sprintf(msg,"c: %f %f %f rgbcol: %d %d %d",data[i].conc[constituent],cmin,cmax,rgbcol[0],rgbcol[1],rgbcol[2]);
+//        sprintf(msg,"c: %f %f %f rgbcol: %d %d %d",data[i].conc[cell_constituent],cmin,cmax,rgbcol[0],rgbcol[1],rgbcol[2]);
 //        LOG_MSG(msg);
         brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
         scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
@@ -601,83 +569,3 @@ void Field::displayField(int hr, int *res)
 }
 
 
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logscale, int rgbcol[])
-{
-    double f, denom, logcmin, logc;
-    int rgb_lo[3], rgb_hi[3], i;
-
-    if (use_logscale) {
-        if (cmin == cmax) {
-            f = 1;
-        } else {
-//            if (cmin > 0.0001)
-//                logcmin = log(cmin);
-//            else
-//                logcmin = 1.0e6;
-//            if (c > 0.0001)
-//                logc = log(c);
-//            else
-//                logc = 1.0e6;
-            cmin = max(cmin, 0.00001);
-            c = max(c, 0.00001);
-            denom = (log(cmax) - log(cmin));
-            if (denom < 0.001)
-                f = 1;
-            else
-                f = (log(c) - log(cmin))/denom;
-        }
-    } else {
-        f = c/cmax;
-    }
-    if (constituent == OXYGEN) {
-        rgb_hi[0] =   0; rgb_hi[1] =   0; rgb_hi[2] = 0;
-        rgb_lo[0] = 255; rgb_lo[1] =   0; rgb_lo[2] = 0;
-        for (i=0; i<3; i++) {
-            rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
-            if (rgbcol[i] < 0 || rgbcol[i] > 255) {
-                sprintf(msg,"chooseFieldColor: %f %f %f %f %d %d",c,cmin,cmax,f,i,rgbcol[i]);
-                LOG_MSG(msg);
-                exit(1);
-            }
-        }
-    } else {
-        rgb_hi[0] =   0; rgb_hi[1] =   255; rgb_hi[2] = 255;
-        rgb_lo[0] =   0; rgb_lo[1] =   0; rgb_lo[2] = 0;
-        for (i=0; i<3; i++) {
-            rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
-            if (rgbcol[i] < 0 || rgbcol[i] > 255) {
-                sprintf(msg,"chooseFieldColor: %f %f %f %f %d %d",c,cmin,cmax,f,i,rgbcol[i]);
-                LOG_MSG(msg);
-                exit(1);
-            }
-        }
-    }
-}
-
-//-----------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------
-void Field::chooseRateColor(double f, int rgbcol[])
-{
-    int rgb_lo[3], rgb_hi[3], i;
-
-    rgb_hi[0] = 0; rgb_hi[1] = 255; rgb_hi[2] = 0;
-    rgb_lo[0] = 0; rgb_lo[1] =  64; rgb_lo[2] = 0;
-    for (i=0; i<3; i++) {
-        rgbcol[i] = int((1-f)*rgb_lo[i] + f*rgb_hi[i]);
-    }
-}
-
-//-----------------------------------------------------------------------------------------
-// Now 'constituent' is an index of the active constituents: 0 - nvars_used
-//-----------------------------------------------------------------------------------------
-void Field::getTitle(int iconst, QString *title)
-{
-    QString name = Global::var_string[iconst];
-    if (Global::GUI_to_DLL_index[iconst] <= Global::MAX_CHEMO) {
-        *title = name + " Concentration";
-    } else {
-        *title = name;
-    }
-}

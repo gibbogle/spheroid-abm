@@ -1404,14 +1404,20 @@ do ichemo = 1,MAX_CHEMO
 	R2 = Rlayer(ichemo)
 	if (ichemo /= OXYGEN) then	! update %medium_M, then %medium_Cext
 		chemo(ichemo)%medium_M = chemo(ichemo)%medium_M*(1 - chemo(ichemo)%decay_rate*dt) - U(ichemo)*dt
+		chemo(ichemo)%medium_M = max(0.0,chemo(ichemo)%medium_M)
 		chemo(ichemo)%medium_Cext = (chemo(ichemo)%medium_M - (U(ichemo)/(6*chemo(ichemo)%medium_diff_coef)*R2) &
 			*(R1*R1*(3*R2 - 2*R1) - R2*R2*R2))/(total_volume - 4*PI*R1*R1*R1/3.)
 	endif
 	a = (1/R2 - 1/R1)/(4*PI*chemo(ichemo)%medium_diff_coef)
 	chemo(ichemo)%medium_Cbnd = chemo(ichemo)%medium_Cext + a*chemo(ichemo)%medium_U
+	if (chemo(ichemo)%medium_Cbnd < 0) then
+		write(nflog,'(a,i2)') 'Setting negative medium_Cbnd to 0: Cbnd,M,Cext,a,U: ',ichemo
+		write(nflog,'(5e12.3)') chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_M,chemo(ichemo)%medium_Cext,a,chemo(ichemo)%medium_U
+		chemo(ichemo)%medium_Cbnd = 0
+	endif
 enddo
 
-write(nflog,'(a,10e12.3)') 'UpdateCbnd_mixed: ',chemo(:)%medium_Cbnd
+!write(nflog,'(a,10e12.3)') 'UpdateCbnd_mixed: ',chemo(:)%medium_Cbnd
 end subroutine
 
 !----------------------------------------------------------------------------------
