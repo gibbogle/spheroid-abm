@@ -164,6 +164,7 @@ public slots:
     void buttonClick_canvas(QAbstractButton* button);
     void textChanged_fraction(QString text);
 	void textEdited_fraction(QString text);
+    void setFields();
     void setupConstituents();
 
     void on_cbox_USE_DRUG_A_toggled(bool checked);

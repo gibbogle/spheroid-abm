@@ -50,16 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_MSG("did setupUi");
     showMaximized();
 
-    // This section configures the GUI for spheroid vs scell
-    tab_force->setEnabled(false);
-    groupBox_force->setEnabled(false);
-    line_DELTA_X->setEnabled(false);
-    line_NXB->setEnabled(false);
-    line_NT_CONC->setEnabled(true);
-    line_NMM3->setEnabled(true);
-    line_UNSTIRRED_LAYER->setEnabled(true);
-    line_FLUID_FRACTION->setEnabled(true);
-    groupBox_drop->setEnabled(true);
+    // Configure the GUI for spheroid vs scell
     QString currPath = QDir::currentPath();
     LOG_QMSG("starting path: " + currPath);
     QString newPath = currPath + "/execution";
@@ -168,6 +159,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     tabs->setCurrentIndex(9);
     setupPopup();
+    setFields();
     goToInputs();
 }
 
@@ -208,6 +200,10 @@ void MainWindow::createActions()
     connect(checkBox_FACS_log_x, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
     connect(checkBox_FACS_log_y, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
     connect(buttonGroup_histo, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(histo_update()));
+
+    connect(line_NXB,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
+    connect(line_NZB,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
+    connect(line_DXF,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
 
     connect(this,SIGNAL(pause_requested()),SLOT(pauseServer()));
 
@@ -1090,6 +1086,42 @@ void MainWindow::loadParams()
 }
 
 //--------------------------------------------------------------------------------------------------------
+// This is to disable unused fields (because spheroid_GUI.ui is shared with spheroid_GUI).
+// The MEDIUM_VOLUME field value is computed from the specified DXF, NXB and NZB.
+// Note that NYB = NXB, and the coarse grid spacing DXB = 4*DXF
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::setFields()
+{
+    tab_force->setEnabled(false);
+    groupBox_force->setEnabled(false);
+    line_NT_CONC->setEnabled(true);
+    line_NMM3->setEnabled(true);
+    spin_NX->setValue(120);
+    line_NXB->setEnabled(false);
+    line_NZB->setEnabled(false);
+    groupBox_drop->setEnabled(true);
+    line_FLUID_FRACTION->setEnabled(true);
+    if (rbut_FD_SOLVER_1->isChecked()) {
+        int nxb = line_NXB->text().toInt();
+        int nzb = line_NZB->text().toInt();
+        double dx = line_DXF->text().toDouble();
+        double vol_cm3 = nxb*nxb*nzb*pow(4*dx,3)*1.0e-12;
+        QString str = QString::number(vol_cm3,'g',3);
+        line_MEDIUM_VOLUME->setText(str);
+        line_MEDIUM_VOLUME->setEnabled(false);
+        line_UNSTIRRED_LAYER->setEnabled(false);
+        cbox_USE_RELAX->setEnabled(false);
+        cbox_USE_PAR_RELAX->setEnabled(false);
+    } else {
+        line_MEDIUM_VOLUME->setEnabled(true);
+        line_UNSTIRRED_LAYER->setEnabled(true);
+        line_FLUID_FRACTION->setEnabled(true);
+        cbox_USE_RELAX->setEnabled(true);
+        cbox_USE_PAR_RELAX->setEnabled(true);
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 //QString MainWindow::parse_rbutton(QString wtag, int *rbutton_case)
 //{
@@ -1255,6 +1287,7 @@ void MainWindow::reloadParams()
     }
     text_GUI_VERSION_NAME->setText(Global::GUI_build_version);
     text_DLL_VERSION_NAME->setText(Global::DLL_build_version);
+    setFields();
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1359,6 +1392,7 @@ void MainWindow::readInputFile()
 	if (fileName.compare("") == 0)
 		return;
     paramSaved = false;
+//    qDebug() << "readInputFile: " + fileName;
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
         QMessageBox::warning(this, tr("Application"),
@@ -3315,24 +3349,27 @@ void MainWindow::setupGraphSelector()
 {
     QGridLayout *grid = new QGridLayout;
     int row[3];
+    int col;
     row[0] = row[1] = row[2] = -1;
 
     cbox_ts = new QMyCheckBox*[grph->n_tsGraphs];
     for (int i=0; i<grph->n_tsGraphs; i++) {
-        int col = grph->tsGraphs[i].type;
+        int itype = grph->tsGraphs[i].type;
+        if (itype == 0) {
+            if (i < 16)
+                col = 0;
+            else
+                col = 1;
+        } else {
+            col = 2;
+        }
         row[col]++;
         QString text = grph->tsGraphs[i].title;
         cbox_ts[i] = new QMyCheckBox;
         cbox_ts[i]->setText(text);
-//        cbox_ts[i]->setChecked(grph->tsGraphs[i].active);
         cbox_ts[i]->setObjectName("cbox_"+grph->tsGraphs[i].tag);
         grid->addWidget(cbox_ts[i],row[col],col);
         connect((QObject *)cbox_ts[i], SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-//        if (col == 2) {
-//            LOG_QMSG(grph->tsGraphs[i].tag);
-//            sprintf(msg,"graph: %d %d",i,grph->tsGraphs[i].active);
-//            LOG_MSG(msg);
-//        }
     }
     groupBox_graphselect->setLayout(grid);
 

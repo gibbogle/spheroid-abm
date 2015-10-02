@@ -47,19 +47,23 @@ contains
 
 !-------------------------------------------------------------------------------------------
 !-------------------------------------------------------------------------------------------
-subroutine setup_react_diff
+subroutine setup_react_diff(ok)
+logical :: ok
 integer :: ix, iy, iz, ic, maxnz, ichemo
 real(REAL_KIND) :: C0, total_flux
 character*(10) :: bmapfile
 real(REAL_KIND), pointer :: Cave_b(:,:,:), Cprev_b(:,:,:), Fprev_b(:,:,:), Fcurr_b(:,:,:)
 logical :: zero
-logical :: ok
 
 write(nflog,*) 'setup_react_diff: NXB: ',NXB
-DXB = 120
+!DXB = 120
 DXB = 1.0e-4*DXB	! um -> cm
 ixb0 = (1 + NXB)/2
 iyb0 = (1 + NYB)/2
+! To place the blob centre at the centre of the fine grid with NX = 33
+! we need zb0 = (izb0-1)*DXB = (izb0-1)*4*DXF = DXF*(NX-1)/2 = 16*DXF
+! i.e. (izb0-1)*4 = 16
+! i.e. izb0 = 5
 izb0 = 5
 xb0 = (ixb0-1)*DXB
 yb0 = (iyb0-1)*DXB 
@@ -78,7 +82,8 @@ allocate(ia_b(nrow_b+1))
 bmapfile = ''
 write(bmapfile,'(a,i2.0,a)') 'bmap',NXB,'.dat'
 write(nflog,*) 'setup_react_diff: ',bmapfile
-call make_sparse_map(bmapfile,.false.)
+call make_sparse_map(bmapfile,.false.,ok)
+if (.not.ok) return
 write(nflog,*) 'made bmapfile: ',bmapfile
 
 call make_grid_flux_weights
@@ -107,6 +112,7 @@ do ichemo = 1,MAX_CHEMO
 !	call makeF_b(Fprev_b,DELTA_T,zero)
 	Fcurr_b = Fprev_b
 enddo
+ok = .true.
 end subroutine
 
 !-------------------------------------------------------------------------------------------
@@ -385,7 +391,7 @@ end subroutine
 
 !-------------------------------------------------------------------------------------------
 ! Estimate total flux values associated with each coarse grid pt, from the cell fluxes.
-! This is the contribution to the field, i.e. cell uptake is negative flux ????
+! This is the total cell uptake.
 !-------------------------------------------------------------------------------------------
 subroutine getF_const(ichemo, total_flux, zero)
 integer :: ichemo
@@ -394,6 +400,7 @@ logical :: zero
 real(REAL_KIND) :: Kin, Kout
 integer :: kcell
 type(cell_type), pointer :: cp
+real(REAL_KIND) :: alpha_flux = 0.3
 
 !write(*,*) 'getF_const: ',ichemo,nlist
 
@@ -414,7 +421,11 @@ do kcell = 1,nlist
 !	endif
 enddo
 !!$omp end parallel do
-!write(nflog,'(a,2i4,e12.3)') 'total_flux: ',istep,ichemo,total_flux
+if (ichemo == OXYGEN) then
+	total_flux = alpha_flux*total_flux + (1 - alpha_flux)*total_flux_prev
+	total_flux_prev = total_flux
+	write(nflog,'(a,i4,e12.3)') 'O2 total_flux: ',istep,total_flux
+endif
 zero = (total_flux == 0)
 !if (ichemo == OXYGEN) write(*,'(a,2e12.3)') 'Cex(O2), O2 flux: ',cell_list(1)%Cex(ichemo),cell_list(1)%dMdt(ichemo)
 end subroutine
@@ -941,8 +952,9 @@ do ic = 1,nchemo
 		do iyb = 1,NYB
 			do ixb = 1,NXB
 				k = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
-				Cave_b(ixb,iyb,izb) = fdecay*x(k)
-				msum = msum + x(k)*dxb3		! this sums the mass of constituent in mumols
+				x(k) = max(0.0,fdecay*x(k))
+				Cave_b(ixb,iyb,izb) = x(k)
+!				msum = msum + x(k)*dxb3		! this sums the mass of constituent in mumols
 !				if (x(k) < 0) then
 !					write(logmsg,*) 'Cave_b < 0: ',ichemo,ixb,iyb,izb,x(k)
 !					call logger(logmsg)

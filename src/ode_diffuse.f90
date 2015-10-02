@@ -1253,6 +1253,7 @@ end subroutine
 subroutine getConc(cb,c)
 real(REAL_KIND) :: cb(3), c(:)
 integer :: ixb, iyb, izb, grid(3), i, ic, ichemo
+integer :: ix, iy, iz
 real(REAL_KIND) :: alfa(3)
 real(REAL_KIND), pointer :: Cextra(:,:,:)
 
@@ -1275,6 +1276,13 @@ do ic = 1,nchemo
 			+ alfa(1)*alfa(2)*(1-alfa(3))*Cextra(ixb+1,iyb+1,izb)  &
 			+ alfa(1)*alfa(2)*alfa(3)*Cextra(ixb+1,iyb+1,izb+1)  &
 			+ alfa(1)*(1-alfa(2))*alfa(3)*Cextra(ixb+1,iyb,izb+1)
+			if (c(ichemo) < 0) then
+				write(nflog,'(a,i3,3e12.3)') 'Error in getConc: ',ichemo,cb
+				write(nflog,'(a,3e12.3)') 'alfa: ',alfa
+				write(nflog,*) 'ixb,iyb,izb: ',ixb,iyb,izb
+				write(nflog,'(8e12.3)') (((Cextra(ixb+ix,iyb+iy,izb+iz),iz=0,1),iy=0,1),ix=0,1)
+				stop
+			endif
 enddo
 end subroutine
 
@@ -1285,7 +1293,9 @@ subroutine UpdateCbnd_FD(dt)
 real(REAL_KIND) :: dt
 integer :: kpar = 0
 real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO)
+integer :: ixb, iyb, izb
 integer :: i, ic, ichemo, n = 100
+real(REAL_KIND) :: alpha_Cbnd = 0.3
 
 call SetRadius(Nsites)
 rad = Radius*DELTA_X
@@ -1304,11 +1314,32 @@ enddo
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	chemo(ichemo)%medium_Cbnd = csum(ichemo)/n
-!	write(nflog,'(a,i2,f8.4)') 'UpdateCbnd: ',ichemo,chemo(ichemo)%medium_Cbnd
+	if (chemo(ichemo)%medium_Cbnd < 0) then
+		write(nflog,'(a,i2,f8.4)') 'Error: UpdateCbnd_FD: ',ichemo,chemo(ichemo)%medium_Cbnd
+		stop
+	endif
 enddo
+if (istep > 6) then
+	chemo(OXYGEN)%medium_Cbnd = alpha_Cbnd*chemo(OXYGEN)%medium_Cbnd + (1 - alpha_Cbnd)*medium_Cbnd_prev
+endif
+write(nflog,'(a,e12.3)') 'O2 medium_Cbnd: ',chemo(1)%medium_Cbnd
+medium_Cbnd_prev = chemo(OXYGEN)%medium_Cbnd
+csum = 0
+do ic = 1,nchemo
+	ichemo = chemomap(ic)
+	do ixb = 1,NXB
+		do iyb = 1,NYB
+			do izb = 1,NZB
+				csum(ichemo) = csum(ichemo) + chemo(ichemo)%cave_b(ixb,iyb,izb)
+			enddo
+		enddo
+	enddo
+enddo
+chemo(:)%medium_Cext = csum(:)/(NXB*NYB*NZB)
+!write(nflog,'(a,e12.3)') 'UpdateCbnd_FD: DRUG_A: medium_Cext: ',chemo(DRUG_A)%medium_Cext
 end subroutine
 
-!----------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------- 
 ! The medium concentrations are updated explicitly, assuming a sphere with 
 ! known total uptake rate U.
 ! Compute U and update M, Cext, Cbnd.

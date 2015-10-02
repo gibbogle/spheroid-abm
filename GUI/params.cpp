@@ -51,8 +51,9 @@ metabolism rate = dMdt = Cdrug.(1 - C2 + C2.KO2/(KO2 + C_O2)).Kmet0   If Vmax > 
  "DLL version number."},
 
 {"NX", 120, 0, 0,
-"Fine grid size",
-"Dimension of the fine grid (number of grid pts in X,Y and Z directions).  Must = 1 + multiple of 8."},
+"Grid size",
+"On-lattice model: Dimension of the lattice (number of lattice sites in X,Y and Z directions).  Must be large enough to hold the largest spheroid. \n\
+Off-lattice model: Dimension of the fine grid (number of grid pts in X,Y and Z directions).  Must = 1 + multiple of 8."},
 
 {"INITIAL_COUNT", 1000, 0, 0,
 "Initial number of tumour cells",
@@ -95,12 +96,18 @@ metabolism rate = dMdt = Cdrug.(1 - C2 + C2.KO2/(KO2 + C_O2)).Kmet0   If Vmax > 
 [mins]"},
 
 {"NXB", 35, 0, 0,
-"Coarse grid size",
-"Dimension of the coarse grid (number of grid pts in X,Y and Z directions).  Grid spacing is 4 times fine grid spacing.  Must be odd"},
+"Coarse grid NXB, NYB",
+"X and Y dimension of the coarse grid (number of grid pts in X and Y directions).  Grid spacing is 4 times fine grid spacing DXF.  Must be odd \n\
+The medium volume is NXB*NXB*NZB*(4*DXF)^3 um^3"},
 
-{"DELTA_X", 30, 0, 0,
-"Fine grid spacing (um)",
-"Grid-cell size in um.  Constituent transport and consumption/production is computed on this grid."},
+{"NZB", 35, 0, 0,
+"Coarse grid NZB",
+"Z dimension of the coarse grid (number of grid pts in Z direction).  Grid spacing is 4 times fine grid spacing DXF. \n\
+The medium volume is NXB*NXB*NZB*(4*DXF)^3 um^3"},
+
+{"DXF", 38, 0, 0,
+"Fine grid spacing DXF",
+"Off-lattice model only. Fine grid-cell size in um.  Constituent transport and consumption/production is computed on this grid."},
 
 {"A_SEPARATION", 1.0, 0, 0,
 "Separation force factor",
@@ -239,7 +246,7 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
  "Spheroid diffusion coeff",
  "Constituent diffusion coefficient in the spheroid"},
 
-{"OXYGEN_MEDIUM_DIFF", 2.5e-5, 0, 0,
+{"OXYGEN_MEDIUM_DIFF", 5.0e-5, 0, 0,
  "Medium diffusion coeff",
  "Constituent diffusion coefficient in the medium"},
 
@@ -431,7 +438,7 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
 "Use parallel O2 relaxation solver",
 "Use over- and under-relaxation to solve reaction-diffusion for oxygen, with parallelized over-relaxation"},
 
-{"FD_SOLVER_1", 0, 0, 1,
+{"FD_SOLVER_1", 1, 0, 1,
 "Use FD solver?",
 "Use the FD solver in the far field"},
 
@@ -495,11 +502,15 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
     {"growthfraction",            1, 0,1,"","Percentage of cells that are growing at a rate less than the specified fraction of the mean growth rate with no nutrient limits"},
     {"necroticfraction",          1, 0,1,"","Percentage of the spheroid that is necrotic = (number of vacant sites)/(number of sites taken up by the spheroid)"},
     {"platingefficiency",         0, 0,1,"","Percentage of live cells that are viable"},
+    {"cellspermm3",               0, 0,1,"","Number of cells per mm3 in the blob"},
     {"mediumoxygen",              0, 0,1,"","Average concentration of oxygen in the medium (far-field)"},
     {"mediumglucose",             0, 0,1,"","Average concentration of glucose in the medium (far-field)"},
     {"mediumdrugA",               0, 0,1,"","Average concentration of drug A in the medium (far-field)"},
     {"mediumdrugB",               0, 0,1,"","Average concentration of drug B in the medium (far-field)"},
-    {"cellspermm3",               0, 0,1,"","Number of cells per mm3 in the blob"},
+    {"bdryoxygen",                0, 0,1,"","Average concentration of oxygen at the blob boundary"},
+    {"bdryglucose",               0, 0,1,"","Average concentration of glucose at the blob boundary"},
+    {"bdrydrugA",                 0, 0,1,"","Average concentration of drug A at the blob boundary"},
+    {"bdrydrugB",                 0, 0,1,"","Average concentration of drug B at the blob boundary"},
 
 // Profile plots
     {"MULTI",                     1, 0,1,"","Selected constituent on a line through the blob centre"},

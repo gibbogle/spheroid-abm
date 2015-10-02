@@ -228,15 +228,12 @@ end function
 subroutine CellDeath(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
-integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, kpar=0 
-real(REAL_KIND) :: C_O2, kmet, Kd, dMdt, killmodel, kill_prob, tnow
-!logical :: use_TPZ_DRUG, use_DNB_DRUG
+integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, killmodel, kpar=0 
+real(REAL_KIND) :: C_O2, Cdrug, kmet, Kd, dMdt, kill_prob, dkill_prob, tnow
 type(drug_type), pointer :: dp
 
 !call logger('CellDeath')
 ok = .true.
-!use_TPZ_DRUG = chemo(TPZ_DRUG)%used
-!use_DNB_DRUG = chemo(DNB_DRUG)%used
 tnow = istep*DELTA_T	! seconds
 nlist0 = nlist
 do kcell = 1,nlist
@@ -250,20 +247,6 @@ do kcell = 1,nlist
 !			call logger('cell dies')
 			call CellDies(kcell)
 			Nanoxia_dead(ityp) = Nanoxia_dead(ityp) + 1
-!			if (cell_list(kcell)%drugA_tag) then
-!				NdrugA_tag(ityp) = NdrugA_tag(ityp) - 1
-!			endif
-!			if (cell_list(kcell)%drugB_tag) then
-!				NdrugB_tag(ityp) = NdrugB_tag(ityp) - 1
-!			endif
-!			do idrug = 1,ndrugs_used
-!				if (cell_list(kcell)%drug_tag(idrug)) then
-!					Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) - 1
-!				endif
-!			enddo
-!			if (cell_list(kcell)%radiation_tag) then
-!				Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
-!			endif
 			cycle
 		endif
 	else
@@ -288,31 +271,73 @@ do kcell = 1,nlist
 		do im = 0,2
 			if (.not.dp%kills(ityp,im)) cycle
 			killmodel = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
+			Cdrug = cell_list(kcell)%conc(ichemo + im)
 			Kd = dp%Kd(ityp,im)
 			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)/(dp%KO2(ityp,im) + C_O2))*dp%Kmet0(ityp,im)
-			dMdt = kmet*cell_list(kcell)%conc(ichemo + im)
-			if (killmodel == 1) then
-				kill_prob = kill_prob + Kd*dMdt*dt
-				write(nflog,'(2i4,5e12.3)') kcell,im,cell_list(kcell)%conc(ichemo + im),Kd,kmet,dMdt,kill_prob/dt
-			elseif (killmodel == 2) then
-				kill_prob = kill_prob + Kd*dMdt*cell_list(kcell)%conc(ichemo + im)*dt
-			elseif (killmodel == 3) then
-				kill_prob = kill_prob + Kd*dMdt**2*dt
-			elseif (killmodel == 4) then
-				kill_prob = kill_prob + Kd*cell_list(kcell)%conc(ichemo + im)*dt
-			elseif (killmodel == 5) then
-				kill_prob = kill_prob + Kd*(cell_list(kcell)%conc(ichemo + im)**2)*dt
-			endif
+			dMdt = kmet*Cdrug
+			call getDrugKillProb(killmodel,Kd,dMdt,Cdrug,dt,dkill_prob)
+			kill_prob = kill_prob + dkill_prob
+!			if (killmodel == 1) then
+!				kill_prob = kill_prob + Kd*dMdt*dt
+!			elseif (killmodel == 2) then
+!				kill_prob = kill_prob + Kd*dMdt*Cdrug*dt
+!			elseif (killmodel == 3) then
+!				kill_prob = kill_prob + Kd*dMdt**2*dt
+!			elseif (killmodel == 4) then
+!				kill_prob = kill_prob + Kd*Cdrug*dt
+!			elseif (killmodel == 5) then
+!				kill_prob = kill_prob + Kd*(Cdrug**2)*dt
+!			endif
 		enddo
 	    if (.not.cell_list(kcell)%drug_tag(idrug) .and. par_uni(kpar) < kill_prob) then		! don't tag more than once
-!            cell_list(kcell)%drugB_tag = .true.			! actually either drugA_tag or drugB_tag
-!            NdrugB_tag(ityp) = NdrugB_tag(ityp) + 1
 			cell_list(kcell)%drug_tag(idrug) = .true.
             Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1
-!		    write(*,*) 'CellDeath: drug tagged: ',kcell,idrug,Ndrug_tag(1,1),Ndrug_tag(1,2)
 		endif
 	enddo
 enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine getDrugKillProb(kill_model,Kd,dMdt,Cdrug,dt,dkill_prob)
+integer :: kill_model
+real(REAL_KIND) :: Kd, dMdt, Cdrug, dt, dkill_prob
+real(REAL_KIND) :: SF, SF1, dtstep, kill_prob, c
+integer :: Nsteps, istep
+
+!Nsteps = dt + 0.5
+!dtstep = 1.0
+!SF1 = 1.0
+!do istep = 1,Nsteps
+!	if (kill_model == 1) then
+!		kill_prob = Kd*dMdt*dtstep
+!	elseif (kill_model == 2) then
+!		kill_prob = Kd*dMdt*Cdrug*dtstep
+!	elseif (kill_model == 3) then
+!		kill_prob = Kd*dMdt**2*dtstep
+!	elseif (kill_model == 4) then
+!		kill_prob = Kd*Cdrug*dtstep
+!	elseif (kill_model == 5) then
+!		kill_prob = Kd*(Cdrug**2)*dtstep
+!	endif
+!    kill_prob = min(kill_prob,1.0)
+!    SF1 = SF1*(1 - kill_prob)
+!enddo
+
+if (kill_model == 1) then
+	c = Kd*dMdt
+elseif (kill_model == 2) then
+	c = Kd*dMdt*Cdrug
+elseif (kill_model == 3) then
+	c = Kd*dMdt**2
+elseif (kill_model == 4) then
+	c = Kd*Cdrug
+elseif (kill_model == 5) then
+	c = Kd*Cdrug**2
+endif
+SF = exp(-c*dt)
+!write(nflog,'(a,2e12.3)') 'SF1, SF2: ',SF1, SF2
+dkill_prob = 1 - SF
 end subroutine
 
 !-----------------------------------------------------------------------------------------

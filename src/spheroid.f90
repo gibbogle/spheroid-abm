@@ -78,7 +78,8 @@ if (.not.ok) return
 call CreateBdryList
 
 if (use_FD) then
-	call setup_react_diff
+	call setup_react_diff(ok)
+	if (.not.ok) return
 endif
 istep = 0
 call SetupODEdiff
@@ -101,6 +102,7 @@ Nanoxia_dead = 0
 t_simulation = 0
 it_saveprofiledata = 1
 total_dMdt = 0
+total_flux_prev = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
@@ -355,8 +357,9 @@ read(nfcell,*) iV_depend
 read(nfcell,*) iV_random
 read(nfcell,*) days							! number of days to simulate
 read(nfcell,*) DELTA_T						! time step size (sec)
-read(nfcell,*) NXB							! size of coarse grid
-read(nfcell,*) DELTA_X						! grid size (um)
+read(nfcell,*) NXB							! size of coarse grid = NXB = NYB
+read(nfcell,*) NZB							! size of coarse grid = NZB
+read(nfcell,*) DXF							! fine grid spacing, off-lattice model (um)
 read(nfcell,*) a_separation
 read(nfcell,*) a_force
 read(nfcell,*) c_force
@@ -484,6 +487,7 @@ if (chemo(GLUCOSE)%Hill_N /= 1 .and. chemo(GLUCOSE)%Hill_N /= 2) then
 	ok = .false.
 	return
 endif
+DXB = 4*DXF
 MM_THRESHOLD = MM_THRESHOLD/1000					! uM -> mM
 ANOXIA_THRESHOLD = ANOXIA_THRESHOLD/1000			! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
@@ -540,7 +544,6 @@ endif
 
 if (mod(NX,2) /= 0) NX = NX+1					! ensure that NX is even
 NYB = NXB
-NZB = NXB
 
 open(nfout,file=outputfile,status='replace')
 write(nfout,'(a,a)') 'GUI version: ',gui_run_version
@@ -564,7 +567,8 @@ Ntagged_anoxia(1) Ntagged_anoxia(2) Ntagged_drugA(1) Ntagged_drugA(2) &
 Ntagged_drugB(1) Ntagged_drugB(2) Ntagged_radiation(1) Ntagged_radiation(2) &
 f_hypox(1) f_hypox(2) f_hypox(3) f_growth(1) f_growth(2) f_growth(3) &
 f_necrot plating_efficiency(1) plating_efficiency(2) &
-medium_oxygen medium_glucose medium_drugA medium_drugB'
+medium_oxygen medium_glucose medium_drugA medium_drugB &
+bdry_oxygen bdry_glucose bdry_drugA bdry_drugB'
 
 write(logmsg,*) 'Opened nfout: ',outputfile
 call logger(logmsg)
@@ -1307,6 +1311,8 @@ if (use_FD) then	! need to set medium concentrations in Cave
 	do ichemo = OXYGEN+1,MAX_CHEMO
 		if (chemo(ichemo)%used) then
 			chemo(ichemo)%Cave_b = chemo(ichemo)%medium_Cext
+			chemo(ichemo)%Cprev_b = chemo(ichemo)%medium_Cext
+			write(nflog,'(a,i2,e12.3)') 'set Cave_b: ',ichemo,chemo(ichemo)%medium_Cext
 		endif
 	enddo
 endif
@@ -1636,15 +1642,11 @@ end function
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine getMediumConc(cmedium)
-real(REAL_KIND) :: cmedium(:)
-logical :: bdry = .true.
+subroutine getMediumConc(cmedium, cbdry)
+real(REAL_KIND) :: cmedium(:), cbdry(:)
 
-if (bdry) then
-	cmedium(:) = chemo(:)%medium_Cbnd
-else
-	cmedium(:) = chemo(:)%medium_Cext
-endif
+cmedium(:) = chemo(:)%medium_Cext
+cbdry(:) = chemo(:)%medium_Cbnd
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1674,13 +1676,15 @@ subroutine get_summary(summaryData,i_hypoxia_cutoff,i_growth_cutoff) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*), i_hypoxia_cutoff,i_growth_cutoff
 integer :: Nviable(MAX_CELLTYPES), plate_eff_10(MAX_CELLTYPES)
-integer :: diam_um, vol_mm3_1000, nhypoxic(3), ngrowth(3), hypoxic_percent_10, growth_percent_10, necrotic_percent_10, &
-    medium_oxygen_1000, medium_glucose_1000, medium_drug_1000(2), npmm3
+integer :: diam_um, vol_mm3_1000, nhypoxic(3), ngrowth(3), hypoxic_percent_10, growth_percent_10, necrotic_percent_10,  npmm3, &
+    medium_oxygen_1000, medium_glucose_1000, medium_drug_1000(2), &
+    bdry_oxygen_1000, bdry_glucose_1000, bdry_drug_1000(2)
 integer :: TNanoxia_dead, TNradiation_dead, TNdrug_dead(2),  &
            Ntagged_anoxia(MAX_CELLTYPES), Ntagged_radiation(MAX_CELLTYPES), Ntagged_drug(2,MAX_CELLTYPES), &
            TNtagged_anoxia, TNtagged_radiation, TNtagged_drug(2)
 integer :: Tplate_eff_10   
-real(REAL_KIND) :: diam_cm, vol_cm3, vol_mm3, hour, plate_eff(MAX_CELLTYPES), cmedium(MAX_CHEMO), necrotic_fraction
+real(REAL_KIND) :: diam_cm, vol_cm3, vol_mm3, hour, plate_eff(MAX_CELLTYPES), necrotic_fraction
+real(REAL_KIND) :: cmedium(MAX_CHEMO), cbdry(MAX_CHEMO)
 
 hour = istep*DELTA_T/3600.
 call getDiamVol(diam_cm,vol_cm3)
@@ -1718,17 +1722,22 @@ call getNviable(Nviable)
 plate_eff = real(Nviable)/Ncells
 plate_eff_10 = 1000*plate_eff
 Tplate_eff_10 = sum(plate_eff_10(1:Ncelltypes))
-call getMediumConc(cmedium)
+call getMediumConc(cmedium, cbdry)
 medium_oxygen_1000 = cmedium(OXYGEN)*1000
 medium_glucose_1000 = cmedium(GLUCOSE)*1000
 medium_drug_1000(1) = cmedium(DRUG_A)*1000
 medium_drug_1000(2) = cmedium(DRUG_B)*1000
+bdry_oxygen_1000 = cbdry(OXYGEN)*1000
+bdry_glucose_1000 = cbdry(GLUCOSE)*1000
+bdry_drug_1000(1) = cbdry(DRUG_A)*1000
+bdry_drug_1000(2) = cbdry(DRUG_B)*1000
 
-summaryData(1:21) = [ istep, Ncells, TNanoxia_dead, TNdrug_dead(1), TNdrug_dead(2), TNradiation_dead, &
+summaryData(1:25) = [ istep, Ncells, TNanoxia_dead, TNdrug_dead(1), TNdrug_dead(2), TNradiation_dead, &
     TNtagged_anoxia, TNtagged_drug(1), TNtagged_drug(2), TNtagged_radiation, &
-	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, Tplate_eff_10, &
-	medium_oxygen_1000, medium_glucose_1000, medium_drug_1000(1), medium_drug_1000(2), npmm3 ]
-write(nfres,'(2a12,i8,2e12.4,19i7,13e12.4)') gui_run_version, dll_run_version, &
+	diam_um, vol_mm3_1000, hypoxic_percent_10, growth_percent_10, necrotic_percent_10, Tplate_eff_10, npmm3, &
+	medium_oxygen_1000, medium_glucose_1000, medium_drug_1000(1), medium_drug_1000(2), &
+	bdry_oxygen_1000, bdry_glucose_1000, bdry_drug_1000(1), bdry_drug_1000(2) ]
+write(nfres,'(2a12,i8,2e12.4,19i7,17e12.4)') gui_run_version, dll_run_version, &
 	istep, hour, vol_mm3, diam_um, Ncells_type(1:2), &
     Nanoxia_dead(1:2), Ndrug_dead(1,1:2), &
     Ndrug_dead(2,1:2), Nradiation_dead(1:2), &
@@ -1736,18 +1745,8 @@ write(nfres,'(2a12,i8,2e12.4,19i7,13e12.4)') gui_run_version, dll_run_version, &
     Ntagged_drug(2,1:2), Ntagged_radiation(1:2), &
 	nhypoxic(:)/real(Ncells), ngrowth(:)/real(Ncells), &
 	necrotic_fraction, plate_eff(1:2), &
-	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A), cmedium(DRUG_B)
-
-!write(nfres,'(a)') 'GUI_version DLL_version &
-!istep hour vol_mm3 diam_um Ncells(1) Ncells(2) &
-!Nanoxia_dead(1) Nanoxia_dead(2) NdrugA_dead(1) NdrugA_dead(2) &
-!NdrugB_dead(1) NdrugB_dead(2) Nradiation_dead(1) Nradiation_dead(2) &
-!Ntagged_anoxia(1) Ntagged_anoxia(2) Ntagged_drugA(1) Ntagged_drugA(2) &
-!Ntagged_drugB(1) Ntagged_drugB(2) Ntagged_radiation(1) Ntagged_radiation(2) &
-!f_hypox(1) f_hypox(2) f_hypox(3) f_growth(1) f_growth(2) f_growth(3) &
-!f_necrot plating_efficiency(1) plating_efficiency(2) &
-!medium_oxygen medium_glucose medium_drugA medium_drugB'
-
+	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A), cmedium(DRUG_B), &
+	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A), cbdry(DRUG_B)
 		
 call sum_dMdt(GLUCOSE)
 end subroutine

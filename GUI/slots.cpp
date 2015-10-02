@@ -237,6 +237,9 @@ void MainWindow::radioButtonChanged(QAbstractButton *b)
             }
         }
 //    }
+        if (wtag.contains("FD_SOLVER")) {
+            setFields();
+        }
 }
 
 void MainWindow::buttonClick_cell_constituent(QAbstractButton* button)

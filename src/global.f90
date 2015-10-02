@@ -332,6 +332,7 @@ real(REAL_KIND) :: O2cutoff(3)
 real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
 real(REAL_KIND) :: total_dMdt
+real(REAL_KIND) :: total_flux_prev, medium_Cbnd_prev
 
 !type(SN30K_type) :: SN30K
 type(TPZ_type) :: TPZ
