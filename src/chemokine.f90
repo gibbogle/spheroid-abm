@@ -273,4 +273,19 @@ enddo
 !endif
 end subroutine
 
+!--------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------------
+subroutine SetupChemomap
+integer :: ichemo
+
+nchemo = 0
+do ichemo = 1,MAX_CHEMO
+	if (chemo(ichemo)%present) then
+		nchemo = nchemo + 1
+		chemomap(nchemo) = ichemo
+	endif
+enddo
+end subroutine
+
+
 end module

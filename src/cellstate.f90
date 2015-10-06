@@ -277,18 +277,10 @@ do kcell = 1,nlist
 			dMdt = kmet*Cdrug
 			call getDrugKillProb(killmodel,Kd,dMdt,Cdrug,dt,dkill_prob)
 			kill_prob = kill_prob + dkill_prob
-!			if (killmodel == 1) then
-!				kill_prob = kill_prob + Kd*dMdt*dt
-!			elseif (killmodel == 2) then
-!				kill_prob = kill_prob + Kd*dMdt*Cdrug*dt
-!			elseif (killmodel == 3) then
-!				kill_prob = kill_prob + Kd*dMdt**2*dt
-!			elseif (killmodel == 4) then
-!				kill_prob = kill_prob + Kd*Cdrug*dt
-!			elseif (killmodel == 5) then
-!				kill_prob = kill_prob + Kd*(Cdrug**2)*dt
-!			endif
 		enddo
+!		if (kcell == 1) then
+!			write(nflog,'(a,i4,2e12.3)') 'istep,Cdrug,kill_prob: ',istep,Cdrug,kill_prob
+!		endif
 	    if (.not.cell_list(kcell)%drug_tag(idrug) .and. par_uni(kpar) < kill_prob) then		! don't tag more than once
 			cell_list(kcell)%drug_tag(idrug) = .true.
             Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1

@@ -1312,10 +1312,11 @@ if (use_FD) then	! need to set medium concentrations in Cave
 		if (chemo(ichemo)%used) then
 			chemo(ichemo)%Cave_b = chemo(ichemo)%medium_Cext
 			chemo(ichemo)%Cprev_b = chemo(ichemo)%medium_Cext
-			write(nflog,'(a,i2,e12.3)') 'set Cave_b: ',ichemo,chemo(ichemo)%medium_Cext
+!			write(nflog,'(a,i2,e12.3)') 'set Cave_b: ',ichemo,chemo(ichemo)%medium_Cext
 		endif
 	enddo
 endif
+call SetupChemomap
 
 end subroutine
 
@@ -1394,6 +1395,10 @@ if (.not.ok) then
 	res = 3
 	return
 endif
+if (.not.use_FD) then
+	call UpdateCbnd(DELTA_T)		! need to check placements of Update_Cbnd
+!	write(nflog,*) 'did UpdateCbnd'
+endif
 if (use_FD) then
 	framp = 1
 	call diff_solver(DELTA_T, framp)
@@ -1419,10 +1424,15 @@ enddo
 if (dbug) write(nflog,*) 'StateToSiteCell'
 call StateToSiteCell
 !call check_allstate('after StateToSiteCell')
-if (.not.use_FD) then
-	call UpdateCbnd(DELTA_T)		! need to check placements of Update_Cbnd
-!	write(nflog,*) 'did UpdateCbnd'
-endif
+!if (.not.use_FD) then
+!	call UpdateCbnd(DELTA_T)		! need to check placements of Update_Cbnd
+!!	write(nflog,*) 'did UpdateCbnd'
+!endif
+!if (use_FD) then
+!	framp = 1
+!	call diff_solver(DELTA_T, framp)
+!	call UpdateCbnd(DELTA_T)
+!endif
 
 res = 0
 

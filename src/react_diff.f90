@@ -43,6 +43,8 @@ use, intrinsic :: iso_c_binding
 
 implicit none
 
+real(REAL_KIND) :: alpha_flux = 0.3
+
 contains
 
 !-------------------------------------------------------------------------------------------
@@ -400,7 +402,6 @@ logical :: zero
 real(REAL_KIND) :: Kin, Kout
 integer :: kcell
 type(cell_type), pointer :: cp
-real(REAL_KIND) :: alpha_flux = 0.3
 
 !write(*,*) 'getF_const: ',ichemo,nlist
 
@@ -938,7 +939,7 @@ do ic = 1,nchemo
 		call itsol_solve_fgmr_ILU(icc, rhs, x, im_krylov, maxits, tol_b, iters, ierr)
 	!	write(nflog,*) 'itsol_solve_fgmr_ILU: Cave_b: ierr, iters: ',ierr,iters
 	else
-		write(nflog,*) 'no solve, zeroC: ',ichemo
+!		write(nflog,*) 'no solve, zeroC: ',ichemo
 	endif
 	call itsol_free_precond_ILU(icc, ierr)
 !	write(nflog,*) 'did itsol_free_precond_ILU'
