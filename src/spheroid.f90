@@ -1284,7 +1284,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! If the volume removed is Vr, the fraction of constituent mass that is retained
 ! in the medium is (Vm - Vr)/Vm.  The calculation does not apply to oxygen.
-! Usually Vr = Ve.
+! Usually Vr = Ve. 
 !-----------------------------------------------------------------------------------------
 subroutine MediumChange(Ve,Ce)
 real(REAL_KIND) :: Ve, Ce(:)

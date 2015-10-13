@@ -214,15 +214,6 @@ void MainWindow::createActions()
         QLabel *label = findChild<QLabel *>(objName);
         connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
     }
-/*
-    for (int i=0; i<parm->nInfocheckbox; i++) {
-        QString tag;
-        parm->get_checkboxtag(i, &tag);
-        QString objName = "infocbox_" + tag;
-        QCheckBox *cbox = findChild<QCheckbox *>(objName);
-        connect((QObject *)cbox, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
-    }
-*/
     for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
@@ -234,7 +225,7 @@ void MainWindow::createActions()
     for (int i=0; i<nCheckBoxes; i++) {
         QCheckBox *cbox = checkbox_list[i];
         QString cbox_str = cbox->objectName();
-        if (cbox_str.startsWith("cbox_")) {
+        if (cbox_str.startsWith("cbox_") && !(cbox_str.contains("PARENT") || cbox_str.contains("METAB"))) {
             connect((QObject *)cbox, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
         }
     }
@@ -324,7 +315,10 @@ void MainWindow::createLists()
 		if (wname.startsWith("cbox_")) {
 			connect(w, SIGNAL(toggled(bool)), this, SLOT(changeParam()));
 		}
-		if (wname.startsWith("rbut_")) {
+//        if (wname.startsWith("cdbox_")) {
+//            connect(w, SIGNAL(toggled(bool)), this, SLOT(changeParam()));
+//        }
+        if (wname.startsWith("rbut_")) {
 			connect(w, SIGNAL(toggled(bool)), this, SLOT(changeParam()));
 		}
 	}
@@ -967,28 +961,16 @@ void MainWindow::loadParams()
                             if (use_TRACER)
                                 disableUseTracer();
                         }
-//                        bool use_TPZ = qsname.contains("USE_TPZ_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
                         } else {
                             w_cb->setChecked(false);
                         }
-//                        bool use_DNB = qsname.contains("USE_DNB_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
                         } else {
                             w_cb->setChecked(false);
                         }
-//                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
-//                        if (p.value == 1) {
-//                            w_cb->setChecked(true);
-//                            if (use_TREATMENT_FILE)
-//                                enableUseTreatmentFile();
-//                        } else {
-//                            w_cb->setChecked(false);
-//                            if (use_TREATMENT_FILE)
-//                                disableUseTreatmentFile();
-//                        }
 					} else if (qsname.startsWith("rbut_")) {
                         parse_rbutton(qsname,&rbutton_case);
                         QRadioButton *w_rb = (QRadioButton *)w;
@@ -2650,7 +2632,7 @@ void MainWindow::changeParam()
     QObject *w = sender(); // Gets the pointer to the object that invoked the changeParam slot.
 	if (w->isWidgetType()) {
 		QString wname = w->objectName();
-//        LOG_QMSG("changeParam:" + wname);
+        LOG_QMSG("changeParam:" + wname);
         if (wname.contains("_PARENT_") || wname.contains("_METAB1_") || wname.contains("_METAB2_")) {
             changeDrugParam(w);
             return;
@@ -2740,30 +2722,17 @@ void MainWindow::changeParam()
                     disableUseTracer();
             }
 
-//            bool use_TPZ = wname.contains("USE_TPZ_DRUG");
             if (checkBox->isChecked()) {
                 v = 1;
             } else {
                 v = 0;
             }
 
-//            bool use_DNB = wname.contains("USE_DNB_DRUG");
             if (checkBox->isChecked()) {
                 v = 1;
             } else {
                 v = 0;
             }
-
-//            bool use_TREATMENT_FILE = wname.contains("USE_TREATMENT_FILE");
-//            if (checkBox->isChecked()) {
-//                v = 1;
-//                if (use_TREATMENT_FILE)
-//                    enableUseTreatmentFile();
-//            } else {
-//                v = 0;
-//                if (use_TREATMENT_FILE)
-//                    disableUseTreatmentFile();
-//            }
 
 			QString wtag = wname.mid(5);
 			for (int k=0; k<parm->nParams; k++) {
