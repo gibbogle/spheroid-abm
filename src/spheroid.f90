@@ -1685,7 +1685,7 @@ subroutine get_summary(summaryData,i_hypoxia_cutoff,i_growth_cutoff) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*), i_hypoxia_cutoff,i_growth_cutoff
-integer :: Nviable(MAX_CELLTYPES), plate_eff_10(MAX_CELLTYPES)
+integer :: Nviable(MAX_CELLTYPES), Nlive(MAX_CELLTYPES),plate_eff_10(MAX_CELLTYPES)
 integer :: diam_um, vol_mm3_1000, nhypoxic(3), ngrowth(3), hypoxic_percent_10, growth_percent_10, necrotic_percent_10,  npmm3, &
     medium_oxygen_1000, medium_glucose_1000, medium_drug_1000(2), &
     bdry_oxygen_1000, bdry_glucose_1000, bdry_drug_1000(2)
@@ -1693,6 +1693,7 @@ integer :: TNanoxia_dead, TNradiation_dead, TNdrug_dead(2),  &
            Ntagged_anoxia(MAX_CELLTYPES), Ntagged_radiation(MAX_CELLTYPES), Ntagged_drug(2,MAX_CELLTYPES), &
            TNtagged_anoxia, TNtagged_radiation, TNtagged_drug(2)
 integer :: Tplate_eff_10   
+integer :: ityp
 real(REAL_KIND) :: diam_cm, vol_cm3, vol_mm3, hour, plate_eff(MAX_CELLTYPES), necrotic_fraction
 real(REAL_KIND) :: cmedium(MAX_CHEMO), cbdry(MAX_CHEMO)
 
@@ -1728,10 +1729,19 @@ else
 	necrotic_fraction = 0
 endif
 necrotic_percent_10 = 1000*necrotic_fraction
-call getNviable(Nviable)
-plate_eff = real(Nviable)/Ncells
+call getNviable(Nviable, Nlive)
+do ityp = 1,Ncelltypes
+	if (Nlive(ityp) > 0) then
+		plate_eff(ityp) = real(Nviable(ityp))/Nlive(ityp)
+	else
+		plate_eff(ityp) = 0
+	endif
+enddo
 plate_eff_10 = 1000*plate_eff
-Tplate_eff_10 = sum(plate_eff_10(1:Ncelltypes))
+Tplate_eff_10 = 0
+do ityp = 1,Ncelltypes
+	Tplate_eff_10 = Tplate_eff_10 + plate_eff_10(ityp)*celltype_fraction(ityp)
+enddo
 call getMediumConc(cmedium, cbdry)
 medium_oxygen_1000 = cmedium(OXYGEN)*1000
 medium_glucose_1000 = cmedium(GLUCOSE)*1000
@@ -1794,28 +1804,29 @@ end subroutine
 
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
-subroutine getNviable(Nviable)
-integer :: Nviable(:)
+subroutine getNviable(Nviable, Nlive)
+integer :: Nviable(:), Nlive(:)
 integer :: kcell, ityp, idrug
 logical :: tag
 
-nviable = 0
+Nviable = 0
+Nlive = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	if (cell_list(kcell)%anoxia_tag .or. &
 !	    cell_list(kcell)%drugA_tag .or. &
 !	    cell_list(kcell)%drugB_tag .or. &
 	    cell_list(kcell)%radiation_tag) cycle
-	    tag = .false.
-	    do idrug = 1,ndrugs_used
-			if (cell_list(kcell)%drug_tag(idrug)) tag = .true.
-		enddo
-		if (tag) cycle
-	    ityp = cell_list(kcell)%celltype
+    tag = .false.
+    do idrug = 1,ndrugs_used
+		if (cell_list(kcell)%drug_tag(idrug)) tag = .true.
+	enddo
+    ityp = cell_list(kcell)%celltype
+    Nlive(ityp) = Nlive(ityp) + 1
+	if (tag) cycle
 	Nviable(ityp) = Nviable(ityp) + 1
 enddo	
 end subroutine
-
 !--------------------------------------------------------------------------------
 !--------------------------------------------------------------------------------
 subroutine getHypoxicCount(nhypoxic)
