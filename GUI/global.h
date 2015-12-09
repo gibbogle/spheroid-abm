@@ -117,6 +117,8 @@ namespace Global
     extern bool recordingVTK;
     extern bool showingFACS;
     extern bool recordingFACS;
+    extern bool showingField;
+    extern bool recordingField;
 
 
 } // namespace Global

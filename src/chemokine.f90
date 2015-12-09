@@ -24,6 +24,7 @@ type chemokine_type
 	logical :: present
 	logical :: use_secretion
 	logical :: constant
+	logical :: controls_growth
 	real(REAL_KIND) :: bdry_conc
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: membrane_diff_in
@@ -273,11 +274,41 @@ enddo
 !endif
 end subroutine
 
-!--------------------------------------------------------------------------------------
-!--------------------------------------------------------------------------------------
-subroutine SetupChemomap
-integer :: ichemo
+!----------------------------------------------------------------------------------------
+! A drug and its metabolites continue to be solved for if any one has a medium boundary 
+! concentration that exceeds Cthreshold
+!----------------------------------------------------------------------------------------
+subroutine UpdateChemomap
+integer :: ichemo, iparent, idrug, im
+logical :: present
+real(REAL_KIND), parameter :: Cthreshold = 1.0e-5
 
+! First check drugs and their metabolites
+do idrug = 1,ndrugs_used
+	iparent = TRACER + 1 + 3*(idrug-1)
+	if (chemo(iparent)%present .and. chemo(iparent)%medium_Cbnd /= 0) then		! simulation with this drug has started
+		present = .false.
+		do im = 0,2
+			ichemo = iparent + im
+			write(nflog,'(a,2i4,e12.3)') 'UpdateChemomap: drug concentration: ',idrug,im,chemo(ichemo)%medium_Cbnd
+			if (chemo(ichemo)%medium_Cbnd > Cthreshold) then
+				present = .true.
+			endif
+		enddo
+		if (.not.present) then
+			write(logmsg,'(a,i2,a,a)') 'Removing drug and metabolites, concentrations below threshold: ',idrug,' ',chemo(iparent)%name
+			call logger(logmsg)
+			write(logmsg,'(a,3e12.3)') 'concs: ',(chemo(iparent+im)%medium_Cbnd,im=0,2)
+			call logger(logmsg)
+			write(logmsg,'(a,e12.3)') 'threshold concentration: ',Cthreshold
+			call logger(logmsg)
+			do im = 0,2
+				ichemo = iparent + im
+				chemo(ichemo)%present = .false.
+			enddo
+		endif
+	endif
+enddo
 nchemo = 0
 do ichemo = 1,MAX_CHEMO
 	if (chemo(ichemo)%present) then
@@ -286,6 +317,5 @@ do ichemo = 1,MAX_CHEMO
 	endif
 enddo
 end subroutine
-
 
 end module

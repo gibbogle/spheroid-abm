@@ -67,7 +67,6 @@ MainWindow::MainWindow(QWidget *parent)
 	nTicks = 1000;
 	tickVTK = 100;	// timer tick for VTK in milliseconds
     ndistplots = 2;
-    paramSaved = false;
 	paused = false;
 	posdata = false;
     DCmotion = false;
@@ -81,6 +80,8 @@ MainWindow::MainWindow(QWidget *parent)
     Global::showingVTK = false;
     Global::recordingFACS = false;
     Global::showingFACS = false;
+    Global::recordingField = false;
+    Global::showingField = false;
     nGraphCases = 0;
 	for (int i=0; i<Plot::ncmax; i++) {
 		graphResultSet[i] = 0;
@@ -132,6 +133,7 @@ MainWindow::MainWindow(QWidget *parent)
     LOG_QMSG("did initHistoPlot");
     loadParams();
     LOG_QMSG("Did loadparams");
+    paramSaved = true;
 
     SetupProtocol();
 
@@ -154,8 +156,9 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
     mdiArea_VTK->setGeometry(rect);
 
-    videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL);
-    videoFACS = new QVideoOutput(this, QWT_SOURCE, NULL, qpFACS);
+    videoVTK = new QVideoOutput(this, VTK_SOURCE, vtk->renWin, NULL, NULL);
+    videoFACS = new QVideoOutput(this, QWT_FACS_SOURCE, NULL, qpFACS, NULL);
+    videoField = new QVideoOutput(this, QWT_FIELD_SOURCE, NULL, NULL, field->view);
 
     tabs->setCurrentIndex(9);
     setupPopup();
@@ -214,6 +217,15 @@ void MainWindow::createActions()
         QLabel *label = findChild<QLabel *>(objName);
         connect((QObject *)label, SIGNAL(labelClicked(QString)), this, SLOT(showMore(QString)));
     }
+/*
+    for (int i=0; i<parm->nInfocheckbox; i++) {
+        QString tag;
+        parm->get_checkboxtag(i, &tag);
+        QString objName = "infocbox_" + tag;
+        QCheckBox *cbox = findChild<QCheckbox *>(objName);
+        connect((QObject *)cbox, SIGNAL(checkBoxClicked(QString)), this, SLOT(showMore(QString)));
+    }
+*/
     for (int i=0; i<nLabels; i++) {
 		QLabel *label = label_list[i];
 		QString label_str = label->objectName();
@@ -240,6 +252,9 @@ void MainWindow::createActions()
     connect(actionStop_recording_VTK, SIGNAL(triggered()), this, SLOT(stopRecorderVTK()));
     connect(actionStart_recording_FACS, SIGNAL(triggered()), this, SLOT(startRecorderFACS()));
     connect(actionStop_recording_FACS, SIGNAL(triggered()), this, SLOT(stopRecorderFACS()));
+
+    connect(actionStart_recording_Field, SIGNAL(triggered()), this, SLOT(startRecorderField()));
+    connect(actionStop_recording_Field, SIGNAL(triggered()), this, SLOT(stopRecorderField()));
 
 //    connect(action_show_gradient3D, SIGNAL(triggered()), this, SLOT(showGradient3D()));
 //    connect(action_show_gradient2D, SIGNAL(triggered()), this, SLOT(showGradient2D()));
@@ -315,10 +330,7 @@ void MainWindow::createLists()
 		if (wname.startsWith("cbox_")) {
 			connect(w, SIGNAL(toggled(bool)), this, SLOT(changeParam()));
 		}
-//        if (wname.startsWith("cdbox_")) {
-//            connect(w, SIGNAL(toggled(bool)), this, SLOT(changeParam()));
-//        }
-        if (wname.startsWith("rbut_")) {
+		if (wname.startsWith("rbut_")) {
 			connect(w, SIGNAL(toggled(bool)), this, SLOT(changeParam()));
 		}
 	}
@@ -426,6 +438,36 @@ void MainWindow:: stopRecorderFACS()
     actionStop_recording_FACS->setEnabled(false);
     Global::recordingFACS = false;
     LOG_QMSG("stopRecorderFACS");
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: startRecorderField()
+{
+    bool ok;
+    int nframes=0;
+    QString itemFormat, itemCodec, videoFileName;
+
+    ok = getVideoFileInfo(&nframes, &itemFormat, &itemCodec, &videoFileName);
+    if (!ok) return;
+    videoField->startRecorder(videoFileName,itemFormat,itemCodec,nframes);
+    actionStart_recording_Field->setEnabled(false);
+    actionStop_recording_Field->setEnabled(true);
+    Global::recordingField = true;
+    LOG_QMSG("startRecorderField");
+    LOG_QMSG(videoFileName);
+    goToField();
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: stopRecorderField()
+{
+    videoField->stopRecorder();
+    actionStart_recording_Field->setEnabled(true);
+    actionStop_recording_Field->setEnabled(false);
+    Global::recordingField = false;
+    LOG_QMSG("stopRecorderField");
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -961,16 +1003,28 @@ void MainWindow::loadParams()
                             if (use_TRACER)
                                 disableUseTracer();
                         }
+//                        bool use_TPZ = qsname.contains("USE_TPZ_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
                         } else {
                             w_cb->setChecked(false);
                         }
+//                        bool use_DNB = qsname.contains("USE_DNB_DRUG");
                         if (p.value == 1) {
                             w_cb->setChecked(true);
                         } else {
                             w_cb->setChecked(false);
                         }
+//                        bool use_TREATMENT_FILE = qsname.contains("USE_TREATMENT_FILE");
+//                        if (p.value == 1) {
+//                            w_cb->setChecked(true);
+//                            if (use_TREATMENT_FILE)
+//                                enableUseTreatmentFile();
+//                        } else {
+//                            w_cb->setChecked(false);
+//                            if (use_TREATMENT_FILE)
+//                                disableUseTreatmentFile();
+//                        }
 					} else if (qsname.startsWith("rbut_")) {
                         parse_rbutton(qsname,&rbutton_case);
                         QRadioButton *w_rb = (QRadioButton *)w;
@@ -1074,11 +1128,11 @@ void MainWindow::loadParams()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setFields()
 {
+    spin_NX->setValue(120);
     tab_force->setEnabled(false);
     groupBox_force->setEnabled(false);
     line_NT_CONC->setEnabled(true);
     line_NMM3->setEnabled(true);
-    spin_NX->setValue(120);
     line_NXB->setEnabled(false);
     line_NZB->setEnabled(false);
     groupBox_drop->setEnabled(true);
@@ -1092,8 +1146,8 @@ void MainWindow::setFields()
         line_MEDIUM_VOLUME->setText(str);
         line_MEDIUM_VOLUME->setEnabled(false);
         line_UNSTIRRED_LAYER->setEnabled(false);
-        cbox_USE_RELAX->setEnabled(false);
-        cbox_USE_PAR_RELAX->setEnabled(false);
+//        cbox_USE_RELAX->setEnabled(false);
+//        cbox_USE_PAR_RELAX->setEnabled(false);
     } else {
         line_MEDIUM_VOLUME->setEnabled(true);
         line_UNSTIRRED_LAYER->setEnabled(true);
@@ -1302,7 +1356,7 @@ void MainWindow::showMore(QString moreText)
 void MainWindow::writeout()
 {
     int ndrugs;
-	QString line;
+    QString line, header;
     QFile file(inputFile);
     if (!file.open(QFile::WriteOnly | QFile::Text)) {
         QMessageBox::warning(this, tr("Application"),
@@ -1313,6 +1367,8 @@ void MainWindow::writeout()
         return;
     }
     QTextStream out(&file);
+    makeHeaderText(&header,!paramSaved);
+    out << header + "\n";
 	for (int k=0; k<parm->nParams; k++) {
         PARAM_SET p = parm->get_param(k);
 		double val = p.value;
@@ -1383,12 +1439,15 @@ void MainWindow::readInputFile()
                              .arg(file.errorString()));
         return;
     }
+    paramSaved = true;
 
     QTextStream in(&file);
 	QString line;
 	for (int k=0; k<parm->nParams; k++) {
 		line = in.readLine();
-		QStringList data = line.split(" ",QString::SkipEmptyParts);
+        if (k == 0 && !line.contains("GUI"))    // This is the header line
+            line = in.readLine();
+        QStringList data = line.split(" ",QString::SkipEmptyParts);
 		PARAM_SET p = parm->get_param(k);
 		QString ptag = p.tag;
         if (ptag.contains("GUI_VERSION")) {
@@ -1428,7 +1487,6 @@ void MainWindow::readInputFile()
     LoadProtocol(fileName);
 
     reloadParams();
-    paramSaved = true;
 	inputFile = fileName;
     alabel_casename->setText(inputFile);
 }
@@ -1583,6 +1641,7 @@ void MainWindow::goToInputs()
     stackedWidget->setCurrentIndex(0);
     Global::showingVTK = false;
     Global::showingFACS = false;
+    Global::showingField = false;
     action_inputs->setEnabled(false);
     action_outputs->setEnabled(true);
     action_VTK->setEnabled(true);
@@ -1598,6 +1657,7 @@ void MainWindow::goToOutputs()
     stackedWidget->setCurrentIndex(1);    
     Global::showingVTK = false;
     Global::showingFACS = false;
+    Global::showingField = false;
     action_outputs->setEnabled(false);
     action_inputs->setEnabled(true);
     action_VTK->setEnabled(true);
@@ -1618,6 +1678,7 @@ void MainWindow::goToVTK()
     action_FACS->setEnabled(true);
     Global::showingVTK = true;
     Global::showingFACS = false;
+    Global::showingField = false;
 }
 
 //-------------------------------------------------------------
@@ -1633,6 +1694,7 @@ void MainWindow::goToFACS()
     action_FACS->setEnabled(false);
     Global::showingVTK = false;
     Global::showingFACS = true;
+    Global::showingField = false;
 }
 
 //-------------------------------------------------------------
@@ -1648,6 +1710,7 @@ void MainWindow::goToField()
     action_FACS->setEnabled(true);
     Global::showingVTK = false;
     Global::showingFACS = false;
+    Global::showingField = true;
     LOG_MSG("goToField");
     field->setSliceChanged();
     if (step > 0 && !action_field->isEnabled()) {
@@ -1898,12 +1961,13 @@ void MainWindow::runServer()
 		else if (response == QMessageBox::Cancel)
             return;
 	}
-	
     // Display the outputs screen
     if (Global::showingVTK) {
         goToVTK();
     } else if(Global::showingFACS) {
         goToFACS();
+    } else if(Global::showingField) {
+        goToField();
     } else {
         goToOutputs();
     }
@@ -1918,7 +1982,8 @@ void MainWindow::runServer()
     action_save_profile_data->setEnabled(false);
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
-    action_field->setEnabled(true);
+    if (!Global::showingField)
+        action_field->setEnabled(true);
     tab_tumour->setEnabled(false);
 //    tab_DC->setEnabled(false);
     tab_chemo->setEnabled(false);
@@ -2210,13 +2275,15 @@ void MainWindow::showSummary(int hr)
     updateProfilePlots();
 
     field->setSliceChanged();
-    if (step > 0 && !action_field->isEnabled()) {
+//    if (step > 0 && !action_field->isEnabled()) {
+    if (step > 0) {
         field->displayField(hour,&res);
-//        if (res != 0) {
-//            sprintf(msg,"displayField returned res: %d",res);
-//            LOG_MSG(msg);
-//            stopServer();
-//        }
+        if (videoField->record) {
+            videoField->recorder();
+        } else if (actionStop_recording_Field->isEnabled()) {
+            actionStart_recording_Field->setEnabled(true);
+            actionStop_recording_Field->setEnabled(false);
+        }
     }
     exthread->mutex1.unlock();
     exthread->summary_done.wakeOne();
@@ -2382,6 +2449,9 @@ void MainWindow::postConnection()
     }
     if (actionStop_recording_FACS->isEnabled()) {
         stopRecorderFACS();
+    }
+    if (actionStop_recording_Field->isEnabled()) {
+        stopRecorderField();
     }
     posdata = false;
 	LOG_MSG("completed postConnection");
@@ -2632,7 +2702,7 @@ void MainWindow::changeParam()
     QObject *w = sender(); // Gets the pointer to the object that invoked the changeParam slot.
 	if (w->isWidgetType()) {
 		QString wname = w->objectName();
-        LOG_QMSG("changeParam:" + wname);
+//        LOG_QMSG("changeParam:" + wname);
         if (wname.contains("_PARENT_") || wname.contains("_METAB1_") || wname.contains("_METAB2_")) {
             changeDrugParam(w);
             return;
@@ -2722,17 +2792,30 @@ void MainWindow::changeParam()
                     disableUseTracer();
             }
 
+//            bool use_TPZ = wname.contains("USE_TPZ_DRUG");
             if (checkBox->isChecked()) {
                 v = 1;
             } else {
                 v = 0;
             }
 
+//            bool use_DNB = wname.contains("USE_DNB_DRUG");
             if (checkBox->isChecked()) {
                 v = 1;
             } else {
                 v = 0;
             }
+
+//            bool use_TREATMENT_FILE = wname.contains("USE_TREATMENT_FILE");
+//            if (checkBox->isChecked()) {
+//                v = 1;
+//                if (use_TREATMENT_FILE)
+//                    enableUseTreatmentFile();
+//            } else {
+//                v = 0;
+//                if (use_TREATMENT_FILE)
+//                    disableUseTreatmentFile();
+//            }
 
 			QString wtag = wname.mid(5);
 			for (int k=0; k<parm->nParams; k++) {

@@ -156,6 +156,8 @@ public slots:
     void stopRecorderVTK();
     void startRecorderFACS();
     void stopRecorderFACS();
+    void startRecorderField();
+    void stopRecorderField();
     bool getVideoFileInfo(int *nframes, QString *itemFormat, QString *itemCodec, QString *videoFileName);
 
     void buttonClick_cell_constituent(QAbstractButton* button);
@@ -258,9 +260,10 @@ private:
     void populateDrugTable(int idrug);
     void makeDrugFileLists();
     void changeDrugParam(QObject *);
-    void extractDrugname(QString *);
+    void extractDrugname(QString *, QString *);
     void readDrugData(QTextStream *in);
     void setupPopup();
+    void makeHeaderText(QString *header, bool interact);
 
     QPlainTextEdit *textEdit;
     QString curFile;
@@ -360,6 +363,7 @@ private:
 
     QVideoOutput   *videoVTK;
     QVideoOutput   *videoFACS;
+    QVideoOutput   *videoField;
 
     QStringList Drug_FilesList;
 

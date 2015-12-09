@@ -31,7 +31,7 @@ use rkc_90
 
 implicit none
 
-integer, parameter :: MAX_VARS = max_nlist	! was 2*
+integer, parameter :: MAX_VARS = 2*max_nlist
 
 integer, parameter :: RKF45_SOLVE = 1
 integer, parameter :: RKSUITE_SOLVE = 2
@@ -412,12 +412,12 @@ subroutine f_rkc(neqn,t,y,dydt,icase)
 integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, idrug, im, site(3), kcell, ict, ith, Ng
-real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol_cm3, val, Cin(MAX_CHEMO), Cex, Cdrug(0:2)
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_kin, membrane_kout, membrane_flux, area_factor
+real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol_cm3, val, Cin(MAX_CHEMO), Cex
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_kin, membrane_kout, membrane_flux, area_factor, n_O2(0:2)
 logical :: bnd, dbug
 !logical :: TPZ_metabolised(MAX_CELLTYPES,0:2), DNB_metabolised(MAX_CELLTYPES,0:2)
 logical :: metabolised(MAX_CELLTYPES,0:2)
-real(REAL_KIND) :: metab, dMdt, KmetC(0:2)
+real(REAL_KIND) :: metab, dMdt, KmetC
 logical :: intracellular, cell_exists
 logical :: use_actual_cell_volume = .false.
 type(drug_type), pointer :: dp
@@ -489,6 +489,9 @@ do i = 1,neqn
 	    Cin = allstate(i,:)
 	    Cin(ichemo) = yy
 	    ict = cell_list(kcell)%celltype
+	    if (idrug > 0) then
+		    n_O2(:) = dp%n_O2(ict,:)
+		endif
 	endif
 	if (.not.intracellular) then	! extracellular
 		! Need to check diffusion eqtn. when Vextra_cm3 < Vsite_cm3 = DX^3 !!!!!!!!!!!!!!!!!!!!!!
@@ -528,53 +531,28 @@ do i = 1,neqn
 		elseif (ichemo == TRACER) then
 			dCreact = membrane_flux/vol_cm3
 		elseif (im == 0) then
-			Cdrug(0) = C
-		    if (metabolised(ict,0) .and. Cdrug(0) > 0) then
-				KmetC(0) = dp%Kmet0(ict,0)*Cdrug(0)
+		    if (metabolised(ict,0) .and. C > 0) then
+				KmetC = dp%Kmet0(ict,0)*C
 				if (dp%Vmax(ict,0) > 0) then
-					KmetC(0) = KmetC(0) + dp%Vmax(ict,0)*Cdrug(0)/(dp%Km(ict,0) + Cdrug(0))
+					KmetC = KmetC + dp%Vmax(ict,0)*C/(dp%Km(ict,0) + C)
 				endif
-				dCreact = -(1 - dp%C2(ict,0) + dp%C2(ict,0)*dp%KO2(ict,0)/(dp%KO2(ict,0) + Cin(OXYGEN)))*KmetC(0)
+				dCreact = -(1 - dp%C2(ict,0) + dp%C2(ict,0)*dp%KO2(ict,0)**n_O2(0)/(dp%KO2(ict,0)**n_O2(0) + Cin(OXYGEN)**n_O2(0)))*KmetC
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
-		elseif (im == 1) then	! ichemo-1 is the PARENT drug 
-			Cdrug(0) = Cin(ichemo-1)
-			Cdrug(1) = C
-			if (metabolised(ict,0) .and. Cdrug(0) > 0) then
-				KmetC(0) = dp%Kmet0(ict,0)*Cdrug(0)
-				if (dp%Vmax(ict,0) > 0) then
-					KmetC(0) = KmetC(0) + dp%Vmax(ict,0)*Cdrug(0)/(dp%Km(ict,0) + Cdrug(0))
-				endif
-!				dCreact = (1 - dp%C2(ict,0) + dp%C2(ict,0)*dp%KO2(ict,0)/(dp%KO2(ict,0) + Cin(OXYGEN)))*dp%Kmet0(ict,0)*Cin(ichemo-1)
-				dCreact = (1 - dp%C2(ict,0) + dp%C2(ict,0)*dp%KO2(ict,0)/(dp%KO2(ict,0) + Cin(OXYGEN)))*KmetC(0)
+		elseif (im == 1) then	! ichemo-1 is the PARENT drug
+			if (metabolised(ict,0) .and. Cin(ichemo-1) > 0) then
+				dCreact = (1 - dp%C2(ict,0) + dp%C2(ict,0)*dp%KO2(ict,0)**n_O2(0)/(dp%KO2(ict,0)**n_O2(0) + Cin(OXYGEN)**n_O2(0)))*dp%Kmet0(ict,0)*Cin(ichemo-1)
 			endif
-			if (metabolised(ict,1) .and. Cdrug(1) > 0) then
-				KmetC(1) = dp%Kmet0(ict,1)*Cdrug(1)
-				if (dp%Vmax(ict,1) > 0) then
-					KmetC(1) = KmetC(1) + dp%Vmax(ict,1)*Cdrug(1)/(dp%Km(ict,1) + Cdrug(1))
-				endif
-!				dCreact = dCreact - (1 - dp%C2(ict,1) + dp%C2(ict,1)*dp%KO2(ict,1)/(dp%KO2(ict,1) + Cin(OXYGEN)))*dp%Kmet0(ict,1)*C
-				dCreact = dCreact - (1 - dp%C2(ict,1) + dp%C2(ict,1)*dp%KO2(ict,1)/(dp%KO2(ict,1) + Cin(OXYGEN)))*KmetC(1)
+			if (metabolised(ict,1) .and. C > 0) then
+				dCreact = dCreact - (1 - dp%C2(ict,1) + dp%C2(ict,1)*dp%KO2(ict,1)**n_O2(1)/(dp%KO2(ict,1)**n_O2(1) + Cin(OXYGEN)**n_O2(1)))*dp%Kmet0(ict,1)*C
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
 		elseif (im == 2) then	! ichemo-1 is the METAB1
-			Cdrug(1) = Cin(ichemo-1)
-			Cdrug(2) = C
-			if (metabolised(ict,1) .and. Cdrug(1) > 0) then
-				KmetC(1) = dp%Kmet0(ict,1)*Cdrug(1)
-				if (dp%Vmax(ict,1) > 0) then
-					KmetC(1) = KmetC(1) + dp%Vmax(ict,1)*Cdrug(1)/(dp%Km(ict,1) + Cdrug(1))
-				endif
-!				dCreact = (1 - dp%C2(ict,1) + dp%C2(ict,1)*dp%KO2(ict,1)/(dp%KO2(ict,1) + Cin(OXYGEN)))*dp%Kmet0(ict,1)*Cin(ichemo-1)
-				dCreact = (1 - dp%C2(ict,1) + dp%C2(ict,1)*dp%KO2(ict,1)/(dp%KO2(ict,1) + Cin(OXYGEN)))*KmetC(1)
+			if (metabolised(ict,1) .and. Cin(ichemo-1) > 0) then
+				dCreact = (1 - dp%C2(ict,1) + dp%C2(ict,1)*dp%KO2(ict,1)**n_O2(1)/(dp%KO2(ict,1)**n_O2(1) + Cin(OXYGEN)**n_O2(1)))*dp%Kmet0(ict,1)*Cin(ichemo-1)
 			endif
-			if (metabolised(ict,2) .and. Cdrug(2) > 0) then
-				KmetC(2) = dp%Kmet0(ict,2)*Cdrug(2)
-				if (dp%Vmax(ict,2) > 0) then
-					KmetC(2) = KmetC(2) + dp%Vmax(ict,2)*Cdrug(2)/(dp%Km(ict,2) + Cdrug(2))
-				endif
-!				dCreact = dCreact - (1 - dp%C2(ict,2) + dp%C2(ict,2)*dp%KO2(ict,2)/(dp%KO2(ict,2) + Cin(OXYGEN)))*dp%Kmet0(ict,2)*C
-				dCreact = dCreact - (1 - dp%C2(ict,2) + dp%C2(ict,2)*dp%KO2(ict,2)/(dp%KO2(ict,2) + Cin(OXYGEN)))*KmetC(2)
+			if (metabolised(ict,2) .and. C > 0) then
+				dCreact = dCreact - (1 - dp%C2(ict,2) + dp%C2(ict,2)*dp%KO2(ict,2)**n_O2(2)/(dp%KO2(ict,2)**n_O2(2) + Cin(OXYGEN)**n_O2(2)))*dp%Kmet0(ict,2)*C
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
 		endif
@@ -651,9 +629,10 @@ end subroutine
 !   * work(:,:) is correctly sized (ODEdiff%nextra)
 ! Currently the relaxation method is used only for OXYGEN
 !----------------------------------------------------------------------------------
-subroutine Solver(it,tstart,dt,nc)
+subroutine Solver(it,tstart,dt,nc,ok)
 integer :: it, nc
 real(REAL_KIND) :: tstart, dt
+logical :: ok
 integer :: ichemo, nvars, ntvars, ic, kcell, site(3), iv, nth
 integer :: ie, ki, i
 real(REAL_KIND) :: t, tend
@@ -661,7 +640,6 @@ real(REAL_KIND), allocatable :: state(:,:)
 real(REAL_KIND) :: C(MAX_CHEMO), Ce(MAX_CHEMO), dCreact(MAX_CHEMO)
 real(REAL_KIND) :: dCsum, dC
 real(REAL_KIND) :: timer1, timer2
-logical :: ok
 ! Variables for RKC
 integer :: info(4), idid
 real(REAL_KIND) :: rtol, atol(1), sprad_ratio
@@ -698,9 +676,10 @@ do ic = 1,nchemo
 	tend = t + dt
 	call rkc(comm_rkc(ichemo),nvars,f_rkc,state(:,ichemo),t,tend,rtol,atol,info,work_rkc,idid,ichemo)
 	if (idid /= 1) then
-		write(logmsg,*) ' Failed at t = ',t,' with idid = ',idid
+		write(logmsg,*) 'Solver: Failed at t = ',t,' with idid = ',idid
 		call logger(logmsg)
-		stop
+		ok = .false.
+		return
 	endif
 enddo
 
@@ -1250,6 +1229,23 @@ O2_metab = metab
 end function
 
 !----------------------------------------------------------------------------------
+! Computes metabolism rate as a fraction of the maximum cell rate
+!----------------------------------------------------------------------------------
+real(REAL_KIND) function glucose_metab(C)
+real(REAL_KIND) :: C
+integer :: N
+real(REAL_KIND) :: MM_C0
+
+N = chemo(GLUCOSE)%Hill_N
+MM_C0 = chemo(GLUCOSE)%MM_C0
+if (C > 0) then
+	glucose_metab = C**N/(MM_C0**N + C**N)
+else
+	glucose_metab = 0
+endif
+end function
+
+!----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine WriteSolution(msg,y,n)
 character*(*) :: msg
@@ -1270,6 +1266,7 @@ if (use_FD) then
 else
 	call UpdateCbnd_mixed(dt)
 endif
+call UpdateChemomap
 end subroutine
 
 !--------------------------------------------------------------------------------------
@@ -1317,11 +1314,13 @@ end subroutine
 subroutine UpdateCbnd_FD(dt)
 real(REAL_KIND) :: dt
 integer :: kpar = 0
-real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO)
+real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO), tnow
 integer :: ixb, iyb, izb
 integer :: i, ic, ichemo, n = 100
 real(REAL_KIND) :: alpha_Cbnd = 0.3
+real(REAL_KIND) :: t_buffer = 3600	! one hour delay before applying smoothing to Cbnd
 
+tnow = istep*DELTA_T
 call SetRadius(Nsites)
 rad = Radius*DELTA_X
 csum = 0
@@ -1344,10 +1343,10 @@ do ic = 1,nchemo
 		stop
 	endif
 enddo
-if (istep > 6) then
+if ((tnow - t_lastmediumchange) > t_buffer) then
 	chemo(OXYGEN)%medium_Cbnd = alpha_Cbnd*chemo(OXYGEN)%medium_Cbnd + (1 - alpha_Cbnd)*medium_Cbnd_prev
 endif
-!write(nflog,'(a,e12.3)') 'O2 medium_Cbnd: ',chemo(1)%medium_Cbnd
+write(nflog,'(a,e12.3)') 'O2 medium_Cbnd: ',chemo(1)%medium_Cbnd
 medium_Cbnd_prev = chemo(OXYGEN)%medium_Cbnd
 csum = 0
 do ic = 1,nchemo

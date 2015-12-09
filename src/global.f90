@@ -45,10 +45,6 @@ integer, parameter :: DRUG_B = DRUG_A + 3
 integer, parameter :: DNB_DRUG = DRUG_B
 integer, parameter :: DNB_DRUG_METAB_1 = DNB_DRUG + 1
 integer, parameter :: DNB_DRUG_METAB_2 = DNB_DRUG + 2
-!integer, parameter :: DRUG_C = DRUG_B + 3
-!integer, parameter :: NIM_DRUG = DRUG_C
-!integer, parameter :: NIM_DRUG_METAB_1 = NIM_DRUG + 1
-!integer, parameter :: NIM_DRUG_METAB_2 = NIM_DRUG + 2
 integer, parameter :: MAX_CHEMO = DRUG_B + 2
 integer, parameter :: GROWTH_RATE = MAX_CHEMO + 1	! (not used here, used in the GUI)
 integer, parameter :: CELL_VOLUME = MAX_CHEMO + 2
@@ -64,19 +60,11 @@ integer, parameter :: MEDIUM_EVENT = 3
 
 integer, parameter :: DIST_NV = 20
 
-!integer, parameter :: SN30000 = DRUG_A
-!integer, parameter :: SN30000_METAB = DRUG_A + 1
-!integer, parameter :: DRUG_B = DRUG_A + 2
-!integer, parameter :: PR104A = DRUG_B
-!integer, parameter :: PR104A_METAB_1 = PR104A + 1
-!integer, parameter :: PR104A_METAB_2 = PR104A + 2
-!integer, parameter :: MAX_CHEMO = PR104A_METAB_2
-
 integer, parameter :: EXTRA = 1
 integer, parameter :: INTRA = 2
 integer, parameter :: MAX_CELLTYPES = 4
 integer, parameter :: MAX_DRUGTYPES = 2
-integer, parameter :: max_nlist = 1000000
+integer, parameter :: max_nlist = 200000
 integer, parameter :: NRF = 4
 
 logical, parameter :: use_ODE_diffusion = .true.
@@ -122,31 +110,13 @@ type cell_type
 	real(REAL_KIND) :: t_hypoxic
 	real(REAL_KIND) :: t_anoxia_die
 	real(REAL_KIND) :: M
-	real(REAL_KIND) :: p_death
+	real(REAL_KIND) :: p_rad_death
+	real(REAL_KIND) :: p_drug_death(MAX_DRUGTYPES)
 	logical :: radiation_tag, anoxia_tag	!, drugA_tag, drugB_tag
 	logical :: drug_tag(MAX_DRUGTYPES)
 	logical :: exists
 	integer :: cnr(3,8)
 	real(REAL_KIND) :: wt(8)
-end type
-
-type SN30K_type
-	integer :: nmetabolites
-	real(REAL_KIND) :: diff_coef
-	real(REAL_KIND) :: medium_diff_coef
-	real(REAL_KIND) :: membrane_diff
-	real(REAL_KIND) :: halflife
-	real(REAL_KIND) :: metabolite_halflife
-	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES)
-	real(REAL_KIND) :: C2(MAX_CELLTYPES)
-	real(REAL_KIND) :: KO2(MAX_CELLTYPES)
-	real(REAL_KIND) :: Klesion(MAX_CELLTYPES)
-	integer         :: kill_model(MAX_CELLTYPES)
-	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES)
-	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES)
-	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES)
-	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES)
-	real(REAL_KIND) :: Kd(MAX_CELLTYPES)
 end type
 
 type drug_type
@@ -164,10 +134,12 @@ type drug_type
 	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: KO2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: n_O2(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: Vmax(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: Km(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: Klesion(MAX_CELLTYPES,0:2)
 	integer         :: kill_model(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: death_prob(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: Kd(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES,0:2)
@@ -177,53 +149,6 @@ type drug_type
 	real(REAL_KIND) :: SER_max(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: SER_Km(MAX_CELLTYPES,0:2)
 	real(REAL_KIND) :: SER_KO2(MAX_CELLTYPES,0:2)
-end type
-
-type TPZ_type
-	character*(16) :: name
-	integer :: nmetabolites
-	logical :: use_metabolites
-	real(REAL_KIND) :: diff_coef(0:2)
-	real(REAL_KIND) :: medium_diff_coef(0:2)
-	real(REAL_KIND) :: membrane_diff_in(0:2)
-	real(REAL_KIND) :: membrane_diff_out(0:2)
-	real(REAL_KIND) :: halflife(0:2)
-	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: KO2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Vmax(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Km(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Klesion(MAX_CELLTYPES,0:2)
-	integer         :: kill_model(MAX_CELLTYPES)
-	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES)
-	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES)
-	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES)
-	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES)
-	real(REAL_KIND) :: Kd(MAX_CELLTYPES)
-end type
-
-
-type DNB_type
-	character*(16) :: name
-	integer :: nmetabolites
-	logical :: use_metabolites
-	real(REAL_KIND) :: diff_coef(0:2)
-	real(REAL_KIND) :: medium_diff_coef(0:2)
-	real(REAL_KIND) :: membrane_diff_in(0:2)
-	real(REAL_KIND) :: membrane_diff_out(0:2)
-	real(REAL_KIND) :: halflife(0:2)
-	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: KO2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Vmax(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Km(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Klesion(MAX_CELLTYPES,0:2)
-	integer         :: kill_model(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Kd(MAX_CELLTYPES,0:2)
 end type
 
 type boundary_type
@@ -271,7 +196,10 @@ type event_type
 	integer :: ichemo			! DRUG CHEMO INDEX
 	real(REAL_KIND) :: volume	! DRUG MEDIUM
 	real(REAL_KIND) :: conc		! DRUG
+	real(REAL_KIND) :: O2conc		! DRUG
+	real(REAL_KIND) :: O2flush		! DRUG
 	real(REAL_KIND) :: dose		! RADIATION
+	real(REAL_KIND) :: O2medium	! MEDIUM
 	logical :: done
 end type	
 
@@ -310,7 +238,7 @@ logical :: is_dropped
 integer :: jumpvec(3,27)
 
 integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes, Ncells_type(MAX_CELLTYPES)
-integer :: max_ngaps, ngaps, nadd_sites, Nsites, Nreuse
+integer :: nadd_sites, Nsites, Nreuse
 integer :: Ndrugs_used
 integer :: Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
 integer :: Ndrug_tag(MAX_DRUGTYPES,MAX_CELLTYPES)
@@ -322,7 +250,7 @@ integer :: Nevents
 integer :: nt_saveprofiledata, it_saveprofiledata
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
 real(REAL_KIND) :: dxb, dxb3, dxf, dx3
-real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer
+real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer, t_lastmediumchange
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
@@ -334,10 +262,11 @@ real(REAL_KIND) :: spcrad_value
 real(REAL_KIND) :: total_dMdt
 real(REAL_KIND) :: total_flux_prev, medium_Cbnd_prev
 
-!type(SN30K_type) :: SN30K
-type(TPZ_type) :: TPZ
-type(DNB_type) :: DNB
 type(drug_type), allocatable, target :: drug(:)
+
+integer, allocatable :: gaplist(:)
+integer :: ngaps
+integer, parameter :: max_ngaps = 10000
 
 logical :: bdry_changed
 type(LQ_type) :: LQ(MAX_CELLTYPES)
@@ -346,6 +275,7 @@ character*(128) :: treatmentfile
 character*(128) :: outputfile
 character*(128) :: profiledatafilebase
 character*(2048) :: logmsg
+character*(1024) :: header
 logical :: test_case(4)
 
 TYPE(winsockport) :: awp_0, awp_1
@@ -358,6 +288,7 @@ logical :: use_extracellular_O2
 logical :: use_V_dependence
 logical :: randomise_initial_volume
 logical :: use_FD = .true.
+logical :: use_gaplist = .true.
 logical :: relax
 logical :: use_parallel
 logical :: saveprofiledata
@@ -742,5 +673,57 @@ else
 endif
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+! Squeeze gaps out of cellist array, adjusting occupancy array.
+!-----------------------------------------------------------------------------------------
+subroutine squeezer()
+integer :: last, kcell, site(3), indx(2), i, j, idc, n, region
+
+!write(*,*) 'squeezer'
+!call logger('squeezer')
+if (ngaps == 0) return
+last = nlist
+kcell = 0
+n = 0
+do
+    kcell = kcell+1
+    if (cell_list(kcell)%state == DEAD) then    ! a gap
+        if (kcell == last) exit
+        do
+            if (last == 0) then
+                write(nflog,*) 'last = 0: kcell: ',kcell
+                stop
+            endif
+            if (cell_list(last)%state == DEAD) then
+                last = last-1
+                n = n+1
+                if (n == ngaps) exit
+            else
+                exit
+            endif
+        enddo
+        if (n == ngaps) exit
+!        call copycell2cell(cell_list(last),cell_list(kcell),kcell) 
+        cell_list(kcell) = cell_list(last)
+        site = cell_list(last)%site
+!        indx = occupancy(site(1),site(2),site(3))%indx
+!        do i = 1,2
+!            if (indx(i) == last) indx(i) = kcell
+!        enddo
+		if (occupancy(site(1),site(2),site(3))%indx(1) /= last) then
+			write(nflog,*) 'squeezer: bad occupancy: ',occupancy(site(1),site(2),site(3))%indx(1),last
+			stop
+		endif
+        occupancy(site(1),site(2),site(3))%indx(1) = kcell
+        last = last-1
+        n = n+1
+    endif
+    if (n == ngaps) exit
+enddo
+nlist = nlist - ngaps
+ngaps = 0
+if (dbug) write(nflog,*) 'squeezed: ',n,nlist
+
+end subroutine
 
 end module

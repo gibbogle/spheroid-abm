@@ -70,6 +70,8 @@ namespace Global
     bool recordingVTK;
     bool showingFACS;
     bool recordingFACS;
+    bool showingField;
+    bool recordingField;
 
 
 } // namespace Global

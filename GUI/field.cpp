@@ -351,7 +351,19 @@ void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logsca
 {
     double f, denom, logcmin, logc;
     int rgb_lo[3], rgb_hi[3], i;
+    bool copy_scell = true;
 
+    if (copy_scell) {
+        rgbcol[0] = 0;
+        if (cmax > 0) {
+            rgbcol[1] = 255*min(c,cmax)/cmax;
+            rgbcol[2] = 255*min(c,cmax)/cmax;
+        } else {
+            rgbcol[1] = 0;
+            rgbcol[2] = 0;
+        }
+        return;
+    }
     if (use_logscale) {
         if (cmin == cmax) {
             f = 1;
@@ -439,7 +451,7 @@ void Field::displayField(int hr, int *res)
     int Nc;
 
     ichemo = Global::GUI_to_DLL_index[cell_constituent];
-    LOG_QMSG("displayField: " + QString::number(cell_constituent) + "-->" + QString::number(ichemo));
+//    LOG_QMSG("displayField: " + QString::number(cell_constituent) + "-->" + QString::number(ichemo));
     use_log = false;    // temporary
     *res = 0;
     hour = hr;
@@ -471,7 +483,6 @@ void Field::displayField(int hr, int *res)
         }
         slice_changed = false;
     }
-
     if (axis == X_AXIS) {           // Y-Z plane
         xindex = 1;
         yindex = 2;
@@ -504,9 +515,8 @@ void Field::displayField(int hr, int *res)
     d0 = w*Global::dfraction;
     cmin = 1.0e10;
     cmax = 0;
-    rmax = 0;
+    rmax = 1;
     for (i=0; i<nsites; i++) {
-        rmax = MAX(rmax,data[i].conc[GROWTH_RATE]);     // GROWTH_RATE = Global::MAX_CHEMO+1
         cmin = MIN(MAX(cmin,0),data[i].conc[ichemo]);
         cmax = MAX(cmax,data[i].conc[ichemo]);
         // Flip it
@@ -539,12 +549,29 @@ void Field::displayField(int hr, int *res)
         yp = int(a*iy + b - w);
         volume = this->data[i].volume;      // = 0 if there is no cell
         if (volume > 0) {
+            double f = 0;
             scale = pow(volume,0.3333);
             d = scale*d0;   // fix this - need to change d0
-            double f = data[i].conc[GROWTH_RATE]/rmax;
-            chooseRateColor(f,rgbcol);
+            if (this->data[i].state == 0) {
+                f = data[i].conc[GROWTH_RATE]/rmax;      // currently colour cells only by growth rate, now fraction of max growth rate
+                chooseRateColor(f,rgbcol);
+            } else if (this->data[i].state == 1) {
+                rgbcol[0] = 50;
+                rgbcol[1] = 100;
+                rgbcol[2] = 32;
+            } else if (this->data[i].state == 2) {
+                rgbcol[0] = 255;
+                rgbcol[1] = 0;
+                rgbcol[2] = 0;
+            } else if (this->data[i].state == 3) {
+                rgbcol[0] = 255;
+                rgbcol[1] = 0;
+                rgbcol[2] = 255;
+            }
             brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);
+//            sprintf(msg,"i: %6d f: %6.3f vol: %6.3f",i,f,volume);
+//            LOG_MSG(msg);
         }
     }
     view->show();

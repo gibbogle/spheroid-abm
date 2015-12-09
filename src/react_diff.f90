@@ -43,8 +43,6 @@ use, intrinsic :: iso_c_binding
 
 implicit none
 
-real(REAL_KIND) :: alpha_flux = 0.3
-
 contains
 
 !-------------------------------------------------------------------------------------------
@@ -402,6 +400,7 @@ logical :: zero
 real(REAL_KIND) :: Kin, Kout
 integer :: kcell
 type(cell_type), pointer :: cp
+real(REAL_KIND) :: alpha_flux = 0.3
 
 !write(*,*) 'getF_const: ',ichemo,nlist
 
@@ -492,7 +491,8 @@ real(REAL_KIND) :: Vin, Cex, Cin, Cex_t, Cin_t
 real(REAL_KIND) :: Kin, Kout, Kd, Kmax, VKdecay, C0, a, b, c, D, r(3)
 integer :: i, n, ictyp, idrug, im
 real(REAL_KIND) :: CO2, C_parent, C_metab1
-real(REAL_KIND) :: C2_0, C2_1, C2_2, KO2_0, KO2_1, KO2_2, Kmet0_0, Kmet0_1, Kmet0_2
+!real(REAL_KIND) :: C2_0, C2_1, C2_2, KO2_0, KO2_1, KO2_2, Kmet0_0, Kmet0_1, Kmet0_2
+real(REAL_KIND) :: C2(0:2), KO2(0:2), Kmet0(0:2), n_O2(0:2)
 real(REAL_KIND) :: K1, K2, Km, Vmax
 type(drug_type), pointer :: dp
 
@@ -548,14 +548,19 @@ else	! parent drug or drug metabolite
 	idrug = (ichemo - TRACER - 1)/3 + 1
 	dp => drug(idrug)
 	im = ichemo - TRACER - 1 - 3*(idrug-1)
+	C2(:) = dp%C2(ictyp,:)
+	KO2(:) = dp%KO2(ictyp,:)
+	Kmet0(:) = dp%Kmet0(ictyp,:)
+	n_O2(:) = dp%n_O2(ictyp,:)
 	if (im == 0) then		! parent
-		Kmet0_0 = dp%Kmet0(ictyp,0)
-		C2_0 = dp%C2(ictyp,0)
-		KO2_0 = dp%KO2(ictyp,0)
+!		Kmet0_0 = dp%Kmet0(ictyp,0)
+!		C2_0 = dp%C2(ictyp,0)
+!		KO2_0 = dp%KO2(ictyp,0)
 		Km = dp%Km(ictyp,0)
 		Vmax = dp%Vmax(ictyp,0)
-		K1 = (1 - C2_0 + C2_0*KO2_0/(KO2_0 + CO2))*Kmet0_0
-		K2 = K1*Vmax/Kmet0_0
+!		K1 = (1 - C2_0 + C2_0*KO2_0/(KO2_0 + CO2))*Kmet0_0
+		K1 = (1 - C2(0) + C2(0)*KO2(0)**n_O2(0)/(KO2(0)**n_O2(0) + CO2**n_O2(0)))*Kmet0(0)
+		K2 = K1*Vmax/Kmet0(0)
 		if (K2 /= 0) then	!quadratic: a.x^2 + b.x + c = 0
 			a = K1 + Kd + Kout/Vin
 			b = a*Km + K2 - Kin*Cex/Vin
@@ -576,25 +581,25 @@ else	! parent drug or drug metabolite
 	elseif (im == 1) then	! metab1
 		CO2 = cell_list(kcell)%conc(OXYGEN)
 		C_parent = cell_list(kcell)%conc(ichemo-1)
-		C2_0 = dp%C2(ictyp,0)
-		KO2_0 = dp%KO2(ictyp,0)
-		Kmet0_0 = dp%Kmet0(ictyp,0)
-		C2_1 = dp%C2(ictyp,1)
-		KO2_1 = dp%KO2(ictyp,1)
-		Kmet0_1 = drug(idrug)%Kmet0(ictyp,1)
-		Cin = ((1 - C2_0 + C2_0*KO2_0/(KO2_0 + CO2))*Kmet0_0*C_parent + Kin*Cex/Vin) &
-		     /((1 - C2_1 + C2_1*KO2_1/(KO2_1 + CO2))*Kmet0_1 + Kd + Kout/Vin)
+!		C2_0 = dp%C2(ictyp,0)
+!		KO2_0 = dp%KO2(ictyp,0)
+!		Kmet0_0 = dp%Kmet0(ictyp,0)
+!		C2_1 = dp%C2(ictyp,1)
+!		KO2_1 = dp%KO2(ictyp,1)
+!		Kmet0_1 = drug(idrug)%Kmet0(ictyp,1)
+		Cin = ((1 - C2(0) + C2(0)*KO2(0)**n_O2(0)/(KO2(0)**n_O2(0) + CO2**n_O2(0)))*Kmet0(0)*C_parent + Kin*Cex/Vin) &
+		     /((1 - C2(1) + C2(1)*KO2(1)**n_O2(1)/(KO2(1)**n_O2(1) + CO2**n_O2(1)))*Kmet0(1) + Kd + Kout/Vin)
 	elseif (im == 2) then	! metab2
 		CO2 = cell_list(kcell)%conc(OXYGEN)
 		C_metab1 = cell_list(kcell)%conc(ichemo-1)
-		C2_1 = dp%C2(ictyp,1)
-		KO2_1 = dp%KO2(ictyp,1)
-		Kmet0_1 = dp%Kmet0(ictyp,1)
-		C2_2 = dp%C2(ictyp,2)
-		KO2_2 = dp%KO2(ictyp,2)
-		Kmet0_2 = dp%Kmet0(ictyp,2)
-		Cin = ((1 - C2_1 + C2_1*KO2_1/(KO2_1 + CO2))*Kmet0_1*C_metab1 + Kin*Cex/Vin) &
-		     /((1 - C2_2 + C2_2*KO2_2/(KO2_2 + CO2))*Kmet0_2 + Kd + Kout/Vin)
+!		C2_1 = dp%C2(ictyp,1)
+!		KO2_1 = dp%KO2(ictyp,1)
+!		Kmet0_1 = dp%Kmet0(ictyp,1)
+!		C2_2 = dp%C2(ictyp,2)
+!		KO2_2 = dp%KO2(ictyp,2)
+!		Kmet0_2 = dp%Kmet0(ictyp,2)
+		Cin = ((1 - C2(1) + C2(1)*KO2(1)**n_O2(1)/(KO2(1)**n_O2(1) + CO2**n_O2(1)))*Kmet0(1)*C_metab1 + Kin*Cex/Vin) &
+		     /((1 - C2(2) + C2(2)*KO2(2)**n_O2(2)/(KO2(2)**n_O2(2) + CO2**n_O2(2)))*Kmet0(2) + Kd + Kout/Vin)
 	endif
 endif
 end function
@@ -608,8 +613,10 @@ real(REAL_KIND) :: Vin, Cex, dCexdt, Cin
 real(REAL_KIND) :: Kin, Kout, Kd, Kmax, VKdecay, dCdt, delta, C0, a, b, c, D, r(3)
 integer :: i, n, ictyp, idrug, im
 real(REAL_KIND) :: CO2, C_parent, C_metab1
-real(REAL_KIND) :: C2_0, C2_1, C2_2, KO2_0, KO2_1, KO2_2, Kmet0_0, Kmet0_1, Kmet0_2
-real(REAL_KIND) :: Km, Vmax, K1_0, K2_0, K1_1, K2_1, K1_2, K2_2
+!real(REAL_KIND) :: C2_0, C2_1, C2_2, KO2_0, KO2_1, KO2_2, Kmet0_0, Kmet0_1, Kmet0_2
+real(REAL_KIND) :: C2(0:2), KO2(0:2), Kmet0(0:2), n_O2(0:2)
+real(REAL_KIND) :: K1(0:2), K2(0:2)
+real(REAL_KIND) :: Km, Vmax		!, K1_0, K2_0, K1_1, K2_1, K1_2, K2_2
 type(drug_type), pointer :: dp
 type(cell_type), pointer :: cp
 
@@ -665,54 +672,65 @@ else	! parent drug or drug metabolite
 	idrug = (ichemo - TRACER - 1)/3 + 1
 	dp => drug(idrug)
 	im = ichemo - TRACER - 1 - 3*(idrug-1)
+	C2(:) = dp%C2(ictyp,:)
+	KO2(:) = dp%KO2(ictyp,:)
+	Kmet0(:) = dp%Kmet0(ictyp,:)
+	n_O2(:) = dp%n_O2(ictyp,:)
 	if (im == 0) then		! parent
-		Kmet0_0 = dp%Kmet0(ictyp,0)
-		C2_0 = dp%C2(ictyp,0)
-		KO2_0 = dp%KO2(ictyp,0)
+!		Kmet0_0 = dp%Kmet0(ictyp,0)
+!		C2_0 = dp%C2(ictyp,0)
+!		KO2_0 = dp%KO2(ictyp,0)
 		Km = dp%Km(ictyp,0)
 		Vmax = dp%Vmax(ictyp,0)
-		K1_0 = (1 - C2_0 + C2_0*KO2_0/(KO2_0 + CO2))*Kmet0_0
-		K2_0 = K1_0*Vmax/Kmet0_0
-		dCdt = (Kin*dCexdt/Vin)/(Kout/Vin + Kd + K1_0 + K2_0*Km/(Km + CO2)**2)
-		if (K2_0 /= 0) then	!quadratic: a.x^2 + b.x + c = 0
-			a = K1_0 + Kd + Kout/Vin
-			b = a*Km + K2_0 - (Kin*Cex/Vin - dCdt)
+!		K1_0 = (1 - C2_0 + C2_0*KO2_0/(KO2_0 + CO2))*Kmet0_0
+!		K2_0 = K1_0*Vmax/Kmet0_0
+		K1(0) = (1 - C2(0) + C2(0)*KO2(0)**n_O2(0)/(KO2(0)**n_O2(0) + CO2**n_O2(0)))*Kmet0(0)
+		K2(0) = K1(0)*Vmax/Kmet0(0)
+		dCdt = (Kin*dCexdt/Vin)/(Kout/Vin + Kd + K1(0) + K2(0)*Km/(Km + CO2)**2)
+		if (K2(0) /= 0) then	!quadratic: a.x^2 + b.x + c = 0
+			a = K1(0) + Kd + Kout/Vin
+			b = a*Km + K2(0) - (Kin*Cex/Vin - dCdt)
 			c = -Km*(Kin*Cex/Vin - dCdt)
 			b = b/a
 			c = c/a
 			D = sqrt(b*b - 4*c)
 			Cin = (D - b)/2
 		else				! linear: a.x + b = 0
-			a = K1_0 + Kd + Kout/Vin
+			a = K1(0) + Kd + Kout/Vin
 			b = -(Kin*Cex/Vin - dCdt)
 			Cin = -b/a
 		endif
 		Cin = max(Cin,0.0)
 	elseif (im == 1) then	! metab1
 		C_parent = cp%conc(ichemo-1)
-		C2_0 = dp%C2(ictyp,0)
-		KO2_0 = dp%KO2(ictyp,0)
-		Kmet0_0 = dp%Kmet0(ictyp,0)
-		C2_1 = dp%C2(ictyp,1)
-		KO2_1 = dp%KO2(ictyp,1)
-		Kmet0_1 = drug(idrug)%Kmet0(ictyp,1)
-		K1_0 = (1 - C2_0 + C2_0*KO2_0/(KO2_0 + CO2))*Kmet0_0
-		K1_1 = (1 - C2_1 + C2_1*KO2_1/(KO2_1 + CO2))*Kmet0_1
-		dCdt = (Kin*dCexdt/Vin + K1_0*cp%dCdt(ichemo-1))/(Kout/Vin + Kd + K1_1)
-		Cin = (K1_0*C_parent + (Kin*Cex/Vin - dCdt))/(K1_1 + Kd + Kout/Vin)
+!		C2_0 = dp%C2(ictyp,0)
+!		KO2_0 = dp%KO2(ictyp,0)
+!		Kmet0_0 = dp%Kmet0(ictyp,0)
+!		C2_1 = dp%C2(ictyp,1)
+!		KO2_1 = dp%KO2(ictyp,1)
+!		Kmet0_1 = drug(idrug)%Kmet0(ictyp,1)
+!		K1_0 = (1 - C2_0 + C2_0*KO2_0/(KO2_0 + CO2))*Kmet0_0
+!		K1_1 = (1 - C2_1 + C2_1*KO2_1/(KO2_1 + CO2))*Kmet0_1
+		K1(0) = (1 - C2(0) + C2(0)*KO2(0)**n_O2(0)/(KO2(0)**n_O2(0) + CO2**n_O2(0)))*Kmet0(0)
+		K1(1) = (1 - C2(1) + C2(1)*KO2(1)**n_O2(1)/(KO2(1)**n_O2(1) + CO2**n_O2(1)))*Kmet0(1)
+		dCdt = (Kin*dCexdt/Vin + K1(0)*cp%dCdt(ichemo-1))/(Kout/Vin + Kd + K1(1))
+		Cin = (K1(0)*C_parent + (Kin*Cex/Vin - dCdt))/(K1(1) + Kd + Kout/Vin)
 		Cin = max(Cin,0.0)
 	elseif (im == 2) then	! metab2
 		C_metab1 = cp%conc(ichemo-1)
-		C2_1 = dp%C2(ictyp,1)
-		KO2_1 = dp%KO2(ictyp,1)
-		Kmet0_1 = dp%Kmet0(ictyp,1)
-		C2_2 = dp%C2(ictyp,2)
-		KO2_2 = dp%KO2(ictyp,2)
-		Kmet0_2 = dp%Kmet0(ictyp,2)
-		K1_1 = (1 - C2_1 + C2_1*KO2_1/(KO2_1 + CO2))*Kmet0_1
-		K1_2 = (1 - C2_2 + C2_2*KO2_2/(KO2_2 + CO2))*Kmet0_2
-		dCdt = (Kin*dCexdt/Vin + K1_1*cp%dCdt(ichemo-1))/(Kout/Vin + Kd + K1_2)
-		Cin = (K1_1*C_metab1 + (Kin*Cex/Vin - dCdt))/(K1_2 + Kd + Kout/Vin)
+!		C2_1 = dp%C2(ictyp,1)
+!		KO2_1 = dp%KO2(ictyp,1)
+!		Kmet0_1 = dp%Kmet0(ictyp,1)
+!		C2_2 = dp%C2(ictyp,2)
+!		KO2_2 = dp%KO2(ictyp,2)
+!		Kmet0_2 = dp%Kmet0(ictyp,2)
+!		K1_1 = (1 - C2_1 + C2_1*KO2_1/(KO2_1 + CO2))*Kmet0_1
+!		K1_2 = (1 - C2_2 + C2_2*KO2_2/(KO2_2 + CO2))*Kmet0_2
+!		dCdt = (Kin*dCexdt/Vin + K1_1*cp%dCdt(ichemo-1))/(Kout/Vin + Kd + K1_2)
+		K1(1) = (1 - C2(1) + C2(1)*KO2(1)**n_O2(1)/(KO2(1)**n_O2(1) + CO2**n_O2(1)))*Kmet0(1)
+		K1(2) = (1 - C2(2) + C2(2)*KO2(2)**n_O2(2)/(KO2(2)**n_O2(2) + CO2**n_O2(2)))*Kmet0(2)
+		dCdt = (Kin*dCexdt/Vin + K1(1)*cp%dCdt(ichemo-1))/(Kout/Vin + Kd + K1(2))
+		Cin = (K1(1)*C_metab1 + (Kin*Cex/Vin - dCdt))/(K1(2) + Kd + Kout/Vin)
 		Cin = max(Cin,0.0)
 	endif
 endif
@@ -858,7 +876,7 @@ end subroutine
 ! For drugs, the three related constituents are solved for sequentially in the fine grid.
 ! First drug, then metab1 (using drug results), then metab2 (using metab1 results).
 !-------------------------------------------------------------------------------------- 
-subroutine diff_solver(dt, framp)
+subroutine diff_solver(dt, framp, ok)
 real(REAL_KIND) :: dt, framp
 integer :: i, k, k1, ix, iy, iz, irow, icol, kc, ic, icc, it
 integer :: ixb, iyb, izb
@@ -873,9 +891,10 @@ real(REAL_KIND) :: dCtol = 1.0e-4
 integer :: ILUtype = 1
 integer :: im, im1, im2, ichemof
 logical :: zeroC(MAX_CHEMO)
-logical :: done
+logical :: done, ok
 logical :: use_const = .true.
 
+ok = .true.
 nfill = 1	! Level of fill for ILUK preconditioner
 tol = 1.0d-6
 tol_b = 1.0d-6
@@ -939,7 +958,7 @@ do ic = 1,nchemo
 		call itsol_solve_fgmr_ILU(icc, rhs, x, im_krylov, maxits, tol_b, iters, ierr)
 	!	write(nflog,*) 'itsol_solve_fgmr_ILU: Cave_b: ierr, iters: ',ierr,iters
 	else
-!		write(nflog,*) 'no solve, zeroC: ',ichemo
+		write(nflog,*) 'no solve, zeroC: ',ichemo
 	endif
 	call itsol_free_precond_ILU(icc, ierr)
 !	write(nflog,*) 'did itsol_free_precond_ILU'
@@ -954,6 +973,10 @@ do ic = 1,nchemo
 			do ixb = 1,NXB
 				k = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
 				x(k) = max(0.0,fdecay*x(k))
+				if (isnan(x(k))) then
+					ok = .false.
+					cycle
+				endif
 				Cave_b(ixb,iyb,izb) = x(k)
 !				msum = msum + x(k)*dxb3		! this sums the mass of constituent in mumols
 !				if (x(k) < 0) then

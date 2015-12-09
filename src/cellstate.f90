@@ -111,7 +111,7 @@ do kcell = 1,nlist
 	if (R < kill_prob) then
 		cell_list(kcell)%radiation_tag = .true.
 		Nradiation_tag(ityp) = Nradiation_tag(ityp) + 1
-		cell_list(kcell)%p_death = p_death
+		cell_list(kcell)%p_rad_death = p_death
 	endif
 enddo
 end subroutine
@@ -229,7 +229,7 @@ subroutine CellDeath(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
 integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, killmodel, kpar=0 
-real(REAL_KIND) :: C_O2, Cdrug, kmet, Kd, dMdt, kill_prob, dkill_prob, tnow
+real(REAL_KIND) :: C_O2, Cdrug, n_O2, kmet, Kd, dMdt, kill_prob, dkill_prob, death_prob, tnow
 type(drug_type), pointer :: dp
 
 !call logger('CellDeath')
@@ -268,20 +268,21 @@ do kcell = 1,nlist
 		dp => drug(idrug)
 		ichemo = TRACER + 1 + 3*(idrug-1)	
 		kill_prob = 0
+		death_prob = 0
 		do im = 0,2
 			if (.not.dp%kills(ityp,im)) cycle
 			killmodel = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
 			Cdrug = cell_list(kcell)%conc(ichemo + im)
 			Kd = dp%Kd(ityp,im)
-			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)/(dp%KO2(ityp,im) + C_O2))*dp%Kmet0(ityp,im)
+			n_O2 = dp%n_O2(ityp,im)
+			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)**n_O2/(dp%KO2(ityp,im)**n_O2 + C_O2**n_O2))*dp%Kmet0(ityp,im)
 			dMdt = kmet*Cdrug
 			call getDrugKillProb(killmodel,Kd,dMdt,Cdrug,dt,dkill_prob)
 			kill_prob = kill_prob + dkill_prob
+			death_prob = max(death_prob,dp%death_prob(ityp,im))
 		enddo
-!		if (kcell == 1) then
-!			write(nflog,'(a,i4,2e12.3)') 'istep,Cdrug,kill_prob: ',istep,Cdrug,kill_prob
-!		endif
 	    if (.not.cell_list(kcell)%drug_tag(idrug) .and. par_uni(kpar) < kill_prob) then		! don't tag more than once
+			cell_list(kcell)%p_drug_death(idrug) = death_prob
 			cell_list(kcell)%drug_tag(idrug) = .true.
             Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1
 		endif
@@ -388,6 +389,13 @@ else
 	occupancy(site(1),site(2),site(3))%C = ((Vsite_cm3 - V)*occupancy(site(1),site(2),site(3))%C + V*cell_list(kcell)%conc)/Vsite_cm3
 endif
 !call NecroticMigration(site)
+ngaps = ngaps + 1
+if (ngaps > max_ngaps) then
+    write(logmsg,'(a,i6,i6)') 'CellDies: ngaps > max_ngaps: ',ngaps,max_ngaps
+    call logger(logmsg)
+    stop
+endif
+gaplist(ngaps) = kcell
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -522,11 +530,11 @@ real(REAL_KIND) :: dt
 logical :: ok
 integer :: kcell, nlist0, site(3), ityp, idrug, kpar=0
 integer :: divide_list(10000), ndivide, i
-real(REAL_KIND) :: tnow, C_O2, metab, dVdt, vol0, r_mean(2), c_rate(2), R
+real(REAL_KIND) :: tnow, C_O2, C_glucose, metab, metab_O2, metab_glucose, dVdt, vol0, r_mean(2), c_rate(2), R
 real(REAL_KIND) :: Vin_0, Vex_0, dV
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
-logical :: drugkilled
+logical :: drugkilled, glucose_growth
 integer :: C_option = 1
 
 !call logger('CellGrowth')
@@ -535,12 +543,20 @@ nlist0 = nlist
 tnow = istep*DELTA_T
 c_rate(1:2) = log(2.0)/divide_time_mean(1:2)		! Note: to randomise divide time need to use random number, not mean!
 r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
+glucose_growth = chemo(GLUCOSE)%controls_growth
 ndivide = 0
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
 	ityp = cell_list(kcell)%celltype
 	C_O2 = cell_list(kcell)%conc(OXYGEN)
-	metab = O2_metab(C_O2)
+	C_glucose = cell_list(kcell)%conc(GLUCOSE)
+	metab_O2 = O2_metab(C_O2)
+	metab_glucose = glucose_metab(C_glucose)
+	if (glucose_growth) then
+		metab = metab_O2*metab_glucose
+	else
+		metab = metab_O2
+	endif
 	if (use_V_dependence) then
 		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
 	else
@@ -570,9 +586,9 @@ do kcell = 1,nlist0
 		if (cell_list(kcell)%radiation_tag) then
 			R = par_uni(kpar)
 !			if (cell_list(kcell)%generation > 1) then
-!				write(*,'(a,2i6,2f8.4)') 'Radiation-tagged cell: generation, R, p_death: ',kcell,cell_list(kcell)%generation,R,cell_list(kcell)%p_death
+!				write(*,'(a,2i6,2f8.4)') 'Radiation-tagged cell: generation, R, p_death: ',kcell,cell_list(kcell)%generation,R,cell_list(kcell)%p_rad_death
 !			endif
-			if (R < cell_list(kcell)%p_death) then
+			if (R < cell_list(kcell)%p_rad_death) then
 				call CellDies(kcell)
 				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
 !				do idrug = 1,ndrugs_used
@@ -589,16 +605,13 @@ do kcell = 1,nlist0
 		drugkilled = .false.
 		do idrug = 1,ndrugs_used
 			if (cell_list(kcell)%drug_tag(idrug)) then
-				call CellDies(kcell)
-				Ndrug_dead(idrug,ityp) = Ndrug_dead(idrug,ityp) + 1
-!				if (cell_list(kcell)%anoxia_tag) then
-!					Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
-!				endif
-!				if (cell_list(kcell)%radiation_tag) then
-!					Nradiation_tag(ityp) = Nradiation_tag(ityp) - 1
-!				endif
-				drugkilled = .true.
-				exit
+				R = par_uni(kpar)
+				if (R < cell_list(kcell)%p_drug_death(idrug)) then
+					call CellDies(kcell)
+					Ndrug_dead(idrug,ityp) = Ndrug_dead(idrug,ityp) + 1
+					drugkilled = .true.
+					exit
+				endif
 			endif
 		enddo
 		if (drugkilled) cycle
@@ -618,15 +631,24 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine SetInitialGrowthRate
 integer :: kcell, ityp
-real(REAL_KIND) :: c_rate(2), r_mean(2), C_O2, metab, dVdt 
+real(REAL_KIND) :: c_rate(2), r_mean(2), C_O2, C_glucose, metab, metab_O2, metab_glucose, dVdt
+logical :: glucose_growth
 
 c_rate(1:2) = log(2.0)/divide_time_mean(1:2)
 r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
+glucose_growth = chemo(GLUCOSE)%controls_growth
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	ityp = cell_list(kcell)%celltype
 	C_O2 = chemo(OXYGEN)%bdry_conc
-	metab = O2_metab(C_O2)
+	C_glucose = cell_list(kcell)%conc(GLUCOSE)
+	metab_O2 = O2_metab(C_O2)
+	metab_glucose = glucose_metab(C_glucose)
+	if (glucose_growth) then
+		metab = metab_O2*metab_glucose
+	else
+		metab = metab_O2
+	endif
 	if (use_V_dependence) then
 		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
 	else
@@ -1227,27 +1249,43 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! The daughter cell kcell1 is given the same characteristics as kcell0 and placed at site1.
 ! Random variation is introduced into %divide_volume.
-! The concentrations of constituents must be halved NOT TRUE!!!!!!!!!!!!
+! The concentrations of constituents must be halved NOT TRUE!!!!!!!!!!!! 
 !-----------------------------------------------------------------------------------------
 subroutine CloneCell(kcell0,kcell1,site1,ok)
-integer :: kcell0, kcell1, site1(3), ityp
+integer :: kcell0, kcell1, site1(3), ityp, idrug
 logical :: ok
 integer :: kpar = 0
 real(REAL_KIND) :: tnow, R
 
 ok = .true.
 tnow = istep*DELTA_T
-nlist = nlist + 1
-if (nlist > max_nlist) then
-	call logger('Dimension of cell_list() has been exceeded: increase max_nlist and rebuild')
-	ok = .false.
-	return
+
+if (use_gaplist .and. ngaps > 0) then
+    kcell1 = gaplist(ngaps)
+    ngaps = ngaps - 1
+else
+    nlist = nlist + 1
+    if (nlist > max_nlist) then
+		write(logmsg,*) 'Error: Dimension of cell_list() has been exceeded: increase max_nlist and rebuild'
+		call logger(logmsg)
+		ok = .false.
+		return
+	endif
+    kcell1 = nlist
 endif
+
+!nlist = nlist + 1
+!if (nlist > max_nlist) then
+!	call logger('Dimension of cell_list() has been exceeded: increase max_nlist and rebuild')
+!	ok = .false.
+!	return
+!endif
+!kcell1 = nlist
+
 ityp = cell_list(kcell0)%celltype
 Ncells = Ncells + 1
 Ncells_type(ityp) = Ncells_type(ityp) + 1
-kcell1 = nlist
-!if (cell_list(kcell0)%generation > 1 .and. cell_list(kcell0)%radiation_tag) then
+!if (cell_list(kcell0)%generation > 1 .and. cell_list(kcell0)%radiation_tag) then 
 !	write(*,*) 'radiation-tagged cell gen > 1 divides: ',kcell0,cell_list(kcell0)%generation 
 !	stop
 !endif
@@ -1261,12 +1299,18 @@ cell_list(kcell1)%ID = cell_list(kcell0)%ID
 !if (cell_list(kcell0)%ID == 582) then
 !	write(*,*) 'New cell with ID=582: ',kcell1
 !endif
-cell_list(kcell1)%p_death = cell_list(kcell0)%p_death
+cell_list(kcell1)%p_rad_death = cell_list(kcell0)%p_rad_death
+cell_list(kcell1)%p_drug_death = cell_list(kcell0)%p_drug_death
 cell_list(kcell1)%radiation_tag = cell_list(kcell0)%radiation_tag
 if (cell_list(kcell1)%radiation_tag) then
 	Nradiation_tag(ityp) = Nradiation_tag(ityp) + 1
 endif
-cell_list(kcell1)%drug_tag = .false.
+cell_list(kcell1)%drug_tag = cell_list(kcell0)%drug_tag
+do idrug = 1,ndrugs_used
+	if (cell_list(kcell1)%drug_tag(idrug)) then
+		Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1
+	endif
+enddo
 cell_list(kcell1)%anoxia_tag = .false.
 cell_list(kcell1)%exists = .true.
 cell_list(kcell1)%active = .true.
