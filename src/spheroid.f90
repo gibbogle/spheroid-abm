@@ -270,7 +270,7 @@ real(REAL_KIND) :: d, rr(3)
 ok = .false.
 call RngInitialisation
 
-! These are deallocated here instead of in subroutine wrapup so that when a simulation run ends 
+! These are deallocated here instead of in subroutine wrapup so that when a simulation run ends
 ! it will still be possible to view the cell distributions and chemokine concentration fields.
 if (allocated(occupancy)) deallocate(occupancy)
 if (allocated(cell_list)) deallocate(cell_list)
