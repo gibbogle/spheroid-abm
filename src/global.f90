@@ -112,6 +112,10 @@ type cell_type
 	real(REAL_KIND) :: M
 	real(REAL_KIND) :: p_rad_death
 	real(REAL_KIND) :: p_drug_death(MAX_DRUGTYPES)
+	logical :: growth_delay
+	real(REAL_KIND) :: dt_delay
+	real(REAL_KIND) :: t_growth_delay_end			! this is for suppression of growth before first division
+	integer :: N_delayed_cycles_left		! decremented by 1 at each cell division
 	logical :: radiation_tag, anoxia_tag	!, drugA_tag, drugB_tag
 	logical :: drug_tag(MAX_DRUGTYPES)
 	logical :: exists
@@ -208,6 +212,8 @@ type LQ_type
 	real(REAL_KIND) :: alpha_H, beta_H
 	real(REAL_KIND) :: K_ms
 	real(REAL_KIND) :: death_prob
+	real(REAL_KIND) :: growth_delay_factor
+	real(REAL_KIND) :: growth_delay_N
 end type
 
 type(dist_type) :: divide_dist(MAX_CELLTYPES)
@@ -251,7 +257,7 @@ integer :: nt_saveprofiledata, it_saveprofiledata
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
 real(REAL_KIND) :: dxb, dxb3, dxf, dx3
 real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer, t_lastmediumchange
-real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
+real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES), growth_delay_factor(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median(MAX_CELLTYPES), divide_time_shape(MAX_CELLTYPES), divide_time_mean(MAX_CELLTYPES), dt_saveprofiledata
@@ -261,6 +267,7 @@ real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
 real(REAL_KIND) :: total_dMdt
 real(REAL_KIND) :: total_flux_prev, medium_Cbnd_prev
+real(REAL_KIND) :: start_wtime
 
 type(drug_type), allocatable, target :: drug(:)
 
@@ -284,6 +291,7 @@ logical :: use_CPORT1 = .false.
 logical :: stopped, clear_to_send
 logical :: simulation_start, par_zig_init, initialized
 logical :: use_radiation, use_treatment
+logical :: use_growth_suppression = .true.	! see usage in subroutine CellGrowth
 logical :: use_extracellular_O2
 logical :: use_V_dependence
 logical :: randomise_initial_volume

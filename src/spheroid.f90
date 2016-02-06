@@ -38,6 +38,8 @@ call ReadCellParams(ok)
 if (.not.ok) return
 call logger("did ReadCellParams")
 
+start_wtime = wtime()
+
 if (ncpu == 0) then
 	ncpu = ncpu_input
 endif
@@ -449,12 +451,16 @@ read(nfcell,*) LQ(1)%OER_am
 read(nfcell,*) LQ(1)%OER_bm
 read(nfcell,*) LQ(1)%K_ms
 read(nfcell,*) LQ(1)%death_prob
+read(nfcell,*) LQ(1)%growth_delay_factor
+read(nfcell,*) LQ(1)%growth_delay_N
 read(nfcell,*) LQ(2)%alpha_H
 read(nfcell,*) LQ(2)%beta_H
 read(nfcell,*) LQ(2)%OER_am
 read(nfcell,*) LQ(2)%OER_bm
 read(nfcell,*) LQ(2)%K_ms
 read(nfcell,*) LQ(2)%death_prob
+read(nfcell,*) LQ(2)%growth_delay_factor
+read(nfcell,*) LQ(2)%growth_delay_N
 read(nfcell,*) O2cutoff(1)
 read(nfcell,*) O2cutoff(2)
 read(nfcell,*) O2cutoff(3)
@@ -507,8 +513,9 @@ chemo(GLUCOSE)%used = (iuse_glucose == 1)
 chemo(TRACER)%used = (iuse_tracer == 1)
 chemo(OXYGEN)%MM_C0 = chemo(OXYGEN)%MM_C0/1000		! uM -> mM
 chemo(GLUCOSE)%MM_C0 = chemo(GLUCOSE)%MM_C0/1000	! uM -> mM
+LQ(:)%growth_delay_factor = 60*60*LQ(:)%growth_delay_factor	! hours -> seconds
 divide_dist(1:2)%class = LOGNORMAL_DIST
-divide_time_median(1:2) = 60*60*divide_time_median(1:2)		! hours -> seconds
+divide_time_median(1:2) = 60*60*divide_time_median(1:2)			! hours -> seconds
 sigma(1:2) = log(divide_time_shape(1:2))
 !divide_dist%p1 = log(divide_time_mean/exp(sigma*sigma/2))	
 divide_dist(1:2)%p1 = log(divide_time_median(1:2))	
@@ -971,6 +978,7 @@ cell_list(k)%radiation_tag = .false.
 cell_list(k)%anoxia_tag = .false.
 cell_list(k)%exists = .true.
 cell_list(k)%active = .true.
+cell_list(k)%growth_delay = .false.
 cell_list(k)%p_rad_death = 0
 R = par_uni(kpar)
 cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
@@ -1369,6 +1377,8 @@ logical :: ok = .true.
 logical :: dbug
 
 !call logger('simulate_step')
+!write(*,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
+!write(nflog,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
 dbug = .false.
 if (Ncells == 0) then
 	call logger('Ncells = 0')
@@ -1391,8 +1401,8 @@ endif
 if (bdry_debug) write(*,*) 'istep, bdry_changed: ',istep,bdry_changed
 if (dbug .or. mod(istep,nthour) == 0) then
 	diam_um = 2*DELTA_X*Radius*10000
-	write(logmsg,'(a,2i8,a,2i8,a,f8.1,a,i2)') &
-		'istep, hour: ',istep,istep/nthour,'  nlist, ncells: ',nlist,ncells,'  diam: ',diam_um,'  nchemo: ',nchemo
+	write(logmsg,'(a,2i6,a,2i6,a,f6.1,a,i2)') &
+		'istep, hour: ',istep,istep/nthour,' nlist, ncells: ',nlist,ncells,' diam: ',diam_um,' nchemo: ',nchemo
 	call logger(logmsg)
 	write(nflog,'(a,2f8.4)') 'bdryconc: O2, glucose: ',bdryconc(OXYGEN),bdryconc(GLUCOSE)
 endif
@@ -1495,6 +1505,7 @@ endif
 if (.not.use_TCP .and. (mod(istep,6) == 0)) then
 	call get_concdata(nvars, ns, dxc, ex_conc)
 endif
+!write(nflog,'(a,f8.3)') 'did simulate_step: time: ',wtime()-start_wtime
 end subroutine
 
 !--------------------------------------------------------------------------------
