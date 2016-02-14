@@ -118,6 +118,7 @@ type cell_type
 	integer :: N_delayed_cycles_left		! decremented by 1 at each cell division
 	logical :: radiation_tag, anoxia_tag	!, drugA_tag, drugB_tag
 	logical :: drug_tag(MAX_DRUGTYPES)
+	logical :: G2_M
 	logical :: exists
 	integer :: cnr(3,8)
 	real(REAL_KIND) :: wt(8)
@@ -257,7 +258,7 @@ integer :: nt_saveprofiledata, it_saveprofiledata
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
 real(REAL_KIND) :: dxb, dxb3, dxf, dx3
 real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer, t_lastmediumchange
-real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES), growth_delay_factor(MAX_CELLTYPES)
+real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median(MAX_CELLTYPES), divide_time_shape(MAX_CELLTYPES), divide_time_mean(MAX_CELLTYPES), dt_saveprofiledata

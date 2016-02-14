@@ -351,7 +351,7 @@ void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logsca
 {
     double f, denom, logcmin, logc;
     int rgb_lo[3], rgb_hi[3], i;
-    bool copy_scell = true;
+    bool copy_scell = false;
 
     if (copy_scell) {
         rgbcol[0] = 0;
@@ -531,6 +531,8 @@ void Field::displayField(int hr, int *res)
         view->show();
         return;
     }
+    sprintf(msg,"cell_constituent: %d",cell_constituent);
+    LOG_MSG(msg);
     for (i=0; i<nsites; i++) {
         ix = this->data[i].site[xindex];
         iy = this->data[i].site[yindex];
@@ -539,6 +541,7 @@ void Field::displayField(int hr, int *res)
         chooseFieldColor(data[i].conc[ichemo],cmin,cmax,use_log,rgbcol);
 //        sprintf(msg,"c: %f %f %f rgbcol: %d %d %d",data[i].conc[cell_constituent],cmin,cmax,rgbcol[0],rgbcol[1],rgbcol[2]);
 //        LOG_MSG(msg);
+//        rgbcol[1] = 0;
         brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
         scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
     }

@@ -979,6 +979,7 @@ cell_list(k)%anoxia_tag = .false.
 cell_list(k)%exists = .true.
 cell_list(k)%active = .true.
 cell_list(k)%growth_delay = .false.
+cell_list(k)%G2_M = .false.
 cell_list(k)%p_rad_death = 0
 R = par_uni(kpar)
 cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
@@ -1505,7 +1506,7 @@ endif
 if (.not.use_TCP .and. (mod(istep,6) == 0)) then
 	call get_concdata(nvars, ns, dxc, ex_conc)
 endif
-!write(nflog,'(a,f8.3)') 'did simulate_step: time: ',wtime()-start_wtime
+! write(nflog,'(a,f8.3)') 'did simulate_step: time: ',wtime()-start_wtime
 end subroutine
 
 !--------------------------------------------------------------------------------
