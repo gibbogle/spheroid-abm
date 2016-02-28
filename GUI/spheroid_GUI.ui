@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>3</number>
+           <number>2</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -1420,6 +1420,19 @@ padding: 8px
               <string>Number of days</string>
              </property>
             </widget>
+           </widget>
+           <widget class="QCheckBox" name="cbox_GLUCOSE_GROWTH">
+            <property name="geometry">
+             <rect>
+              <x>540</x>
+              <y>210</y>
+              <width>141</width>
+              <height>18</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Glucose controls growth</string>
+            </property>
            </widget>
           </widget>
           <widget class="QWidget" name="tab_treatment">
