@@ -422,6 +422,10 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
 "Growth delay cycles",
 "For a damaged cell, cell cycle delay persists for a number of cell cycles"},
 
+{"RADIATION_GROWTH_DELAY_ALL", 1, 0, 0,
+"Delay growth of all cells",
+"Growth delay is applied to untagged as well as tagged cells"},
+
 {"HYPOXIA_1", 0.1, 0, 0,
 "Hypoxia threshold 1",
 "Hypoxia threshold 1"},

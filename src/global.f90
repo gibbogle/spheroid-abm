@@ -76,7 +76,6 @@ logical, parameter :: use_migration = .false.	! causing an error with vacant sit
 logical, parameter :: use_medium_flux = .true.	! flux of constituents between spheroid and medium is accounted for.
 logical, parameter :: use_metabolites = .true.
 logical, parameter :: use_celltype_colour = .true.
-logical, parameter :: use_radiation_growth_delay_all = .true.
 
 logical, parameter :: use_Cex_Cin = .true.		! assume equilibrium to derive Cin from Cex
 logical, parameter :: suppress_growth = .false.
@@ -252,7 +251,8 @@ integer :: Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
 integer :: Ndrug_tag(MAX_DRUGTYPES,MAX_CELLTYPES)
 integer :: Nradiation_dead(MAX_CELLTYPES), Nanoxia_dead(MAX_CELLTYPES)
 integer :: Ndrug_dead(MAX_DRUGTYPES,MAX_CELLTYPES)
-logical :: radiation_dosed
+logical :: use_radiation_growth_delay_all = .true.
+!logical :: radiation_dosed
 
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny, ichemo_curr
 integer :: Mnodes, ncpu_input

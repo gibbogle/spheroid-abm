@@ -101,7 +101,7 @@ Nanoxia_tag = 0
 Nradiation_dead = 0
 Ndrug_dead = 0
 Nanoxia_dead = 0
-radiation_dosed = .false.
+!radiation_dosed = .false.
 t_simulation = 0
 it_saveprofiledata = 1
 total_dMdt = 0
@@ -334,7 +334,7 @@ end subroutine
 subroutine ReadCellParams(ok)
 logical :: ok
 integer :: i, idrug, imetab, nmetab, im, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax, iuse_FD
-integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, iV_depend, iV_random
+integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, iV_depend, iV_random, iuse_gd_all
 !integer ::  idrug_decay, imetab_decay
 integer :: ictype, idisplay, isconstant, iglucosegrowth
 integer :: iuse_drop, iconstant, isaveprofiledata
@@ -462,6 +462,8 @@ read(nfcell,*) LQ(2)%K_ms
 read(nfcell,*) LQ(2)%death_prob
 read(nfcell,*) LQ(2)%growth_delay_factor
 read(nfcell,*) LQ(2)%growth_delay_N
+use_radiation_growth_delay_all = (iuse_gd_all == 1)
+read(nfcell,*) iuse_gd_all
 read(nfcell,*) O2cutoff(1)
 read(nfcell,*) O2cutoff(2)
 read(nfcell,*) O2cutoff(3)

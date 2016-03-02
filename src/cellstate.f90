@@ -121,7 +121,7 @@ do kcell = 1,nlist
 			cell_list(kcell)%growth_delay = .false.
 		endif
 	elseif (use_radiation_growth_delay_all .and. LQ(ityp)%growth_delay_N > 0) then
-		radiation_dosed = .true.
+!		radiation_dosed = .true.
 		cell_list(kcell)%growth_delay = .true.
 		cell_list(kcell)%dt_delay = LQ(ityp)%growth_delay_factor*dose
 		cell_list(kcell)%N_delayed_cycles_left = LQ(ityp)%growth_delay_N
