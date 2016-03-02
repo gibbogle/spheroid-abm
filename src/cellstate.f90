@@ -581,40 +581,43 @@ do kcell = 1,nlist0
 !			r_mean = Vdivide0/(2*(divide_time_mean(ityp) + tdelay))	! growth rate reduction
 !		endif
 !	endif
-	C_O2 = cell_list(kcell)%conc(OXYGEN)
-	C_glucose = cell_list(kcell)%conc(GLUCOSE)
-	metab_O2 = O2_metab(C_O2)
-	metab_glucose = glucose_metab(C_glucose)
-	if (glucose_growth) then
-		metab = metab_O2*metab_glucose
-	else
-		metab = metab_O2
+	if (cell_list(kcell)%volume < cell_list(kcell)%divide_volume) then	! still growing - not delayed
+		C_O2 = cell_list(kcell)%conc(OXYGEN)
+		C_glucose = cell_list(kcell)%conc(GLUCOSE)
+		metab_O2 = O2_metab(C_O2)
+		metab_glucose = glucose_metab(C_glucose)
+		if (glucose_growth) then
+			metab = metab_O2*metab_glucose
+		else
+			metab = metab_O2
+		endif
+		if (use_V_dependence) then
+			dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
+		else
+			dVdt = r_mean(ityp)*metab
+		endif
+		if (suppress_growth) then	! for checking solvers
+			dVdt = 0
+		endif
+		site = cell_list(kcell)%site
+		Cin_0 = cell_list(kcell)%conc
+		Cex_0 = occupancy(site(1),site(2),site(3))%C
+		cell_list(kcell)%dVdt = dVdt
+		Vin_0 = cell_list(kcell)%volume*Vcell_cm3	! cm^3
+		Vex_0 = Vsite_cm3 - Vin_0					! cm^3
+		dV = dVdt*dt*Vcell_cm3						! cm^3
+		cell_list(kcell)%volume = (Vin_0 + dV)/Vcell_cm3
+		if (C_option == 1) then
+			! Calculation based on transfer of an extracellular volume dV with constituents, i.e. holding extracellular concentrations constant
+			cell_list(kcell)%conc = (Vin_0*Cin_0 + dV*Cex_0)/(Vin_0 + dV)
+			occupancy(site(1),site(2),site(3))%C = (Vex_0*Cex_0 - dV*Cex_0)/(Vex_0 - dV)	! = Cex_0
+		elseif (C_option == 2) then
+			! Calculation based on change in volumes without mass transfer of constituents
+			cell_list(kcell)%conc = Vin_0*Cin_0/(Vin_0 + dV)
+			occupancy(site(1),site(2),site(3))%C = Vex_0*Cex_0/(Vex_0 - dV)
+		endif
 	endif
-	if (use_V_dependence) then
-		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
-	else
-		dVdt = r_mean(ityp)*metab
-	endif
-	if (suppress_growth) then	! for checking solvers
-		dVdt = 0
-	endif
-	site = cell_list(kcell)%site
-	Cin_0 = cell_list(kcell)%conc
-	Cex_0 = occupancy(site(1),site(2),site(3))%C
-	cell_list(kcell)%dVdt = dVdt
-	Vin_0 = cell_list(kcell)%volume*Vcell_cm3	! cm^3
-	Vex_0 = Vsite_cm3 - Vin_0					! cm^3
-	dV = dVdt*dt*Vcell_cm3						! cm^3
-	cell_list(kcell)%volume = (Vin_0 + dV)/Vcell_cm3
-	if (C_option == 1) then
-		! Calculation based on transfer of an extracellular volume dV with constituents, i.e. holding extracellular concentrations constant
-		cell_list(kcell)%conc = (Vin_0*Cin_0 + dV*Cex_0)/(Vin_0 + dV)
-		occupancy(site(1),site(2),site(3))%C = (Vex_0*Cex_0 - dV*Cex_0)/(Vex_0 - dV)	! = Cex_0
-	elseif (C_option == 2) then
-		! Calculation based on change in volumes without mass transfer of constituents
-		cell_list(kcell)%conc = Vin_0*Cin_0/(Vin_0 + dV)
-		occupancy(site(1),site(2),site(3))%C = Vex_0*Cex_0/(Vex_0 - dV)
-	endif
+	
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then	! time to divide
 		! try letting tagged cell die only after end of G2/M delay
 !		if (cell_list(kcell)%radiation_tag) then
@@ -705,6 +708,7 @@ do kcell = 1,nlist0
 	    divide_list(ndivide) = kcell
 	endif
 enddo
+
 do i = 1,ndivide
     kcell = divide_list(i)
 	kcell_dividing = kcell
