@@ -120,6 +120,13 @@ do kcell = 1,nlist
 		else
 			cell_list(kcell)%growth_delay = .false.
 		endif
+	elseif (use_radiation_growth_delay_all .and. LQ(ityp)%growth_delay_N > 0) then
+		radiation_dosed = .true.
+		cell_list(kcell)%growth_delay = .true.
+		cell_list(kcell)%dt_delay = LQ(ityp)%growth_delay_factor*dose
+		cell_list(kcell)%N_delayed_cycles_left = LQ(ityp)%growth_delay_N
+	else
+		cell_list(kcell)%growth_delay = .false.
 	endif
 enddo
 end subroutine
@@ -609,16 +616,15 @@ do kcell = 1,nlist0
 		occupancy(site(1),site(2),site(3))%C = Vex_0*Cex_0/(Vex_0 - dV)
 	endif
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then	! time to divide
-		if (cell_list(kcell)%radiation_tag) then
-			R = par_uni(kpar)
-!			if (cell_list(kcell)%generation > 1) then
-!				write(*,'(a,2i6,2f8.4)') 'Radiation-tagged cell: generation, R, p_death: ',kcell,cell_list(kcell)%generation,R,cell_list(kcell)%p_rad_death
+		! try letting tagged cell die only after end of G2/M delay
+!		if (cell_list(kcell)%radiation_tag) then
+!			R = par_uni(kpar)
+!			if (R < cell_list(kcell)%p_rad_death) then
+!				call CellDies(kcell)
+!				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
+!				cycle
 !			endif
-			if (R < cell_list(kcell)%p_rad_death) then
-				call CellDies(kcell)
-				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
-				cycle
-			endif
+		!
 !			if (cell_list(kcell)%growth_delay) then
 !				if (.not.cell_list(kcell)%G2_M) then	! this is the first time to divide
 !					cell_list(kcell)%t_growth_delay_end = tnow + cell_list(kcell)%dt_delay
@@ -630,7 +636,7 @@ do kcell = 1,nlist0
 !					cycle
 !				endif
 !			endif
-		endif
+!		endif
 		drugkilled = .false.
 		do idrug = 1,ndrugs_used
 			if (cell_list(kcell)%drug_tag(idrug)) then
@@ -644,19 +650,57 @@ do kcell = 1,nlist0
 			endif
 		enddo
 		if (drugkilled) cycle
-		if (cell_list(kcell)%radiation_tag .and..not.cell_list(kcell)%G2_M) then
-			if (cell_list(kcell)%growth_delay) then
-				if (.not.cell_list(kcell)%G2_M) then	! this is the first time to divide
-					cell_list(kcell)%t_growth_delay_end = tnow + cell_list(kcell)%dt_delay
-					cell_list(kcell)%G2_M = .true.
-				endif
+!		if (cell_list(kcell)%radiation_tag .and..not.cell_list(kcell)%G2_M) then
+!			if (cell_list(kcell)%growth_delay) then
+!				if (.not.cell_list(kcell)%G2_M) then	! this is the first time to divide
+!					cell_list(kcell)%t_growth_delay_end = tnow + cell_list(kcell)%dt_delay
+!					cell_list(kcell)%G2_M = .true.
+!					write(*,'(a,i6,2f8.0)') 't_growth_delay_end: ',kcell,cell_list(kcell)%t_growth_delay_end,cell_list(kcell)%dt_delay
+!				endif
+!				if (tnow > cell_list(kcell)%t_growth_delay_end) then
+!					write(*,*) 'tnow > t_growth_delay_end: ', kcell
+!					cell_list(kcell)%G2_M = .false.
+!				else
+!					cycle
+!				endif
+!			endif
+!		endif
+
+		if (cell_list(kcell)%growth_delay) then
+			if (cell_list(kcell)%G2_M) then
 				if (tnow > cell_list(kcell)%t_growth_delay_end) then
 					cell_list(kcell)%G2_M = .false.
 				else
 					cycle
 				endif
+			else
+				cell_list(kcell)%t_growth_delay_end = tnow + cell_list(kcell)%dt_delay
+				cell_list(kcell)%G2_M = .true.
+				cycle
 			endif
 		endif
+		! try moving death prob test to here
+		if (cell_list(kcell)%radiation_tag) then
+			R = par_uni(kpar)
+			if (R < cell_list(kcell)%p_rad_death) then
+				call CellDies(kcell)
+				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
+				cycle
+			endif
+		endif
+		!
+!		elseif (radiation_dosed) then	! non-tagged cells also experience growth delay
+!			if (cell_list(kcell)%G2_M) then
+!				if (tnow > cell_list(kcell)%t_growth_delay_end) then
+!					cell_list(kcell)%G2_M = .false.
+!				else
+!					cycle
+!				endif
+!			else
+!				cell_list(kcell)%t_growth_delay_end = tnow + cell_list(kcell)%dt_delay
+!				cell_list(kcell)%G2_M = .true.
+!				cycle
+!			endif		
 	    ndivide = ndivide + 1
 	    divide_list(ndivide) = kcell
 	endif

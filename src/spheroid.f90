@@ -101,6 +101,7 @@ Nanoxia_tag = 0
 Nradiation_dead = 0
 Ndrug_dead = 0
 Nanoxia_dead = 0
+radiation_dosed = .false.
 t_simulation = 0
 it_saveprofiledata = 1
 total_dMdt = 0
