@@ -7,6 +7,7 @@ use react_diff
 use winsock  
 use deform
 use drop
+use colony
 
 #include "../src/version.h"
 
@@ -462,8 +463,8 @@ read(nfcell,*) LQ(2)%K_ms
 read(nfcell,*) LQ(2)%death_prob
 read(nfcell,*) LQ(2)%growth_delay_factor
 read(nfcell,*) LQ(2)%growth_delay_N
-use_radiation_growth_delay_all = (iuse_gd_all == 1)
 read(nfcell,*) iuse_gd_all
+use_radiation_growth_delay_all = (iuse_gd_all == 1)
 read(nfcell,*) O2cutoff(1)
 read(nfcell,*) O2cutoff(2)
 read(nfcell,*) O2cutoff(3)
@@ -993,7 +994,7 @@ else
 	cell_list(k)%volume = 1.0
 endif
 !write(nflog,'(a,i6,f6.2)') 'volume: ',k,cell_list(k)%volume
-cell_list(k)%t_divide_last = 0		! not used
+cell_list(k)%t_divide_last = 0		! used in colony growth
 cell_list(k)%t_hypoxic = 0
 cell_list(k)%conc = 0
 cell_list(k)%conc(OXYGEN) = chemo(OXYGEN)%bdry_conc
@@ -1372,7 +1373,7 @@ subroutine simulate_step(res) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 integer :: kcell, site(3), hour, nthour, kpar=0
-real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um, framp
+real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um, framp, tnow
 !integer, parameter :: NT_CONC = 6
 integer :: i, ic, ichemo, ndt
 integer :: nvars, ns
@@ -1391,6 +1392,12 @@ if (Ncells == 0) then
 endif
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
+
+if (istep == -100) then
+	tnow = istep*DELTA_T
+	call make_colony_distribution(tnow)
+	stop
+endif
 
 if (ngaps > 200) then
 	call squeezer

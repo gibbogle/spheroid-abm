@@ -251,6 +251,8 @@ type(drug_type), pointer :: dp
 ok = .true.
 tnow = istep*DELTA_T	! seconds
 nlist0 = nlist
+!write(logmsg,*) 'Nanoxia_tag: ',Nanoxia_tag(1),'  Nanoxia_dead: ',Nanoxia_dead(1)
+!call logger(logmsg)
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	ityp = cell_list(kcell)%celltype
@@ -259,9 +261,10 @@ do kcell = 1,nlist
 !		write(logmsg,*) 'anoxia_tag: ',kcell,cell_list(kcell)%state,tnow,cell_list(kcell)%t_anoxia_die
 !		call logger(logmsg)
 		if (tnow >= cell_list(kcell)%t_anoxia_die) then
-!			call logger('cell dies')
 			call CellDies(kcell)
 			Nanoxia_dead(ityp) = Nanoxia_dead(ityp) + 1
+!			write(logmsg,*) 'cell dies: ndead: ',Nanoxia_dead(ityp)
+!			call logger(logmsg)
 			cycle
 		endif
 	else
@@ -1492,6 +1495,7 @@ if (cell_list(kcell0)%growth_delay) then
 	cell_list(kcell0)%growth_delay = (cell_list(kcell0)%N_delayed_cycles_left > 0)
 endif
 cell_list(kcell0)%G2_M = .false.
+cell_list(kcell0)%t_divide_last = tnow
 cell_list(kcell1)%celltype = cell_list(kcell0)%celltype
 cell_list(kcell1)%state = cell_list(kcell0)%state
 cell_list(kcell1)%generation = cell_list(kcell0)%generation

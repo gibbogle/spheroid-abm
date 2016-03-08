@@ -106,7 +106,8 @@ type cell_type
 	real(REAL_KIND) :: dVdt
 	real(REAL_KIND) :: volume			! fractional volume (fraction of nominal cell volume Vcell_cm3)
 	real(REAL_KIND) :: divide_volume
-	real(REAL_KIND) :: t_divide_last
+	real(REAL_KIND) :: t_divide_last	! these two values are used for colony simulation
+	real(REAL_KIND) :: t_divide_next
 	real(REAL_KIND) :: t_hypoxic
 	real(REAL_KIND) :: t_anoxia_die
 	real(REAL_KIND) :: M
