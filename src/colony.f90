@@ -33,17 +33,18 @@ contains
 subroutine make_colony_distribution(tnow)
 real(REAL_KIND) :: tnow
 real(REAL_KIND) :: V0, dVdt, dt, t, tend
-integer, parameter :: ndist=30
+integer, parameter :: ndist=40
 real(REAL_KIND) :: ddist, dist(ndist)
-integer :: kcell, ityp, n, idist, ncycmax
+integer :: kcell, ityp, n, idist, ncycmax, ntot
 type (cell_type), pointer :: cp
 
 write(*,*) 'make_colony_distribution: nlist: ',nlist
-ncycmax = 24*3600*n_colony_days/divide_time_mean(1) + 2
+ncycmax = 24*3600*n_colony_days/divide_time_mean(1) + 3
 nmax = 2**ncycmax
 allocate(ccell_list(nmax))
 ddist = 50
 dist = 0
+ntot = 0
 tend = tnow + 10*24*3600
 do kcell = 1, nlist
 	cp => cell_list(kcell)
@@ -51,22 +52,28 @@ do kcell = 1, nlist
 	ityp = cp%celltype
 	if (.not.cp%G2_M) then
 		! approximate time to reach divide volume
-		V0 = cp%volume*Vcell_cm3
+!		V0 = cp%volume*Vcell_cm3
+		if (use_divide_time_distribution) then
+			cp%divide_volume = Vdivide0
+		endif
+		V0 = cp%volume	!!!!!!!!!!!!!!
 		dt = ((cp%divide_volume - V0)/cp%divide_volume)*divide_time_mean(ityp)
 	else
 		dt = 0
 	endif
 	t = tnow + dt
-	cp%volume = cp%divide_volume/Vcell_cm3
+!	cp%volume = cp%divide_volume/Vcell_mm3
+	cp%volume = cp%divide_volume	!!!!!!!!!!!
 	! Now simulate colony growth
 	call make_colony(kcell,t,tend,n)
-!	write(*,*) 'cell: n: ',kcell,n
+	write(*,*) 'cell: n: ',kcell,n
+	ntot = ntot + n
 	idist = n/ddist + 1
 	dist(idist) = dist(idist) + 1
 enddo
 dist = dist/sum(dist)
-write(*,*) 'Colony size distribution: '
-write(nfout,*) 'Colony size distribution: '
+write(*,*) 'Colony size distribution: ', nlist,ntot
+write(nfout,*) 'Colony size distribution: ', nlist,ntot
 do idist = 1,ndist
 	write(*,'(i4,a,i4,f6.3)') int((idist-1)*ddist),'-',int(idist*ddist),dist(idist)
 	write(nfout,'(i4,a,i4,f6.3)') int((idist-1)*ddist),'-',int(idist*ddist),dist(idist)
@@ -83,7 +90,7 @@ subroutine make_colony(kcell,t,tend,n)
 integer :: kcell, n
 real(REAL_KIND) :: t, tend, dt 
 integer :: icell, ityp, nl, nl0, kpar=0
-real(REAL_KIND) :: R
+real(REAL_KIND) :: V0, Tdiv0, r_mean, c_rate, dVdt, Tmean, R
 logical :: ok
 type (cell_type), pointer :: cp
 
@@ -92,6 +99,12 @@ ccell_list(1) = cell_list(kcell)
 ccell_list(1)%anoxia_tag = .false.
 ccell_list(1)%drug_tag = .false.
 dt = 3600	! use big time steps, 1h
+ityp = cell_list(kcell)%celltype
+Tdiv0 = divide_time_mean(ityp)
+r_mean = Vdivide0/Tdiv0
+c_rate = log(2.0)/Tdiv0
+ccell_list(1)%volume = cell_list(kcell)%divide_volume
+ccell_list(1)%t_divide_next = t
 nl = 1
 do while (t < tend)
 	t = t + dt
@@ -99,9 +112,8 @@ do while (t < tend)
 	do icell = 1,nl0
 		cp => ccell_list(icell)
 		if (cp%state == DEAD) cycle
-		ityp = cp%celltype
-		if (t > cp%t_divide_next) then
-!			if (icell == 1) write(*,*) 't_divide_next: ',cp%t_divide_next
+		if (t >= cp%t_divide_next) then
+!			if (kcell == nlist) write(*,*) 't_divide_next: ',icell,cp%t_divide_next
 			! Time to divide, unless delayed
 			if (cp%growth_delay) then
 				if (cp%G2_M) then
@@ -133,6 +145,12 @@ do while (t < tend)
 			endif
 			call CloneColonyCell(icell,nl,t,ok)
 		endif
+		if (use_V_dependence) then
+			dVdt = c_rate*cp%volume
+		else
+			dVdt = r_mean
+		endif
+		cp%volume = cp%volume + dt*dVdt
 	enddo
 enddo
 n = 0
@@ -147,11 +165,12 @@ subroutine CloneColonyCell(kcell0,kcell1,tnow,ok)
 integer :: kcell0, kcell1, ityp, idrug
 logical :: ok
 integer :: kpar = 0
-real(REAL_KIND) :: tnow, R, Tdiv0
+real(REAL_KIND) :: tnow, R, Tdiv, Tdiv0
 
 ok = .true.
 ityp = ccell_list(kcell0)%celltype
 Tdiv0 = divide_time_mean(ityp)
+ccell_list(kcell0)%volume = ccell_list(kcell0)%volume/2
 ccell_list(kcell0)%generation = ccell_list(kcell0)%generation + 1
 if (ccell_list(kcell0)%growth_delay) then
 	ccell_list(kcell0)%N_delayed_cycles_left = ccell_list(kcell0)%N_delayed_cycles_left - 1
@@ -159,11 +178,17 @@ if (ccell_list(kcell0)%growth_delay) then
 endif
 ccell_list(kcell0)%G2_M = .false.
 ccell_list(kcell0)%t_divide_last = tnow
-R = par_uni(kpar)
-ccell_list(kcell0)%t_divide_next = tnow + Tdiv0*(1 + (2*dVdivide/Vdivide0)*(2*R-1))
+if (use_divide_time_distribution) then
+	Tdiv = DivideTime(ityp)
+	ccell_list(kcell0)%t_divide_next = tnow + Tdiv
+else
+	R = par_uni(kpar)
+	ccell_list(kcell0)%t_divide_next = tnow + Tdiv0*(1 + (2*dVdivide/Vdivide0)*(2*R-1))
+endif
 !write(*,*) 'divide time: ',Tdiv0*(1 + (2*dVdivide/Vdivide0)*(2*R-1))/3600
 ccell_list(kcell1)%celltype = ccell_list(kcell0)%celltype
 ccell_list(kcell1)%state = ccell_list(kcell0)%state
+ccell_list(kcell1)%volume = ccell_list(kcell0)%volume
 ccell_list(kcell1)%generation = ccell_list(kcell0)%generation
 ccell_list(kcell1)%ID = ccell_list(kcell0)%ID
 ccell_list(kcell1)%p_rad_death = ccell_list(kcell0)%p_rad_death
@@ -179,8 +204,13 @@ if (ccell_list(kcell1)%growth_delay) then
 endif
 ccell_list(kcell1)%G2_M = .false.
 ccell_list(kcell1)%t_divide_last = tnow
-R = par_uni(kpar)
-ccell_list(kcell1)%t_divide_next = tnow + Tdiv0*(1 + (2*dVdivide/Vdivide0)*(2*R-1))
+if (use_divide_time_distribution) then
+	Tdiv = DivideTime(ityp)
+	ccell_list(kcell1)%t_divide_next = tnow + Tdiv
+else
+	R = par_uni(kpar)
+	ccell_list(kcell1)%t_divide_next = tnow + Tdiv0*(1 + (2*dVdivide/Vdivide0)*(2*R-1))
+endif
 ccell_list(kcell1)%t_hypoxic = 0
 ccell_list(kcell1)%conc = ccell_list(kcell0)%conc
 ccell_list(kcell1)%Cex = ccell_list(kcell0)%Cex

@@ -73,6 +73,7 @@ bdrop = 1
 cdrop = 0
 zmin = 1
 call PlaceCells(ok)
+!call show_volume_data
 call SetRadius(Nsites)
 write(logmsg,*) 'did PlaceCells: Ncells: ',Ncells,Radius
 call logger(logmsg)
@@ -111,6 +112,28 @@ t_lastmediumchange = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
+end subroutine
+
+!----------------------------------------------------------------------------------------- 
+!----------------------------------------------------------------------------------------- 
+subroutine show_volume_data
+integer :: kcell
+real(REAL_KIND) :: Vsum, Vdivsum
+
+write(nfout,*) 'Volume data:'
+write(nfout,'(a,L)') 'use_divide_time_distribution: ',use_divide_time_distribution
+write(nfout,'(a,L)') 'use_V_dependence: ',use_V_dependence
+Vsum = 0
+Vdivsum = 0
+do kcell = 1,nlist
+	write(nfout,'(i6,2f6.2)') kcell,cell_list(kcell)%volume, cell_list(kcell)%divide_volume
+	Vsum = Vsum + cell_list(kcell)%volume
+	Vdivsum = Vdivsum + cell_list(kcell)%divide_volume
+enddo
+write(nfout,*)
+write(nfout,'(a,f6.2)') 'Average initial volume: ',Vsum/nlist
+write(nfout,'(a,f6.2)') 'Average divide volume: ',Vdivsum/nlist
+stop
 end subroutine
 
 !----------------------------------------------------------------------------------------- 
@@ -965,7 +988,7 @@ end subroutine
 subroutine AddCell(k,site)
 integer :: k, site(3)
 integer :: ityp, kpar = 0
-real(REAL_KIND) :: R
+real(REAL_KIND) :: V0, R
 
 lastID = lastID + 1
 cell_list(k)%ID = lastID
@@ -985,8 +1008,10 @@ cell_list(k)%active = .true.
 cell_list(k)%growth_delay = .false.
 cell_list(k)%G2_M = .false.
 cell_list(k)%p_rad_death = 0
-R = par_uni(kpar)
-cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+!R = par_uni(kpar)
+!cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+V0 = Vdivide0/2
+cell_list(k)%divide_volume = get_divide_volume(ityp,V0)
 R = par_uni(kpar)
 if (randomise_initial_volume) then
 	cell_list(k)%volume = cell_list(k)%divide_volume*0.5*(1 + R)

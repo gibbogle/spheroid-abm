@@ -299,6 +299,7 @@ logical :: use_radiation, use_treatment
 !logical :: use_growth_suppression = .true.	! see usage in subroutine CellGrowth
 logical :: use_extracellular_O2
 logical :: use_V_dependence
+logical :: use_divide_time_distribution = .true.
 logical :: randomise_initial_volume
 logical :: use_FD = .true.
 logical :: use_gaplist = .true.
@@ -651,6 +652,38 @@ real(REAL_KIND) :: R
 R = par_rnor(kpar)	! N(0,1)
 generate_CFSE = (1 + CFSE_std*R)*average
 end function
+
+!-----------------------------------------------------------------------------------------
+! ityp = cell type
+! V0 = cell starting volume (after division) = %volume
+! Two approaches:
+! 1. Use Vdivide0 and dVdivide to generate a volume
+! 2. Use the divide time log-normal distribution
+!    (a) use_V_dependence = true
+!    (b) use_V_dependence = false
+! NOTE: %volume and %divide_volume are normalised.
+!-----------------------------------------------------------------------------------------
+function get_divide_volume(ityp,V0) result(Vdiv)
+integer :: ityp
+real(REAL_KIND) :: V0
+real(REAL_KIND) :: Vdiv
+real(REAL_KIND) :: Tdiv, Tmean, b, R
+integer :: kpar=0
+
+Tmean = divide_time_mean(ityp)
+if (use_divide_time_distribution) then
+	Tdiv = DivideTime(ityp)
+	if (use_V_dependence) then
+		b = log(2.0)*(Tdiv/Tmean)
+		Vdiv = V0*exp(b)
+	else
+		Vdiv = V0 + (Vdivide0/2)*(Tdiv/Tmean)
+	endif
+else
+	R = par_uni(kpar)
+	Vdiv = Vdivide0 + dVdivide*(2*R-1)
+endif
+end function	
 
 !--------------------------------------------------------------------------------------
 ! Determine real roots r(:) of the cubic equation:

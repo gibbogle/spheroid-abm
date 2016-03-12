@@ -869,7 +869,7 @@ subroutine CellDivider(kcell0, ok)
 integer :: kcell0
 logical :: ok
 integer :: kpar=0
-integer :: j, k, kcell1, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, nfree, bestsite(3)
+integer :: j, k, kcell1, ityp, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, nfree, bestsite(3)
 integer :: npath, path(3,200)
 real(REAL_KIND) :: tnow, R, v, vmax, V0, Cex(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_CHEMO), alpha(MAX_CHEMO)
 real(REAL_KIND) :: cfse0, cfse1
@@ -883,15 +883,17 @@ endif
 ok = .true.
 tnow = istep*DELTA_T
 cell_list(kcell0)%t_divide_last = tnow
-V0 = cell_list(kcell0)%volume
-cell_list(kcell0)%volume = V0/2
+V0 = cell_list(kcell0)%volume/2
+cell_list(kcell0)%volume = V0
 cfse0 = cell_list(kcell0)%CFSE
 cell_list(kcell0)%CFSE = generate_CFSE(cfse0/2)
 cfse1 = cfse0 - cell_list(kcell0)%CFSE
 cell_list(kcell0)%t_hypoxic = 0
 
-R = par_uni(kpar)
-cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+!R = par_uni(kpar)
+!cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+ityp = cell_list(kcell0)%celltype
+cell_list(kcell0)%divide_volume = get_divide_volume(ityp,V0)
 cell_list(kcell0)%M = cell_list(kcell0)%M/2
 !write(nflog,'(a,i6,2f8.2)') 'divide: ',kcell0,cell_list(kcell0)%volume,cell_list(kcell0)%divide_volume
 !write(logmsg,'(a,f6.1)') 'Divide time: ',tnow/3600
@@ -1455,7 +1457,7 @@ subroutine CloneCell(kcell0,kcell1,site1,ok)
 integer :: kcell0, kcell1, site1(3), ityp, idrug
 logical :: ok
 integer :: kpar = 0
-real(REAL_KIND) :: tnow, R
+real(REAL_KIND) :: tnow, V0, R
 
 ok = .true.
 tnow = istep*DELTA_T
@@ -1529,8 +1531,10 @@ cell_list(kcell1)%G2_M = .false.
 cell_list(kcell1)%t_divide_last = tnow
 cell_list(kcell1)%dVdt = cell_list(kcell0)%dVdt
 cell_list(kcell1)%volume = cell_list(kcell0)%volume
-R = par_uni(kpar)
-cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+!R = par_uni(kpar)
+!cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
+V0 = cell_list(kcell0)%volume
+cell_list(kcell1)%divide_volume = get_divide_volume(ityp, V0)
 cell_list(kcell1)%t_hypoxic = 0
 cell_list(kcell1)%conc = cell_list(kcell0)%conc
 cell_list(kcell1)%Cex = cell_list(kcell0)%Cex
