@@ -555,7 +555,7 @@ integer :: kcell, nlist0, site(3), ityp, idrug, kpar=0
 integer :: divide_list(10000), ndivide, i
 real(REAL_KIND) :: tnow, C_O2, C_glucose, metab, metab_O2, metab_glucose, dVdt, vol0, R		!r_mean(2), c_rate(2)
 real(REAL_KIND) :: r_mean(MAX_CELLTYPES), c_rate(MAX_CELLTYPES)
-real(REAL_KIND) :: Vin_0, Vex_0, dV
+real(REAL_KIND) :: Vin_0, Vex_0, dV, minVex
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
 logical :: drugkilled, glucose_growth, first_cycle
@@ -569,6 +569,7 @@ c_rate(1:2) = log(2.0)/divide_time_mean(1:2)		! Note: to randomise divide time n
 r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
 glucose_growth = chemo(GLUCOSE)%controls_growth
 ndivide = 0
+minVex = 1.0e10
 do kcell = 1,nlist0
 	if (cell_list(kcell)%state == DEAD) cycle
 	ityp = cell_list(kcell)%celltype
@@ -594,11 +595,17 @@ do kcell = 1,nlist0
 		else
 			metab = metab_O2
 		endif
-		if (use_V_dependence) then
-			dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
-		else
-			dVdt = r_mean(ityp)*metab
-		endif
+!		if (use_constant_divide_volume) then
+!			dVdt = metab*Vdivide0/(2*cell_list(kcell)%divide_time)
+!		else
+!			if (use_V_dependence) then
+!				dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
+!			else
+!				dVdt = r_mean(ityp)*metab
+!			endif
+!		endif
+		dVdt = get_dVdt(kcell,metab)
+!		if (kcell <= 5) write(*,'(a,i6,e12.3)') 'dVdt: ',kcell,dVdt
 		if (suppress_growth) then	! for checking solvers
 			dVdt = 0
 		endif
@@ -619,6 +626,7 @@ do kcell = 1,nlist0
 			cell_list(kcell)%conc = Vin_0*Cin_0/(Vin_0 + dV)
 			occupancy(site(1),site(2),site(3))%C = Vex_0*Cex_0/(Vex_0 - dV)
 		endif
+		minVex = min(minVex,Vex_0 - dV)
 	endif
 	
 	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then	! time to divide
@@ -711,7 +719,7 @@ do kcell = 1,nlist0
 	    divide_list(ndivide) = kcell
 	endif
 enddo
-
+!write(*,'(a,e12.3)') 'minVex: ',minVex
 do i = 1,ndivide
     kcell = divide_list(i)
 	kcell_dividing = kcell
@@ -757,11 +765,16 @@ do kcell = 1,nlist0
 	else
 		metab = metab_O2
 	endif
-	if (use_V_dependence) then
-		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
-	else
-		dVdt = r_mean(ityp)*metab
-	endif
+!	if (use_constant_divide_volume) then
+!		dVdt = metab*Vdivide0/(2*cell_list(kcell)%divide_time)
+!	else
+!		if (use_V_dependence) then
+!			dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
+!		else
+!			dVdt = r_mean(ityp)*metab
+!		endif
+!	endif
+	dVdt = get_dVdt(kcell,metab)
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0
 	endif
@@ -839,7 +852,7 @@ r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
 glucose_growth = chemo(GLUCOSE)%controls_growth
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
-	ityp = cell_list(kcell)%celltype
+!	ityp = cell_list(kcell)%celltype
 	C_O2 = chemo(OXYGEN)%bdry_conc
 	C_glucose = cell_list(kcell)%conc(GLUCOSE)
 	metab_O2 = O2_metab(C_O2)
@@ -849,17 +862,40 @@ do kcell = 1,nlist
 	else
 		metab = metab_O2
 	endif
-	if (use_V_dependence) then
-		dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
-	else
-		dVdt = r_mean(ityp)*metab
-	endif
+	dVdt = get_dVdt(kcell,metab)
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0
 	endif
 	cell_list(kcell)%dVdt = dVdt
 enddo
 end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+function get_dVdt(kcell, metab) result(dVdt)
+integer :: kcell
+real(REAL_KIND) :: metab, dVdt
+integer :: ityp
+real(REAL_KIND) :: r_mean, c_rate
+
+if (use_V_dependence) then
+	if (use_constant_divide_volume) then
+		dVdt = metab*log(2.0)*cell_list(kcell)%volume/cell_list(kcell)%divide_time
+	else
+		ityp = cell_list(kcell)%celltype
+		c_rate = log(2.0)/divide_time_mean(ityp)
+		dVdt = c_rate*cell_list(kcell)%volume*metab
+	endif
+else
+	if (use_constant_divide_volume) then
+		dVdt = metab*Vdivide0/(2*cell_list(kcell)%divide_time)
+	else
+		ityp = cell_list(kcell)%celltype
+		r_mean = Vdivide0/(2*divide_time_mean(ityp))
+		dVdt = r_mean*metab
+	endif
+endif
+end function
 
 !-----------------------------------------------------------------------------------------
 ! The dividing cell, kcell0, is at site0.
@@ -871,7 +907,7 @@ logical :: ok
 integer :: kpar=0
 integer :: j, k, kcell1, ityp, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, nfree, bestsite(3)
 integer :: npath, path(3,200)
-real(REAL_KIND) :: tnow, R, v, vmax, V0, Cex(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_CHEMO), alpha(MAX_CHEMO)
+real(REAL_KIND) :: tnow, R, v, vmax, V0, Tdiv, Cex(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_CHEMO), alpha(MAX_CHEMO)
 real(REAL_KIND) :: cfse0, cfse1
 integer :: freesite(27,3)
 type (boundary_type), pointer :: bdry
@@ -893,7 +929,8 @@ cell_list(kcell0)%t_hypoxic = 0
 !R = par_uni(kpar)
 !cell_list(kcell0)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 ityp = cell_list(kcell0)%celltype
-cell_list(kcell0)%divide_volume = get_divide_volume(ityp,V0)
+cell_list(kcell0)%divide_volume = get_divide_volume(ityp,V0, Tdiv)
+cell_list(kcell0)%divide_time = Tdiv
 cell_list(kcell0)%M = cell_list(kcell0)%M/2
 !write(nflog,'(a,i6,2f8.2)') 'divide: ',kcell0,cell_list(kcell0)%volume,cell_list(kcell0)%divide_volume
 !write(logmsg,'(a,f6.1)') 'Divide time: ',tnow/3600
@@ -1457,7 +1494,7 @@ subroutine CloneCell(kcell0,kcell1,site1,ok)
 integer :: kcell0, kcell1, site1(3), ityp, idrug
 logical :: ok
 integer :: kpar = 0
-real(REAL_KIND) :: tnow, V0, R
+real(REAL_KIND) :: tnow, V0, Tdiv, R
 
 ok = .true.
 tnow = istep*DELTA_T
@@ -1534,7 +1571,8 @@ cell_list(kcell1)%volume = cell_list(kcell0)%volume
 !R = par_uni(kpar)
 !cell_list(kcell1)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 V0 = cell_list(kcell0)%volume
-cell_list(kcell1)%divide_volume = get_divide_volume(ityp, V0)
+cell_list(kcell1)%divide_volume = get_divide_volume(ityp, V0, Tdiv)
+cell_list(kcell1)%divide_time = Tdiv
 cell_list(kcell1)%t_hypoxic = 0
 cell_list(kcell1)%conc = cell_list(kcell0)%conc
 cell_list(kcell1)%Cex = cell_list(kcell0)%Cex

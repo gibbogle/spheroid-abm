@@ -988,7 +988,7 @@ end subroutine
 subroutine AddCell(k,site)
 integer :: k, site(3)
 integer :: ityp, kpar = 0
-real(REAL_KIND) :: V0, R
+real(REAL_KIND) :: V0, Tdiv, R
 
 lastID = lastID + 1
 cell_list(k)%ID = lastID
@@ -1011,7 +1011,8 @@ cell_list(k)%p_rad_death = 0
 !R = par_uni(kpar)
 !cell_list(k)%divide_volume = Vdivide0 + dVdivide*(2*R-1)
 V0 = Vdivide0/2
-cell_list(k)%divide_volume = get_divide_volume(ityp,V0)
+cell_list(k)%divide_volume = get_divide_volume(ityp,V0, Tdiv)
+cell_list(k)%divide_time = Tdiv
 R = par_uni(kpar)
 if (randomise_initial_volume) then
 	cell_list(k)%volume = cell_list(k)%divide_volume*0.5*(1 + R)

@@ -106,6 +106,7 @@ type cell_type
 	real(REAL_KIND) :: dVdt
 	real(REAL_KIND) :: volume			! fractional volume (fraction of nominal cell volume Vcell_cm3)
 	real(REAL_KIND) :: divide_volume
+	real(REAL_KIND) :: divide_time
 	real(REAL_KIND) :: t_divide_last	! these two values are used for colony simulation
 	real(REAL_KIND) :: t_divide_next
 	real(REAL_KIND) :: t_hypoxic
@@ -300,6 +301,7 @@ logical :: use_radiation, use_treatment
 logical :: use_extracellular_O2
 logical :: use_V_dependence
 logical :: use_divide_time_distribution = .true.
+logical :: use_constant_divide_volume = .true.
 logical :: randomise_initial_volume
 logical :: use_FD = .true.
 logical :: use_gaplist = .true.
@@ -663,25 +665,34 @@ end function
 !    (b) use_V_dependence = false
 ! NOTE: %volume and %divide_volume are normalised.
 !-----------------------------------------------------------------------------------------
-function get_divide_volume(ityp,V0) result(Vdiv)
+function get_divide_volume(ityp,V0,Tdiv) result(Vdiv)
 integer :: ityp
-real(REAL_KIND) :: V0
+real(REAL_KIND) :: V0, Tdiv
 real(REAL_KIND) :: Vdiv
-real(REAL_KIND) :: Tdiv, Tmean, b, R
+real(REAL_KIND) :: Tmean, b, R
 integer :: kpar=0
 
 Tmean = divide_time_mean(ityp)
 if (use_divide_time_distribution) then
 	Tdiv = DivideTime(ityp)
-	if (use_V_dependence) then
-		b = log(2.0)*(Tdiv/Tmean)
-		Vdiv = V0*exp(b)
+	if (use_constant_divide_volume) then
+		Vdiv = Vdivide0
 	else
-		Vdiv = V0 + (Vdivide0/2)*(Tdiv/Tmean)
+		if (use_V_dependence) then
+			b = log(2.0)*(Tdiv/Tmean)
+			Vdiv = V0*exp(b)
+		else
+			Vdiv = V0 + (Vdivide0/2)*(Tdiv/Tmean)
+		endif
 	endif
 else
-	R = par_uni(kpar)
-	Vdiv = Vdivide0 + dVdivide*(2*R-1)
+	if (use_constant_divide_volume) then
+		Vdiv = Vdivide0
+	else
+		R = par_uni(kpar)
+		Vdiv = Vdivide0 + dVdivide*(2*R-1)
+	endif
+	Tdiv = Tmean
 endif
 end function	
 
