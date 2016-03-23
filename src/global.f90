@@ -80,6 +80,8 @@ logical, parameter :: use_celltype_colour = .true.
 logical, parameter :: use_Cex_Cin = .true.		! assume equilibrium to derive Cin from Cex
 logical, parameter :: suppress_growth = .false.
 
+logical, parameter :: OFF_LATTICE = .false.
+
 real(REAL_KIND), parameter :: PI = 4.0*atan(1.0)
 real(REAL_KIND), parameter :: CFSE_std = 0.05
 real(REAL_KIND), parameter :: small_d = 0.1e-4          ! 0.1 um -> cm
@@ -105,7 +107,7 @@ type cell_type
 	real(REAL_KIND) :: CFSE
 	real(REAL_KIND) :: dVdt
 	real(REAL_KIND) :: volume			! fractional volume (fraction of nominal cell volume Vcell_cm3)
-	real(REAL_KIND) :: divide_volume
+	real(REAL_KIND) :: divide_volume	! fractional divide volume (normalised)
 	real(REAL_KIND) :: divide_time
 	real(REAL_KIND) :: t_divide_last	! these two values are used for colony simulation
 	real(REAL_KIND) :: t_divide_next
