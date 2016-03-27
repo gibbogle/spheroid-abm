@@ -1,3 +1,4 @@
+#include "qdebug.h"
 #include "field.h"
 #include "log.h"
 
@@ -570,6 +571,11 @@ void Field::displayField(int hr, int *res)
                 rgbcol[0] = 255;
                 rgbcol[1] = 0;
                 rgbcol[2] = 255;
+            } else if (this->data[i].state >= 10) {     // tagged to die from radiation or drug
+                rgbcol[0] = 255;
+                rgbcol[1] = 150;
+                rgbcol[2] = 0;
+                qDebug("Tagged to die of treatment");
             }
             brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);

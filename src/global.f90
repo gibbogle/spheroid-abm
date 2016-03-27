@@ -270,7 +270,7 @@ logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
 real(REAL_KIND) :: divide_time_median(MAX_CELLTYPES), divide_time_shape(MAX_CELLTYPES), divide_time_mean(MAX_CELLTYPES), dt_saveprofiledata
 real(REAL_KIND) :: t_simulation, execute_t1
-real(REAL_KIND) :: O2cutoff(3)
+real(REAL_KIND) :: O2cutoff(3), hypoxia_threshold
 real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
 real(REAL_KIND) :: total_dMdt

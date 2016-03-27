@@ -276,6 +276,7 @@ void MainWindow::createActions()
 //    connect(buttonGroup_SN30K_killmodel_2, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
 
     connect(buttonGroup_farfield, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
+    connect(buttonGroup_hypoxia, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(radioButtonChanged(QAbstractButton*)));
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -1927,12 +1928,12 @@ void MainWindow::runServer()
  //       field = new Field(page_2D, checkBox_record2D->isChecked());
         field->setSaveImages(checkBox_record2D->isChecked());
         field->setUseLogScale(checkBox_O2logscale->isChecked());
-        if (radioButton_hypoxia_1->isChecked())
-            Global::i_hypoxia_cutoff = 1;
-        else if (radioButton_hypoxia_2->isChecked())
-            Global::i_hypoxia_cutoff = 2;
-        else if (radioButton_hypoxia_3->isChecked())
-            Global::i_hypoxia_cutoff = 3;
+//        if (radioButton_hypoxia_1->isChecked())
+//            Global::i_hypoxia_cutoff = 1;
+//        else if (radioButton_hypoxia_2->isChecked())
+//            Global::i_hypoxia_cutoff = 2;
+//        else if (radioButton_hypoxia_3->isChecked())
+//            Global::i_hypoxia_cutoff = 3;
         if (radioButton_growthfraction_1->isChecked())
             Global::i_growth_cutoff = 1;
         else if (radioButton_growthfraction_2->isChecked())

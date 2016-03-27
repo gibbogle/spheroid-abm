@@ -491,6 +491,7 @@ use_radiation_growth_delay_all = (iuse_gd_all == 1)
 read(nfcell,*) O2cutoff(1)
 read(nfcell,*) O2cutoff(2)
 read(nfcell,*) O2cutoff(3)
+read(nfcell,*) hypoxia_threshold
 read(nfcell,*) growthcutoff(1)
 read(nfcell,*) growthcutoff(2)
 read(nfcell,*) growthcutoff(3)
@@ -532,6 +533,7 @@ DXB = 4*DXF
 MM_THRESHOLD = MM_THRESHOLD/1000					! uM -> mM
 ANOXIA_THRESHOLD = ANOXIA_THRESHOLD/1000			! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
+hypoxia_threshold = hypoxia_threshold/1000			! uM -> mM
 relax = (iuse_relax == 1)
 use_parallel = (iuse_par_relax == 1)
 use_FD = (iuse_FD == 1)
@@ -2082,7 +2084,13 @@ type(cell_type), pointer :: cp
 cp => cell_list(kcell)
 if (cp%anoxia_tag) then
 	getCellState = 2	! tagged to die of anoxia
-elseif (cp%conc(OXYGEN) < 4e-3) then
+elseif (cp%radiation_tag) then
+	getCellState = 10
+elseif (cp%drug_tag(1)) then
+	getCellState = 11
+elseif (cp%drug_tag(1)) then
+	getCellState = 12
+elseif (cp%conc(OXYGEN) < hypoxia_threshold) then
 	getCellState = 1	! radiobiological hypoxia
 elseif (cp%volume/cp%divide_volume > 0.95) then
 	getCellState = 3	! in mitosis
