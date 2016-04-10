@@ -114,6 +114,9 @@ MainWindow::MainWindow(QWidget *parent)
     vbox_FACS_y_vars = NULL;
     buttonGroup_FACS_y_vars = new QButtonGroup;
 
+    rbut_HYPOXIA_3->setChecked(true);
+    Global::i_hypoxia_cutoff = 3;
+
     setupGraphSelector();
     setGraphsActive();
 

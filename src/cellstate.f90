@@ -121,7 +121,6 @@ do kcell = 1,nlist
 			cell_list(kcell)%growth_delay = .false.
 		endif
 	elseif (use_radiation_growth_delay_all .and. LQ(ityp)%growth_delay_N > 0) then
-!		radiation_dosed = .true.
 		cell_list(kcell)%growth_delay = .true.
 		cell_list(kcell)%dt_delay = LQ(ityp)%growth_delay_factor*dose
 		cell_list(kcell)%N_delayed_cycles_left = LQ(ityp)%growth_delay_N
@@ -560,6 +559,7 @@ real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
 logical :: drugkilled, glucose_growth, first_cycle
 integer :: C_option = 1
+type(cell_type), pointer :: cp
 
 !call logger('CellGrowth')
 ok = .true.
@@ -571,8 +571,9 @@ glucose_growth = chemo(GLUCOSE)%controls_growth
 ndivide = 0
 minVex = 1.0e10
 do kcell = 1,nlist0
-	if (cell_list(kcell)%state == DEAD) cycle
-	ityp = cell_list(kcell)%celltype
+	cp => cell_list(kcell)
+	if (cp%state == DEAD) cycle
+	ityp = cp%celltype
 !	c_rate = log(2.0)/divide_time_mean(ityp)
 !	r_mean = Vdivide0/(2*divide_time_mean(ityp))
 !	if (cell_list(kcell)%growth_delay) then
@@ -585,9 +586,9 @@ do kcell = 1,nlist0
 !			r_mean = Vdivide0/(2*(divide_time_mean(ityp) + tdelay))	! growth rate reduction
 !		endif
 !	endif
-	if (cell_list(kcell)%volume < cell_list(kcell)%divide_volume) then	! still growing - not delayed
-		C_O2 = cell_list(kcell)%conc(OXYGEN)
-		C_glucose = cell_list(kcell)%conc(GLUCOSE)
+	if (cp%volume < cp%divide_volume) then	! still growing - not delayed
+		C_O2 = cp%conc(OXYGEN)
+		C_glucose = cp%conc(GLUCOSE)
 		metab_O2 = O2_metab(C_O2)
 		metab_glucose = glucose_metab(C_glucose)
 		if (glucose_growth) then
@@ -604,32 +605,32 @@ do kcell = 1,nlist0
 !				dVdt = r_mean(ityp)*metab
 !			endif
 !		endif
-		dVdt = get_dVdt(kcell,metab)
+		dVdt = get_dVdt(cp,metab)
 !		if (kcell <= 5) write(*,'(a,i6,e12.3)') 'dVdt: ',kcell,dVdt
 		if (suppress_growth) then	! for checking solvers
 			dVdt = 0
 		endif
-		site = cell_list(kcell)%site
-		Cin_0 = cell_list(kcell)%conc
+		site = cp%site
+		Cin_0 = cp%conc
 		Cex_0 = occupancy(site(1),site(2),site(3))%C
-		cell_list(kcell)%dVdt = dVdt
-		Vin_0 = cell_list(kcell)%volume*Vcell_cm3	! cm^3
+		cp%dVdt = dVdt
+		Vin_0 = cp%volume*Vcell_cm3	! cm^3
 		Vex_0 = Vsite_cm3 - Vin_0					! cm^3
 		dV = dVdt*dt*Vcell_cm3						! cm^3
-		cell_list(kcell)%volume = (Vin_0 + dV)/Vcell_cm3
+		cp%volume = (Vin_0 + dV)/Vcell_cm3
 		if (C_option == 1) then
 			! Calculation based on transfer of an extracellular volume dV with constituents, i.e. holding extracellular concentrations constant
-			cell_list(kcell)%conc = (Vin_0*Cin_0 + dV*Cex_0)/(Vin_0 + dV)
+			cp%conc = (Vin_0*Cin_0 + dV*Cex_0)/(Vin_0 + dV)
 			occupancy(site(1),site(2),site(3))%C = (Vex_0*Cex_0 - dV*Cex_0)/(Vex_0 - dV)	! = Cex_0
 		elseif (C_option == 2) then
 			! Calculation based on change in volumes without mass transfer of constituents
-			cell_list(kcell)%conc = Vin_0*Cin_0/(Vin_0 + dV)
+			cp%conc = Vin_0*Cin_0/(Vin_0 + dV)
 			occupancy(site(1),site(2),site(3))%C = Vex_0*Cex_0/(Vex_0 - dV)
 		endif
 		minVex = min(minVex,Vex_0 - dV)
 	endif
 	
-	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then	! time to divide
+	if (cp%volume > cp%divide_volume) then	! time to divide
 		! try letting tagged cell die only after end of G2/M delay
 !		if (cell_list(kcell)%radiation_tag) then
 !			R = par_uni(kpar)
@@ -653,9 +654,9 @@ do kcell = 1,nlist0
 !		endif
 		drugkilled = .false.
 		do idrug = 1,ndrugs_used
-			if (cell_list(kcell)%drug_tag(idrug)) then
+			if (cp%drug_tag(idrug)) then
 				R = par_uni(kpar)
-				if (R < cell_list(kcell)%p_drug_death(idrug)) then
+				if (R < cp%p_drug_death(idrug)) then
 					call CellDies(kcell)
 					Ndrug_dead(idrug,ityp) = Ndrug_dead(idrug,ityp) + 1
 					drugkilled = .true.
@@ -680,23 +681,23 @@ do kcell = 1,nlist0
 !			endif
 !		endif
 
-		if (cell_list(kcell)%growth_delay) then
-			if (cell_list(kcell)%G2_M) then
-				if (tnow > cell_list(kcell)%t_growth_delay_end) then
-					cell_list(kcell)%G2_M = .false.
+		if (cp%growth_delay) then
+			if (cp%G2_M) then
+				if (tnow > cp%t_growth_delay_end) then
+					cp%G2_M = .false.
 				else
 					cycle
 				endif
 			else
-				cell_list(kcell)%t_growth_delay_end = tnow + cell_list(kcell)%dt_delay
-				cell_list(kcell)%G2_M = .true.
+				cp%t_growth_delay_end = tnow + cp%dt_delay
+				cp%G2_M = .true.
 				cycle
 			endif
 		endif
 		! try moving death prob test to here
-		if (cell_list(kcell)%radiation_tag) then
+		if (cp%radiation_tag) then
 			R = par_uni(kpar)
-			if (R < cell_list(kcell)%p_rad_death) then
+			if (R < cp%p_rad_death) then
 				call CellDies(kcell)
 				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
 				cycle
@@ -744,6 +745,7 @@ real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
 logical :: drugkilled, glucose_growth
 integer :: C_option = 1
+type(cell_type), pointer :: cp
 
 !call logger('CellGrowth')
 ok = .true.
@@ -754,6 +756,7 @@ r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
 glucose_growth = chemo(GLUCOSE)%controls_growth
 ndivide = 0
 do kcell = 1,nlist0
+cp => cell_list(kcell)
 	if (cell_list(kcell)%state == DEAD) cycle
 	ityp = cell_list(kcell)%celltype
 	C_O2 = cell_list(kcell)%conc(OXYGEN)
@@ -774,7 +777,7 @@ do kcell = 1,nlist0
 !			dVdt = r_mean(ityp)*metab
 !		endif
 !	endif
-	dVdt = get_dVdt(kcell,metab)
+	dVdt = get_dVdt(cp,metab)
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0
 	endif
@@ -844,17 +847,16 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine SetInitialGrowthRate
 integer :: kcell, ityp
-real(REAL_KIND) :: c_rate(2), r_mean(2), C_O2, C_glucose, metab, metab_O2, metab_glucose, dVdt
+real(REAL_KIND) :: C_O2, C_glucose, metab, metab_O2, metab_glucose, dVdt
 logical :: glucose_growth
+type(cell_type), pointer :: cp
 
-c_rate(1:2) = log(2.0)/divide_time_mean(1:2)
-r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
 glucose_growth = chemo(GLUCOSE)%controls_growth
 do kcell = 1,nlist
-	if (cell_list(kcell)%state == DEAD) cycle
-!	ityp = cell_list(kcell)%celltype
+	cp => cell_list(kcell)
+	if (cp%state == DEAD) cycle
 	C_O2 = chemo(OXYGEN)%bdry_conc
-	C_glucose = cell_list(kcell)%conc(GLUCOSE)
+	C_glucose = cp%conc(GLUCOSE)
 	metab_O2 = O2_metab(C_O2)
 	metab_glucose = glucose_metab(C_glucose)
 	if (glucose_growth) then
@@ -862,35 +864,35 @@ do kcell = 1,nlist
 	else
 		metab = metab_O2
 	endif
-	dVdt = get_dVdt(kcell,metab)
+	dVdt = get_dVdt(cp,metab)
 	if (suppress_growth) then	! for checking solvers
 		dVdt = 0
 	endif
-	cell_list(kcell)%dVdt = dVdt
+	cp%dVdt = dVdt
 enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-function get_dVdt(kcell, metab) result(dVdt)
-integer :: kcell
+function get_dVdt(cp, metab) result(dVdt)
+type(cell_type), pointer :: cp
 real(REAL_KIND) :: metab, dVdt
 integer :: ityp
 real(REAL_KIND) :: r_mean, c_rate
 
 if (use_V_dependence) then
 	if (use_constant_divide_volume) then
-		dVdt = metab*log(2.0)*cell_list(kcell)%volume/cell_list(kcell)%divide_time
+		dVdt = metab*log(2.0)*cp%volume/cp%divide_time
 	else
-		ityp = cell_list(kcell)%celltype
+		ityp = cp%celltype
 		c_rate = log(2.0)/divide_time_mean(ityp)
-		dVdt = c_rate*cell_list(kcell)%volume*metab
+		dVdt = c_rate*cp%volume*metab
 	endif
 else
 	if (use_constant_divide_volume) then
-		dVdt = metab*Vdivide0/(2*cell_list(kcell)%divide_time)
+		dVdt = metab*Vdivide0/(2*cp%divide_time)
 	else
-		ityp = cell_list(kcell)%celltype
+		ityp = cp%celltype
 		r_mean = Vdivide0/(2*divide_time_mean(ityp))
 		dVdt = r_mean*metab
 	endif

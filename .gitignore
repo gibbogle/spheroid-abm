@@ -44,3 +44,6 @@ ToDo/
 /src/ode_diffuse-28-07-2015.f90
 /src/spheroid-28-07-2015.f90
 VBA/**/*
+/GUI/params-backup.cpp
+/GUI/slots-backup.cpp
+/GUI/snapshot.png

@@ -1781,6 +1781,8 @@ integer :: ityp
 real(REAL_KIND) :: diam_cm, vol_cm3, vol_mm3, hour, plate_eff(MAX_CELLTYPES), necrotic_fraction
 real(REAL_KIND) :: cmedium(MAX_CHEMO), cbdry(MAX_CHEMO)
 
+if (i_hypoxia_cutoff == 0) stop
+
 hour = istep*DELTA_T/3600.
 call getDiamVol(diam_cm,vol_cm3)
 vol_mm3 = vol_cm3*1000				! volume in mm^3
