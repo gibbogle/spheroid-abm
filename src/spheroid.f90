@@ -109,6 +109,7 @@ it_saveprofiledata = 1
 total_dMdt = 0
 total_flux_prev = 0
 t_lastmediumchange = 0
+limit_stop = .false.
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
@@ -363,7 +364,7 @@ integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, iV_dep
 integer :: ictype, idisplay, isconstant, iglucosegrowth
 integer :: iuse_drop, iconstant, isaveprofiledata
 logical :: use_metabolites
-real(REAL_KIND) :: days, bdry_conc, percent
+real(REAL_KIND) :: days, bdry_conc, percent, d_n_limit
 real(REAL_KIND) :: sigma(2), DXmm, anoxia_tag_hours, anoxia_death_hours
 character*(12) :: drug_name
 character*(1) :: numstr
@@ -389,6 +390,8 @@ read(nfcell,*) divide_time_shape(2)
 read(nfcell,*) iV_depend
 read(nfcell,*) iV_random
 read(nfcell,*) days							! number of days to simulate
+read(nfcell,*) d_n_limit					! possible limit on diameter or number of cells
+diam_count_limit = d_n_limit
 read(nfcell,*) DELTA_T						! time step size (sec)
 read(nfcell,*) NXB							! size of coarse grid = NXB = NYB
 read(nfcell,*) NZB							! size of coarse grid = NZB
@@ -1415,9 +1418,15 @@ logical :: dbug
 dbug = .false.
 if (Ncells == 0) then
 	call logger('Ncells = 0')
-    res = 3
+    res = 2
     return
 endif
+if (limit_stop) then
+	call logger('Spheroid size limit reached')
+	res = 6
+	return
+endif
+
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
 
@@ -1855,6 +1864,12 @@ write(nfres,'(a,a,2a12,i8,2e12.4,19i7,17e12.4)') trim(header),' ',gui_run_versio
 	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A), cbdry(DRUG_B)
 		
 call sum_dMdt(GLUCOSE)
+
+if (diam_count_limit > LIMIT_THRESHOLD) then
+	if (Ncells > diam_count_limit) limit_stop = .true.
+elseif (diam_count_limit > 0) then
+	if (diam_um > diam_count_limit) limit_stop = .true.
+endif
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1943,6 +1958,7 @@ do kcell = 1,nlist
 		if (cell_list(kcell)%dVdt < growthcutoff(i)*r_mean(ityp)) ngrowth(i) = ngrowth(i) + 1
 	enddo
 enddo
+
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -2685,8 +2701,9 @@ deallocate(valmax_log)
 end subroutine
 
 !--------------------------------------------------------------------------------
+! This version computes concentrations on a line through the blob centre.
 !--------------------------------------------------------------------------------
-subroutine WriteProfileData
+subroutine WriteProfileData1
 integer :: ns
 real(REAL_KIND) :: dx
 real(REAL_KIND), allocatable :: ex_conc(:,:)
@@ -2790,6 +2807,132 @@ do k = 1,ns
 enddo
 close(nfprofile)
 deallocate(ex_conc)
+end subroutine
+
+!--------------------------------------------------------------------------------
+! This version computes concentrations in a spherical shell of thickness dr.
+! Note that for a cell at (ix,iy,iz):
+! x = (ix-0.5)*dx, y = (iy-0.5)*dx, z = (iz-0.5)*dx
+!--------------------------------------------------------------------------------
+subroutine WriteProfileData
+integer :: ns
+real(REAL_KIND), allocatable :: ex_conc(:,:)
+real(REAL_KIND) :: dr = 20.e-4	! 20um -> cm
+real(REAL_KIND) :: dx, xyz0(3), dxyz(3), r2, r
+integer :: ntot, ir, nr, ichemo, kcell, site(3)
+integer :: i, ic, nc
+integer, parameter :: max_shells = 100
+integer :: cnt(max_shells)
+integer :: icmap(0:MAX_CHEMO+N_EXTRA)		! maps ichemo -> ic
+character*(16) :: title(1:MAX_CHEMO+N_EXTRA)
+character*(128) :: filename
+character*(6) :: mintag
+type(cell_type), pointer :: cp
+
+!write(nflog,*) 'WriteProfileData: MAX_CHEMO,N_EXTRA: ',MAX_CHEMO,N_EXTRA
+! First find the centre of the blob
+dx = DELTA_X
+xyz0 = 0
+ntot = 0
+do kcell = 1,nlist
+	cp => cell_list(kcell)
+	if (cp%state == DEAD) cycle
+	ntot = ntot+1
+	xyz0 = xyz0 + (cp%site - 0.5)*dx
+enddo
+if (ntot == 0) return
+xyz0 = xyz0/ntot	! this is the blob centre
+
+! Set up icmap
+ic = 0
+do ichemo = 0,MAX_CHEMO+N_EXTRA
+	if (ichemo == CFSE) then
+		if (.not.chemo(ichemo)%used) cycle
+		ic = ic + 1
+		title(ic) = 'CFSE'
+	    icmap(ichemo) = ic
+	elseif (ichemo <= MAX_CHEMO) then
+		if (.not.chemo(ichemo)%used) cycle
+		ic = ic + 1
+		title(ic) = chemo(ichemo)%name
+	    icmap(ichemo) = ic
+	elseif (ichemo == GROWTH_RATE) then
+		ic = ic + 1
+		title(ic) = 'Growth_rate'
+	    icmap(ichemo) = ic
+	elseif (ichemo == CELL_VOLUME) then
+		ic = ic + 1
+		title(ic) = 'Cell_volume'
+	    icmap(ichemo) = ic
+!	elseif (ichemo == O2_BY_VOL) then
+!		ic = ic + 1
+!		title(ic) = 'Cell_O2xVol'
+!	    icmap(ichemo) = ic
+	endif
+enddo
+nc = ic
+allocate(ex_conc(nc,max_shells))
+ex_conc = 0
+
+! Now look at shells at dr spacing. 
+nr = 0
+cnt = 0
+do kcell = 1,nlist
+	cp => cell_list(kcell)
+	if (cp%state == DEAD) cycle
+	dxyz = (cp%site - 0.5)*dx - xyz0
+	r2 = 0
+	do i = 1,3
+		r2 = r2 + dxyz(i)**2
+	enddo
+	r = sqrt(r2)
+	ir = r/dr + 1
+	nr = max(ir,nr)
+	cnt(ir) = cnt(ir) + 1
+	do ichemo = 0,MAX_CHEMO+N_EXTRA
+		ic = icmap(ichemo)
+		if (ichemo == CFSE .and. chemo(ichemo)%used) then
+			ex_conc(ic,ir) = ex_conc(ic,ir) + cp%cfse
+		elseif (ichemo <= MAX_CHEMO .and. chemo(ichemo)%used) then
+!			if (cp%conc(ichemo) > 10) then
+!			write(*,'(a,3i6,e12.3)') 'bad conc: ',kcell,ichemo,ic,cp%conc(ichemo)
+!			stop
+!			endif
+			ex_conc(ic,ir) = ex_conc(ic,ir) + cp%conc(ichemo)
+		elseif (ichemo == GROWTH_RATE) then
+			ex_conc(ic,ir) = ex_conc(ic,ir) + cp%dVdt
+		elseif (ichemo == CELL_VOLUME) then
+			ex_conc(ic,ir) = ex_conc(ic,ir) + Vcell_pL*cp%volume
+		endif
+	enddo
+enddo
+
+! Average
+do ir = 1,nr
+	do ic = 1,nc
+		ex_conc(ic,ir) = ex_conc(ic,ir)/cnt(ir)
+	enddo
+enddo			
+	
+! Remove time tag from the filename for download from NeSI
+write(mintag,'(i6)') int(istep*DELTA_T/60)
+filename = profiledatafilebase
+filename = trim(filename)//'_'
+filename = trim(filename)//trim(adjustl(mintag))
+filename = trim(filename)//'min.dat'
+open(nfprofile,file=filename,status='replace')
+write(nfprofile,'(a,a)') 'GUI version: ',gui_run_version
+write(nfprofile,'(a,a)') 'DLL version: ',dll_run_version
+write(nfprofile,'(i6,a)') int(istep*DELTA_T/60),' minutes'
+write(nfprofile,'(i6,a)') nr,' shells'
+write(nfprofile,'(f6.2,a)') 10000*dr,' dr (um)'
+write(nfprofile,'(32a16)') title(1:nc)
+do ir = 1,nr
+	write(nfprofile,'(32(e12.3,4x))') ex_conc(1:nc,ir)
+enddo
+close(nfprofile)
+deallocate(ex_conc)
+!write(nflog,*) 'did WriteProfileData: ',filename
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -3074,8 +3217,16 @@ if (res == 0) then
 	call logger(' Execution successful!')
 elseif (res == -1) then
 	call logger(' Execution stopped')
-else
-	call logger('  === Execution failed ===')
+elseif (res == 2) then
+	call logger(' No more live cells')
+elseif (res == 6) then
+	call logger(' Spheroid size limit reached')
+elseif (res == 3) then
+	call logger(' === Execution failed === ERROR in GrowCells')
+elseif (res == 4) then
+	call logger(' === Execution failed === ERROR in diff_solver')
+elseif (res == 5) then
+	call logger(' === Execution failed === ERROR in Solver')
 endif
 write(logmsg,'(a,f10.2)') 'Execution time (min): ',(wtime() - execute_t1)/60
 call logger(logmsg)

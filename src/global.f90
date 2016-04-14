@@ -66,6 +66,7 @@ integer, parameter :: MAX_CELLTYPES = 4
 integer, parameter :: MAX_DRUGTYPES = 2
 integer, parameter :: max_nlist = 200000
 integer, parameter :: NRF = 4
+integer, parameter :: LIMIT_THRESHOLD = 1500
 
 logical, parameter :: use_ODE_diffusion = .true.
 logical, parameter :: compute_concentrations = .true.
@@ -249,6 +250,8 @@ logical :: is_dropped
 integer :: jumpvec(3,27)
 
 integer :: nlist, Ncells, Ncells0, lastNcells, lastID, Ncelltypes, Ncells_type(MAX_CELLTYPES)
+integer :: diam_count_limit
+logical :: limit_stop
 integer :: nadd_sites, Nsites, Nreuse
 integer :: Ndrugs_used
 integer :: Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
