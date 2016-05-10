@@ -810,7 +810,7 @@ integer :: kpar = 0
 real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO)
 integer :: i, ic, ichemo, n = 100
 
-call SetRadius(Nsites)
+!call SetRadius(Nsites)
 rad = Radius*DELTA_X
 csum = 0
 do i = 1,n

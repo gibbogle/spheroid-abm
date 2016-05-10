@@ -239,6 +239,7 @@ real(REAL_KIND) :: Radius, Centre(3)		! sphere radius and centre
 real(REAL_KIND) :: x0,y0,z0					! sphere centre in global coordinates (units = grids)
 real(REAL_KIND) :: Centre_b(3)              ! sphere centre in coarse grid axes
 real(REAL_KIND) :: xb0,yb0,zb0              ! sphere centre in coarse grid axes
+real(REAL_KIND) :: blob_volume, blob_area
 
 logical :: use_dropper
 integer :: Ndrop
@@ -396,6 +397,8 @@ end subroutine
 
 !---------------------------------------------------------------------
 ! This calculates the radius of the equivalent sphere.
+! Note: this assumes that N is an accurate measure of the number of sites
+! occupied by the blob.
 !---------------------------------------------------------------------
 subroutine SetRadius(N)
 integer :: N

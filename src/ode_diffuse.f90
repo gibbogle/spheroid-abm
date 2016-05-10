@@ -1321,7 +1321,7 @@ real(REAL_KIND) :: alpha_Cbnd = 0.3
 real(REAL_KIND) :: t_buffer = 3600	! one hour delay before applying smoothing to Cbnd
 
 tnow = istep*DELTA_T
-call SetRadius(Nsites)
+!call SetRadius(Nsites)
 rad = Radius*DELTA_X
 csum = 0
 do i = 1,n
@@ -1450,7 +1450,7 @@ enddo
 chemo(:)%medium_U = U(:)
 
 ! First need the spheroid radius
-call SetRadius(Nsites)
+!call SetRadius(Nsites)
 R1 = Radius*DELTA_X		! cm
 Rlayer(:) = R1 + chemo(:)%medium_dlayer
 do ichemo = 1,MAX_CHEMO

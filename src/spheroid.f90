@@ -8,6 +8,7 @@ use winsock
 use deform
 use drop
 use colony
+use envelope
 
 #include "../src/version.h"
 
@@ -74,7 +75,9 @@ cdrop = 0
 zmin = 1
 call PlaceCells(ok)
 !call show_volume_data
-call SetRadius(Nsites)
+!call SetRadius(Nsites)
+call getVolume(blob_volume,blob_area)
+Radius = sqrt(blob_area/PI)
 write(logmsg,*) 'did PlaceCells: Ncells: ',Ncells,Radius
 call logger(logmsg)
 if (.not.ok) return
@@ -145,7 +148,7 @@ integer :: ichemo
 real(REAL_KIND) :: V, V0, R1
 
 if (chemo(ichemo)%present) then
-	call SetRadius(Nsites)
+!	call SetRadius(Nsites)
 	R1 = Radius*DELTA_X			! cm
 	V0 = total_volume			! cm3
 	V = V0 - (4./3.)*PI*R1**3	! cm3
@@ -320,7 +323,7 @@ y0 = (NY + 1.0)/2.
 z0 = (NZ + 1.0)/2.
 Centre = [x0,y0,z0]   ! now, actually the global centre (units = grids)
 call SetRadius(initial_count)
-write(logmsg,*) 'Initial radius, nc0, max_nlist: ',Radius, initial_count, max_nlist
+write(logmsg,*) 'Initial radius, count, max_nlist: ',Radius, initial_count, max_nlist
 call logger(logmsg)
 
 allocate(cell_list(max_nlist))
@@ -1326,7 +1329,7 @@ write(nflog,*) 'MediumChange:'
 write(nflog,'(a,f8.4)') 'Ve: ',Ve
 write(nflog,'(a,13f8.4)') 'Ce: ',Ce
 write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
-call SetRadius(Nsites)
+!call SetRadius(Nsites)
 R = Radius*DELTA_X		! cm
 Vblob = (4./3.)*PI*R**3	! cm3
 Vm = total_volume - Vblob
@@ -1368,7 +1371,7 @@ write(nflog,*) 'MediumChange:'
 write(nflog,'(a,f8.4)') 'Ve: ',Ve
 write(nflog,'(a,13f8.4)') 'Ce: ',Ce
 write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
-call SetRadius(Nsites)
+!call SetRadius(Nsites)
 R = Radius*DELTA_X		! cm
 Vblob = (4./3.)*PI*R**3	! cm3
 Vm = total_volume - Vblob
@@ -1404,9 +1407,9 @@ subroutine simulate_step(res) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 integer :: kcell, site(3), hour, nthour, kpar=0
-real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um, framp, tnow
+real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um, framp, tnow, area, diam
 !integer, parameter :: NT_CONC = 6
-integer :: i, ic, ichemo, ndt
+integer :: i, ic, ichemo, ndt, iz
 integer :: nvars, ns
 real(REAL_KIND) :: dxc, ex_conc(120*O2_BY_VOL+1)		! just for testing
 logical :: ok = .true.
@@ -1426,6 +1429,9 @@ if (limit_stop) then
 	res = 6
 	return
 endif
+
+call getVolume(blob_volume,blob_area)
+Radius = sqrt(blob_area/PI)		! number of sites
 
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
@@ -1764,7 +1770,8 @@ end subroutine
 subroutine getDiamVol(diam_cm,vol_cm3)
 real(REAL_KIND) :: diam_cm, vol_cm3
 diam_cm = 2*DELTA_X*Radius
-vol_cm3 = Vsite_cm3*Nsites			! total volume in cm^3
+!vol_cm3 = Vsite_cm3*Nsites			! total volume in cm^3
+vol_cm3 = Vsite_cm3*blob_volume		! total volume in cm^3
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1815,14 +1822,14 @@ TNdrug_dead(1) = sum(Ndrug_dead(1,1:Ncelltypes))
 TNdrug_dead(2) = sum(Ndrug_dead(2,1:Ncelltypes))
 
 call getHypoxicCount(nhypoxic)
-hypoxic_percent_10 = (1000*nhypoxic(i_hypoxia_cutoff))/Ncells
+hypoxic_percent_10 = (1000*nhypoxic(i_hypoxia_cutoff))/Ncells	! 10* %hypoxic
 call getGrowthCount(ngrowth)
 growth_percent_10 = (1000*ngrowth(i_growth_cutoff))/Ncells
-if (TNanoxia_dead > 0) then
+!if (TNanoxia_dead > 0) then
 	call getNecroticFraction(necrotic_fraction,vol_cm3)
-else
-	necrotic_fraction = 0
-endif
+!else
+!	necrotic_fraction = 0
+!endif
 necrotic_percent_10 = 1000*necrotic_fraction
 call getNviable(Nviable, Nlive)
 do ityp = 1,Ncelltypes
@@ -2106,7 +2113,7 @@ elseif (cp%radiation_tag) then
 	getCellState = 10
 elseif (cp%drug_tag(1)) then
 	getCellState = 11
-elseif (cp%drug_tag(1)) then
+elseif (cp%drug_tag(2)) then
 	getCellState = 12
 elseif (cp%conc(OXYGEN) < hypoxia_threshold) then
 	getCellState = 1	! radiobiological hypoxia
@@ -3030,7 +3037,7 @@ character*(1024), save :: string
 
 string = 'A test string'
 buflen = len(trim(string))
-write(*,*) 'buflen: ',buflen
+!write(*,*) 'buflen: ',buflen
 string(buflen+1:buflen+1) = char(0)
 bufptr = c_loc(string)
 end subroutine

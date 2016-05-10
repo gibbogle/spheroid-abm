@@ -74,7 +74,7 @@ allocate(rz(NZ))
 allocate(nstack(NX,NY))
 allocate(usable(NX,NY))
 
-call SetRadius(Nsites)
+!call SetRadius(Nsites)
 zmin = GetZmin()
 z0drop = zmin + (bdrop-cdrop)*Radius
 z0 = z0drop

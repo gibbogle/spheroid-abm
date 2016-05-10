@@ -559,15 +559,15 @@ void Field::displayField(int hr, int *res)
             if (this->data[i].state == 0) {
                 f = data[i].conc[GROWTH_RATE]/rmax;      // currently colour cells only by growth rate, now fraction of max growth rate
                 chooseRateColor(f,rgbcol);
-            } else if (this->data[i].state == 1) {
+            } else if (this->data[i].state == 1) {      // hypoxic (O2 < hypoxic threshold)
                 rgbcol[0] = 50;
                 rgbcol[1] = 100;
                 rgbcol[2] = 32;
-            } else if (this->data[i].state == 2) {
-                rgbcol[0] = 255;
+            } else if (this->data[i].state == 2) {      // anoxia_tag
+                rgbcol[0] = 0;
                 rgbcol[1] = 0;
-                rgbcol[2] = 0;
-            } else if (this->data[i].state == 3) {
+                rgbcol[2] = 255;
+            } else if (this->data[i].state == 3) {      // mitosis
                 rgbcol[0] = 255;
                 rgbcol[1] = 0;
                 rgbcol[2] = 255;
@@ -575,7 +575,6 @@ void Field::displayField(int hr, int *res)
                 rgbcol[0] = 255;
                 rgbcol[1] = 150;
                 rgbcol[2] = 0;
-                qDebug("Tagged to die of treatment");
             }
             brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
             scene->addEllipse(xp+(w-d)/2,yp+(w-d)/2,d,d,Qt::NoPen, brush);

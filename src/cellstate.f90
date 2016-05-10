@@ -1080,7 +1080,7 @@ call ScalePathConcentrations(site0,site01,path,npath,alpha)
 !Cex = occupancy(site0(1),site0(2),site0(3))%C(:)
 !occupancy(site0(1),site0(2),site0(3))%C(:) = (Cex*(Vsite_cm3 - V0) + occupancy(site01(1),site01(2),site01(3))%C(:)*V0/2)/(Vsite_cm3 - V0/2)
 
-call SetRadius(Nsites)
+!call SetRadius(Nsites)
 !call extendODEdiff(site2)
 ! Now need to fix the bdrylist.  
 ! site1 was on the boundary, but may no longer be.
