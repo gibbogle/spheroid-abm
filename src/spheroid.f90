@@ -1760,9 +1760,14 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine getNecroticFraction(necrotic_fraction,vol_cm3)
-real(REAL_KIND) :: necrotic_fraction, vol_cm3	! vol_cm3 not used here, needed in scell
-necrotic_fraction = (Nsites-Ncells)/real(Nsites)
+subroutine getNecroticFraction(necrotic_fraction,totvol_cm3)
+real(REAL_KIND) :: necrotic_fraction, totvol_cm3	! vol_cm3 not used here, needed in scell
+real(REAL_KIND) :: cellvol_cm3, dvol
+!necrotic_fraction = (Nsites-Ncells)/real(Nsites)
+cellvol_cm3 = Ncells*DELTA_X**3
+dvol = totvol_cm3-cellvol_cm3
+necrotic_fraction = dvol/totvol_cm3
+if (necrotic_fraction < 0.005) necrotic_fraction = 0
 end subroutine
 
 !-----------------------------------------------------------------------------------------

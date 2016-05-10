@@ -31,6 +31,7 @@ do iz = izmin,izmax
 	volume = volume + area(iz)
 	if (area(iz) > maxarea) maxarea = area(iz)
 enddo
+write(*,'(a,i6,f10.1,f8.3)') 'getVolume: Ncells,volume: ',Ncells,volume,volume/Ncells
 end subroutine
 
 !---------------------------------------------------------------------------------------
@@ -40,6 +41,7 @@ integer :: iz
 real(REAL_KIND) :: area
 real(REAL_KIND), allocatable :: x(:), y(:), xv(:), yv(:)
 real(REAL_KIND) :: ave(2), xc, yc, d2, d2max, dx(4), dy(4), dx_um
+real(REAL_KIND) :: delta = 0.20
 integer, allocatable :: iwk(:), vertex(:)
 integer :: ix, iy, n, nvert, i, i1, i2, k, kmax
 
@@ -78,8 +80,8 @@ do i = 1,nvert
 enddo
 ave = ave/nvert	! this is the approximate centre
 ! Now adjust (xv,yv) to the site corner most remote from the centre
-dx = [-0.5, 0.5, 0.5, -0.5]
-dy = [-0.5, -0.5, 0.5, 0.5]
+dx = [-delta, delta, delta, -delta]
+dy = [-delta, -delta, delta, delta]
 do i = 1,nvert
 	d2max = 0
 	do k = 1,4
