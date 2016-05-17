@@ -31,7 +31,7 @@ do iz = izmin,izmax
 	volume = volume + area(iz)
 	if (area(iz) > maxarea) maxarea = area(iz)
 enddo
-write(*,'(a,i6,f10.1,f8.3)') 'getVolume: Ncells,volume: ',Ncells,volume,volume/Ncells
+!write(*,'(a,i6,f10.1,f8.3)') 'getVolume: Ncells,volume: ',Ncells,volume,volume/Ncells
 end subroutine
 
 !---------------------------------------------------------------------------------------
