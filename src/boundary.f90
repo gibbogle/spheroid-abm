@@ -312,7 +312,7 @@ do x = 1,NX
 			bdry => occupancy(x,y,z)%bdry
 			if (associated(bdry)) then
 				nb2 = nb2 + 1
-				dy = y - Centre(2)
+				dy = y - blob_centre(2)
 			else
 				site = (/x,y,z/)
 				if (isbdry(site)) then

@@ -56,7 +56,6 @@ real(REAL_KIND), pointer :: Cave_b(:,:,:), Cprev_b(:,:,:), Fprev_b(:,:,:), Fcurr
 logical :: zero
 
 write(nflog,*) 'setup_react_diff: NXB: ',NXB
-!DXB = 120
 DXB = 1.0e-4*DXB	! um -> cm
 ixb0 = (1 + NXB)/2
 iyb0 = (1 + NYB)/2
@@ -138,12 +137,14 @@ subroutine make_csr_b(a_b, ichemo, dt, Cave_b, Cprev_b, Fcurr_b, Fprev_b, rhs, z
 integer :: ichemo
 real(REAL_KIND) :: dt, a_b(:), Cave_b(:,:,:), Cprev_b(:,:,:), Fcurr_b(:,:,:), Fprev_b(:,:,:), rhs(:)
 logical :: zero
-integer :: ixb, iyb, izb, k, i, krow, kcol, nc
-real(REAL_KIND) :: Kdiff, Kr, Cbdry, Fsum
+integer :: ixb, iyb, izb, k, i, krow, kcol, nc, krow0
+real(REAL_KIND) :: Kdiff, Kr, Cbdry, Fsum, Kdiff0
 integer, parameter :: m = 3
 
 zero = .true.
 Kdiff = chemo(ichemo)%medium_diff_coef
+Kdiff0 = chemo(ichemo)%diff_coef
+krow0 = (ixb0-1)*NYB*NZB + (iyb0-1)*NZB + izb0
 Fsum = 0
 krow = 0
 do k = 1,nnz_b
@@ -151,6 +152,11 @@ do k = 1,nnz_b
 	kcol = ja_b(k)
 	if (amap_b(k,0) == 2*m) then
 		Kr = dxb*dxb/Kdiff
+!	    if (krow == krow0) then
+!		    Kr = dxb*dxb/Kdiff0
+!		else
+!		    Kr = dxb*dxb/Kdiff
+!		endif
 		a_b(k) = 3*Kr/(2*dt) + 2*m	! ... note that Kdiff should depend on (ixb,iyb,izb), ultimately on # of cells
 	else
 		a_b(k) = amap_b(k,0)
@@ -170,7 +176,12 @@ do izb = 1,NZB
 	do iyb = 1,NYB
 		do ixb = 1,NXB
 			krow = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
-			Kr = dxb*dxb/Kdiff
+            Kr = dxb*dxb/Kdiff
+!	        if (krow == krow0) then
+!		        Kr = dxb*dxb/Kdiff0
+!		    else
+!		        Kr = dxb*dxb/Kdiff
+!		    endif
 			rhs(krow) = Kr*((-2*Fcurr_b(ixb,iyb,izb) + Fprev_b(ixb,iyb,izb))/dxb3 + (1./(2*dt))*(4*Cave_b(ixb,iyb,izb) - Cprev_b(ixb,iyb,izb)))
 			if (rhs(krow) /= 0) zero = .false.
 		enddo
@@ -231,7 +242,7 @@ if (cp%state == DEAD) then
 	write(*,*) 'Error: extra_concs_const: dead cell: ',kcell
 	stop
 endif
-cb = Centre_b + (cp%site - Centre)*DELTA_X
+cb = Centre_b + (cp%site - blob_centre)*DELTA_X
 ixb = cb(1)/DXB + 1
 iyb = cb(2)/DXB + 1
 izb = cb(3)/DXB + 1
@@ -259,7 +270,7 @@ type(cell_type), pointer :: cp
 do kcell = 1,nlist
 	cp => cell_list(kcell)
 	if (cp%state == DEAD) cycle
-	cb = Centre_b + (cp%site - Centre)*DELTA_X
+	cb = Centre_b + (cp%site - blob_centre)*DELTA_X
 	call getConc(cb,cp%Cex)
 enddo
 end subroutine
@@ -419,6 +430,10 @@ do kcell = 1,nlist
 !	if (kcell == 1) then
 !		write(nflog,'(a,i4,5e12.5)') 'getF_const: Cin, Cex, dMdt: ',ichemo, cp%conc(ichemo), cp%Cex(ichemo),cp%dMdt(ichemo),Kin,Kout
 !	endif
+	if (istep == 35 .and. ichemo == OXYGEN) then
+	    write(nflog,'(i6,6e12.3)') kcell, Kin, Kout, cp%conc(ichemo), cp%Cex(OXYGEN), &
+	        cp%Cex(OXYGEN)-cp%conc(ichemo), cp%dMdt(OXYGEN)
+	endif
 enddo
 !!$omp end parallel do
 if (ichemo == OXYGEN) then
@@ -807,19 +822,26 @@ end function
 !--------------------------------------------------------------------------------------
 subroutine set_bdry_conc
 integer :: kpar = 0
-real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO)
+real(REAL_KIND) :: rad, cntr(3), x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO)
+real(REAL_KIND) :: xc0, yc0, zc0
 integer :: i, ic, ichemo, n = 100
 
 !call SetRadius(Nsites)
-rad = Radius*DELTA_X
+!rad = Radius*DELTA_X
+! Try this change
+rad = DELTA_X*blob_radius
+cntr = DELTA_X*blob_centre
+xc0 = cntr(1)
+yc0 = cntr(2)
+zc0 = cntr(3)
 csum = 0
 do i = 1,n
 	z = -rad + 2*rad*par_uni(kpar)
 	phi = 2*PI*par_uni(kpar)
 	theta = asin(z/rad)
-	x = xb0 + rad*cos(theta)*cos(phi)
-	y = yb0 + rad*cos(theta)*sin(phi)
-	z = zb0 + z
+	x = xc0 + rad*cos(theta)*cos(phi)
+	y = yc0 + rad*cos(theta)*sin(phi)
+	z = zc0 + z
 	p = [x, y, z]
 	call getConc(p,c)
 	csum = csum + c

@@ -30,7 +30,7 @@ integer, parameter :: DIVIDE_ALWAYS_PUSH  = 1
 integer, parameter :: DIVIDE_USE_CLEAR_SITE  = 2
 integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 
-integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16, nfprofile=17
+integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16, nfprofile=17, nfslice=18
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
 integer, parameter :: CFSE = 0
@@ -50,7 +50,7 @@ integer, parameter :: GROWTH_RATE = MAX_CHEMO + 1	! (not used here, used in the 
 integer, parameter :: CELL_VOLUME = MAX_CHEMO + 2
 integer, parameter :: O2_BY_VOL = MAX_CHEMO + 3
 
-integer, parameter :: N_EXTRA = O2_BY_VOL - MAX_CHEMO	! = 3 = total # of variables - MAX_CHEMO
+integer, parameter :: N_EXTRA = O2_BY_VOL - MAX_CHEMO + 1	! = 4 = total # of variables - MAX_CHEMO
 
 integer, parameter :: TPZ_CLASS = 1
 integer, parameter :: DNB_CLASS = 2
@@ -222,6 +222,13 @@ type LQ_type
 	real(REAL_KIND) :: growth_delay_N
 end type
 
+type savedata_type
+    logical :: active
+    character*(128) :: filebase
+    real(REAL_KIND) :: dt
+    integer :: nt, it
+end type
+
 type(dist_type) :: divide_dist(MAX_CELLTYPES)
 type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable, target :: cell_list(:)
@@ -235,11 +242,13 @@ integer :: ixb0, iyb0, izb0
 integer :: initial_count
 integer, allocatable :: zdomain(:),zoffset(:)
 integer :: blobrange(3,2)
-real(REAL_KIND) :: Radius, Centre(3)		! sphere radius and centre
-real(REAL_KIND) :: x0,y0,z0					! sphere centre in global coordinates (units = grids)
+!real(REAL_KIND) :: Radius, Centre(3)		! sphere radius and centre
+real(REAL_KIND) :: x0,y0,z0					! initial sphere centre in lattice coordinates (units = sites)
 real(REAL_KIND) :: Centre_b(3)              ! sphere centre in coarse grid axes
 real(REAL_KIND) :: xb0,yb0,zb0              ! sphere centre in coarse grid axes
-real(REAL_KIND) :: blob_volume, blob_area
+real(REAL_KIND) :: blob_volume, blob_area       ! blob volume, max z-slice area (units = sites)
+real(REAL_KIND) :: blob_centre(3), blob_radius  ! blob centre, radius in lattice coordinates (units = sites)
+real(REAL_KIND) :: Vex_min, Vex_max
 
 logical :: use_dropper
 integer :: Ndrop
@@ -262,17 +271,21 @@ integer :: Ndrug_dead(MAX_DRUGTYPES,MAX_CELLTYPES)
 logical :: use_radiation_growth_delay_all = .true.
 !logical :: radiation_dosed
 
+logical :: drug_gt_cthreshold(MAX_DRUGTYPES)
+real(REAL_KIND), parameter :: Cthreshold = 1.0e-5
+
+type(savedata_type) :: saveprofile, saveslice
+
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny, ichemo_curr
 integer :: Mnodes, ncpu_input
 integer :: Nevents
-integer :: nt_saveprofiledata, it_saveprofiledata
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
 real(REAL_KIND) :: dxb, dxb3, dxf, dx3
 real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer, t_lastmediumchange
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
-real(REAL_KIND) :: divide_time_median(MAX_CELLTYPES), divide_time_shape(MAX_CELLTYPES), divide_time_mean(MAX_CELLTYPES), dt_saveprofiledata
+real(REAL_KIND) :: divide_time_median(MAX_CELLTYPES), divide_time_shape(MAX_CELLTYPES), divide_time_mean(MAX_CELLTYPES)
 real(REAL_KIND) :: t_simulation, execute_t1
 real(REAL_KIND) :: O2cutoff(3), hypoxia_threshold
 real(REAL_KIND) :: growthcutoff(3)
@@ -292,7 +305,6 @@ type(LQ_type) :: LQ(MAX_CELLTYPES)
 character*(128) :: inputfile
 character*(128) :: treatmentfile
 character*(128) :: outputfile
-character*(128) :: profiledatafilebase
 character*(2048) :: logmsg
 character*(1024) :: header
 logical :: test_case(4)
@@ -313,7 +325,6 @@ logical :: use_FD = .true.
 logical :: use_gaplist = .true.
 logical :: relax
 logical :: use_parallel
-logical :: saveprofiledata
 logical :: dbug = .false.
 logical :: bdry_debug
 
@@ -402,10 +413,10 @@ end subroutine
 !---------------------------------------------------------------------
 subroutine SetRadius(N)
 integer :: N
-Radius = (3.0*N/(4.0*PI))**(1./3.)
+blob_radius = (3.0*N/(4.0*PI))**(1./3.)
 if (is_dropped) then
-	z0 = zmin + (bdrop-cdrop)*Radius
-	Centre(3) = z0
+	z0 = zmin + (bdrop-cdrop)*blob_radius
+	blob_centre(3) = z0
 endif
 end subroutine
 
@@ -514,7 +525,7 @@ real(REAL_KIND) function cdistance(site)
 integer :: site(3)
 real(REAL_KIND) :: r(3)
 
-r = site - Centre
+r = site - blob_centre
 cdistance = norm(r)
 end function
 

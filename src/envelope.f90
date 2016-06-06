@@ -6,22 +6,52 @@ implicit none
 integer, parameter :: MAXN = 5000
 contains
 
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+function getCentre() result (C)
+integer :: kcell, n
+real(REAL_KIND) :: csum(3), C(3)
+type(cell_type), pointer :: cp
+
+n = 0
+csum = 0
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+	n = n+1
+	cp => cell_list(kcell)
+	csum = csum + cp%site
+enddo
+C = csum/n
+end function
+
+!-----------------------------------------------------------------------------------------
+! Estimate blob radius (units sites) from max z-slice area.
+!-----------------------------------------------------------------------------------------
+function getRadius() result(R)
+real(REAL_KIND) :: R
+real(REAL_KIND) :: vol, area
+
+!call getBlobCentreRange(cntr,rng, R)
+call getVolume(vol, area)
+R = sqrt(area/PI)
+end function
+
 !---------------------------------------------------------------------------------------
-! Returns total blob volume in units of sites
+! Returns total blob volume, max z-slice area in units of sites
 !---------------------------------------------------------------------------------------
 subroutine getVolume(volume,maxarea)
 real(REAL_KIND) :: volume, maxarea
-real(REAL_KIND) :: area(NZ)
+real(REAL_KIND) :: area(NZ), cntr(2)
 integer :: iz, iz0, izmin, izmax
 
-iz0 = Centre(3)
+iz0 = blob_centre(3)
 do iz = iz0,NZ
-	call getArea(iz,area(iz))
+	call getArea(iz,area(iz),cntr)
 	if (area(iz) == 0) exit
 	izmax = iz
 enddo
 do iz = iz0-1,1,-1
-	call getArea(iz,area(iz))
+	call getArea(iz,area(iz),cntr)
 	if (area(iz) == 0) exit
 	izmin = iz
 enddo
@@ -35,10 +65,84 @@ enddo
 end subroutine
 
 !---------------------------------------------------------------------------------------
+! nsmax = dimension of rad(:,2)
 !---------------------------------------------------------------------------------------
-subroutine getArea(iz, area)
+subroutine getSlices(nslices,dzslice,nsmax,rad)
+integer :: nslices, nsmax
+real(REAL_KIND) :: dzslice, rad(:,:)
+real(REAL_KIND) :: area, cntr(2), r_inner(NZ), r_outer(NZ)
+integer :: iz, iz1, iz2, i
+
+!iz0 = blob_centre(3)
+!do iz = iz0,NZ
+!	call getArea(iz,area(iz),cntr)
+!	if (area(iz) == 0) exit
+!	izmax = iz
+!enddo
+!do iz = iz0-1,1,-1
+!	call getArea(iz,area(iz),cntr)
+!	if (area(iz) == 0) exit
+!	izmin = iz
+!enddo
+
+do iz = 1,NZ
+	call getArea(iz,area,cntr)
+    r_outer(iz) = sqrt(area/PI)	! cm
+    if (r_outer(iz) > 0) then
+        call getInnerRadius(iz,cntr,r_inner(iz))
+    else
+        r_inner(iz) = 0
+    endif
+enddo
+iz1 = 0
+do iz = 1,NZ
+    if (r_outer(iz) > 0) then
+        if (iz1 == 0) iz1 = iz
+        iz2 = iz
+    endif
+enddo
+nslices = iz2 - iz1 + 1
+nslices = min(nslices,nsmax)
+do i = 1,nslices
+    iz = iz1 + i - 1
+    rad(i,1) = DELTA_X*r_inner(iz)
+    rad(i,2) = DELTA_X*r_outer(iz)
+enddo
+dzslice = DELTA_X
+
+end subroutine
+
+!---------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------
+subroutine getInnerRadius(iz,cntr,r_in)
 integer :: iz
-real(REAL_KIND) :: area
+real(REAL_KIND) :: r_in, cntr(2)
+integer :: ix, iy
+real(REAL_KIND) :: r2, r2min, dx, dy
+
+r2min = 1.0e10
+do ix = 1,NX
+	do iy = 1,NY
+		if (occupancy(ix,iy,iz)%indx(1) > 0) then
+	        dx = ix - cntr(1)
+	        dy = iy - cntr(2)
+	        r2 = dx**2 + dy**2
+	        r2min = min(r2,r2min)
+	    endif
+	enddo
+enddo
+if (r2min > 0) then
+    r_in = sqrt(r2min)
+else
+    r_in = 0
+endif
+end subroutine
+
+!---------------------------------------------------------------------------------------
+!---------------------------------------------------------------------------------------
+subroutine getArea(iz, area, cntr)
+integer :: iz
+real(REAL_KIND) :: area, cntr(2)
 real(REAL_KIND), allocatable :: x(:), y(:), xv(:), yv(:)
 real(REAL_KIND) :: ave(2), xc, yc, d2, d2max, dx(4), dy(4), dx_um
 real(REAL_KIND) :: delta = 0.20
@@ -78,7 +182,7 @@ do i = 1,nvert
 	ave(1) = ave(1) + xv(i)
 	ave(2) = ave(2) + yv(i)
 enddo
-ave = ave/nvert	! this is the approximate centre
+cntr = ave/nvert	! this is the approximate centre
 ! Now adjust (xv,yv) to the site corner most remote from the centre
 dx = [-delta, delta, delta, -delta]
 dy = [-delta, -delta, delta, delta]
@@ -87,7 +191,7 @@ do i = 1,nvert
 	do k = 1,4
 		xc = xv(i) + dx(k)
 		yc = yv(i) + dy(k)
-		d2 = (xc - ave(1))**2 + (yc-ave(2))**2
+		d2 = (xc - cntr(1))**2 + (yc-cntr(2))**2
 		if (d2 > d2max) then
 			d2max = d2
 			kmax = k
@@ -104,10 +208,6 @@ do i1 = 1,nvert
 	area = area + xv(i1)*yv(i2) - xv(i2)*yv(i1)
 enddo
 area = -area/2
-!dx_um = DELTA_X*10000	! site size in um
-!area = area*dx_um*dx_um	! area in um^2
-!diam = 2*sqrt(area/PI)
-!write(*,'(a,i4,2f8.1)') 'area: ',iz,area,diam
 
 deallocate(xv)
 deallocate(yv)

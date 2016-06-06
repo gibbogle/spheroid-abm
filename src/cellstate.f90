@@ -367,7 +367,7 @@ end subroutine
 ! the site migrates towards the blob centre.
 ! %indx -> 0
 ! If the site is on the boundary, it is removed from the boundary list, and %indx -> OUTSIDE_TAG
-! The cell contents should be released into the site.
+! The cell contents are released into the site.
 !-----------------------------------------------------------------------------------------
 subroutine CellDies(kcell)
 integer :: kcell
@@ -558,7 +558,7 @@ real(REAL_KIND) :: Vin_0, Vex_0, dV, minVex
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
 logical :: drugkilled, glucose_growth, first_cycle
-integer :: C_option = 1
+integer :: C_option = 2
 type(cell_type), pointer :: cp
 
 !call logger('CellGrowth')
@@ -901,7 +901,46 @@ end function
 
 !-----------------------------------------------------------------------------------------
 ! The dividing cell, kcell0, is at site0.
-! A neighbour site site01 is chosen randomly.  This becomes the site for the daughter cell.
+! The cases are:
+!   (0) If there is a vacant interior neighbour site, this is used for the daughter cell, done.
+! Otherwise, a neighbour site site01 is chosen randomly.  This becomes the site for the daughter cell.
+! The cell occupying site01 must be moved to make way for the daughter cell.
+! site01 is:
+!   (1) outside the blob
+!   (2) on the boundary
+!   (3) inside the blob
+!
+! Revised simple mass balance
+! ---------------------------
+! In case (0), the effect on mass balance is insignificant, since the two sites are neighbours
+! and therefore have very similar extracellular concentrations.  For now no adjustment is done.
+! In case (1), same as case (0), no adjustment needed.
+! In cases (2) and (3), cells are displaced on a line from site01 to the first (nearest) vacant site.
+! The previously vacant site that receives a cell, at the end of the line of moved cells,
+! is site2.  Mass conservation is (approximately) conserved by an adjustment to the 
+! extracellular concentration at this site.  For this the extra conc at site0 is needed.
+! The extracellular concentration at site2 is adjusted to ensure that mass is conserved
+! approximately, on average.
+! Let: 
+! Vc = daughter cell volume = 0.8
+! Vi = volume of displaced cells, on average = 1.2
+! C0 = extracellular conc at site of division
+! Ci = extracellular conc at sites along the line of displacement
+! Cn = extracellular conc at unoccupied site that receives a cell (end of the line)
+! Change in extracellular mass:
+! + Vc.C0 at division site
+! + (V1 - Vc).C1 at neighbour site that daughter cell moves into
+! - Vn.Cn at the end site
+! Note that on average there is no change in extra volume at intermediate sites, since on
+! average the cells have the same volume = 1.2
+! Therefore the total change (increase) in mass dM = Vc.C0 + (V1 - Vc).C1 - Vn.Cn
+! Since Vc = 0.8 and V1 = Vn = 1.2 (on average), dM = 0.8C0 + 0.4C1 - 1.2Cn
+! and since C1 is approximately equal to C0 (neighbour sites), approx dM = 1.2(C0 - Cn)
+! The adjustment subtracts dM from the extra conc at the end site site2.
+! Cn -> (Vn.Cn - 1.2(C0-Cn))/Vn
+! where Vn is the normalised volume.
+! Note: this "simple" adjustment does not work.  The required additional mass at site2
+! is excessive, leads, for example, to O2 concentration that exceeds the boundary value.
 !-----------------------------------------------------------------------------------------
 subroutine CellDivider(kcell0, ok)
 integer :: kcell0
@@ -909,10 +948,11 @@ logical :: ok
 integer :: kpar=0
 integer :: j, k, kcell1, ityp, site0(3), site1(3), site2(3), site01(3), site(3), ichemo, nfree, bestsite(3)
 integer :: npath, path(3,200)
-real(REAL_KIND) :: tnow, R, v, vmax, V0, Tdiv, Cex(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_CHEMO), alpha(MAX_CHEMO)
+real(REAL_KIND) :: tnow, R, v, vmax, V0, Tdiv, Cex0(MAX_CHEMO), M0(MAX_CHEMO), M1(MAX_CHEMO), alpha(MAX_CHEMO)
 real(REAL_KIND) :: cfse0, cfse1
 integer :: freesite(27,3)
 type (boundary_type), pointer :: bdry
+logical :: use_simple_mass_balance = .false.
 
 if (dbug) then
 	write(logmsg,*) 'CellDivider: ',kcell0
@@ -939,6 +979,7 @@ cell_list(kcell0)%M = cell_list(kcell0)%M/2
 !call logger(logmsg)
 
 site0 = cell_list(kcell0)%site
+Cex0 = occupancy(site0(1),site0(2),site0(3))%C
 if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby clear site, if it exists use it
 	divide_option == DIVIDE_USE_CLEAR_SITE_RANDOM) then		! make random choice from nearby clear sites
 	vmax = -1.0e10
@@ -947,7 +988,7 @@ if (divide_option == DIVIDE_USE_CLEAR_SITE .or. &			! look for the best nearby c
 		if (j == 14) cycle
 		site01 = site0 + jumpvec(:,j)
 !		if (occupancy(site01(1),site01(2),site01(3))%indx(1) < -100) then
-		if (occupancy(site01(1),site01(2),site01(3))%indx(1) == 0) then
+		if (occupancy(site01(1),site01(2),site01(3))%indx(1) == 0) then ! vacant site, not OUTSIDE
 			nfree = nfree + 1
 			freesite(nfree,:) = site01
 			v = SiteValue(occupancy(site01(1),site01(2),site01(3))%C(:))
@@ -1048,7 +1089,9 @@ else
 	Nsites = Nsites + 1
 endif
 
-call GetPathMass(site0,site01,path,npath,M0)
+if (.not.use_simple_mass_balance) then
+    call GetPathMass(site0,site01,path,npath,M0)
+endif
 if (npath > 0) then
 	call PushPath(path,npath)
 !	if (bdry_debug) call CheckBdryList('after PushPath')
@@ -1063,22 +1106,28 @@ cell_list(kcell1)%CFSE = cfse1
 ! Cell division completed
 ! Adjust concentrations, boundary list
 
-call GetPathMass(site0,site01,path,npath,M1)
-do ichemo = 1,MAX_CHEMO
-	if (M0(ichemo) >= 0 .and. M1(ichemo) > 0) then
-		alpha(ichemo) = M0(ichemo)/M1(ichemo)	! scaling for concentrations on the path
-	else
-		alpha(ichemo) = 1
-	endif
-enddo
-call ScalePathConcentrations(site0,site01,path,npath,alpha)
-
+if (use_simple_mass_balance) then
+    if (npath > 0) then
+        call AdjustMass(site0,site2)
+    endif
+else
+! This is superceded by a simple adjustment to the extracellular concentration at the final destination site
+    call GetPathMass(site0,site01,path,npath,M1)
+    do ichemo = 1,MAX_CHEMO
+	    if (M0(ichemo) >= 0 .and. M1(ichemo) > 0) then
+		    alpha(ichemo) = M0(ichemo)/M1(ichemo)	! scaling for concentrations on the path
+	    else
+		    alpha(ichemo) = 1
+	    endif
+    enddo
+    call ScalePathConcentrations(site0,site01,path,npath,alpha)
+endif
 !if (npath > 0) then
 !	call FixPathConcentrations1(path,npath)
 !endif
 !! Now adjust extracellular concentrations for the parent cell site to ensure mass conservation
-!Cex = occupancy(site0(1),site0(2),site0(3))%C(:)
-!occupancy(site0(1),site0(2),site0(3))%C(:) = (Cex*(Vsite_cm3 - V0) + occupancy(site01(1),site01(2),site01(3))%C(:)*V0/2)/(Vsite_cm3 - V0/2)
+!Cex0 = occupancy(site0(1),site0(2),site0(3))%C(:)
+!occupancy(site0(1),site0(2),site0(3))%C(:) = (Cex0*(Vsite_cm3 - V0) + occupancy(site01(1),site01(2),site01(3))%C(:)*V0/2)/(Vsite_cm3 - V0/2)
 
 !call SetRadius(Nsites)
 !call extendODEdiff(site2)
@@ -1129,6 +1178,27 @@ enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! In the following C0 -> Cex0, Cn -> Cex, Vn -> Vex
+!-----------------------------------------------------------------------------------------
+subroutine AdjustMass(site0,site2)
+integer :: site0(3), site2(3)
+integer :: kcell2
+real(REAL_KIND) :: Vc, Vex, Cex0(MAX_CHEMO), Cex(MAX_CHEMO)
+
+! Concentration adjustment
+kcell2 = occupancy(site2(1),site2(2),site2(3))%indx(1)
+Cex0 = occupancy(site0(1),site0(2),site0(3))%C
+Vc = cell_list(kcell2)%volume
+Vex = Vsite_cm3/Vcell_cm3 - Vc  ! normalised extracellular volume
+Cex = occupancy(site2(1),site2(2),site2(3))%C
+write(*,'(a,4e12.3)') 'AdjustMass: ',Vex,Vc,Cex0(OXYGEN),Cex(OXYGEN)
+Cex = (Vex*Cex + 1.2*(Cex-Cex0))/Vex
+write(*,'(a,e12.3)') 'Cex: ',Cex(OXYGEN)
+occupancy(site2(1),site2(2),site2(3))%C = Cex
+cell_list(kcell2)%Cex = Cex
+end subroutine
+
+!-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine GetPathMass(site0,site01,path,npath,mass)
 integer :: site0(3),site01(3),path(3,200),npath
@@ -1175,6 +1245,7 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! NOTE: This is not satisfactory, because it can create a concentration increase -
 ! but it is not clear what should be done!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! NOW NOT USED
 !-----------------------------------------------------------------------------------------
 subroutine ScalePathConcentrations(site0,site01,path,npath,alpha)
 integer :: site0(3),site01(3),path(3,200),npath
@@ -1254,14 +1325,14 @@ real(REAL_KIND) :: z, r2, sin2, cos2, d2, dd, dsq, dsqmax, tempCentre(3)
 logical :: hit
 type (boundary_type), pointer :: bdry
 
-tempCentre = Centre
-if (is_dropped .and. site0(3) < Centre(3)) then
-	tempCentre(3) = (site0(3) + 2*Centre(3))/3
+tempCentre = blob_centre
+if (is_dropped .and. site0(3) < blob_centre(3)) then
+	tempCentre(3) = (site0(3) + 2*blob_centre(3))/3
 endif
 vc = site0 - tempCentre
 r = norm(vc)
 vc = vc/r
-rfrac = r/Radius
+rfrac = r/blob_radius
 alpha_max = getAlphaMax(rfrac)
 cosa_min = cos(alpha_max)
 dmin = 1.0e10
@@ -1277,21 +1348,21 @@ do while ( associated ( bdry ))
 		hit = .true.
 		if (is_dropped) then
 			z = site0(3) + cdrop - zmin
-			if (z < 2*bdrop*Radius) then
-				cos2 = (1 - (z)/(bdrop*Radius))**2
+			if (z < 2*bdrop*blob_radius) then
+				cos2 = (1 - (z)/(bdrop*blob_radius))**2
 				sin2 = 1 - cos2
 			else
-				r2 = (site0(1)-Centre(1))**2 + (site0(2)-Centre(2))**2
-				sin2 = r2/(adrop*Radius)**2
+				r2 = (site0(1)-blob_centre(1))**2 + (site0(2)-blob_centre(2))**2
+				sin2 = r2/(adrop*blob_radius)**2
 				cos2 = 1 - sin2
 			endif
 			d2 = adrop*adrop*sin2 + bdrop*bdrop*cos2
 			if (d2 < 0) then
 				write(nflog,*) 'd2 < 0: cos2, sin2: ',cos2,sin2
-				write(nflog,*) 'site0(3),cdrop,zmin: ',site0(3),cdrop,zmin,(site0(3) + cdrop - zmin)/(bdrop*Radius)
+				write(nflog,*) 'site0(3),cdrop,zmin: ',site0(3),cdrop,zmin,(site0(3) + cdrop - zmin)/(bdrop*blob_radius)
 				stop
 			endif
-			dd = Radius*sqrt(d2)	! this is the desired distance for this z
+			dd = blob_radius*sqrt(d2)	! this is the desired distance for this z
 			dsq = dd - d	! could use dd/d or dd-d
 			if (dsq > dsqmax) then
 				dsqmax = dsq
@@ -1490,13 +1561,13 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! The daughter cell kcell1 is given the same characteristics as kcell0 and placed at site1.
 ! Random variation is introduced into %divide_volume.
-! The concentrations of constituents must be halved NOT TRUE!!!!!!!!!!!! 
 !-----------------------------------------------------------------------------------------
 subroutine CloneCell(kcell0,kcell1,site1,ok)
 integer :: kcell0, kcell1, site1(3), ityp, idrug
+!real(REAL_KIND) :: Cex0(:)
 logical :: ok
 integer :: kpar = 0
-real(REAL_KIND) :: tnow, V0, Tdiv, R
+real(REAL_KIND) :: tnow, V0, Tdiv, R, Vex, Cex(MAX_CHEMO)
 
 ok = .true.
 tnow = istep*DELTA_T
@@ -1577,12 +1648,13 @@ cell_list(kcell1)%divide_volume = get_divide_volume(ityp, V0, Tdiv)
 cell_list(kcell1)%divide_time = Tdiv
 cell_list(kcell1)%t_hypoxic = 0
 cell_list(kcell1)%conc = cell_list(kcell0)%conc
-cell_list(kcell1)%Cex = cell_list(kcell0)%Cex
+!cell_list(kcell1)%Cex = cell_list(kcell0)%Cex
 cell_list(kcell1)%dCdt = cell_list(kcell0)%dCdt
 cell_list(kcell1)%dMdt = cell_list(kcell0)%dMdt
 cell_list(kcell1)%M = cell_list(kcell0)%M
 occupancy(site1(1),site1(2),site1(3))%indx(1) = kcell1
-!write(nflog,'(a,i6,2f8.2)') 'cloned: ',kcell1,cell_list(kcell1)%volume,cell_list(kcell1)%divide_volume
+
+cell_list(kcell1)%Cex = occupancy(site1(1),site1(2),site1(3))%C
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1606,15 +1678,15 @@ do kcell = 1,nlist
 		endif
 	enddo
 	if (bdry) then
-		v = site - Centre
+		v = site - blob_centre
 		r = norm(v)
 		if (r < rmin) then
 			rmin = r
-			minv = site - Centre
+			minv = site - blob_centre
 		endif
 		if (r > rmax) then
 			rmax = r
-			maxv = site - Centre
+			maxv = site - blob_centre
 		endif
 	endif
 enddo

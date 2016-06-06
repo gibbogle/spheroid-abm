@@ -153,7 +153,8 @@ void Field::setFieldConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxL
     QRadioButton *rb;
 
     Global::nfieldvars_used = Global::nvars_used - Global::N_EXTRA;
-    LOG_QMSG("setFieldConstituentButtons: " + tag);
+    LOG_QMSG("setFieldConstituentButtons: " + tag + " nfieldvars_used: "
+             + QString::number(Global::nfieldvars_used));
     if (rb_list->length() != 0) {
         LOG_MSG("rb_list not NULL, delete it");
         for (ivar=0; ivar<rb_list->length(); ivar++) {
@@ -204,6 +205,7 @@ void Field::setMaxConcentrations(QGroupBox *gbox)
         for (ivar=0; ivar < line_maxConc_list.length(); ivar++) {
             line_maxConc = line_maxConc_list[ivar];
             vbox_cell_max_concentration->removeWidget(line_maxConc);
+            line_maxConc->setVisible(false);
         }
     }
     line_maxConc_list.clear();
@@ -388,7 +390,8 @@ void Field::chooseFieldColor(double c, double cmin, double cmax, bool use_logsca
     } else {
         f = c/cmax;
     }
-    if (cell_constituent == OXYGEN) {
+//    if (cell_constituent == OXYGEN) {
+    if (field_constituent == OXYGEN) {
         rgb_hi[0] =   0; rgb_hi[1] =   0; rgb_hi[2] = 0;
         rgb_lo[0] = 255; rgb_lo[1] =   0; rgb_lo[2] = 0;
         for (i=0; i<3; i++) {
@@ -451,8 +454,8 @@ void Field::displayField(int hr, int *res)
     double a, b, Wc;
     int Nc;
 
-    ichemo = Global::GUI_to_DLL_index[cell_constituent];
-//    LOG_QMSG("displayField: " + QString::number(cell_constituent) + "-->" + QString::number(ichemo));
+    ichemo = Global::GUI_to_DLL_index[field_constituent];
+//    LOG_QMSG("displayField: " + QString::number(field_constituent) + "-->" + QString::number(ichemo));
     use_log = false;    // temporary
     *res = 0;
     hour = hr;
@@ -529,22 +532,23 @@ void Field::displayField(int hr, int *res)
     view->setScene(scene);
     view->setGeometry(QRect(0, 0, 700, 700));
     if (cmax == 0) {
-        view->show();
-        return;
-    }
-    sprintf(msg,"cell_constituent: %d",cell_constituent);
-    LOG_MSG(msg);
-    for (i=0; i<nsites; i++) {
-        ix = this->data[i].site[xindex];
-        iy = this->data[i].site[yindex];
-        xp = int(a*ix + b - w);
-        yp = int(a*iy + b - w);
-        chooseFieldColor(data[i].conc[ichemo],cmin,cmax,use_log,rgbcol);
-//        sprintf(msg,"c: %f %f %f rgbcol: %d %d %d",data[i].conc[cell_constituent],cmin,cmax,rgbcol[0],rgbcol[1],rgbcol[2]);
-//        LOG_MSG(msg);
-//        rgbcol[1] = 0;
-        brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
-        scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+        sprintf(msg,"displayField: ichemo: %d cmax=0",ichemo);
+        LOG_MSG(msg);
+    } else {
+        sprintf(msg,"field_constituent: %d",field_constituent);
+        LOG_MSG(msg);
+        for (i=0; i<nsites; i++) {
+            ix = this->data[i].site[xindex];
+            iy = this->data[i].site[yindex];
+            xp = int(a*ix + b - w);
+            yp = int(a*iy + b - w);
+            chooseFieldColor(data[i].conc[ichemo],cmin,cmax,use_log,rgbcol);
+    //        sprintf(msg,"c: %f %f %f rgbcol: %d %d %d",data[i].conc[cell_constituent],cmin,cmax,rgbcol[0],rgbcol[1],rgbcol[2]);
+    //        LOG_MSG(msg);
+    //        rgbcol[1] = 0;
+            brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+            scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+        }
     }
     for (i=0; i<nsites; i++) {
         ix = this->data[i].site[xindex];

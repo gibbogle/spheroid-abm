@@ -355,12 +355,45 @@ do i = 1,ODEdiff%nvars
 			cell_list(kcell)%Cex(:) = allstate(i,:)
 		endif
     else
-!        kcell = occupancy(site(1),site(2),site(3))%indx(1)
         kcell = ODEdiff%cell_index(i)
         cell_list(kcell)%conc(:) = allstate(i,:)
     endif
 enddo
 
+end subroutine
+
+!----------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------
+subroutine CheckDrugConcs
+integer :: ndrugs_present, drug_present(3*MAX_DRUGTYPES), drug_number(3*MAX_DRUGTYPES)
+integer :: idrug, iparent, im, kcell, ichemo, i
+type(cell_type), pointer :: cp
+
+ndrugs_present = 0
+drug_present = 0
+do idrug = 1,ndrugs_used
+	iparent = TRACER + 1 + 3*(idrug-1)
+	if (chemo(iparent)%present) then		! simulation with this drug has started
+	    do im = 0,2
+	        ichemo = iparent + im
+	        ndrugs_present = ndrugs_present + 1
+	        drug_present(ndrugs_present) = ichemo
+	        drug_number(ndrugs_present) = idrug
+	    enddo
+	endif
+enddo
+
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+    cp => cell_list(kcell)
+	do i = 1,ndrugs_present
+	    ichemo = drug_present(i)
+	    idrug = drug_number(i)
+	    if (cp%conc(ichemo) > Cthreshold) drug_gt_cthreshold(idrug) = .true.
+	    if (cp%Cex(ichemo) > Cthreshold) drug_gt_cthreshold(idrug) = .true.
+	enddo
+enddo
+    
 end subroutine
 
 !----------------------------------------------------------------------------------
@@ -411,15 +444,16 @@ end subroutine
 subroutine f_rkc(neqn,t,y,dydt,icase)
 integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
-integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, idrug, im, site(3), kcell, ict, ith, Ng
+integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, idrug, im, site(3), kcell, ict, ith, Ng, nc, nc0
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol_cm3, val, Cin(MAX_CHEMO), Cex
 real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_kin, membrane_kout, membrane_flux, area_factor, n_O2(0:2)
 logical :: bnd, dbug
 !logical :: TPZ_metabolised(MAX_CELLTYPES,0:2), DNB_metabolised(MAX_CELLTYPES,0:2)
 logical :: metabolised(MAX_CELLTYPES,0:2)
-real(REAL_KIND) :: metab, dMdt, KmetC
+real(REAL_KIND) :: metab, dMdt, KmetC, vcell_actual, Kd(0:2), dC, C0
 logical :: intracellular, cell_exists
 logical :: use_actual_cell_volume = .false.
+logical :: use_revised_diffusion_eqtn = .false.  ! account for effect of local cells on Kdiff
 type(drug_type), pointer :: dp
 
 ichemo = icase
@@ -440,7 +474,11 @@ else
 	metabolised(:,:) = .false.
 endif
 
+Kd(0) = chemo(ichemo)%medium_diff_coef
+Kd(2) = chemo(ichemo)%diff_coef
+Kd(1) = (Kd(0) + Kd(2))/2
 DX2 = DELTA_X*DELTA_X
+DX3 = DELTA_X*DX2
 decay_rate = chemo(ichemo)%decay_rate
 dc1 = chemo(ichemo)%diff_coef/DX2
 dc6 = 6*dc1 + decay_rate
@@ -467,22 +505,26 @@ do i = 1,neqn
                 cell_exists = .true.
 				kcell = ODEdiff%cell_index(i+1)		! for access to cell-specific parameters (note that the intra variable follows the extra variable)
 				if (use_actual_cell_volume) then
-					vol_cm3 = Vsite_cm3 - Vcell_cm3*cell_list(kcell)%volume	! accounting for cell volume change
+				    Vcell_actual = Vcell_cm3*cell_list(kcell)%volume
+					vol_cm3 = Vsite_cm3 - Vcell_actual	! accounting for cell volume change
 				else
-	                vol_cm3 = Vextra_cm3									! for now, ignoring cell volume change!!!!!
+	                vol_cm3 = Vextra_cm3				! for now, ignoring cell volume change!!!!!
 	            endif
 				area_factor = (cell_list(kcell)%volume)**(2./3.)
 	            Cin = allstate(i+1,:)
 	            Cin(ichemo) = y(i+1)
 	        endif
 	    endif
+	    Vex_min = min(Vex_min,vol_cm3/Vsite_cm3)
+	    Vex_max = max(Vex_max,vol_cm3/Vsite_cm3)
 	else
         intracellular = .true.
 	    kcell = ODEdiff%cell_index(i)					! for access to cell-specific parameters
 	    if (use_actual_cell_volume) then
-			vol_cm3 = Vcell_cm3*cell_list(kcell)%volume	! accounting for cell volume change
+		    Vcell_actual = Vcell_cm3*cell_list(kcell)%volume
+			vol_cm3 = Vcell_actual	            ! accounting for cell volume change
 		else
-			vol_cm3 = Vsite_cm3 - Vextra_cm3			! for now, ignoring cell volume change!!!!!
+			vol_cm3 = Vsite_cm3 - Vextra_cm3	! for now, ignoring cell volume change!!!!!
 		endif
 		area_factor = (cell_list(kcell)%volume)**(2./3.)
         Cex = y(i-1)
@@ -495,23 +537,52 @@ do i = 1,neqn
 	endif
 	if (.not.intracellular) then	! extracellular
 		! Need to check diffusion eqtn. when Vextra_cm3 < Vsite_cm3 = DX^3 !!!!!!!!!!!!!!!!!!!!!!
-	    dCsum = 0
-	    do k = 1,7
-		    kv = ODEdiff%icoef(i,k)
-		    if (k == 1) then
-			    dCdiff = -dc6
+        if (use_revised_diffusion_eqtn) then
+		    if (cell_exists) then   ! central cell
+		        nc0 = 1
 		    else
-			    dCdiff = dc1
+		        nc0 = 0
 		    endif
-		    if (kv == OUTSIDE_TAG) then
-			    val = cbnd
-		    elseif (kv == UNREACHABLE_TAG) then
-				val = y(ODEdiff%icoef(i,1))		! reflect concentration --> no flux
-		    else
-			    val = y(kv)
-		    endif
-		    dCsum = dCsum + dCdiff*val
-	    enddo
+            C0 = y(ODEdiff%icoef(i,1))  ! ex-concentration at the central site
+ 	        dCsum = 0
+	        do k = 2,7
+		        kv = ODEdiff%icoef(i,k)
+		        if (kv == OUTSIDE_TAG) then
+			        dC = cbnd - C0
+		        elseif (kv == UNREACHABLE_TAG) then
+				    dC = 0		! reflect concentration --> no flux
+		        else
+			        dC = y(kv) - C0
+		        endif     
+                if (kv < neqn .and. ODEdiff%vartype(kv+1) == INTRA) then
+                    nc = nc0 + 1
+                else
+                    nc = nc0
+                endif
+                ! nc = number of cells at the two sites (1 and k), can be 0, 1, 2
+                ! modify Kd according to nc              
+    		    dCsum = dCsum + Kd(nc)*dC*DELTA_X/vol_cm3   ! need to add in decay
+    		enddo
+            dCsum = dCsum - decay_rate*C0   !???????
+        else
+	        dCsum = 0
+	        do k = 1,7
+		        kv = ODEdiff%icoef(i,k)
+		        if (k == 1) then
+			        dCdiff = -dc6
+		        else
+			        dCdiff = dc1
+		        endif
+		        if (kv == OUTSIDE_TAG) then
+			        val = cbnd
+		        elseif (kv == UNREACHABLE_TAG) then
+				    val = y(ODEdiff%icoef(i,1))		! reflect concentration --> no flux
+		        else
+			        val = y(kv)
+		        endif
+		        dCsum = dCsum + dCdiff*val
+	        enddo
+	    endif
 	    if (cell_exists) then
 			membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*Cin(ichemo))
 		else
@@ -1262,7 +1333,7 @@ subroutine UpdateCbnd(dt)
 real(REAL_KIND) :: dt
 
 if (use_FD) then
-	call UpdateCbnd_FD(dt)
+	call UpdateCbnd_FD
 else
 	call UpdateCbnd_mixed(dt)
 endif
@@ -1310,19 +1381,43 @@ end subroutine
 
 !----------------------------------------------------------------------------------
 ! Was set_bdry_conc
+! The blob is currently centred at blob_centre (lattice coords) and has radius
+! = blob_radius (lattice sites).
 !----------------------------------------------------------------------------------
-subroutine UpdateCbnd_FD(dt)
-real(REAL_KIND) :: dt
+subroutine UpdateCbnd_FD
 integer :: kpar = 0
-real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO), tnow
+real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO), ca, tnow
+real(REAL_KIND) :: cntr(3), xc0, yc0, zc0
 integer :: ixb, iyb, izb
 integer :: i, ic, ichemo, n = 100
 real(REAL_KIND) :: alpha_Cbnd = 0.3
 real(REAL_KIND) :: t_buffer = 3600	! one hour delay before applying smoothing to Cbnd
+integer :: ndrugs_present, drug_present(3*MAX_DRUGTYPES), drug_number(3*MAX_DRUGTYPES)
+integer :: idrug, iparent, im
+logical :: present
+
+ndrugs_present = 0
+drug_present = 0
+do idrug = 1,ndrugs_used
+	iparent = TRACER + 1 + 3*(idrug-1)
+	if (chemo(iparent)%present) then		! simulation with this drug has started
+	    do im = 0,2
+	        ichemo = iparent + im
+	        ndrugs_present = ndrugs_present + 1
+	        drug_present(ndrugs_present) = ichemo
+	        drug_number(ndrugs_present) = idrug
+	    enddo
+	endif
+enddo
 
 tnow = istep*DELTA_T
 !call SetRadius(Nsites)
-rad = Radius*DELTA_X
+rad = blob_radius*DELTA_X
+cntr = blob_centre*DELTA_X
+!xc0 = cntr(1)
+!yc0 = cntr(2)
+!zc0 = cntr(3)
+!write(nflog,'(a,e12.3,2x,3e12.3)') 'UpdateCbnd_FD: rad, cntr:',rad,cntr
 csum = 0
 do i = 1,n
 	z = -rad + 2*rad*par_uni(kpar)
@@ -1351,10 +1446,21 @@ medium_Cbnd_prev = chemo(OXYGEN)%medium_Cbnd
 csum = 0
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
+	do i = 1,ndrugs_present
+	    if (ichemo == drug_present(i)) then
+	        idrug = drug_number(i)
+	    else
+	        idrug = 0
+	    endif
+	enddo
 	do ixb = 1,NXB
 		do iyb = 1,NYB
 			do izb = 1,NZB
-				csum(ichemo) = csum(ichemo) + chemo(ichemo)%cave_b(ixb,iyb,izb)
+			    ca = chemo(ichemo)%cave_b(ixb,iyb,izb)
+				csum(ichemo) = csum(ichemo) + ca
+				if (idrug > 0 .and. ca > Cthreshold) then
+    			    drug_gt_cthreshold(idrug) = .true.
+    			endif
 			enddo
 		enddo
 	enddo
@@ -1391,6 +1497,7 @@ real(REAL_KIND) :: a, Rlayer(MAX_CHEMO)
 integer :: kcell, Nh, Nc
 real(REAL_KIND) :: C, metab, dMdt, asum
 real(REAL_KIND) :: Kin, Kout, decay_rate, vol_cm3, Cin, Cex
+integer :: idrug, iparent, im
 
 !write(*,*) 'UpdateCbnd_mixed'
 ! Start by looking at a conservative constituent (e.g. glucose)
@@ -1451,7 +1558,7 @@ chemo(:)%medium_U = U(:)
 
 ! First need the spheroid radius
 !call SetRadius(Nsites)
-R1 = Radius*DELTA_X		! cm
+R1 = blob_radius*DELTA_X		! cm
 Rlayer(:) = R1 + chemo(:)%medium_dlayer
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%present) cycle
@@ -1469,6 +1576,17 @@ do ichemo = 1,MAX_CHEMO
 		write(nflog,'(a,i2)') 'Setting negative medium_Cbnd to 0: Cbnd,M,Cext,a,U: ',ichemo
 		write(nflog,'(5e12.3)') chemo(ichemo)%medium_Cbnd,chemo(ichemo)%medium_M,chemo(ichemo)%medium_Cext,a,chemo(ichemo)%medium_U
 		chemo(ichemo)%medium_Cbnd = 0
+	endif
+enddo
+
+do idrug = 1,ndrugs_used
+	iparent = TRACER + 1 + 3*(idrug-1)
+	if (chemo(iparent)%present) then		! simulation with this drug has started
+	    do im = 0,2
+	        ichemo =iparent + im
+	        if (chemo(ichemo)%medium_Cext > Cthreshold) drug_gt_cthreshold(idrug) = .true.
+	        if (chemo(ichemo)%medium_Cbnd > Cthreshold) drug_gt_cthreshold(idrug) = .true.
+	    enddo
 	endif
 enddo
 

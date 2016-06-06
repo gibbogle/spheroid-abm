@@ -241,8 +241,8 @@ integer :: x, y, z, k, x1, site(3), ichemo
 real(REAL_KIND) :: C(MAX_CHEMO,100)
 logical :: start
 
-y = Centre(2) 
-z = Centre(3)
+y = blob_centre(2) 
+z = blob_centre(3)
 start = .false.
 k = 0
 do x = blobrange(1,1),blobrange(1,2)
@@ -281,21 +281,52 @@ end subroutine
 subroutine UpdateChemomap
 integer :: ichemo, iparent, idrug, im
 logical :: present
-real(REAL_KIND), parameter :: Cthreshold = 1.0e-5
 
-! First check drugs and their metabolites
+!! First check drugs and their metabolites
+!do idrug = 1,ndrugs_used
+!	iparent = TRACER + 1 + 3*(idrug-1)
+!	if (chemo(iparent)%present .and. chemo(iparent)%medium_Cbnd /= 0) then		! simulation with this drug has started
+!		present = .false.
+!		do im = 0,2
+!			ichemo = iparent + im
+!			write(nflog,'(a,2i4,e12.3)') 'UpdateChemomap: drug concentration: ',idrug,im,chemo(ichemo)%medium_Cbnd
+!			if (chemo(ichemo)%medium_Cbnd > Cthreshold) then
+!				present = .true.
+!			endif
+!		enddo
+!		if (.not.present) then
+!			write(logmsg,'(a,i2,a,a)') 'Removing drug and metabolites, concentrations below threshold: ',idrug,' ',chemo(iparent)%name
+!			call logger(logmsg)
+!			write(logmsg,'(a,3e12.3)') 'concs: ',(chemo(iparent+im)%medium_Cbnd,im=0,2)
+!			call logger(logmsg)
+!			write(logmsg,'(a,e12.3)') 'threshold concentration: ',Cthreshold
+!			call logger(logmsg)
+!			do im = 0,2
+!				ichemo = iparent + im
+!				chemo(ichemo)%present = .false.
+!			enddo
+!		endif
+!	endif
+!enddo
+nchemo = 0
+do ichemo = 1,MAX_CHEMO
+	if (chemo(ichemo)%present) then
+		nchemo = nchemo + 1
+		chemomap(nchemo) = ichemo
+	endif
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+subroutine CheckDrugPresence
+integer :: idrug, iparent, im, ichemo
+
+! Check drugs and their metabolites
 do idrug = 1,ndrugs_used
 	iparent = TRACER + 1 + 3*(idrug-1)
-	if (chemo(iparent)%present .and. chemo(iparent)%medium_Cbnd /= 0) then		! simulation with this drug has started
-		present = .false.
-		do im = 0,2
-			ichemo = iparent + im
-			write(nflog,'(a,2i4,e12.3)') 'UpdateChemomap: drug concentration: ',idrug,im,chemo(ichemo)%medium_Cbnd
-			if (chemo(ichemo)%medium_Cbnd > Cthreshold) then
-				present = .true.
-			endif
-		enddo
-		if (.not.present) then
+	if (chemo(iparent)%present) then		! simulation with this drug has started
+		if (.not.drug_gt_cthreshold(idrug)) then
 			write(logmsg,'(a,i2,a,a)') 'Removing drug and metabolites, concentrations below threshold: ',idrug,' ',chemo(iparent)%name
 			call logger(logmsg)
 			write(logmsg,'(a,3e12.3)') 'concs: ',(chemo(iparent+im)%medium_Cbnd,im=0,2)
@@ -307,13 +338,6 @@ do idrug = 1,ndrugs_used
 				chemo(ichemo)%present = .false.
 			enddo
 		endif
-	endif
-enddo
-nchemo = 0
-do ichemo = 1,MAX_CHEMO
-	if (chemo(ichemo)%present) then
-		nchemo = nchemo + 1
-		chemomap(nchemo) = ichemo
 	endif
 enddo
 end subroutine

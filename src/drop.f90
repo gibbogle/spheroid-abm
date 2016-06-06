@@ -30,15 +30,15 @@ logical function OutsideSquashedSphere(site) result(out)
 integer :: site(3)
 real(REAL_KIND) :: r, z, cos2, sin2
 
-z = site(3) + cdrop*Radius - zmin
-if (z < 0 .or. z > 2*bdrop*Radius) then
+z = site(3) + cdrop*blob_radius - zmin
+if (z < 0 .or. z > 2*bdrop*blob_radius) then
 	out = .true.
 	return
 endif
-r = sqrt((site(1) - Centre(1))**2 + (site(2) - Centre(2))**2)
-cos2 = (1 - z/(bdrop*Radius))**2
+r = sqrt((site(1) - blob_centre(1))**2 + (site(2) - blob_centre(2))**2)
+cos2 = (1 - z/(bdrop*blob_radius))**2
 sin2 = 1 - cos2
-out = (r > adrop*Radius*sqrt(sin2))
+out = (r > adrop*blob_radius*sqrt(sin2))
 end function
 
 !--------------------------------------------------------------------------------
@@ -76,13 +76,13 @@ allocate(usable(NX,NY))
 
 !call SetRadius(Nsites)
 zmin = GetZmin()
-z0drop = zmin + (bdrop-cdrop)*Radius
+z0drop = zmin + (bdrop-cdrop)*blob_radius
 z0 = z0drop
-Centre(3) = z0
+blob_centre(3) = z0
 sintheta0 = sqrt(1 - (1-cdrop/bdrop)**2)
-Rcontact = adrop*Radius*sintheta0
+Rcontact = adrop*blob_radius*sintheta0
 Rc2 = Rcontact*Rcontact
-Ra2 = (adrop*Radius)**2
+Ra2 = (adrop*blob_radius)**2
 
 ! Stage 1
 !--------
@@ -97,8 +97,8 @@ do x = 1,NX
 			incontact = 0
 			! we need to find the desired lower boundary z=zlow at (x,y)
 			! r = a.R.sin(theta) ==> theta = asin(r/aR)
-			theta = asin(r/(adrop*Radius))
-			zlow = bdrop*Radius*(1-cos(theta)) + zmin - cdrop*Radius + 1
+			theta = asin(r/(adrop*blob_radius))
+			zlow = bdrop*blob_radius*(1-cos(theta)) + zmin - cdrop*blob_radius + 1
 		else
 			incontact = 1
 			zlow = zmin
@@ -154,9 +154,9 @@ enddo
 rz = 0
 newtot = 0
 do z = zmin,zbmax
-	cosa = 1 - (z - zmin + cdrop*Radius)/(bdrop*Radius)	
+	cosa = 1 - (z - zmin + cdrop*blob_radius)/(bdrop*blob_radius)	
 	sina = sqrt(1 - cosa*cosa)
-	rz(z) = adrop*Radius*sina
+	rz(z) = adrop*blob_radius*sina
 	newtot = newtot + 3.14159*rz(z)*rz(z)
 enddo
 !write(nflog,*) 'Approximate number of sites in the squashed spheroid: ',newtot
@@ -175,7 +175,7 @@ do x = 1,NX
 		r = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0))
 		cdist(x,y) = r
 		do z = zmin,zmax
-			if (z <= zmin + Radius*(2*bdrop - cdrop)) then
+			if (z <= zmin + blob_radius*(2*bdrop - cdrop)) then
 				if (rz(z) >= r) then
 					bdist(x,y,z) = rz(z) - r
 					nbtot = nbtot + 1
@@ -488,13 +488,13 @@ integer :: x, y, zmin
 real(REAL_KIND) :: r, sina, cosa
 
 r = sqrt((x-x0)*(x-x0) + (y-y0)*(y-y0))
-if (r > adrop*Radius) then
+if (r > adrop*blob_radius) then
 	GetZb = -1
 	return
 endif
-sina = r/(adrop*Radius)
+sina = r/(adrop*blob_radius)
 cosa = -sqrt(1 - sina*sina)
-GetZb = zmin + Radius*(bdrop*(1 - cosa) - cdrop)
+GetZb = zmin + blob_radius*(bdrop*(1 - cosa) - cdrop)
 end function
 
 end module

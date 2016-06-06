@@ -10,7 +10,7 @@
 
 #define CANVAS_WIDTH 696
 #define MAX_CONC 9 // must = MAX_CHEMO in DLL for conc[] in FIELD_DATA to be the right size
-#define NEXTRA 3    // must = N_EXTRA in DLL
+#define NEXTRA 4    // must = N_EXTRA in DLL
 
 struct field_data {
     int site[3];
