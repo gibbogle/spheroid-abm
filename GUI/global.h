@@ -19,23 +19,21 @@
 #define CELL_VOLUME 11
 #define O2_BY_VOL 12
 
-//#define PROFILE_MULTI -1    // for a plot that can be of any selected constituent
-//#define PROFILE_CFSE 0
-//#define PROFILE_OXYGEN 1
-//#define PROFILE_GLUCOSE 2
-//#define PROFILE_TRACER 3
-//#define PROFILE_TPZ_DRUG 4
-//#define PROFILE_TPZ_METAB_1 5
-//#define PROFILE_TPZ_METAB_2 6
-//#define PROFILE_DNB_DRUG 7
-//#define PROFILE_DNB_METAB_1 8
-//#define PROFILE_DNB_METAB_2 9
-//#define PROFILE_GROWTH_RATE 10
-//#define PROFILE_CELL_VOLUME 11
-//#define PROFILE_O2_BY_VOL 12
-
-//#define DIST_OXYGEN 21
-//#define DIST_CELL_VOLUME 22
+// The intracellular (IC) dataIndex is the same as extracellular, from the tag determine which
+#define IC_MULTI -1
+#define IC_CFSE 0
+#define IC_OXYGEN 1
+#define IC_GLUCOSE 2
+#define IC_TRACER 3
+#define IC_DRUG_A_PARENT 4
+#define IC_DRUG_A_METAB_1 5
+#define IC_DRUG_A_METAB_2 6
+#define IC_DRUG_B_PARENT 7
+#define IC_DRUG_B_METAB_1 8
+#define IC_DRUG_B_METAB_2 9
+#define IC_GROWTH_RATE 10      // we pretend that this is a concentration
+#define IC_CELL_VOLUME 11
+#define IC_O2_BY_VOL 12
 
 #define DIST_NV 20
 
@@ -91,9 +89,12 @@ namespace Global
     extern int i_growth_cutoff;
 
     extern double concData[4000];
+    extern double IC_concData[4000];
     extern int conc_nvars;
-    extern int conc_nc;
-    extern double conc_dx;
+    extern int conc_nc_ex;
+    extern int conc_nc_ic;
+    extern double conc_dx_ex;
+    extern double conc_dx_ic;
     extern QString casename;
 
     extern double volProb[100];

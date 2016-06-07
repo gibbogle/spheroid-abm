@@ -296,12 +296,33 @@ void MainWindow::textEdited_fraction(QString text)
     field->setFraction(text);
 }
 
-void MainWindow::onSelectConstituent()
+void MainWindow::onSelectCellConstituent()
 {
-    if (exthread != NULL)
-        field->selectCellConstituent();     //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    if (exthread != NULL) {
+        field->selectCellConstituent();
+        QString rbname = "rb_cell_constituent_cell" + QString::number(field->cell_constituent);
+        QRadioButton *rb = groupBox_cell_constituent->findChild<QRadioButton *>(rbname);
+        if (rb) {
+            rb->setChecked(true);
+        } else {
+            LOG_QMSG("onSelectCellConstituent: failed to find rb: " + rbname)
+        }
         updateProfilePlots();
+    }
 }
+void MainWindow::onSelectFieldConstituent()
+{
+    if (exthread != NULL) {
+        field->selectFieldConstituent();
+        QString rbname = "rb_field_constituent_field" + QString::number(field->field_constituent-1);
+        QRadioButton *rb = groupBox_field_constituent->findChild<QRadioButton *>(rbname);
+        if (rb) {
+            rb->setChecked(true);
+        }
+        updateProfilePlots();
+    }
+}
+
 
 void MainWindow::on_verticalSliderTransparency_sliderMoved(int position)
 {

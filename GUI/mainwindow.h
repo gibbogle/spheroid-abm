@@ -123,7 +123,8 @@ private slots:
     void showGradient2D();
     void setSavePosStart();
 
-    void onSelectConstituent();
+    void onSelectCellConstituent();
+    void onSelectFieldConstituent();
 
     void on_verticalSliderTransparency_sliderMoved(int position);
     void on_checkBox_CELLDISPLAY_1_toggled(bool display);

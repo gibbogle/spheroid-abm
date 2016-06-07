@@ -872,6 +872,111 @@ offset = ichemo*ns
 end subroutine
 
 !--------------------------------------------------------------------------------
+! Returns all the extracellular concentrations along a line through the blob centre.
+! Together with CFSE, growth rate (dVdt), cell volume,...
+! Store the constituent profiles one after the other.
+! Drop the extra end points
+!--------------------------------------------------------------------------------
+subroutine get_IC_concdata(nvars, ns, dx, ic_conc) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_ic_concdata
+use, intrinsic :: iso_c_binding
+integer(c_int) :: nvars, ns
+real(c_double) :: dx, ic_conc(0:*)
+real(REAL_KIND) :: cbnd, cmin = 1.0e-6
+integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z, x1, x2, offset
+type(cell_type), pointer :: cp
+
+!call logger('get_IC_concdata')
+nvars = 1 + MAX_CHEMO + N_EXTRA
+dx = DELTA_X
+rng(:,1) = blob_centre(:) - (adrop*blob_radius + 2)
+rng(:,2) = blob_centre(:) + (adrop*blob_radius + 2)
+!rng(axis,:) = Centre(axis) + fraction*Radius
+y = blob_centre(2) + 0.5
+z = blob_centre(3) + 0.5
+
+! First need to establish the range of x that is inside the blob: (x1,x2)
+x1 = 0
+x2 = 0
+do x = rng(1,1),rng(1,2)
+	kcell = occupancy(x,y,z)%indx(1)
+	if (kcell <= OUTSIDE_TAG) then
+		if (x1 == 0) then
+			cycle
+		else
+			exit
+		endif
+	elseif (x1 == 0) then
+		x1 = x
+	endif
+	x2 = x
+enddo
+if (x2 == 0) then
+	call logger('Blob is destroyed!')
+	return
+endif
+
+ns = x2 - x1 + 1 
+do ichemo = 0,nvars-1
+	offset = ichemo*ns
+	k = offset - 1
+	do x = x1, x2
+		k = k + 1
+		kcell = occupancy(x,y,z)%indx(1)
+		if (kcell <= OUTSIDE_TAG) then
+			ic_conc(k) = 0
+			cycle
+		else
+		    cp => cell_list(kcell)
+		endif
+		i = ODEdiff%ivar(x,y,z)
+        if (ichemo == 0) then	! CFSE
+			if (kcell > 0) then
+				ic_conc(k) = cp%CFSE
+			else
+				ic_conc(k) = 0
+			endif
+       elseif (ichemo <= MAX_CHEMO) then
+			if (chemo(ichemo)%used) then
+!				if (i > 0) then
+!					ex_conc(k) = allstate(i,ichemo)
+                if (kcell > 0) then
+                    ic_conc(k) = cp%conc(ichemo)
+				else
+					ic_conc(k) = 0
+				endif
+			else
+				ic_conc(k) = 0
+			endif
+        elseif (ichemo == GROWTH_RATE) then	
+			if (kcell > 0) then
+				ic_conc(k) = cp%dVdt
+			else
+				ic_conc(k) = 0
+			endif
+        elseif (ichemo == CELL_VOLUME) then	
+			if (kcell > 0) then
+				ic_conc(k) = Vcell_pL*cp%volume
+			else
+				ic_conc(k) = 0
+			endif
+        elseif (ichemo == O2_BY_VOL) then	
+			if (kcell > 0) then
+!				ex_conc(k) = allstate(i,OXYGEN)*Vcell_pL*cell_list(kcell)%volume
+				ic_conc(k) = cp%conc(OXYGEN)*Vcell_pL*cp%volume
+			else
+				ic_conc(k) = 0
+			endif
+		endif
+    enddo
+enddo
+
+ichemo = GLUCOSE
+offset = ichemo*ns
+!write(*,'(10f7.3)') ic_conc(offset:offset+ns-1)
+end subroutine
+
+!--------------------------------------------------------------------------------
 ! Returns the distribution of cell volume.
 ! nv is passed from the GUI
 ! Min divide volume = Vdivide0 - dVdivide

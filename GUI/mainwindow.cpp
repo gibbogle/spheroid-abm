@@ -262,7 +262,6 @@ void MainWindow::createActions()
 
 //    connect(action_show_gradient3D, SIGNAL(triggered()), this, SLOT(showGradient3D()));
 //    connect(action_show_gradient2D, SIGNAL(triggered()), this, SLOT(showGradient2D()));
-//    connect(field->buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_constituent(QAbstractButton*)));
 
     connect(field->buttonGroup_cell_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_cell_constituent(QAbstractButton*)));
     connect(field->buttonGroup_field_constituent, SIGNAL(buttonClicked(QAbstractButton*)), this, SLOT(buttonClick_field_constituent(QAbstractButton*)));
@@ -271,7 +270,8 @@ void MainWindow::createActions()
 //    connect(buttonGroup_constituent, SIGNAL(buttonClicked(QAbstractButton*)), field, SLOT(setConstituent(QAbstractButton*)));
 //	  connect(lineEdit_fraction, SIGNAL(textChanged(QString)), this, SLOT(textChanged_fraction(QString)));
 	connect(lineEdit_fraction, SIGNAL(textEdited(QString)), this, SLOT(textEdited_fraction(QString)));
-    connect(action_select_constituent, SIGNAL(triggered()), SLOT(onSelectConstituent()));
+    connect(actionSelect_cell_constituent, SIGNAL(triggered()), SLOT(onSelectCellConstituent()));
+    connect(actionSelect_field_constituent, SIGNAL(triggered()), SLOT(onSelectFieldConstituent()));
     connect(line_CELLPERCENT_1, SIGNAL(textEdited(QString)), this, SLOT(on_line_CELLPERCENT_1_textEdited(QString)));
     connect(line_CELLPERCENT_2, SIGNAL(textEdited(QString)), this, SLOT(on_line_CELLPERCENT_2_textEdited(QString)));
 
@@ -1862,8 +1862,8 @@ void MainWindow::saveProfileData()
         out << "\n";
     }
     out << "\n";
-    for (i=0; i<Global::conc_nc; i++) {
-        x = i*Global::conc_dx*1.0e4;
+    for (i=0; i<Global::conc_nc_ex; i++) {
+        x = i*Global::conc_dx_ex*1.0e4;
         line = QString::number(x,'g',4);
         line += " ";
         for (ichemo=0; ichemo<Global::MAX_CHEMO+1; ichemo++) {
@@ -2302,42 +2302,59 @@ void MainWindow::showSummary(int hr)
 void MainWindow::updateProfilePlots()
 {
     if (Global::casename == "") return;
-    int ivar=0;
+    int ivar = 0;
     for (int i=0; i<nGraphs; i++) {
         if (!grph->isActive(i)) continue;
-        if (Global::conc_nc > 0 && grph->isProfile(i)) {
-            double x[100], y[100];
+        if (Global::conc_nc_ex > 0 && grph->isProfile(i)) {
+            int nc;
+            double x[100], y[100], dx;
             double xscale, yscale;
             QString tag = grph->get_tag(i);
+            bool IC = tag.contains("IC_");
+            if (IC) {
+                nc = Global::conc_nc_ex;
+                dx = Global:: conc_dx_ex;
+            } else {
+                nc = Global::conc_nc_ic;
+                dx = Global:: conc_dx_ic;
+            }
             int k = grph->get_dataIndex(i);
             if (k == MULTI) {
-                ivar = field->cell_constituent;
-//                ivar = field->constituent;    //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                if (IC) {
+                    ivar = field->cell_constituent;
+                } else {
+                    ivar = field->field_constituent;
+                }
                 QString title;
                 field->getTitle(ivar,&title);
+                if (IC) {
+                    title = "IC " + title;
+                }
                 pGraph[i]->setTitle(title);
                 k = Global::GUI_to_DLL_index[ivar];
             }
-            int n = Global::conc_nc;
-            int offset = k*n;
-            for (int j=0; j<n; j++) {
-                x[j] = j*Global::conc_dx*1.0e4;
-                y[j] = Global::concData[offset+j];
+//            int n = Global::conc_nc;
+            int offset = k*nc;
+            for (int j=0; j<nc; j++) {
+                x[j] = j*dx*1.0e4;
+                if (IC) {
+                    y[j] = Global::IC_concData[offset+j];
+                } else {
+                    y[j] = Global::concData[offset+j];
+                }
+
             }
-            xscale = grph->get_xscale(x[n-1]);
+            xscale = grph->get_xscale(x[nc-1]);
             double maxval = 0;
-            for (int j=0; j<n; j++) {
+            for (int j=0; j<nc; j++) {
                 if (y[j] > maxval) maxval = y[j];
             }
             yscale = pGraph[i]->calc_yscale(maxval);
             pGraph[i]->setAxisScale(QwtPlot::xBottom, 0, xscale, 0);
             pGraph[i]->setAxisScale(QwtPlot::yLeft, 0, yscale, 0);
-//            if (k == CFSE){
-//                pGraph[i]->setAxisScale(QwtPlot::xBottom, -20.0, 1.0, 0);
-//            }
             pGraph[i]->setAxisTitle(QwtPlot::xBottom, "Distance (microns)");
             pGraph[i]->setAxisTitle(QwtPlot::yLeft, grph->get_yAxisTitle(i));
-            pGraph[i]->redraw(x, y, n, Global::casename, tag, yscale, true);
+            pGraph[i]->redraw(x, y, nc, Global::casename, tag, yscale, true);
         }
     }
 }
@@ -3321,7 +3338,6 @@ void MainWindow::setupConstituents()
         name[nvarlen] = NULL;
         str = name;
         Global::var_string[ivar] = str.trimmed();
-        LOG_QMSG(name);
     }
     free(name_array);
 
@@ -3719,10 +3735,10 @@ void MainWindow::textEdited_fraction(QString text)
     field->setFraction(text);
 }
 
-void MainWindow::onSelectConstituent()
+void MainWindow::onSelectICConstituent()
 {
     if (exthread != NULL)
-        field->selectConstituent();
+        field->selectICConstituent();
 }
 
 void MainWindow::on_verticalSliderTransparency_sliderMoved(int position)

@@ -93,7 +93,7 @@ void Field::setOxyPlot(bool status)
 void Field::setCellConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QList<QRadioButton *> *rb_list, QString tag)
 {
     int ivar;
-    QString name, str;
+    QString name, str, ivar_str;
     QRadioButton *rb;
 
     LOG_QMSG("setCellConstituentButtons: " + tag);
@@ -116,14 +116,16 @@ void Field::setCellConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLa
     sprintf(msg,"rb_list: %p vbox: %p bg: %p nvars_used: %d",rb_list,*vbox,bg,Global::nvars_used);
     LOG_MSG(msg);
     for (ivar=0; ivar<Global::nvars_used; ivar++) {
+        ivar_str = QString::number(ivar);
         str = Global::var_string[ivar];
         rb = new QRadioButton;
         rb->setText(str);
-        rb->setObjectName(name+ivar);
+        rb->setObjectName(name+ivar_str);
         (*vbox)->addWidget(rb);
         rb->setEnabled(true);
         bg->addButton(rb,ivar);
         rb_list->append(rb);
+//        LOG_QMSG(rb->objectName());
     }
     LOG_MSG("added buttons");
     if (tag.contains("FACS")) {
@@ -135,7 +137,6 @@ void Field::setCellConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLa
     rect.setHeight(25*Global::nvars_used);
     gbox->setGeometry(rect);
     gbox->show();
-    LOG_MSG("completed");
 }
 
 
@@ -149,12 +150,12 @@ void Field::setCellConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLa
 void Field::setFieldConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QList<QRadioButton *> *rb_list, QString tag)
 {
     int ivar;
-    QString name, str;
+    QString name, str, ivar_str;
     QRadioButton *rb;
 
     Global::nfieldvars_used = Global::nvars_used - Global::N_EXTRA;
-    LOG_QMSG("setFieldConstituentButtons: " + tag + " nfieldvars_used: "
-             + QString::number(Global::nfieldvars_used));
+//    LOG_QMSG("setFieldConstituentButtons: " + tag + " nfieldvars_used: "
+//             + QString::number(Global::nfieldvars_used));
     if (rb_list->length() != 0) {
         LOG_MSG("rb_list not NULL, delete it");
         for (ivar=0; ivar<rb_list->length(); ivar++) {
@@ -170,16 +171,26 @@ void Field::setFieldConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxL
         gbox->setLayout(*vbox);
     }
     name = "rb_field_constituent_"+tag;
-    LOG_QMSG(name);
+//    LOG_QMSG(name);
     for (ivar=0; ivar<Global::nfieldvars_used; ivar++) {
+        ivar_str = QString::number(ivar);
         str = Global::var_string[ivar+1];
         rb = new QRadioButton;
         rb->setText(str);
-        rb->setObjectName(name+ivar);
+        QString objname = name+ivar_str;
+        rb->setObjectName(objname);
         (*vbox)->addWidget(rb);
         rb->setEnabled(true);
         bg->addButton(rb,ivar);
         rb_list->append(rb);
+//        QRadioButton *chkrb = gbox->findChild<QRadioButton *>(objname);
+//        if (chkrb) {
+//            QString chkstr = chkrb->objectName();
+//            LOG_QMSG(chkstr);
+//        } else {
+//            chkrb = (*rb_list)[ivar];
+//            LOG_QMSG("findChild failed, but: " + chkrb->objectName());
+//        }
     }
     (*rb_list)[0]->setChecked(true);   // Oxygen
     QRect rect = gbox->geometry();
@@ -235,7 +246,7 @@ void Field::selectCellConstituent()
     int iconst, res;
     QStringList items;
 
-    LOG_MSG("selectCellConstituent");
+//    LOG_MSG("selectCellConstituent");
     for (iconst=0; iconst<Global::nvars_used; iconst++) {
         if (iconst == cell_constituent) continue;
         items << Global::var_string[iconst];
@@ -247,18 +258,18 @@ void Field::selectCellConstituent()
         for (iconst=0; iconst<Global::nvars_used; iconst++) {
             if (item == Global::var_string[iconst]) {
                 cell_constituent = iconst;
+//                LOG_QMSG("selectCellConstituent: " + QString::number(cell_constituent));
             }
         }
     }
 }
-
 
 //------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------
 void Field::setCellConstituent(QAbstractButton *button)
 {
     int res;
-    LOG_MSG("setCellConstituent");
+//    LOG_MSG("setCellConstituent");
     int prev_constituent = cell_constituent;
     QString text = button->text();
     for (int ivar=0; ivar<Global::nvars_used; ivar++) {
@@ -268,8 +279,32 @@ void Field::setCellConstituent(QAbstractButton *button)
     }
 
     if (cell_constituent != prev_constituent) {
-        LOG_MSG("setCellConstituent");
+//        LOG_MSG("setCellConstituent");
         displayField(hour,&res);
+    }
+}
+
+//------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------------------------
+void Field::selectFieldConstituent()
+{
+    int iconst, res;
+    QStringList items;
+
+//    LOG_MSG("selectFieldConstituent");
+    for (iconst=1; iconst<Global::nfieldvars_used+1; iconst++) {
+        if (iconst == field_constituent) continue;
+        items << Global::var_string[iconst];
+    }
+    bool ok;
+    QString item = QInputDialog::getItem(this, tr("QInputDialog::getItem()"),
+                                          tr("Constituent:"), items, 0, false, &ok);
+    if (ok && !item.isEmpty()) {
+        for (iconst=1; iconst<Global::nfieldvars_used+1; iconst++) {
+            if (item == Global::var_string[iconst]) {
+                field_constituent = iconst;
+            }
+        }
     }
 }
 
@@ -278,7 +313,7 @@ void Field::setCellConstituent(QAbstractButton *button)
 void Field::setFieldConstituent(QAbstractButton *button)
 {
     int res;
-    LOG_MSG("setFieldConstituent");
+//    LOG_MSG("setFieldConstituent");
     int prev_constituent = field_constituent;
     QString text = button->text();
     for (int ivar=0; ivar<Global::nfieldvars_used; ivar++) {
@@ -288,7 +323,7 @@ void Field::setFieldConstituent(QAbstractButton *button)
     }
 
     if (field_constituent != prev_constituent) {
-        LOG_MSG("setFieldConstituent");
+//        LOG_MSG("setFieldConstituent");
         displayField(hour,&res);
     }
 }
@@ -535,8 +570,6 @@ void Field::displayField(int hr, int *res)
         sprintf(msg,"displayField: ichemo: %d cmax=0",ichemo);
         LOG_MSG(msg);
     } else {
-        sprintf(msg,"field_constituent: %d",field_constituent);
-        LOG_MSG(msg);
         for (i=0; i<nsites; i++) {
             ix = this->data[i].site[xindex];
             iy = this->data[i].site[yindex];

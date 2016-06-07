@@ -50,8 +50,8 @@ public:
     void setVolPlot(bool);
     bool isOxyPlot();
     void setOxyPlot(bool);
-    void selectConstituent();
     void selectCellConstituent();
+    void selectFieldConstituent();
     void setExecuting(bool);
     void setSaveImages(bool);
     void setUseLogScale(bool);
