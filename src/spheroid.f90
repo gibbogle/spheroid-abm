@@ -309,6 +309,7 @@ if (allocated(cell_list)) deallocate(cell_list)
 if (allocated(allstate)) deallocate(allstate)
 if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
 if (allocated(gaplist)) deallocate(gaplist)
+if (allocated(Cslice)) deallocate(Cslice)
 call logger('did deallocation')
 
 !nsteps_per_min = 1.0/DELTA_T
@@ -330,6 +331,8 @@ call logger(logmsg)
 allocate(cell_list(max_nlist))
 allocate(occupancy(NX,NY,NZ))
 allocate(gaplist(max_ngaps))
+!allocate(Cslice(NX/2,NY/2,NZ/2,MAX_CHEMO))
+allocate(Cslice(NX,NY,NZ,MAX_CHEMO))
 
 call make_jumpvec
 
@@ -1569,14 +1572,14 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine Execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen) BIND(C) 
+subroutine Execute(ncpu,infile_array,inbuflen,outfile_array,outbuflen,res) BIND(C) 
 !DEC$ ATTRIBUTES DLLEXPORT :: execute
 use, intrinsic :: iso_c_binding
 character(c_char) :: infile_array(128), outfile_array(128)
-integer(c_int) :: ncpu, inbuflen, outbuflen
+integer(c_int) :: ncpu, inbuflen, outbuflen, res
 character*(128) :: infile, outfile
 logical :: ok, success
-integer :: i, res
+integer :: i
 
 infile = ''
 do i = 1,inbuflen

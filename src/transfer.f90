@@ -6,10 +6,31 @@ use global
 use chemokine
 use envelope
 use ode_diffuse
+use, intrinsic :: iso_c_binding
 
 #include "../src/version.h"
 
 implicit none
+
+integer, parameter :: X_AXIS = 1
+integer, parameter :: Y_AXIS = 2
+integer, parameter :: Z_AXIS = 3
+
+type, bind(C) :: celldata_type
+	integer(c_int) :: tag
+	real(c_double) :: radius
+	real(c_double) :: centre(3)
+	integer(c_int) :: celltype
+	integer(c_int) :: status
+end type
+
+type, bind(C) :: fielddata_type
+    integer(c_int) :: NX, NY, NZ, NCONST
+    real(c_double) :: DX
+    type(c_ptr) :: Conc_ptr   ! Cslice(NX,NY,NZ,NCONST)
+    integer(c_int) :: ncells
+    type(c_ptr) :: cell_ptr
+end type
 
 contains
 
@@ -656,6 +677,259 @@ enddo
 !call logger(logmsg)
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+! Distances are still all cm 
+! Added ixyz to pass the appropriate Caverage array index
+!-----------------------------------------------------------------------------------------
+subroutine new_get_fielddata(axis, fraction, fdata, ixyz, res) bind(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: new_get_fielddata
+use, intrinsic :: iso_c_binding
+integer(c_int) :: axis, ixyz, res
+real(c_double) :: fraction
+type (fielddata_type)    :: fdata
+type(celldata_type), save :: cdata(4000)
+type(cell_type), pointer :: cp
+real(REAL_KIND) :: x, y, z, rad, csum(3), bcentre(3), dx, p(3)
+integer :: ichemo, ix, iy, iz, k, i, i1, i2, kcell, nc, nlump
+
+write(nflog,*) 'new_get_fielddata: axis: ',axis
+nlump = 1
+
+dx = nlump*DELTA_X
+fdata%NX = NX/nlump
+fdata%NY = NY/nlump
+fdata%NZ = NZ/nlump
+fdata%NCONST = MAX_CHEMO
+fdata%DX = dx
+fdata%conc_ptr = c_loc(Cslice)
+fdata%cell_ptr = c_loc(cdata)
+
+!ixyz = NX/2
+!fdata%ncells = 0
+!Cslice = 0
+!res = 0
+!return
+
+! Find blob centre
+csum = 0
+nc = 0
+do kcell = 1,nlist
+	cp => cell_list(kcell)
+	if (cp%state == DEAD) cycle
+	nc = nc+1
+	csum = csum + cp%site
+!	write(nflog,'(a,i6,3f8.4)') 'cell centre: ',kcell,cp%centre(:,1) 
+enddo
+bcentre = csum*DELTA_X/nc
+!write(nflog,'(a,3f8.4)') 'actual blobcentre: ',bcentre
+
+! Set up concentration values for the slice
+! start by fixing on central plane, ignoring fraction
+! Note that in Qt, scene->addRect(x,y,w,w) places the square (width w) with the top left corner at (x,y)
+! On a z-slice (fixed iz) Cslice(ix,iy) fills a square at x = ix*dx, y = iy*dx
+! for ix=0,NX-1, iy=0,NY-1 (0-based indexing in Qt)
+! Equivalent to ix=1,NX, iy=1,NY on the Fortran side.  I.e. Fortran Cslice(1,1) -> Qt Cslice(0,0) -> (x,y) = (0,0)
+! 
+
+nc = 0
+if (axis == X_AXIS) then
+!	x = ((NX-1)/2)*DELTA_X
+	x = bcentre(1)	
+	ix = x/dx		! approx?
+	ixyz = ix
+	call fillCslice('X',ix,x,dx)
+	do iy = 1,fdata%NY
+	    do iz = 1,fdata%NZ
+	        Cslice(ix,iy,iz,:) = occupancy(nlump*ix,nlump*iy,nlump*iz)%C(:)
+            do i1 = 1-nlump,0
+            do i2 = 1-nlump,0
+	        kcell = occupancy(nlump*ix,nlump*iy+i1,nlump*iz+i2)%indx(1)
+	            if (kcell > 0) then
+	                cp => cell_list(kcell)
+	                nc = nc + 1
+	                rad = (3*cp%volume*Vcell_cm3/(4*PI))**(1./3)
+			        cdata(nc)%radius = rad
+!			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(2)-1.5,NZ - cp%site(3) + 0.5]
+			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(2)- 1,NZ - cp%site(3)]
+                    cdata(nc)%status = getstatus(cp)
+			    endif
+			enddo
+			enddo
+	    enddo
+	enddo
+elseif (axis == Y_AXIS) then
+!	y = ((NY-1)/2)*DELTA_X 
+	y = bcentre(2)	
+	iy = y/dx		! approx?
+	ixyz = iy
+	call fillCslice('Y',iy,y,dx)
+	do ix = 1,fdata%NX
+	    do iz = 1,fdata%NZ
+	        Cslice(ix,iy,iz,:) = occupancy(nlump*ix,nlump*iy,nlump*iz)%C(:)
+            do i1 = 1-nlump,0
+            do i2 = 1-nlump,0
+	            kcell = occupancy(nlump*ix+i1,nlump*iy,nlump*iz+i2)%indx(1)
+	            if (kcell > 0) then
+	                cp => cell_list(kcell)
+	                nc = nc + 1
+	                rad = (3*cp%volume*Vcell_cm3/(4*PI))**(1./3)
+			        cdata(nc)%radius = rad
+!			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1)-1.5,NZ - cp%site(3) + 0.5]
+			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1) - 1, NZ - cp%site(3)]
+                    cdata(nc)%status = getstatus(cp)
+			    endif
+			enddo
+			enddo
+	    enddo
+	enddo
+elseif (axis == Z_AXIS) then
+!	z = ((NZ-1)/2)*DELTA_X 
+	z = bcentre(3)	
+	iz = z/dx		! approx?
+	ixyz = iz
+!	call fillCslice('Z',iz,z,dx)
+	do iy = 1,fdata%NY
+	    do ix = 1,fdata%NX
+	        ! First interpolate at all points on the (NX/2,NY/2,NZ/2) grid from the coarse grid solution
+	        ! Then overwrite with the site values in occupancy()%C
+	        ! Need to be sure of mapping (ix,iy,iz) -> (x,y,z) in coarse grid axes 
+	        if (occupancy(ix,iy,iz)%indx(1) <= OUTSIDE_TAG) then
+	            p(:) = [ix,iy,iz]*DELTA_X
+	            call getConc(p,Cslice(ix,iy,iz,:))
+	        else
+ 	            i = ODEdiff%ivar(ix,iy,iz)
+	            if (i < 1) then
+				    res = -1
+				    return
+			    endif
+			    Cslice(ix,iy,iz,:) = allstate(i,1:MAX_CHEMO)
+    	    endif
+!	        if (iy == NY/2) write(nflog,'(a,i6,2e12.3)') 'blob: ',ix,Cslice(ix,iy,iz,1:2)
+            do i1 = 1-nlump,0
+            do i2 = 1-nlump,0
+	            kcell = occupancy(nlump*ix+i1,nlump*iy+i2,nlump*iz)%indx(1)
+	            if (kcell > 0) then
+	                cp => cell_list(kcell)
+	                nc = nc + 1
+	                rad = (3*cp%volume*Vcell_cm3/(4*PI))**(1./3)
+!	                write(nflog,'(a,i6,2e12.3)') 'rad, DELTA_X: ',kcell,rad,DELTA_X
+			        cdata(nc)%radius = rad
+!			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1)-1.5,cp%site(2)-1.5]
+			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1)-1,cp%site(2)-1]
+                    cdata(nc)%status = getstatus(cp)
+			    endif
+			 enddo
+			 enddo
+	    enddo
+	enddo
+endif
+ixyz = ixyz-1   ! to use in C with 0-based indexing
+!write(nflog,*) 'axis: ',axis,' nc: ',nc, ' NX: ',fdata%NX,' dx: ',fdata%dx
+fdata%ncells = nc
+res = 0
+
+!nc = 0
+!do kcell = 1,nlist
+!	cp => cell_list(kcell)
+!	if (cp%state == DEAD) cycle
+!	do i = 1,cp%nspheres
+!		c = cp%centre(:,i)
+!		r = cp%radius(i)
+!		if (axis == X_AXIS) then
+!			if (c(1) + r < x .or. c(1) - r > x) cycle
+!			rad = sqrt(r**2-(c(1)-x)**2)
+!			nc = nc + 1
+!			cdata(nc)%radius = rad
+!			cdata(nc)%centre(1:2) = [c(2),(NX-1.1)*DELTA_X - c(3)]		! 2D coordinates
+!			cdata(nc)%status = getstatus(cp)
+!		elseif (axis == Y_AXIS) then
+!			if (c(2) + r < y .or. c(2) - r > y) cycle
+!			rad = sqrt(r**2-(c(2)-y)**2)
+!			nc = nc + 1
+!			cdata(nc)%radius = rad
+!			cdata(nc)%centre(1:2) = [c(1),(NX-1.1)*DELTA_X - c(3)]
+!			cdata(nc)%status = getstatus(cp)
+!		elseif (axis == Z_AXIS) then
+!			if (c(3) + r < z .or. c(3) - r > z) cycle
+!			rad = sqrt(r**2-(c(3)-z)**2)
+!			nc = nc + 1
+!			cdata(nc)%radius = rad
+!			cdata(nc)%centre(1:2) = [c(1),c(2)]		! always use centre(1:2) to store the 2D coordinates
+!			cdata(nc)%status = getstatus(cp)
+!		endif
+!		if (cp%anoxia_tag) then
+!			cdata(nc)%status = 2	! tagged to die of anoxia
+!		elseif (cp%radiation_tag) then
+!			cdata(nc)%status = 10
+!			write(nflog,*) 'Tagged to die from radiation: ',kcell
+!		elseif (cp%drug_tag(1)) then
+!			cdata(nc)%status = 11
+!		elseif (cp%drug_tag(1)) then
+!			cdata(nc)%status = 12
+!		elseif (cp%Cin(OXYGEN) < hypoxia_threshold) then
+!			cdata(nc)%status = 1	! radiobiological hypoxia
+!		elseif (cp%mitosis > 0) then
+!			cdata(nc)%status = 3	! in mitosis
+!		else
+!			cdata(nc)%status = 0
+!		endif
+!	enddo
+!enddo
+!write(nflog,*) 'axis: ',axis,' nc: ',nc
+!fdata%ncells = nc
+!res = 0
+end subroutine
+
+!--------------------------------------------------------------------------------
+! We want to evaluate Cslice(ix,iy,iz,:) at the centre of the lattice site (ix,iy,iz)
+! Note that
+!--------------------------------------------------------------------------------
+subroutine fillCslice(ch,ixyz,val,dx)
+character :: ch
+integer :: ixyz
+real(REAL_KIND) :: val, dx
+integer :: ix, iy, iz
+real(REAL_KIND) :: x, y, z
+
+if (ch == 'X') then
+    ix = ixyz
+    x = val
+    
+elseif (ch == 'Y') then
+    iy = ixyz
+    y = val
+
+elseif (ch == 'Z') then
+    iz = ixyz
+    z = val
+
+endif
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+function getstatus(cp) result(status)
+type(cell_type), pointer :: cp
+integer :: status
+
+if (cp%anoxia_tag) then
+	status = 2	! tagged to die of anoxia
+elseif (cp%radiation_tag) then
+	status = 10
+elseif (cp%drug_tag(1)) then
+	status = 11
+elseif (cp%drug_tag(1)) then
+	status = 12
+elseif (cp%conc(OXYGEN) < hypoxia_threshold) then
+	status = 1	! radiobiological hypoxia
+!elseif (cp%mitosis > 0) then
+elseif (cp%volume > 0.9*cp%divide_volume) then  ! just a surrogate for mitosis
+	status = 3	! in mitosis
+else
+	status = 0
+endif
+end function
+
 !--------------------------------------------------------------------------------
 ! Need to transmit medium concentration data.  This could be a separate subroutine.
 !--------------------------------------------------------------------------------
@@ -872,10 +1146,9 @@ offset = ichemo*ns
 end subroutine
 
 !--------------------------------------------------------------------------------
-! Returns all the extracellular concentrations along a line through the blob centre.
+! Returns all the intracellular concentrations along a line through the blob centre.
 ! Together with CFSE, growth rate (dVdt), cell volume,...
 ! Store the constituent profiles one after the other.
-! Drop the extra end points
 !--------------------------------------------------------------------------------
 subroutine get_IC_concdata(nvars, ns, dx, ic_conc) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_ic_concdata
@@ -1745,7 +2018,7 @@ do x = rng(1,1),rng(1,2)
 			else
 				ex_conc(k) = 0
 			endif
- 			write(nflog,'(a,4i6,f8.3)') 'Cell volume: ',x,ns,i,k,ex_conc(k)
+! 			write(nflog,'(a,4i6,f8.3)') 'Cell volume: ',x,ns,i,k,ex_conc(k)
 		endif
     enddo
 enddo

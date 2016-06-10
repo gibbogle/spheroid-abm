@@ -558,7 +558,7 @@ real(REAL_KIND) :: Vin_0, Vex_0, dV, minVex
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
 logical :: drugkilled, glucose_growth, first_cycle
-integer :: C_option = 2
+integer :: C_option = 1
 type(cell_type), pointer :: cp
 
 !call logger('CellGrowth')

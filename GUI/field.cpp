@@ -6,6 +6,8 @@
 
 LOG_USE();
 
+//NEW_FIELD_DATA fdata;
+
 //-----------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------
 Field::Field(QWidget *aParent) : QWidget(aParent)
@@ -306,6 +308,7 @@ void Field::selectFieldConstituent()
             }
         }
     }
+    slice_changed = true;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -324,6 +327,7 @@ void Field::setFieldConstituent(QAbstractButton *button)
 
     if (field_constituent != prev_constituent) {
 //        LOG_MSG("setFieldConstituent");
+        slice_changed = true;
         displayField(hour,&res);
     }
 }
@@ -484,6 +488,199 @@ void Field::displayField(int hr, int *res)
 {
     QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, CANVAS_WIDTH, CANVAS_WIDTH));
     QBrush brush;
+    int i, k, ix, iy, iz, w, rgbcol[3], ichemo, ixyz;
+    double xp, yp, x, y, d, C, cmin, cmax, rmax, valmin;
+    double a, b, Wc, dx, Wx, radius;
+    int Nc, NX, NY, NZ;
+    double beta = 1.0;
+    NEW_FIELD_DATA fdata;
+
+    ichemo = Global::GUI_to_DLL_index[field_constituent];
+    LOG_QMSG("displayField: field: " + QString::number(field_constituent) + " --> " + QString::number(ichemo));
+    sprintf(msg,"slice_changed? %d",slice_changed);
+    LOG_MSG(msg);
+    use_log = false;    // temporary
+    *res = 0;
+    if (hr >= 0) hour = hr;
+    if (slice_changed) {
+        LOG_MSG("call new_get_fielddata");
+        new_get_fielddata(&axis, &fraction, &fdata, &ixyz, res);
+        if (*res != 0) {
+            LOG_MSG("Error: new_get_fielddata: FAILED");
+            return;
+        }
+        sprintf(msg,"fdata: %d %d %d %d ncells: %d",fdata.NX,fdata.NY,fdata.NZ,fdata.NCONST,fdata.ncells);
+        LOG_MSG(msg);
+        slice_changed = false;
+    }
+
+    cmin = 1.0e10;
+    cmax = 0;
+    rmax = 1;
+
+    NX = fdata.NX;
+    NY = fdata.NY;
+    NZ = fdata.NZ;
+    dx = fdata.DX;
+
+    Wx = (NX-1)*dx;
+    Wc = CANVAS_WIDTH;
+    a = Wc/(beta*Wx);
+    b = Wc/2 - a*Wx/2;
+    sprintf(msg,"NX: %d dx: %f Wx: %f Wc: %f a: %f b: %f",NX,dx,Wx,Wc,a,b);
+    LOG_MSG(msg);
+    brush.setStyle(Qt::SolidPattern);
+    brush.setColor(QColor(0,0,0));
+    scene->addRect(0,0,CANVAS_WIDTH,CANVAS_WIDTH,Qt::NoPen, brush);
+    view->setScene(scene);
+    view->setGeometry(QRect(0, 0, CANVAS_WIDTH+4, CANVAS_WIDTH+4));
+
+//    LOG_MSG("--------------- a");
+    cmax = line_maxConc_list[field_constituent]->text().toDouble();
+    sprintf(msg,"displayField: field constituent: %d ichemo: %d cmax: %f",field_constituent,ichemo,cmax);
+    LOG_MSG(msg);
+    rgbcol[0] = 0;
+    rgbcol[1] = 0;
+    rgbcol[2] = 0;
+    w = a*dx + 0.5;
+    valmin = 1.0e10;
+    if (axis == X_AXIS) {           // Y-Z plane
+        ix = ixyz;
+        for (iy=0; iy<NY; iy++) {
+            x = iy*dx;
+            for (iz=0; iz<NZ; iz++) {
+                y = (NZ-1-iz)*dx;
+                k = (ichemo-1)*NZ*NY*NX + iz*NY*NX + iy*NX + ix;    // index(ix,iy,iz,ichemo);
+                C = fdata.Cave[k];
+                valmin = MIN(C,valmin);
+                rgbcol[1] = 255*min(C,cmax)/cmax;
+                rgbcol[2] = 255*min(C,cmax)/cmax;
+                xp = int(a*x + b);
+                yp = int(a*y + b);
+    //        chooseFieldColor(data[i].conc[ichemo],cmin,cmax,use_log,rgbcol);
+    //        sprintf(msg,"c: %f %f %f rgbcol: %d %d %d",data[i].conc[constituent],cmin,cmax,rgbcol[0],rgbcol[1],rgbcol[2]);
+    //        LOG_MSG(msg);
+                brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+                scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+            }
+        }
+    } else if (axis == Y_AXIS) {           // X-Z plane
+//        iy = (NY+1)/2 - 1;
+        iy = ixyz;
+        for (ix=0; ix<NX; ix++) {
+            x = ix*dx;
+            for (iz=0; iz<NZ; iz++) {
+//                y = iz*dx;
+                y = (NZ-1-iz)*dx;
+                k = (ichemo-1)*NZ*NY*NX + iz*NY*NX + iy*NX + ix;    // index(ix,iy,iz,ichemo);
+                C = fdata.Cave[k];
+                valmin = MIN(C,valmin);
+                rgbcol[1] = 255*min(C,cmax)/cmax;
+                rgbcol[2] = 255*min(C,cmax)/cmax;
+                xp = int(a*x + b);
+                yp = int(a*y + b);
+                brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+                scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+            }
+        }
+    } else if (axis == Z_AXIS) {           // X-Y plane
+//        iz = (NZ+1)/2 - 1;
+//        LOG_MSG("--------------- b");
+        iz = ixyz;
+        for (ix=0; ix<NX; ix++) {
+            x = ix*dx;
+            for (iy=0; iy<NY; iy++) {
+                y = iy*dx;
+                k = (ichemo-1)*NZ*NY*NX + iz*NY*NX + iy*NX + ix;    // index(ix,iy,iz,ichemo);
+                C = fdata.Cave[k];
+//                sprintf(msg,"%d %d %d %d %d %d %d %d %8.3f",NX,NY,NZ,ichemo,ix,iy,iz,k,C);
+//                LOG_MSG(msg);
+                valmin = MIN(C,valmin);
+                rgbcol[1] = 255*min(C,cmax)/cmax;
+                rgbcol[2] = 255*min(C,cmax)/cmax;
+                if (ix == NX/2) {
+//                    sprintf(msg,"iy,C,cmax: %4d %8.3f %8.3f rgb: %3d %3d %3d",iy,C,cmax,
+//                            rgbcol[0],rgbcol[1],rgbcol[2]);
+//                    LOG_MSG(msg);
+                }
+                xp = int(a*x + b);
+                yp = int(a*y + b);
+                brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+                scene->addRect(xp,yp,w,w,Qt::NoPen, brush);
+            }
+        }
+//        LOG_MSG("--------------- c");
+    }
+    sprintf(msg,"axis: %d valmin: %f",axis,valmin);
+    LOG_MSG(msg);
+//    LOG_MSG("--------------- d");
+
+
+//    ichemo = Global::GUI_to_DLL_index[cell_constituent];
+//    LOG_QMSG("displayField: cell: " + QString::number(cell_constituent) + " --> " + QString::number(ichemo));
+//    LOG_QMSG("displayField: nc: " + QString::number(fdata.ncells));
+    for (i=0; i<fdata.ncells; i++) {
+        x = fdata.cell_data[i].centre[0];
+        y = fdata.cell_data[i].centre[1];
+        radius = fdata.cell_data[i].radius;
+        xp = a*x + b;
+        yp = a*y + b;
+        d = 2*a*radius;
+//        sprintf(msg,"Cell: %d x,y: %f %f radius: %f xp,yp: %f %f",i,x,y,radius,xp,yp);
+//        LOG_MSG(msg);
+        if (fdata.cell_data[i].status == 0) {
+            rgbcol[0] = 0;
+            rgbcol[1] = 200;
+            rgbcol[2] = 32;
+        } else if (fdata.cell_data[i].status == 1) {
+            rgbcol[0] = 50;
+            rgbcol[1] = 100;
+            rgbcol[2] = 32;
+        } else if (fdata.cell_data[i].status == 2) {
+            rgbcol[0] = 0;
+            rgbcol[1] = 0;
+            rgbcol[2] = 255;
+        } else if (fdata.cell_data[i].status == 3) {
+            rgbcol[0] = 255;
+            rgbcol[1] = 0;
+            rgbcol[2] = 255;
+        } else if (fdata.cell_data[i].status >= 10) {   // tagged to die of treatment
+            rgbcol[0] = 255;
+            rgbcol[1] = 150;
+            rgbcol[2] = 0;
+        }
+        brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
+        scene->addEllipse(xp,yp,d,d,Qt::NoPen, brush);
+    }
+    view->show();
+    return;
+
+    if (save_images) {
+        scene->clearSelection();                                                  // Selections would also render to the file
+        scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
+        QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
+        image.fill(Qt::transparent);                                              // Start all pixels transparent
+
+        QPainter painter(&image);
+        scene->render(&painter);
+        ifield++;
+        char filename[] = "image/field0000.png";
+        char numstr[5];
+        sprintf(numstr,"%04d",hour);
+        for (int i=0; i<4; i++)
+            filename[11+i] = numstr[i];
+        image.save(filename);
+    }
+}
+
+/*
+//-----------------------------------------------------------------------------------------
+// New version, site/cell size is fixed, the blob grows
+//-----------------------------------------------------------------------------------------
+void Field::displayField(int hr, int *res)
+{
+    QGraphicsScene* scene = new QGraphicsScene(QRect(0, 0, CANVAS_WIDTH, CANVAS_WIDTH));
+    QBrush brush;
     int i, xindex, yindex, ix, iy, w, rgbcol[3], ichemo;
     double xp, yp, d0, d, volume, scale, cmin, cmax, rmax;
     double a, b, Wc;
@@ -533,19 +730,19 @@ void Field::displayField(int hr, int *res)
         yindex = 1;
     }
 
-/*
- NX = size of lattice
- Nc = # of sites to fill the canvas from side to side (or top to bottom) = (2/3)NX
- Wc = canvas width (pixels)
- w = site width = Wc/Nc
- xp = a.ix + b
- yp = a.iy + b
- blob centre at (NX/2,NX/2) maps to canvas centre at (Wc/2,Wc/2)
- => Wc/2 = a.NX/2 + b
- The width of Nc sites maps to the canvas width
- => Wc = a.Nc
- => a = Wc/Nc, b = Wc/2 - a.NX/2
-*/
+
+// NX = size of lattice
+// Nc = # of sites to fill the canvas from side to side (or top to bottom) = (2/3)NX
+// Wc = canvas width (pixels)
+// w = site width = Wc/Nc
+// xp = a.ix + b
+// yp = a.iy + b
+// blob centre at (NX/2,NX/2) maps to canvas centre at (Wc/2,Wc/2)
+// => Wc/2 = a.NX/2 + b
+// The width of Nc sites maps to the canvas width
+// => Wc = a.Nc
+// => a = Wc/Nc, b = Wc/2 - a.NX/2
+
     Nc = (2*NX)/3;
     Wc = CANVAS_WIDTH;
     w = Wc/Nc;
@@ -640,4 +837,4 @@ void Field::displayField(int hr, int *res)
     }
 }
 
-
+*/

@@ -34,6 +34,7 @@ read(nfmap,'(3i4)') NX_f, NY_f, NZ_f
 read(nfmap,'(i8)') nrow_f
 if (is_fine) then
 	if (NX_f /= NX .or. NY_f /= NY .or. NZ_f /= NZ .or. nrow_f /= nrow) then
+	    close(nfmap)
 		write(logmsg,*) 'Error: read_map_file: ',mapfile
 		call logger(logmsg)
 		write(logmsg,*) 'inconsistent parameters: NZ, NY, NZ, nrow'
@@ -58,6 +59,7 @@ if (is_fine) then
 	enddo
 else
 	if (NX_f /= NXB .or. NY_f /= NYB .or. NZ_f /= NZB .or. nrow_f /= nrow_b) then
+	    close(nfmap)
 		write(logmsg,*) 'Error: read_map_file: ',mapfile
 		call logger(logmsg)
 		write(logmsg,*) 'inconsistent parameters: NZ, NY, NZ, nrow'
@@ -138,9 +140,10 @@ real(REAL_KIND) :: Kd, Kr, aval(7)
 integer, allocatable :: arow(:)
 logical :: file_exists = .false., upper_bdry
 integer, parameter :: m = 3
+logical :: use_mapfile = .false.
 
 inquire(file=mapfile,exist=file_exists)
-if (file_exists) then
+if (use_mapfile .and. file_exists) then
 	call read_map_file(mapfile,is_fine,ok)
 	return
 endif
@@ -266,7 +269,9 @@ else
 !	write(*,'(10i5)') amap_b(1:100,0)
 endif
 deallocate(arow)
-call write_map_file(mapfile,is_fine)
+if (use_mapfile) then
+    call write_map_file(mapfile,is_fine)
+endif
 ok = .true.
 end subroutine
 
@@ -291,6 +296,7 @@ read(nfmap,'(3i4)') NX_f, NY_f, NZ_f
 read(nfmap,'(i8)') nrow_f
 if (is_fine) then
 	if (NX_f+2 /= NX .or. NY_f+2 /= NY .or. NZ_f+1 /= NZ .or. nrow_f /= nrow) then
+	    close(nfmap)
 		write(logmsg,*) 'Error: read_map_file: ',mapfile
 		call logger(logmsg)
 		write(logmsg,*) 'inconsistent parameters: NZ, NY, NZ, nrow'
@@ -315,6 +321,7 @@ if (is_fine) then
 	enddo
 else
 	if (NX_f /= NXB .or. NY_f /= NYB .or. NZ_f /= NZB .or. nrow_f /= nrow_b) then
+	    close(nfmap)
 		write(logmsg,*) 'Error: read_map_file: ',mapfile
 		call logger(logmsg)
 		write(logmsg,*) 'inconsistent parameters: NZ, NY, NZ, nrow'

@@ -427,13 +427,6 @@ do kcell = 1,nlist
 	if (cp%state == DEAD) cycle
 	cp%dMdt(ichemo) = Kin*cp%Cex(ichemo) - Kout*cp%conc(ichemo)
 	total_flux = total_flux + cp%dMdt(ichemo)
-!	if (kcell == 1) then
-!		write(nflog,'(a,i4,5e12.5)') 'getF_const: Cin, Cex, dMdt: ',ichemo, cp%conc(ichemo), cp%Cex(ichemo),cp%dMdt(ichemo),Kin,Kout
-!	endif
-	if (istep == 35 .and. ichemo == OXYGEN) then
-	    write(nflog,'(i6,6e12.3)') kcell, Kin, Kout, cp%conc(ichemo), cp%Cex(OXYGEN), &
-	        cp%Cex(OXYGEN)-cp%conc(ichemo), cp%dMdt(OXYGEN)
-	endif
 enddo
 !!$omp end parallel do
 if (ichemo == OXYGEN) then

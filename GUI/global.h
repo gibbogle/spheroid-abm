@@ -49,6 +49,16 @@ struct dist_set {
 };
 typedef dist_set DIST_SET;
 
+struct cell_data {
+    int tag;
+    double radius;
+    double centre[3];
+    int celltype;
+    int status;
+//    int highlight;
+};
+typedef cell_data CELL_DATA;
+
 namespace Global
 {
     extern QString GUI_build_version;

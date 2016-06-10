@@ -165,6 +165,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     tabs->setCurrentIndex(9);
     setupPopup();
+    LOG_MSG("call setFields from start");
     setFields();
     goToInputs();
 }
@@ -208,9 +209,11 @@ void MainWindow::createActions()
     connect(checkBox_FACS_log_y, SIGNAL(stateChanged(int)), this, SIGNAL(facs_update()));
     connect(buttonGroup_histo, SIGNAL(buttonClicked(QAbstractButton*)), this, SIGNAL(histo_update()));
 
-    connect(line_NXB,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
-    connect(line_NZB,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
-    connect(line_DXF,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
+//    connect(line_NXB,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
+//    connect(line_NZB,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
+//    connect(line_DXF,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
+    connect(line_MEDIUM_VOLUME,SIGNAL(textChanged(QString)),this,SLOT(setFields()));
+// Only volume change is permitted - must avoid repeated calls to setFields
 
     connect(this,SIGNAL(pause_requested()),SLOT(pauseServer()));
 
@@ -1133,6 +1136,9 @@ void MainWindow::loadParams()
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::setFields()
 {
+    bool specify_volume = true;
+
+    LOG_MSG("setFields");
     spin_NX->setValue(120);
     tab_force->setEnabled(false);
     groupBox_force->setEnabled(false);
@@ -1140,19 +1146,32 @@ void MainWindow::setFields()
     line_NMM3->setEnabled(true);
     line_NXB->setEnabled(false);
     line_NZB->setEnabled(false);
+    line_DXF->setEnabled(false);
     groupBox_drop->setEnabled(true);
     line_FLUID_FRACTION->setEnabled(true);
     if (rbut_FD_SOLVER_1->isChecked()) {
         int nxb = line_NXB->text().toInt();
-        int nzb = line_NZB->text().toInt();
-        double dx = line_DXF->text().toDouble();
-        double vol_cm3 = nxb*nxb*nzb*pow(4*dx,3)*1.0e-12;
-        QString str = QString::number(vol_cm3,'g',3);
-        line_MEDIUM_VOLUME->setText(str);
-        line_MEDIUM_VOLUME->setEnabled(false);
+//        double dxf = line_DXF->text().toDouble();
+        double dxf = 38;
+        if (specify_volume) {
+            line_MEDIUM_VOLUME->setEnabled(true);
+            double vol_cm3 = line_MEDIUM_VOLUME->text().toDouble();
+            int nzb = vol_cm3/(nxb*nxb*pow(4*dxf,3)*1.0e-12);   // need to adjust dxf to make exact
+            double dxb3 = vol_cm3/(nxb*nxb*nzb*1.0e-12);        // = pow(4*dxf,3)
+            dxf = pow(dxb3,1./3)/4;
+            sprintf(msg,"vol_cm3, nzb, dxf: %f %d %f",vol_cm3,nzb,dxf);
+            LOG_MSG(msg);
+            QString str = QString::number(dxf,'g',4);
+            line_DXF->setText(str);
+            line_NZB->setText(QString::number(nzb));
+        } else {
+            int nzb = line_NZB->text().toInt();
+            double vol_cm3 = nxb*nxb*nzb*pow(4*dxf,3)*1.0e-12;
+            QString str = QString::number(vol_cm3,'g',3);
+            line_MEDIUM_VOLUME->setText(str);
+            line_MEDIUM_VOLUME->setEnabled(false);
+        }
         line_UNSTIRRED_LAYER->setEnabled(false);
-//        cbox_USE_RELAX->setEnabled(false);
-//        cbox_USE_PAR_RELAX->setEnabled(false);
     } else {
         line_MEDIUM_VOLUME->setEnabled(true);
         line_UNSTIRRED_LAYER->setEnabled(true);
@@ -1328,6 +1347,7 @@ void MainWindow::reloadParams()
     }
     text_GUI_VERSION_NAME->setText(Global::GUI_build_version);
     text_DLL_VERSION_NAME->setText(Global::DLL_build_version);
+    LOG_MSG("call setFields from reloadParams");
     setFields();
 }
 
@@ -2281,8 +2301,8 @@ void MainWindow::showSummary(int hr)
     // Profile plots
     updateProfilePlots();
 
-    field->setSliceChanged();
 //    if (step > 0 && !action_field->isEnabled()) {
+    field->setSliceChanged();
     if (step > 0) {
         field->displayField(hour,&res);
         if (videoField->record) {

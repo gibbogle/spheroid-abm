@@ -6,6 +6,7 @@
 #include <QtGui>
 #include <QMouseEvent>
 #include "plot.h"
+#include "global.h"
 #include "myqgraphicsview.h"
 
 #define CANVAS_WIDTH 696
@@ -21,6 +22,17 @@ struct field_data {
 
 typedef field_data FIELD_DATA;
 
+struct new_field_data {
+    int NX, NY, NZ;
+    int NCONST;
+    double DX;
+    double *Cave;   // Cslice(NX,NY,NZ,NCONST) where NCONST = MAX_CHEMO
+    int ncells;
+    CELL_DATA *cell_data;
+};
+typedef new_field_data NEW_FIELD_DATA;
+
+
 #define X_AXIS 1
 #define Y_AXIS 2
 #define Z_AXIS 3
@@ -31,6 +43,7 @@ typedef field_data FIELD_DATA;
 extern "C" {
     void get_fieldinfo(int *, int *, double *, int *, int *, int *, int *);
     void get_fielddata(int *, double *, int *, int *, FIELD_DATA *, int *);
+    void new_get_fielddata(int *, double *, new_field_data *, int *, int *);
 }
 
 class Field : public QWidget

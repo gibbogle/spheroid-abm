@@ -234,6 +234,7 @@ type(occupancy_type), allocatable :: occupancy(:,:,:)
 type(cell_type), allocatable, target :: cell_list(:)
 type(treatment_type), allocatable :: protocol(:)
 type(event_type), allocatable :: event(:)
+real(REAL_KIND), allocatable, target :: Cslice(:,:,:,:)
 
 character*(12) :: dll_version, dll_run_version
 character*(12) :: gui_version, gui_run_version

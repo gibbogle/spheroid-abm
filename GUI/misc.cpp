@@ -175,8 +175,12 @@ void ExecThread::run()
     }
 	paused = false;
     LOG_MSG("call execute");
-    execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile);
+    execute(&ncpu,const_cast<char *>(infile),&len_infile,const_cast<char *>(outfile),&len_outfile,&res);
     LOG_MSG("did execute");
+    if (res) {
+        terminate_run(&res);
+        return;
+    }
 
 //    char *b;
 //    get_string(&b);

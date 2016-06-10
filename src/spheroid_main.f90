@@ -69,7 +69,8 @@ do irun = 1,1
 	write(*,*) 'call execute'
 	write(nfrun,*) 'infile: ',infile
 	write(nfrun,*) 'outfile: ',outfile
-	call execute(ncpu,infile,inbuflen,outfile,outbuflen)
+	call execute(ncpu,infile,inbuflen,outfile,outbuflen,res)
+	if (res /= 0) stop
 	!call cpu_time(t1)
 	t1 = wtime()
 	write(*,*) 'did execute: nsteps, DELTA_T: ',nsteps, DELTA_T
