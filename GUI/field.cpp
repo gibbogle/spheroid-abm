@@ -264,6 +264,7 @@ void Field::selectCellConstituent()
             }
         }
     }
+    slice_changed = true;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -282,6 +283,7 @@ void Field::setCellConstituent(QAbstractButton *button)
 
     if (cell_constituent != prev_constituent) {
 //        LOG_MSG("setCellConstituent");
+        slice_changed = true;
         displayField(hour,&res);
     }
 }
@@ -652,6 +654,15 @@ void Field::displayField(int hr, int *res)
         brush.setColor(QColor(rgbcol[0],rgbcol[1],rgbcol[2]));
         scene->addEllipse(xp,yp,d,d,Qt::NoPen, brush);
     }
+    double w_scalebar = a*0.01 + b; // 100um = 0.01cm
+    double scalebar0 = a*2*dx + b;
+    QPen pen;
+    QFont font;
+    pen.setBrush(Qt::black);
+    pen.setWidth(3);
+    scene->addLine(scalebar0, scalebar0, scalebar0+w_scalebar, scalebar0, pen);
+    QGraphicsTextItem *scalebar_text = scene->addText("100 um",font);
+    scalebar_text->setPos(scalebar0,1.4*scalebar0);
     view->show();
     return;
 
