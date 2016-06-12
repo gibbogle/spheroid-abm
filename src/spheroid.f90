@@ -103,9 +103,11 @@ call SetInitialGrowthRate
 Nradiation_tag = 0
 Ndrug_tag = 0
 Nanoxia_tag = 0
+Naglucosia_tag = 0
 Nradiation_dead = 0
 Ndrug_dead = 0
 Nanoxia_dead = 0
+Naglucosia_dead = 0
 !radiation_dosed = .false.
 t_simulation = 0
 total_dMdt = 0
@@ -372,7 +374,7 @@ integer :: ictype, idisplay, isconstant, iglucosegrowth
 integer :: iuse_drop, iconstant, isaveprofiledata, isaveslicedata
 logical :: use_metabolites
 real(REAL_KIND) :: days, bdry_conc, percent, d_n_limit
-real(REAL_KIND) :: sigma(2), DXmm, anoxia_tag_hours, anoxia_death_hours
+real(REAL_KIND) :: sigma(2), DXmm, anoxia_tag_hours, anoxia_death_hours, aglucosia_tag_hours, aglucosia_death_hours
 character*(12) :: drug_name
 character*(1) :: numstr
 
@@ -421,9 +423,12 @@ read(nfcell,*) d_layer						! thickness of the unstirred layer around the sphero
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
 read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (uM)
-read(nfcell,*) ANOXIA_THRESHOLD			    ! O2 threshold for anoxia (uM)
+read(nfcell,*) anoxia_threshold			    ! O2 threshold for anoxia (uM)
 read(nfcell,*) anoxia_tag_hours				! hypoxic time leading to tagging to die by anoxia (h)
 read(nfcell,*) anoxia_death_hours			! time after tagging to death by anoxia (h)
+read(nfcell,*) aglucosia_threshold			! O2 threshold for aglucosia (uM)
+read(nfcell,*) aglucosia_tag_hours			! hypoxic time leading to tagging to die by aglucosia (h)
+read(nfcell,*) aglucosia_death_hours		! time after tagging to death by aglucosia (h)
 read(nfcell,*) itestcase                    ! test case to simulate
 read(nfcell,*) seed(1)						! seed vector(1) for the RNGs
 read(nfcell,*) seed(2)						! seed vector(2) for the RNGs
@@ -545,7 +550,8 @@ if (chemo(GLUCOSE)%Hill_N /= 1 .and. chemo(GLUCOSE)%Hill_N /= 2) then
 endif
 DXB = 4*DXF
 MM_THRESHOLD = MM_THRESHOLD/1000					! uM -> mM
-ANOXIA_THRESHOLD = ANOXIA_THRESHOLD/1000			! uM -> mM
+anoxia_threshold = anoxia_threshold/1000			! uM -> mM
+aglucosia_threshold = aglucosia_threshold/1000		! uM -> mM
 O2cutoff = O2cutoff/1000							! uM -> mM
 hypoxia_threshold = hypoxia_threshold/1000			! uM -> mM
 relax = (iuse_relax == 1)
@@ -572,8 +578,10 @@ call logger(logmsg)
 use_V_dependence = (iV_depend == 1)
 randomise_initial_volume = (iV_random == 1)
 use_extracellular_O2 = (iuse_extra == 1)
-t_anoxic_limit = 60*60*anoxia_tag_hours				! hours -> seconds
+t_anoxia_limit = 60*60*anoxia_tag_hours				! hours -> seconds
 anoxia_death_delay = 60*60*anoxia_death_hours		! hours -> seconds
+t_aglucosia_limit = 60*60*aglucosia_tag_hours		! hours -> seconds
+aglucosia_death_delay = 60*60*aglucosia_death_hours	! hours -> seconds
 Vextra_cm3 = fluid_fraction*Vsite_cm3				! extracellular volume in a site (cm^3)
 cell_radius = (3*(1-fluid_fraction)*Vsite_cm3/(4*PI))**(1./3.)
 ! In a well-oxygenated tumour the average cell fractional volume is intermediate between vdivide0/2 and vdivide0.
@@ -624,9 +632,9 @@ open(nfres,file='spheroid_ts.out',status='replace')
 !write(nfres,*)
 write(nfres,'(a)') 'date info GUI_version DLL_version &
 istep hour vol_mm3 diam_um Ncells(1) Ncells(2) &
-Nanoxia_dead(1) Nanoxia_dead(2) NdrugA_dead(1) NdrugA_dead(2) &
+Nanoxia_dead(1) Nanoxia_dead(2) Naglucosia_dead(1) Naglucosia_dead(2) NdrugA_dead(1) NdrugA_dead(2) &
 NdrugB_dead(1) NdrugB_dead(2) Nradiation_dead(1) Nradiation_dead(2) &
-Ntagged_anoxia(1) Ntagged_anoxia(2) Ntagged_drugA(1) Ntagged_drugA(2) &
+Ntagged_anoxia(1) Ntagged_anoxia(2) Ntagged_aglucosia(1) Ntagged_aglucosia(2) Ntagged_drugA(1) Ntagged_drugA(2) &
 Ntagged_drugB(1) Ntagged_drugB(2) Ntagged_radiation(1) Ntagged_radiation(2) &
 f_hypox(1) f_hypox(2) f_hypox(3) &
 f_clonohypox(1) f_clonohypox(2) f_clonohypox(3) &
@@ -1026,6 +1034,7 @@ cell_list(k)%generation = 1
 cell_list(k)%drug_tag = .false.
 cell_list(k)%radiation_tag = .false.
 cell_list(k)%anoxia_tag = .false.
+cell_list(k)%aglucosia_tag = .false.
 cell_list(k)%exists = .true.
 cell_list(k)%active = .true.
 cell_list(k)%growth_delay = .false.
@@ -1044,7 +1053,7 @@ else
 endif
 !write(nflog,'(a,i6,f6.2)') 'volume: ',k,cell_list(k)%volume
 cell_list(k)%t_divide_last = 0		! used in colony growth
-cell_list(k)%t_hypoxic = 0
+cell_list(k)%t_anoxia = 0
 cell_list(k)%conc = 0
 cell_list(k)%conc(OXYGEN) = chemo(OXYGEN)%bdry_conc
 cell_list(k)%conc(GLUCOSE) = chemo(GLUCOSE)%bdry_conc

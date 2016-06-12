@@ -75,6 +75,7 @@ public:
     bool save_images;
     bool use_log;
     MyQGraphicsView* view;
+    QGraphicsScene* scene;
     int NX;
     int axis;
     double fraction;
@@ -88,7 +89,6 @@ public:
     int cell_constituent;
     int field_constituent;
     bool slice_changed;
-	bool constituent_changed;
     bool useConcPlot;
     bool useVolPlot;
     bool useOxyPlot;

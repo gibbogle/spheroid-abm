@@ -33,6 +33,8 @@ LOG_USE();
 Params *parm;	// I don't believe this is the right way, but it works
 Graphs *grph;
 
+bool ON_LATTICE = true;
+
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 MainWindow::MainWindow(QWidget *parent)
@@ -1131,6 +1133,67 @@ void MainWindow::loadParams()
 
 //--------------------------------------------------------------------------------------------------------
 // This is to disable unused fields (because spheroid_GUI.ui is shared with spheroid_GUI).
+// DXF and NZB are computed from NXB and MEDIUM_VOLUME, keeping DXF close to 38um.
+// Note that NYB = NXB, and the coarse grid spacing DXB = 4*DXF
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::setFields()
+{
+    bool specify_volume = true;
+
+    LOG_MSG("setFields");
+    if (ON_LATTICE) {
+        spin_NX->setValue(120);
+        tab_force->setEnabled(false);
+        groupBox_force->setEnabled(false);
+        groupBox_farfield->setEnabled(true);
+    } else {
+        spin_NX->setValue(33);
+        tab_force->setEnabled(true);
+        groupBox_force->setEnabled(true);
+        groupBox_farfield->setEnabled(false);
+    }
+    line_NT_CONC->setEnabled(true);
+    line_NMM3->setEnabled(true);
+    spin_NX->setEnabled(false);
+    line_NXB->setEnabled(false);
+    line_NZB->setEnabled(false);
+    line_DXF->setEnabled(false);
+    line_FLUID_FRACTION->setEnabled(true);
+    groupBox_drop->setEnabled(true);
+    if (rbut_FD_SOLVER_1->isChecked()) {
+        int nxb = line_NXB->text().toInt();
+        double dxf = 38;
+        if (specify_volume) {
+            line_MEDIUM_VOLUME->setEnabled(true);
+            double vol_cm3 = line_MEDIUM_VOLUME->text().toDouble();
+            int nzb = vol_cm3/(nxb*nxb*pow(4*dxf,3)*1.0e-12);   // need to adjust dxf to make exact
+            double dxb3 = vol_cm3/(nxb*nxb*nzb*1.0e-12);        // = pow(4*dxf,3)
+            dxf = pow(dxb3,1./3)/4;
+            sprintf(msg,"vol_cm3, nzb, dxf: %f %d %f",vol_cm3,nzb,dxf);
+            LOG_MSG(msg);
+            QString str = QString::number(dxf,'g',4);
+            line_DXF->setText(str);
+            line_NZB->setText(QString::number(nzb));
+        } else {
+            int nzb = line_NZB->text().toInt();
+            double vol_cm3 = nxb*nxb*nzb*pow(4*dxf,3)*1.0e-12;
+            QString str = QString::number(vol_cm3,'g',3);
+            line_MEDIUM_VOLUME->setText(str);
+            line_MEDIUM_VOLUME->setEnabled(false);
+        }
+        line_UNSTIRRED_LAYER->setEnabled(false);
+    } else if (ON_LATTICE) {
+        line_MEDIUM_VOLUME->setEnabled(true);
+        line_UNSTIRRED_LAYER->setEnabled(true);
+        line_FLUID_FRACTION->setEnabled(true);
+        cbox_USE_RELAX->setEnabled(true);
+        cbox_USE_PAR_RELAX->setEnabled(true);
+    }
+}
+
+/*
+//--------------------------------------------------------------------------------------------------------
+// This is to disable unused fields (because spheroid_GUI.ui is shared with spheroid_GUI).
 // The MEDIUM_VOLUME field value is computed from the specified DXF, NXB and NZB.
 // Note that NYB = NXB, and the coarse grid spacing DXB = 4*DXF
 //--------------------------------------------------------------------------------------------------------
@@ -1180,20 +1243,7 @@ void MainWindow::setFields()
         cbox_USE_PAR_RELAX->setEnabled(true);
     }
 }
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-//QString MainWindow::parse_rbutton(QString wtag, int *rbutton_case)
-//{
-//	// parse wtag into part before '_' and part after '_'
-//	int j = wtag.indexOf('_');
-//	QString suffix = wtag.mid(j+1);
-//	// the prefix becomes wtag, the suffix becomes rbutton_case, an integer 0,1,2,...
-//	wtag = wtag.mid(0,j);
-//	bool ok;
-//	*rbutton_case = suffix.toInt(&ok);
-//	return wtag;
-//}
+*/
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------

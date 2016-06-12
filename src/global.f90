@@ -112,8 +112,10 @@ type cell_type
 	real(REAL_KIND) :: divide_time
 	real(REAL_KIND) :: t_divide_last	! these two values are used for colony simulation
 	real(REAL_KIND) :: t_divide_next
-	real(REAL_KIND) :: t_hypoxic
+	real(REAL_KIND) :: t_anoxia
 	real(REAL_KIND) :: t_anoxia_die
+	real(REAL_KIND) :: t_aglucosia
+	real(REAL_KIND) :: t_aglucosia_die
 	real(REAL_KIND) :: M
 	real(REAL_KIND) :: p_rad_death
 	real(REAL_KIND) :: p_drug_death(MAX_DRUGTYPES)
@@ -121,7 +123,7 @@ type cell_type
 	real(REAL_KIND) :: dt_delay
 	real(REAL_KIND) :: t_growth_delay_end			! this is for suppression of growth before first division
 	integer :: N_delayed_cycles_left		! decremented by 1 at each cell division
-	logical :: radiation_tag, anoxia_tag	!, drugA_tag, drugB_tag
+	logical :: radiation_tag, anoxia_tag, aglucosia_tag
 	logical :: drug_tag(MAX_DRUGTYPES)
 	logical :: G2_M
 	logical :: exists
@@ -265,9 +267,9 @@ integer :: diam_count_limit
 logical :: limit_stop
 integer :: nadd_sites, Nsites, Nreuse
 integer :: Ndrugs_used
-integer :: Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES)
+integer :: Nradiation_tag(MAX_CELLTYPES), Nanoxia_tag(MAX_CELLTYPES), Naglucosia_tag(MAX_CELLTYPES)
 integer :: Ndrug_tag(MAX_DRUGTYPES,MAX_CELLTYPES)
-integer :: Nradiation_dead(MAX_CELLTYPES), Nanoxia_dead(MAX_CELLTYPES)
+integer :: Nradiation_dead(MAX_CELLTYPES), Nanoxia_dead(MAX_CELLTYPES), Naglucosia_dead(MAX_CELLTYPES)
 integer :: Ndrug_dead(MAX_DRUGTYPES,MAX_CELLTYPES)
 logical :: use_radiation_growth_delay_all = .true.
 !logical :: radiation_dosed
@@ -285,7 +287,8 @@ real(REAL_KIND) :: dxb, dxb3, dxf, dx3
 real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer, t_lastmediumchange
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
-real(REAL_KIND) :: MM_THRESHOLD, ANOXIA_THRESHOLD, t_anoxic_limit, anoxia_death_delay, Vdivide0, dVdivide
+real(REAL_KIND) :: MM_THRESHOLD, anoxia_threshold, t_anoxia_limit, anoxia_death_delay, Vdivide0, dVdivide
+real(REAL_KIND) :: aglucosia_threshold, t_aglucosia_limit, aglucosia_death_delay
 real(REAL_KIND) :: divide_time_median(MAX_CELLTYPES), divide_time_shape(MAX_CELLTYPES), divide_time_mean(MAX_CELLTYPES)
 real(REAL_KIND) :: t_simulation, execute_t1
 real(REAL_KIND) :: O2cutoff(3), hypoxia_threshold

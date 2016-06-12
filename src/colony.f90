@@ -97,6 +97,7 @@ type (cell_type), pointer :: cp
 !write(*,'(a,i6,2f8.0)') 'make_colony: ',kcell,t,tend
 ccell_list(1) = cell_list(kcell)
 ccell_list(1)%anoxia_tag = .false.
+ccell_list(1)%aglucosia_tag = .false.
 ccell_list(1)%drug_tag = .false.
 dt = 3600	! use big time steps, 1h
 ityp = cell_list(kcell)%celltype
@@ -195,6 +196,7 @@ ccell_list(kcell1)%p_rad_death = ccell_list(kcell0)%p_rad_death
 ccell_list(kcell1)%p_drug_death = ccell_list(kcell0)%p_drug_death
 ccell_list(kcell1)%radiation_tag = ccell_list(kcell0)%radiation_tag
 ccell_list(kcell1)%anoxia_tag = .false.
+ccell_list(kcell1)%aglucosia_tag = .false.
 ccell_list(kcell1)%exists = .true.
 ccell_list(kcell1)%active = .true.
 ccell_list(kcell1)%growth_delay = ccell_list(kcell0)%growth_delay
@@ -211,7 +213,8 @@ else
 	R = par_uni(kpar)
 	ccell_list(kcell1)%t_divide_next = tnow + Tdiv0*(1 + (2*dVdivide/Vdivide0)*(2*R-1))
 endif
-ccell_list(kcell1)%t_hypoxic = 0
+ccell_list(kcell1)%t_anoxia = 0
+ccell_list(kcell1)%t_aglucosia = 0
 ccell_list(kcell1)%conc = ccell_list(kcell0)%conc
 ccell_list(kcell1)%Cex = ccell_list(kcell0)%Cex
 ccell_list(kcell1)%dCdt = ccell_list(kcell0)%dCdt
