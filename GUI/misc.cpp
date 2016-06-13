@@ -205,12 +205,12 @@ void ExecThread::run()
 //    LOG_MSG("did tester");
 //    emit run_tester();
 
-    mutex1.lock();
+//    mutex1.lock();
     get_summary(Global::summaryData, &Global::i_hypoxia_cutoff, &Global::i_growth_cutoff);
 //    getProfiles();
-    mutex1.unlock();
+//    mutex1.unlock();
     emit summary(hour);		// Emit signal to initialise summary plots
-    summary_done.wait(&mutex3);
+//    summary_done.wait(&mutex3);
 //    wait_to_go();
 
     for (int i=1; i <= nsteps+1; i++) {
@@ -255,8 +255,9 @@ void ExecThread::run()
                 emit histo_update();
             }
             hour++;
+            mutex1.lock();
             emit summary(hour);		// Emit signal to update summary plots, at hourly intervals
-            summary_done.wait(&mutex3);
+//            summary_done.wait(&mutex3);
         }
 
         if (stopped) {

@@ -2323,7 +2323,7 @@ void MainWindow::showSummary(int hr)
 		return;
 	}
     hour = hr;
-    exthread->mutex1.lock();
+//    exthread->mutex1.lock();
 
 //    hour = summaryData[0]*DELTA_T/(60*60);
 //    hour = summaryData[1]*DELTA_T/60;
@@ -2363,7 +2363,7 @@ void MainWindow::showSummary(int hr)
         }
     }
     exthread->mutex1.unlock();
-    exthread->summary_done.wakeOne();
+//    exthread->summary_done.wakeOne();
 }
 
 //--------------------------------------------------------------------------------------------------------
