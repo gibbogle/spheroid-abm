@@ -116,6 +116,7 @@ t_lastmediumchange = 0
 limit_stop = .false.
 Vex_min = 1.0
 Vex_max = 0
+kcell_dbug = 0
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
@@ -370,7 +371,7 @@ logical :: ok
 integer :: i, idrug, imetab, nmetab, im, itestcase, Nmm3, ichemo, itreatment, iuse_extra, iuse_relax, iuse_par_relax, iuse_FD
 integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, iV_depend, iV_random, iuse_gd_all
 !integer ::  idrug_decay, imetab_decay
-integer :: ictype, idisplay, isconstant, iglucosegrowth
+integer :: ictype, idisplay, isconstant, ioxygengrowth, iglucosegrowth, ioxygendeath, iglucosedeath
 integer :: iuse_drop, iconstant, isaveprofiledata, isaveslicedata
 logical :: use_metabolites
 real(REAL_KIND) :: days, bdry_conc, percent, d_n_limit
@@ -443,6 +444,10 @@ enddo
 read(nfcell,*) NT_GUI_OUT					! interval between GUI outputs (timesteps)
 read(nfcell,*) show_progeny                 ! if != 0, the number of the cell to show descendents of
 read(nfcell,*) iuse_oxygen		! chemo(OXYGEN)%used
+read(nfcell,*) ioxygengrowth
+chemo(OXYGEN)%controls_growth = (ioxygengrowth == 1)
+read(nfcell,*) ioxygendeath
+chemo(OXYGEN)%controls_death = (ioxygendeath == 1)
 read(nfcell,*) chemo(OXYGEN)%diff_coef
 read(nfcell,*) chemo(OXYGEN)%medium_diff_coef
 read(nfcell,*) chemo(OXYGEN)%membrane_diff_in
@@ -456,6 +461,10 @@ chemo(OXYGEN)%max_cell_rate = chemo(OXYGEN)%max_cell_rate*1.0e6					! mol/cell/s
 read(nfcell,*) chemo(OXYGEN)%MM_C0
 read(nfcell,*) chemo(OXYGEN)%Hill_N
 read(nfcell,*) iuse_glucose		!chemo(GLUCOSE)%used
+read(nfcell,*) iglucosegrowth
+chemo(GLUCOSE)%controls_growth = (iglucosegrowth == 1)
+read(nfcell,*) iglucosedeath
+chemo(GLUCOSE)%controls_death = (iglucosedeath == 1)
 read(nfcell,*) chemo(GLUCOSE)%diff_coef
 read(nfcell,*) chemo(GLUCOSE)%medium_diff_coef
 read(nfcell,*) chemo(GLUCOSE)%membrane_diff_in
@@ -468,8 +477,6 @@ read(nfcell,*) chemo(GLUCOSE)%max_cell_rate
 chemo(GLUCOSE)%max_cell_rate = chemo(GLUCOSE)%max_cell_rate*1.0e6					! mol/cell/s -> mumol/cell/s
 read(nfcell,*) chemo(GLUCOSE)%MM_C0
 read(nfcell,*) chemo(GLUCOSE)%Hill_N
-read(nfcell,*) iglucosegrowth
-chemo(GLUCOSE)%controls_growth = (iglucosegrowth == 1)
 read(nfcell,*) iuse_tracer		!chemo(TRACER)%used
 read(nfcell,*) chemo(TRACER)%diff_coef
 read(nfcell,*) chemo(TRACER)%medium_diff_coef
@@ -1573,9 +1580,48 @@ if (dbug .or. mod(istep,nthour) == 0) then
 	write(logmsg,'(a,2i6,a,2i6,a,f6.1,a,i2,a,2f6.3)') &
 		'istep, hour: ',istep,istep/nthour,' nlist, ncells: ',nlist,ncells,' diam: ',diam_um,' nchemo: ',nchemo
 	call logger(logmsg)
-	write(nflog,'(a,2f8.4)') 'bdryconc: O2, glucose: ',bdryconc(OXYGEN),bdryconc(GLUCOSE)
+	call showcells
 endif
 ! write(nflog,'(a,f8.3)') 'did simulate_step: time: ',wtime()-start_wtime
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine showcell(kcell)
+integer :: kcell
+type(cell_type), pointer :: cp
+
+cp => cell_list(kcell)
+write(nflog,'(a,i6,4e12.3)') 'kcell, volume, divide_volume, dVdt, divide_time: ', &
+                kcell, cp%volume, cp%divide_volume, cp%dVdt, cp%divide_time
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Average volumes etc
+!-----------------------------------------------------------------------------------------
+subroutine showcells
+integer :: kcell, n
+real(REAL_KIND) :: Vsum,divVsum,dVdtsum,divtsum
+!real(REAL_KIND) :: Vn   ! to normalise volumes
+type(cell_type), pointer :: cp
+
+!Vn = Vdivide0/1.6
+Vsum=0
+divVsum=0
+dVdtsum=0
+divtsum=0
+n=0
+do kcell = 1,nlist
+    cp => cell_list(kcell)
+    if (cp%state == DEAD) cycle
+    n = n+1
+    Vsum = Vsum + cp%volume
+    divVsum = divVsum + cp%divide_volume
+    dVdtsum = dVdtsum + cp%dVdt
+    divtsum = divtsum + cp%divide_time
+enddo
+write(nflog,'(a,4e12.3)') 'ave volume, divide_volume, dVdt, divide_time: ', Vsum/n,divVsum/n,dVdtsum/n,divtsum/n
+!write(*,'(a,4e12.3)') 'ave volume, divide_volume, dVdt, divide_time: ', Vsum/n,divVsum/n,dVdtsum/n,divtsum/n
 end subroutine
 
 
@@ -1639,7 +1685,6 @@ if (use_TCP) then
 	endif
 endif
 
-istep = 0
 NX=100
 NY=100
 NZ=100

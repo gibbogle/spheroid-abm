@@ -589,6 +589,7 @@ type(celldata_type) :: cdata(4000)
 type(cell_type), pointer :: cp
 real(REAL_KIND) :: x, y, z, rad, csum(3), bcentre(3), dx, p(3)
 integer :: ichemo, ix, iy, iz, k, i, i1, i2, kcell, nc, nlump
+logical :: in
 
 write(nflog,*) 'new_get_fielddata: axis: ',axis
 nlump = 1
@@ -629,10 +630,23 @@ if (axis == X_AXIS) then
 	x = bcentre(1)	
 	ix = x/dx		! approx?
 	ixyz = ix
-	call fillCslice('X',ix,x,dx)
+!	call fillCslice('X',ix,x,dx)
 	do iy = 1,fdata%NY
 	    do iz = 1,fdata%NZ
-	        Cslice(ix,iy,iz,:) = occupancy(nlump*ix,nlump*iy,nlump*iz)%C(:)
+	        if (occupancy(ix,iy,iz)%indx(1) <= OUTSIDE_TAG) then
+	            in = .false.
+	            p(:) = [ix,iy,iz]*DELTA_X
+	            call getConc(p,Cslice(ix,iy,iz,:))
+	        else
+	            in = .true.
+ 	            i = ODEdiff%ivar(ix,iy,iz)
+	            if (i < 1) then
+				    res = -1
+				    return
+			    endif
+			    Cslice(ix,iy,iz,:) = allstate(i,1:MAX_CHEMO)
+    	    endif
+!	        if (iy == NY/2) write(nflog,'(a,i6,L2,2e12.3)') 'blob: ',iz,in,Cslice(ix,iy,iz,1:2)
             do i1 = 1-nlump,0
             do i2 = 1-nlump,0
 	        kcell = occupancy(nlump*ix,nlump*iy+i1,nlump*iz+i2)%indx(1)
@@ -641,7 +655,6 @@ if (axis == X_AXIS) then
 	                nc = nc + 1
 	                rad = (3*cp%volume*Vcell_cm3/(4*PI))**(1./3)
 			        cdata(nc)%radius = rad
-!			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(2)-1.5,NZ - cp%site(3) + 0.5]
 			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(2)- 1,NZ - cp%site(3)]
                     cdata(nc)%status = getstatus(cp)
 			    endif
@@ -650,14 +663,25 @@ if (axis == X_AXIS) then
 	    enddo
 	enddo
 elseif (axis == Y_AXIS) then
-!	y = ((NY-1)/2)*DELTA_X 
 	y = bcentre(2)	
 	iy = y/dx		! approx?
 	ixyz = iy
-	call fillCslice('Y',iy,y,dx)
 	do ix = 1,fdata%NX
 	    do iz = 1,fdata%NZ
-	        Cslice(ix,iy,iz,:) = occupancy(nlump*ix,nlump*iy,nlump*iz)%C(:)
+	        if (occupancy(ix,iy,iz)%indx(1) <= OUTSIDE_TAG) then
+	            in = .false.
+	            p(:) = [ix,iy,iz]*DELTA_X
+	            call getConc(p,Cslice(ix,iy,iz,:))
+	        else
+	            in = .true.
+ 	            i = ODEdiff%ivar(ix,iy,iz)
+	            if (i < 1) then
+				    res = -1
+				    return
+			    endif
+			    Cslice(ix,iy,iz,:) = allstate(i,1:MAX_CHEMO)
+    	    endif
+!	        if (ix == NX/2) write(nflog,'(a,i6,L2,2e12.3)') 'blob: ',iz,in,Cslice(ix,iy,iz,1:2)
             do i1 = 1-nlump,0
             do i2 = 1-nlump,0
 	            kcell = occupancy(nlump*ix+i1,nlump*iy,nlump*iz+i2)%indx(1)
@@ -666,7 +690,6 @@ elseif (axis == Y_AXIS) then
 	                nc = nc + 1
 	                rad = (3*cp%volume*Vcell_cm3/(4*PI))**(1./3)
 			        cdata(nc)%radius = rad
-!			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1)-1.5,NZ - cp%site(3) + 0.5]
 			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1) - 1, NZ - cp%site(3)]
                     cdata(nc)%status = getstatus(cp)
 			    endif
@@ -682,13 +705,15 @@ elseif (axis == Z_AXIS) then
 !	call fillCslice('Z',iz,z,dx)
 	do iy = 1,fdata%NY
 	    do ix = 1,fdata%NX
-	        ! First interpolate at all points on the (NX/2,NY/2,NZ/2) grid from the coarse grid solution
-	        ! Then overwrite with the site values in occupancy()%C
+	        ! The field outside the blob is estimated by interpolation from the coarse grid solution.
+	        ! Inside the blob the lattice solution is used.
 	        ! Need to be sure of mapping (ix,iy,iz) -> (x,y,z) in coarse grid axes 
 	        if (occupancy(ix,iy,iz)%indx(1) <= OUTSIDE_TAG) then
+	            in = .false.
 	            p(:) = [ix,iy,iz]*DELTA_X
 	            call getConc(p,Cslice(ix,iy,iz,:))
 	        else
+	            in = .true.
  	            i = ODEdiff%ivar(ix,iy,iz)
 	            if (i < 1) then
 				    res = -1
@@ -696,7 +721,7 @@ elseif (axis == Z_AXIS) then
 			    endif
 			    Cslice(ix,iy,iz,:) = allstate(i,1:MAX_CHEMO)
     	    endif
-!	        if (iy == NY/2) write(nflog,'(a,i6,2e12.3)') 'blob: ',ix,Cslice(ix,iy,iz,1:2)
+!	        if (iy == NY/2) write(nflog,'(a,i6,L2,2e12.3)') 'blob: ',ix,in,Cslice(ix,iy,iz,1:2)
             do i1 = 1-nlump,0
             do i2 = 1-nlump,0
 	            kcell = occupancy(nlump*ix+i1,nlump*iy+i2,nlump*iz)%indx(1)

@@ -341,6 +341,8 @@ integer :: divide_option = DIVIDE_USE_CLEAR_SITE
 integer :: idbug = 0
 integer :: Nbnd
 integer :: seed(2)
+integer :: kcell_dbug
+integer :: icentral !extracellular variable index corresponding to a central site (NX/2,NY/2,NZ/2)
 
 ! Off-lattice parameters, in the input file but unused here
 real(REAL_KIND) :: a_separation

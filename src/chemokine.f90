@@ -25,6 +25,7 @@ type chemokine_type
 	logical :: use_secretion
 	logical :: constant
 	logical :: controls_growth
+	logical :: controls_death
 	real(REAL_KIND) :: bdry_conc
 	real(REAL_KIND) :: diff_coef
 	real(REAL_KIND) :: membrane_diff_in

@@ -183,9 +183,14 @@ enddo
 ODEdiff%nextra = nex
 ODEdiff%nintra = nin
 ODEdiff%nvars = i
+
+icentral = ODEdiff%ivar(NX/2,NY/2,NZ/2) ! extracellular variable index corresponding to a central site (NX/2,NY/2,NZ/2)
+!write(*,*) 'icentral = ',icentral
+
 if (.not.use_ODE_diffusion) return
 
 ! Set up mapping for EXTRA variables from variable index to EXTRA sequence number
+! NOT USED
 allocate(exmap(ODEdiff%nvars))
 kextra = 0
 do i = 1,ODEdiff%nvars
@@ -854,7 +859,13 @@ enddo
 do k_under = 1,n_under
 
     do ie = 1,nvar
-        uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
+        if (ie < nvar) then
+            if (ODEdiff%vartype(ie+1) == INTRA) then    ! there is a cell here
+                uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of constituent concentration by reactions
+            else
+                uptake(ie) = 0
+            endif
+        endif
     enddo
 
     ! Loop over diffusion by over-relaxation until convergence
@@ -960,6 +971,7 @@ integer :: nexvar, ie, ia, k, je, ja, k_under, k_over
 integer :: site(3), x, z, i, nt, ie1, ie2, n1, n2, nrange, ierange(100,2), n(100), nn
 integer, allocatable :: all_index(:), extra_index(:), icoef(:,:)
 real(REAL_KIND), allocatable :: y0(:), ydiff(:), uptake(:)
+logical, allocatable :: is_cell(:)
 real(REAL_KIND) :: DX2, Kdiff, Csum, dCreact, val, cbnd, esum2, sum, Cnew, y0temp, dy, ymin
 real(REAL_KIND), parameter :: w_over = 1.7, w_under = 0.05
 real(REAL_KIND), parameter :: tol1_over = 1.0e-5, tol1_under = 1.0e-6, tol2 = 1.0e-10
@@ -976,6 +988,7 @@ cbnd = BdryConc(ichemo)
 ! Allocate y0(:), ydiff(:) and copy y(:) to y0(:), ydiff(:)
 allocate(y0(nexvar))
 allocate(ydiff(nexvar))
+allocate(is_cell(nexvar))
 allocate(uptake(nexvar))
 allocate(extra_index(ODEdiff%nvars))
 allocate(all_index(nexvar))
@@ -988,6 +1001,12 @@ ie = 0
 do ia = 1,ODEdiff%nvars
     if (ODEdiff%vartype(ia) == EXTRA) then
         ie = ie+1
+        is_cell(ie) = .false.
+        if (ia < ODEdiff%nvars) then
+            if (ODEdiff%vartype(ia+1) == INTRA) then    ! there is a cell here
+                is_cell(ie) = .true.
+            endif
+        endif
         y0(ie) = y(ia)
         extra_index(ia) = ie
         all_index(ie) = ia
@@ -1032,7 +1051,11 @@ enddo
 ! Loop over under-relaxation until convergence
 do k_under = 1,n_under
     do ie = 1,nexvar
-        uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of intracellular constituent concentration by reactions
+        if (is_cell(ie)) then
+            uptake(ie) = UptakeRate(ichemo,y0(ie))     ! rate of decrease of intracellular constituent concentration by reactions
+        else
+            uptake(ie) = 0
+        endif
     enddo
     ! Loop over diffusion by over-relaxation until convergence
     do k_over = 1,n_over
@@ -1386,7 +1409,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine UpdateCbnd_FD
 integer :: kpar = 0
-real(REAL_KIND) :: rad, x, y, z, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO), ca, tnow
+real(REAL_KIND) :: rad, x, y, z, dz, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CHEMO), ca, tnow
 real(REAL_KIND) :: cntr(3), xc0, yc0, zc0
 integer :: ixb, iyb, izb
 integer :: i, ic, ichemo, n = 100
@@ -1420,15 +1443,18 @@ cntr = blob_centre*DELTA_X
 !write(nflog,'(a,e12.3,2x,3e12.3)') 'UpdateCbnd_FD: rad, cntr:',rad,cntr
 csum = 0
 do i = 1,n
-	z = -rad + 2*rad*par_uni(kpar)
+	dz = -rad + 2*rad*par_uni(kpar)  ! these are not uniform random points on a sphere
 	phi = 2*PI*par_uni(kpar)
-	theta = asin(z/rad)
+	theta = asin(dz/rad)
 	x = xb0 + rad*cos(theta)*cos(phi)
 	y = yb0 + rad*cos(theta)*sin(phi)
-	z = zb0 + z
+	z = zb0 + dz
 	p = [x, y, z]
 	call getConc(p,c)
 	csum = csum + c
+!	if (i <= 10) then
+!    	write(*,'(a,i6,2e12.3)') 'UpdateCbnd_FD: i,rad,c(O2): ',i,rad,c(OXYGEN)
+!    endif
 enddo
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
@@ -1438,6 +1464,7 @@ do ic = 1,nchemo
 		stop
 	endif
 enddo
+
 if ((tnow - t_lastmediumchange) > t_buffer) then
 	chemo(OXYGEN)%medium_Cbnd = alpha_Cbnd*chemo(OXYGEN)%medium_Cbnd + (1 - alpha_Cbnd)*medium_Cbnd_prev
 endif
@@ -1467,6 +1494,22 @@ do ic = 1,nchemo
 enddo
 chemo(:)%medium_Cext = csum(:)/(NXB*NYB*NZB)
 !write(nflog,'(a,e12.3)') 'UpdateCbnd_FD: DRUG_A: medium_Cext: ',chemo(DRUG_A)%medium_Cext
+
+csum = 0
+do ixb = ixb0-1,ixb0+1
+do iyb = iyb0-1,iyb0+1
+do izb = izb0-1,izb0+1
+    x = (ixb-1)*DXB
+    y = (iyb-1)*DXB
+    z = (izb-1)*DXB
+    p = [x, y, z]
+	call getConc(p,c)
+	if (ixb /= ixb0 .or. iyb /= iyb0 .or. izb /= izb0) csum = csum + c
+!    write(*,'(a,3i6,2e12.3)') 'O2 neighbours: ',ixb,iyb,izb,DXB,c(OXYGEN)
+enddo
+enddo
+enddo
+write(nflog,'(a,e12.3)') 'O2 average of neighbours: ',csum(OXYGEN)/26
 end subroutine
 
 !---------------------------------------------------------------------------------- 

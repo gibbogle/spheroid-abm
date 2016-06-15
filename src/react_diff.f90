@@ -841,7 +841,7 @@ do i = 1,n
 enddo
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
-	chemo(ichemo)%medium_Cbnd = csum(ichemo)/n
+	chemo(ichemo)%medium_Cbnd = csum(ichemo)/n	
 !	write(*,'(a,i2,f8.4)') 'medium_Cbnd: ',ichemo,chemo(ichemo)%medium_Cbnd
 enddo
 end subroutine
@@ -933,12 +933,14 @@ do ic = 1,nchemo
 	Cprev_b => chemo(ichemo)%Cprev_b
 	Fprev_b => chemo(ichemo)%Fprev_b
 	Fcurr_b => chemo(ichemo)%Fcurr_b
-!	write(nflog,*) 'Cave_b:'
-!	write(nflog,'(5e15.6)') Cave_b(NXB/2,NYB/2,:)
+!	if (ichemo == OXYGEN) then
+!	    write(nflog,*) 'Cave_b: O2:'
+!	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
+!	endif
 		
 	Fprev_b = Fcurr_b
 	call getF_const(ichemo,total_flux,zeroC(ichemo))
-	Fcurr_b(ixb0,iyb0,izb0) = total_flux*framp
+	Fcurr_b(ixb0,iyb0,izb0) = total_flux*framp  ! here all the flux is concentrated at a single grid point
 	call make_csr_b(a_b, ichemo, dt, Cave_b, Cprev_b, Fcurr_b, Fprev_b, rhs, zeroC(ichemo))		! coarse grid
 
 	! Solve Cave_b(t+dt) on coarse grid

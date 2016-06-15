@@ -266,11 +266,14 @@ real(REAL_KIND) :: dt
 logical :: ok
 integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, killmodel, kpar=0 
 real(REAL_KIND) :: C_O2, C_glucose, Cdrug, n_O2, kmet, Kd, dMdt, kill_prob, dkill_prob, death_prob, tnow
+logical :: anoxia_death, aglucosia_death
 type(drug_type), pointer :: dp
 
 !call logger('CellDeath')
 ok = .true.
 tnow = istep*DELTA_T	! seconds
+anoxia_death = chemo(OXYGEN)%controls_death
+aglucosia_death = chemo(GLUCOSE)%controls_death
 nlist0 = nlist
 !write(logmsg,*) 'Nanoxia_tag: ',Nanoxia_tag(1),'  Nanoxia_dead: ',Nanoxia_dead(1)
 !call logger(logmsg)
@@ -289,7 +292,7 @@ do kcell = 1,nlist
 			cycle
 		endif
 	else
-		if (C_O2 < anoxia_threshold) then
+		if (anoxia_death .and. C_O2 < anoxia_threshold) then
 			cell_list(kcell)%t_anoxia = cell_list(kcell)%t_anoxia + dt
 			if (cell_list(kcell)%t_anoxia > t_anoxia_limit) then
 				cell_list(kcell)%t_anoxia_die = tnow + anoxia_death_delay	! time that the cell will die
@@ -315,7 +318,7 @@ do kcell = 1,nlist
 			cycle
 		endif
 	else
-		if (C_glucose < aglucosia_threshold) then
+		if (aglucosia_death .and. C_glucose < aglucosia_threshold) then
 			cell_list(kcell)%t_aglucosia = cell_list(kcell)%t_aglucosia + dt
 			if (cell_list(kcell)%t_aglucosia > t_aglucosia_limit) then
 				cell_list(kcell)%t_aglucosia_die = tnow + aglucosia_death_delay	! time that the cell will die
@@ -431,7 +434,7 @@ if (cell_list(kcell)%anoxia_tag) then
 	Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
 endif
 if (cell_list(kcell)%aglucosia_tag) then
-	Nanoxia_tag(ityp) = Naglucosia_tag(ityp) - 1
+	Naglucosia_tag(ityp) = Naglucosia_tag(ityp) - 1
 endif
 do idrug = 1,ndrugs_used
 	if (cell_list(kcell)%drug_tag(idrug)) then
