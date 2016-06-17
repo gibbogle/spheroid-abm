@@ -611,7 +611,7 @@ real(REAL_KIND) :: r_mean(MAX_CELLTYPES), c_rate(MAX_CELLTYPES)
 real(REAL_KIND) :: Vin_0, Vex_0, dV, minVex
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
-logical :: drugkilled, glucose_growth, first_cycle
+logical :: drugkilled, oxygen_growth, glucose_growth, first_cycle
 integer :: C_option = 1
 type(cell_type), pointer :: cp
 
@@ -621,6 +621,7 @@ nlist0 = nlist
 tnow = istep*DELTA_T
 c_rate(1:2) = log(2.0)/divide_time_mean(1:2)		! Note: to randomise divide time need to use random number, not mean!
 r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
+oxygen_growth = chemo(OXYGEN)%controls_growth
 glucose_growth = chemo(GLUCOSE)%controls_growth
 ndivide = 0
 minVex = 1.0e10
@@ -643,12 +644,16 @@ do kcell = 1,nlist0
 	if (cp%volume < cp%divide_volume) then	! still growing - not delayed
 		C_O2 = cp%conc(OXYGEN)
 		C_glucose = cp%conc(GLUCOSE)
-		metab_O2 = O2_metab(C_O2)
-		metab_glucose = glucose_metab(C_glucose)
-		if (glucose_growth) then
+		if (oxygen_growth .and. glucose_growth) then
+		    metab_O2 = O2_metab(C_O2)
+    		metab_glucose = glucose_metab(C_glucose)
 			metab = metab_O2*metab_glucose
-		else
+		elseif (oxygen_growth) then
+		    metab_O2 = O2_metab(C_O2)
 			metab = metab_O2
+		elseif (glucose_growth) then
+    		metab_glucose = glucose_metab(C_glucose)
+			metab = metab_glucose
 		endif
 !		if (use_constant_divide_volume) then
 !			dVdt = metab*Vdivide0/(2*cell_list(kcell)%divide_time)
@@ -784,139 +789,30 @@ enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
-! Cell growth, death and division are handled here.  Division occurs when cell volume 
-! exceeds the divide volume. 
-! As the cell grows we need to adjust both Cin and Cex to maintain mass conservation.
-!-----------------------------------------------------------------------------------------
-subroutine CellGrowth1(dt,ok)
-real(REAL_KIND) :: dt
-logical :: ok
-integer :: kcell, nlist0, site(3), ityp, idrug, kpar=0
-integer :: divide_list(10000), ndivide, i
-real(REAL_KIND) :: tnow, C_O2, C_glucose, metab, metab_O2, metab_glucose, dVdt, vol0, r_mean(2), c_rate(2), R
-real(REAL_KIND) :: Vin_0, Vex_0, dV
-real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
-character*(20) :: msg
-logical :: drugkilled, glucose_growth
-integer :: C_option = 1
-type(cell_type), pointer :: cp
-
-!call logger('CellGrowth')
-ok = .true.
-nlist0 = nlist
-tnow = istep*DELTA_T
-c_rate(1:2) = log(2.0)/divide_time_mean(1:2)		! Note: to randomise divide time need to use random number, not mean!
-r_mean(1:2) = Vdivide0/(2*divide_time_mean(1:2))
-glucose_growth = chemo(GLUCOSE)%controls_growth
-ndivide = 0
-do kcell = 1,nlist0
-cp => cell_list(kcell)
-	if (cell_list(kcell)%state == DEAD) cycle
-	ityp = cell_list(kcell)%celltype
-	C_O2 = cell_list(kcell)%conc(OXYGEN)
-	C_glucose = cell_list(kcell)%conc(GLUCOSE)
-	metab_O2 = O2_metab(C_O2)
-	metab_glucose = glucose_metab(C_glucose)
-	if (glucose_growth) then
-		metab = metab_O2*metab_glucose
-	else
-		metab = metab_O2
-	endif
-!	if (use_constant_divide_volume) then
-!		dVdt = metab*Vdivide0/(2*cell_list(kcell)%divide_time)
-!	else
-!		if (use_V_dependence) then
-!			dVdt = c_rate(ityp)*cell_list(kcell)%volume*metab
-!		else
-!			dVdt = r_mean(ityp)*metab
-!		endif
-!	endif
-	dVdt = get_dVdt(cp,metab)
-	if (suppress_growth) then	! for checking solvers
-		dVdt = 0
-	endif
-	site = cell_list(kcell)%site
-	Cin_0 = cell_list(kcell)%conc
-	Cex_0 = occupancy(site(1),site(2),site(3))%C
-	cell_list(kcell)%dVdt = dVdt
-	Vin_0 = cell_list(kcell)%volume*Vcell_cm3	! cm^3
-	Vex_0 = Vsite_cm3 - Vin_0					! cm^3
-	dV = dVdt*dt*Vcell_cm3						! cm^3
-	cell_list(kcell)%volume = (Vin_0 + dV)/Vcell_cm3
-	if (C_option == 1) then
-		! Calculation based on transfer of an extracellular volume dV with constituents, i.e. holding extracellular concentrations constant
-		cell_list(kcell)%conc = (Vin_0*Cin_0 + dV*Cex_0)/(Vin_0 + dV)
-		occupancy(site(1),site(2),site(3))%C = (Vex_0*Cex_0 - dV*Cex_0)/(Vex_0 - dV)	! = Cex_0
-	elseif (C_option == 2) then
-		! Calculation based on change in volumes without mass transfer of constituents
-		cell_list(kcell)%conc = Vin_0*Cin_0/(Vin_0 + dV)
-		occupancy(site(1),site(2),site(3))%C = Vex_0*Cex_0/(Vex_0 - dV)
-	endif
-	if (cell_list(kcell)%volume > cell_list(kcell)%divide_volume) then	! time to divide
-		if (cell_list(kcell)%radiation_tag) then
-			R = par_uni(kpar)
-!			if (cell_list(kcell)%generation > 1) then
-!				write(*,'(a,2i6,2f8.4)') 'Radiation-tagged cell: generation, R, p_death: ',kcell,cell_list(kcell)%generation,R,cell_list(kcell)%p_rad_death
-!			endif
-			if (R < cell_list(kcell)%p_rad_death) then
-				call CellDies(kcell)
-				Nradiation_dead(ityp) = Nradiation_dead(ityp) + 1
-!				do idrug = 1,ndrugs_used
-!					if (cell_list(kcell)%drug_tag(idrug)) then
-!						Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) - 1
-!					endif
-!				enddo
-!				if (cell_list(kcell)%anoxia_tag) then
-!					Nanoxia_tag(ityp) = Nanoxia_tag(ityp) - 1
-!				endif
-				cycle
-			endif
-		endif
-		drugkilled = .false.
-		do idrug = 1,ndrugs_used
-			if (cell_list(kcell)%drug_tag(idrug)) then
-				R = par_uni(kpar)
-				if (R < cell_list(kcell)%p_drug_death(idrug)) then
-					call CellDies(kcell)
-					Ndrug_dead(idrug,ityp) = Ndrug_dead(idrug,ityp) + 1
-					drugkilled = .true.
-					exit
-				endif
-			endif
-		enddo
-		if (drugkilled) cycle
-	    ndivide = ndivide + 1
-	    divide_list(ndivide) = kcell
-	endif
-enddo
-do i = 1,ndivide
-    kcell = divide_list(i)
-	kcell_dividing = kcell
-	call CellDivider(kcell, ok)
-	if (.not.ok) return
-enddo
-end subroutine
-
-!-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
 subroutine SetInitialGrowthRate
 integer :: kcell, ityp
 real(REAL_KIND) :: C_O2, C_glucose, metab, metab_O2, metab_glucose, dVdt
-logical :: glucose_growth
+logical :: oxygen_growth, glucose_growth
 type(cell_type), pointer :: cp
 
+oxygen_growth = chemo(OXYGEN)%controls_growth
 glucose_growth = chemo(GLUCOSE)%controls_growth
 do kcell = 1,nlist
 	cp => cell_list(kcell)
 	if (cp%state == DEAD) cycle
 	C_O2 = chemo(OXYGEN)%bdry_conc
 	C_glucose = cp%conc(GLUCOSE)
-	metab_O2 = O2_metab(C_O2)
-	metab_glucose = glucose_metab(C_glucose)
-	if (glucose_growth) then
+	if (oxygen_growth .and. glucose_growth) then
+	    metab_O2 = O2_metab(C_O2)
+		metab_glucose = glucose_metab(C_glucose)
 		metab = metab_O2*metab_glucose
-	else
+	elseif (oxygen_growth) then
+	    metab_O2 = O2_metab(C_O2)
 		metab = metab_O2
+	elseif (glucose_growth) then
+		metab_glucose = glucose_metab(C_glucose)
+		metab = metab_glucose
 	endif
 	dVdt = get_dVdt(cp,metab)
 	if (suppress_growth) then	! for checking solvers

@@ -1287,7 +1287,6 @@ end function
 ! Use the "soft landing" option for Hill_N = 1 if MM_threshold = 0
 !----------------------------------------------------------------------------------
 real(REAL_KIND) function O2_metab(C)
-!real(REAL_KIND) function metabolic_rate(ichemo,C)
 integer :: ichemo
 real(REAL_KIND) :: C
 real(REAL_KIND) :: metab
@@ -1319,7 +1318,6 @@ if (ichemo == OXYGEN) then
 	endif
 endif
 O2_metab = metab
-!metabolic_rate = metab
 end function
 
 !----------------------------------------------------------------------------------
