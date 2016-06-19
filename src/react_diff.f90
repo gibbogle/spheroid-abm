@@ -181,11 +181,11 @@ do izb = 1,NZB
 		do ixb = 1,NXB
 			krow = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
 ! This causes glucose etc. to blow up.
- 			if (Fcurr_b(ixb,iyb,izb) > 0) then
-			    Kdiff = Ktissue
-			else
-			    Kdiff = Kmedium
-			endif
+! 			if (Fcurr_b(ixb,iyb,izb) > 0) then
+!			    Kdiff = Ktissue
+!			else
+!			    Kdiff = Kmedium
+!			endif
 		    Fsum = Fsum + Fcurr_b(ixb,iyb,izb)
             Kr = dxb*dxb/Kdiff
 			rhs(krow) = Kr*((-2*Fcurr_b(ixb,iyb,izb) + Fprev_b(ixb,iyb,izb))/dxb3 + (1./(2*dt))*(4*Cave_b(ixb,iyb,izb) - Cprev_b(ixb,iyb,izb)))
