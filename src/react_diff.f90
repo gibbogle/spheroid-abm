@@ -874,10 +874,10 @@ do ic = 1,nchemo
 	Cprev_b => chemo(ichemo)%Cprev_b
 	Fprev_b => chemo(ichemo)%Fprev_b
 	Fcurr_b => chemo(ichemo)%Fcurr_b
-	if (ichemo == OXYGEN) then
-	    write(nflog,*) 'Cave_b: O2: ixb,..,izb: ',NXB/2,izb0
-	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
-	endif
+!	if (ichemo == OXYGEN) then
+!	    write(nflog,*) 'Cave_b: O2: ixb,..,izb: ',NXB/2,izb0
+!	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
+!	endif
 		
 	Fprev_b = Fcurr_b
 	call getF_const(ichemo,total_flux,zeroC(ichemo))

@@ -629,11 +629,9 @@ bcentre = csum*DELTA_X/nc
 
 nc = 0
 if (axis == X_AXIS) then
-!	x = ((NX-1)/2)*DELTA_X
 	x = bcentre(1)	
 	ix = x/dx		! approx?
 	ixyz = ix
-!	call fillCslice('X',ix,x,dx)
 	do iy = 1,fdata%NY
 	    do iz = 1,fdata%NZ
 	        if (occupancy(ix,iy,iz)%indx(1) <= OUTSIDE_TAG) then
@@ -701,34 +699,33 @@ elseif (axis == Y_AXIS) then
 	    enddo
 	enddo
 elseif (axis == Z_AXIS) then
-!	z = ((NZ-1)/2)*DELTA_X 
 	z = bcentre(3)	
 	iz = z/dx		! approx?
 	ixyz = iz
 	!
 	! checking why Cslice can exceed Cave_b
-    ix = fdata%NX/2
-    iy = 1
-	cb(:) = [ix,iy,iz]*DELTA_X + grid_offset
-    ixb = cb(1)/DXB + 1
-    iyb = cb(2)/DXB + 1
-    izb = cb(3)/DXB + 1
-    grid = [ixb, iyb, izb]
-    do i = 1,3
-	    alfa(i) = (cb(i) - (grid(i)-1)*DXB)/DXB
-    enddo
-    write(nflog,'(a,6i4,3f8.3)') 'new_get_fielddata: ix,iy,iz,grid,alfa: ',ix,iy,iz,grid,alfa
-    ix = fdata%NX/2
-    iy = fdata%NY
-	cb(:) = [ix,iy,iz]*DELTA_X + grid_offset
-    ixb = cb(1)/DXB + 1
-    iyb = cb(2)/DXB + 1
-    izb = cb(3)/DXB + 1
-    grid = [ixb, iyb, izb]
-    do i = 1,3
-	    alfa(i) = (cb(i) - (grid(i)-1)*DXB)/DXB
-    enddo
-    write(nflog,'(a,6i4,3f8.3)') 'new_get_fielddata: ix,iy,iz,grid,alfa: ',ix,iy,iz,grid,alfa
+!    ix = fdata%NX/2
+!    iy = 1
+!	cb(:) = [ix,iy,iz]*DELTA_X + grid_offset
+!    ixb = cb(1)/DXB + 1
+!    iyb = cb(2)/DXB + 1
+!    izb = cb(3)/DXB + 1
+!    grid = [ixb, iyb, izb]
+!    do i = 1,3
+!	    alfa(i) = (cb(i) - (grid(i)-1)*DXB)/DXB
+!    enddo
+!    write(nflog,'(a,6i4,3f8.3)') 'new_get_fielddata: ix,iy,iz,grid,alfa: ',ix,iy,iz,grid,alfa
+!    ix = fdata%NX/2
+!    iy = fdata%NY
+!	cb(:) = [ix,iy,iz]*DELTA_X + grid_offset
+!    ixb = cb(1)/DXB + 1
+!    iyb = cb(2)/DXB + 1
+!    izb = cb(3)/DXB + 1
+!    grid = [ixb, iyb, izb]
+!    do i = 1,3
+!	    alfa(i) = (cb(i) - (grid(i)-1)*DXB)/DXB
+!    enddo
+!    write(nflog,'(a,6i4,3f8.3)') 'new_get_fielddata: ix,iy,iz,grid,alfa: ',ix,iy,iz,grid,alfa
     
 	do iy = 1,fdata%NY
 	    do ix = 1,fdata%NX
@@ -766,8 +763,8 @@ elseif (axis == Z_AXIS) then
 			 enddo
 	    enddo
 	enddo
-	write(nflog,*) 'Cslice: O2:' 
-	write(nflog,'(10e12.3)') Cslice(NX/2,:,iz,1)
+!	write(nflog,*) 'Cslice: O2:' 
+!	write(nflog,'(10e12.3)') Cslice(NX/2,:,iz,1)
 
 endif
 ixyz = ixyz-1   ! to use in C with 0-based indexing
