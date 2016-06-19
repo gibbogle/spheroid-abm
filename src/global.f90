@@ -864,12 +864,12 @@ do ix = 1,NX
                 occupancy(ix,iy,iz)%cnr(:,k) = cnr(:,k)
 	            occupancy(ix,iy,iz)%wt(k) = (1/d(k))/sum    ! weight associated with cnr(:,k)
             enddo
-            if (ix == (NX+1)/2 .and. iy == (NY+1)/2 .and. iz == (NZ+1)/2) then
-                write(*,*) 'lattice centre point:'
-                do k = 1,8
-                    write(*,*) k,occupancy(ix,iy,iz)%cnr(:,k),occupancy(ix,iy,iz)%wt(k)
-                enddo
-            endif
+!            if (ix == (NX+1)/2 .and. iy == (NY+1)/2 .and. iz == (NZ+1)/2) then
+!                write(*,*) 'lattice centre point:'
+!                do k = 1,8
+!                    write(*,*) k,occupancy(ix,iy,iz)%cnr(:,k),occupancy(ix,iy,iz)%wt(k)
+!                enddo
+!            endif
         enddo
     enddo
 enddo
