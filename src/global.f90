@@ -299,7 +299,7 @@ real(REAL_KIND) :: O2cutoff(3), hypoxia_threshold
 real(REAL_KIND) :: growthcutoff(3)
 real(REAL_KIND) :: spcrad_value
 real(REAL_KIND) :: total_dMdt
-real(REAL_KIND) :: total_flux_prev, medium_Cbnd_prev
+!real(REAL_KIND) :: total_flux_prev, medium_Cbnd_prev
 real(REAL_KIND) :: start_wtime
 
 type(drug_type), allocatable, target :: drug(:)
@@ -832,9 +832,10 @@ subroutine make_lattice_grid_weights
 integer :: ix, iy, iz, ixb, iyb, izb, k, cnr(3,8)
 real(REAL_KIND) :: c(3), gridpt(3), r(3), sum, d(8)
 
-grid_offset(1) = ((NXB-1)/2)*DXB - ((NX+1)/2)*DELTA_X
-grid_offset(2) = ((NYB-1)/2)*DXB - ((NY+1)/2)*DELTA_X
-grid_offset(3) = (izb0-1)*DXB    - ((NZ+1)/2)*DELTA_X
+!grid_offset(1) = ((NXB-1)/2)*DXB - ((NX+1)/2)*DELTA_X
+!grid_offset(2) = ((NYB-1)/2)*DXB - ((NY+1)/2)*DELTA_X
+!grid_offset(3) = (izb0-1)*DXB    - ((NZ+1)/2)*DELTA_X
+!write(nflog,'(a,3e12.3)') 'grid_offset: ',grid_offset
 do ix = 1,NX
     do iy = 1,NY
         do iz = 1,NZ

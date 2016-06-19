@@ -58,19 +58,20 @@ real(REAL_KIND), pointer :: Cave_b(:,:,:), Cprev_b(:,:,:), Fprev_b(:,:,:), Fcurr
 logical :: zero
 
 write(nflog,*) 'setup_react_diff: NXB: ',NXB
-DXB = 1.0e-4*DXB	! um -> cm
-ixb0 = (1 + NXB)/2
-iyb0 = (1 + NYB)/2
+!DXB = 1.0e-4*DXB	! um -> cm
+!ixb0 = (1 + NXB)/2
+!iyb0 = (1 + NYB)/2
+!izb0 = 6
+! Off-lattice:
 ! To place the blob centre at the centre of the fine grid with NX = 33
 ! we need zb0 = (izb0-1)*DXB = (izb0-1)*4*DXF = DXF*(NX-1)/2 = 16*DXF
 ! i.e. (izb0-1)*4 = 16
 ! i.e. izb0 = 5
-izb0 = 5
-xb0 = (ixb0-1)*DXB
-yb0 = (iyb0-1)*DXB 
-zb0 = (izb0-1)*DXB
-centre_b = [xb0, yb0, zb0]
-dxb3 = dxb*dxb*dxb
+!xb0 = (ixb0-1)*DXB
+!yb0 = (iyb0-1)*DXB 
+!zb0 = (izb0-1)*DXB
+!centre_b = [xb0, yb0, zb0]
+!dxb3 = dxb*dxb*dxb
 nrow_b = NXB*NYB*NZB
 maxnz = MAX_CHEMO*nrow_b
 if (allocated(amap_b)) deallocate(amap_b)
@@ -80,7 +81,7 @@ allocate(amap_b(maxnz,0:3))
 allocate(ja_b(maxnz))
 allocate(ia_b(nrow_b+1))
 
-call make_lattice_grid_weights
+!call make_lattice_grid_weights
 
 bmapfile = ''
 write(bmapfile,'(a,i2.0,a)') 'bmap',NXB,'.dat'
@@ -144,7 +145,7 @@ subroutine make_csr_b(a_b, ichemo, dt, Cave_b, Cprev_b, Fcurr_b, Fprev_b, rhs, z
 integer :: ichemo
 real(REAL_KIND) :: dt, a_b(:), Cave_b(:,:,:), Cprev_b(:,:,:), Fcurr_b(:,:,:), Fprev_b(:,:,:), rhs(:)
 logical :: zero
-integer :: ixb, iyb, izb, k, i, krow, kcol, nc, krow0
+integer :: ixb, iyb, izb, k, i, krow, kcol, nc
 real(REAL_KIND) :: Kdiff, Ktissue, Kmedium, Kr, Cbdry, Fsum
 integer, parameter :: m = 3
 
@@ -152,7 +153,6 @@ zero = .true.
 !Kdiff = chemo(ichemo)%medium_diff_coef
 Ktissue = chemo(ichemo)%diff_coef
 Kmedium = chemo(ichemo)%medium_diff_coef
-!krow0 = (ixb0-1)*NYB*NZB + (iyb0-1)*NZB + izb0
 Fsum = 0
 krow = 0
 Kdiff = Kmedium
@@ -166,7 +166,7 @@ do k = 1,nnz_b
 		a_b(k) = amap_b(k,0)
 	endif
 	if (ichemo == OXYGEN) then
-		if (amap_b(k,3) == NZB .and. kcol == krow-1) then		! check this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		if (amap_b(k,3) == NZB .and. kcol == krow-1) then
 			if (a_b(k) /= -2) then
 				write(*,*) 'Error in OXYGEN bdry adjustment'
 				stop
@@ -180,12 +180,13 @@ do izb = 1,NZB
 	do iyb = 1,NYB
 		do ixb = 1,NXB
 			krow = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
+! This causes glucose etc. to blow up.
  			if (Fcurr_b(ixb,iyb,izb) > 0) then
 			    Kdiff = Ktissue
-			    Fsum = Fsum + Fcurr_b(ixb,iyb,izb)
 			else
 			    Kdiff = Kmedium
 			endif
+		    Fsum = Fsum + Fcurr_b(ixb,iyb,izb)
             Kr = dxb*dxb/Kdiff
 			rhs(krow) = Kr*((-2*Fcurr_b(ixb,iyb,izb) + Fprev_b(ixb,iyb,izb))/dxb3 + (1./(2*dt))*(4*Cave_b(ixb,iyb,izb) - Cprev_b(ixb,iyb,izb)))
 			if (rhs(krow) /= 0) zero = .false.
@@ -202,8 +203,8 @@ if (ichemo == OXYGEN) then
 			rhs(krow) = rhs(krow) + Cbdry		
 		enddo
 	enddo
-	write(nflog,*) 'make_csr_b: Fsum: ',Fsum
 endif
+write(nflog,'(a,i4,e12.3)') 'make_csr_b: Fsum: ',ichemo,Fsum
 end subroutine
 
 !-------------------------------------------------------------------------------------------
@@ -382,7 +383,7 @@ integer :: kcell
 type(cell_type), pointer :: cp
 real(REAL_KIND) :: alpha_flux = 0.3
 integer :: k, site(3), cnr(3)
-real(REAL_KIND) :: wt
+real(REAL_KIND) :: wsum
 type(occupancy_type) :: occ
 
 !write(*,*) 'getF_const: ',ichemo,nlist
@@ -404,26 +405,36 @@ do kcell = 1,nlist
 	if (.not.use_central_flux) then
 	    site = cp%site
 	    occ = occupancy(site(1),site(2),site(3))
+	    wsum = 0
 	    do k = 1,8
 	        cnr = occ%cnr(:,k)
 	        chemo(ichemo)%Fcurr_b(cnr(1),cnr(2),cnr(3)) = chemo(ichemo)%Fcurr_b(cnr(1),cnr(2),cnr(3)) &
 	            + occ%wt(k)*cp%dMdt(ichemo)
+            wsum = wsum + occ%wt(k)
 	    enddo
+	    if (abs(wsum-1) > 0.0001) then
+	        write(nflog,'(a,9e12.3)') 'wsum: ',wsum,occ%wt
+	        stop
+	    endif
 	endif
 enddo
-if (ichemo == OXYGEN) then
-	write(nflog,'(a,2e12.3)') 'O2 total_flux: ',total_flux,chemo(ichemo)%Fcurr_b(ixb0,iyb0,izb0)
-endif
+write(nflog,'(a,i4,2e12.3)') 'total_flux: ',ichemo,total_flux, &
+    sum(chemo(ichemo)%Fcurr_b(ixb0-1:ixb0+1,iyb0-1:iyb0+1,izb0-1:izb0+1))
+
     
-!!$omp end parallel do
-if (ichemo == OXYGEN) then
-	total_flux = alpha_flux*total_flux + (1 - alpha_flux)*total_flux_prev
-	total_flux_prev = total_flux
-	write(nflog,'(a,i4,e12.3)') 'smoothed O2 total_flux: ',istep,total_flux
-	if (.not.use_central_flux) then
-	    chemo(ichemo)%Fcurr_b = alpha_flux*chemo(ichemo)%Fcurr_b + (1 - alpha_flux)*chemo(ichemo)%Fprev_b
-	endif
+if (use_central_flux) then
+!if (ichemo == OXYGEN) then
+    write(nflog,'(a,2i4,3e12.3)') 'previous total_flux: ',istep,ichemo,chemo(ichemo)%total_flux_prev
+	total_flux = alpha_flux*total_flux + (1 - alpha_flux)*chemo(ichemo)%total_flux_prev
+	chemo(ichemo)%total_flux_prev = total_flux
+	write(nflog,'(a,2i4,3e12.3)') 'smoothed total_flux: ',istep,ichemo,total_flux
+!endif
+    chemo(ichemo)%Fcurr_b(ixb0,iyb0,izb0) = total_flux  ! here all the flux is concentrated at a single grid point
 endif
+!	if (.not.use_central_flux) then
+!	    chemo(ichemo)%Fcurr_b = alpha_flux*chemo(ichemo)%Fcurr_b + (1 - alpha_flux)*chemo(ichemo)%Fprev_b
+!	endif
+
 zero = (total_flux == 0)
 !if (ichemo == OXYGEN) write(*,'(a,2e12.3)') 'Cex(O2), O2 flux: ',cell_list(1)%Cex(ichemo),cell_list(1)%dMdt(ichemo)
 end subroutine
@@ -874,16 +885,18 @@ do ic = 1,nchemo
 	Cprev_b => chemo(ichemo)%Cprev_b
 	Fprev_b => chemo(ichemo)%Fprev_b
 	Fcurr_b => chemo(ichemo)%Fcurr_b
-!	if (ichemo == OXYGEN) then
-!	    write(nflog,*) 'Cave_b: O2: ixb,..,izb: ',NXB/2,izb0
-!	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
-!	endif
+	if (ichemo == GLUCOSE) then
+	    write(nflog,*) 'Cave_b: glucose: ixb,..,izb: ',NXB/2,izb0
+	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
+	endif
 		
 	Fprev_b = Fcurr_b
 	call getF_const(ichemo,total_flux,zeroC(ichemo))
-	if (use_central_flux) then
-	    Fcurr_b(ixb0,iyb0,izb0) = total_flux*framp  ! here all the flux is concentrated at a single grid point
-	endif
+!	if (use_central_flux) then
+!	    Fcurr_b(ixb0,iyb0,izb0) = total_flux  ! here all the flux is concentrated at a single grid point
+!	endif
+	Fcurr_b = framp*Fcurr_b
+
 	call make_csr_b(a_b, ichemo, dt, Cave_b, Cprev_b, Fcurr_b, Fprev_b, rhs, zeroC(ichemo))		! coarse grid
 
 	! Solve Cave_b(t+dt) on coarse grid
@@ -948,9 +961,7 @@ do ic = 1,nchemo
 		enddo
 	enddo
 	deallocate(a_b, x, rhs)
-	if (ichemo == OXYGEN) then
-        write(nflog,*) 'Cave_b(14,14,9): ',Cave_b(14,14,9)
-    endif
+    write(nflog,*) 'Cave_b(14,14,9): ',ichemo,Cave_b(14,14,9)
 enddo
 !$omp end parallel do
 

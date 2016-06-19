@@ -42,6 +42,9 @@ type chemokine_type
 	real(REAL_KIND) :: medium_U			! total blob uptake rate
 	real(REAL_KIND) :: medium_Cext		! far-field concentration
 	real(REAL_KIND) :: medium_Cbnd		! boundary concentration
+	real(REAL_KIND) :: total_flux_prev
+	real(REAL_KIND) :: medium_Cbnd_prev
+
 	real(REAL_KIND) :: diff_reduction_factor
 	real(REAL_KIND), allocatable :: coef(:,:)
 	real(REAL_KIND), allocatable :: conc(:,:,:)

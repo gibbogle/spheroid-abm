@@ -61,9 +61,37 @@ call logger(logmsg)
     endif
 #endif
 
+! Set up grid alignment
+NY = NX
+NZ = NX
+x0 = (NX + 1.0)/2.
+y0 = (NY + 1.0)/2.
+z0 = (NZ + 1.0)/2.
+blob_centre = [x0,y0,z0]   ! (units = grids)
+
+DXB = 1.0e-4*DXB	! um -> cm
+ixb0 = (1 + NXB)/2
+iyb0 = (1 + NYB)/2
+izb0 = 6
+xb0 = (ixb0-1)*DXB
+yb0 = (iyb0-1)*DXB 
+zb0 = (izb0-1)*DXB
+centre_b = [xb0, yb0, zb0]
+dxb3 = dxb*dxb*dxb
+
+write(nflog,'(a,3e12.3)') 'x0,y0,z0: ',x0,y0,z0
+write(nflog,'(a,3e12.3)') 'xb0,yb0,zb0: ',xb0,yb0,zb0
+grid_offset(1) = (ixb0-1)*DXB - ((NX+1)/2)*DELTA_X
+grid_offset(2) = (iyb0-1)*DXB - ((NY+1)/2)*DELTA_X
+grid_offset(3) = (izb0-1)*DXB - ((NZ+1)/2)*DELTA_X
+write(nflog,'(a,3e12.3)') 'grid_offset: ',grid_offset
+write(nflog,'(a,3e12.3)') 'blob_centre: ',blob_centre*DELTA_X + grid_offset
+
 call ArrayInitialisation(ok)
 if (.not.ok) return
 call logger('did ArrayInitialisation')
+
+call make_lattice_grid_weights
 
 call SetupChemo
 
@@ -111,7 +139,7 @@ Naglucosia_dead = 0
 !radiation_dosed = .false.
 t_simulation = 0
 total_dMdt = 0
-total_flux_prev = 0
+chemo(:)%total_flux_prev = 0
 t_lastmediumchange = 0
 limit_stop = .false.
 Vex_min = 1.0
@@ -316,17 +344,15 @@ if (allocated(Cslice)) deallocate(Cslice)
 call logger('did deallocation')
 
 !nsteps_per_min = 1.0/DELTA_T
-NY = NX
-NZ = NX
 ngaps = 0
 nlist = 0
 
 allocate(zoffset(0:2*Mnodes))
 allocate(zdomain(NZ))
-x0 = (NX + 1.0)/2.        ! global value
-y0 = (NY + 1.0)/2.
-z0 = (NZ + 1.0)/2.
-blob_centre = [x0,y0,z0]   ! now, actually the global centre (units = grids)
+!x0 = (NX + 1.0)/2.        ! global value
+!y0 = (NY + 1.0)/2.
+!z0 = (NZ + 1.0)/2.
+!blob_centre = [x0,y0,z0]   ! now, actually the global centre (units = grids)
 call SetRadius(initial_count)
 write(logmsg,*) 'Initial radius, count, max_nlist: ',blob_radius, initial_count, max_nlist
 call logger(logmsg)
