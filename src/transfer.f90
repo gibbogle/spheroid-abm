@@ -591,6 +591,9 @@ real(REAL_KIND) :: x, y, z, rad, csum(3), bcentre(3), dx, p(3)
 integer :: ichemo, ix, iy, iz, k, i, i1, i2, kcell, nc, nlump
 logical :: in
 
+integer :: ixb,iyb,izb,grid(3)
+real(REAL_KIND) :: cb(3), alfa(3)
+
 write(nflog,*) 'new_get_fielddata: axis: ',axis
 nlump = 1
 
@@ -635,7 +638,7 @@ if (axis == X_AXIS) then
 	    do iz = 1,fdata%NZ
 	        if (occupancy(ix,iy,iz)%indx(1) <= OUTSIDE_TAG) then
 	            in = .false.
-	            p(:) = [ix,iy,iz]*DELTA_X
+	            p(:) = [ix,iy,iz]*DELTA_X + grid_offset
 	            call getConc(p,Cslice(ix,iy,iz,:))
 	        else
 	            in = .true.
@@ -670,7 +673,7 @@ elseif (axis == Y_AXIS) then
 	    do iz = 1,fdata%NZ
 	        if (occupancy(ix,iy,iz)%indx(1) <= OUTSIDE_TAG) then
 	            in = .false.
-	            p(:) = [ix,iy,iz]*DELTA_X
+	            p(:) = [ix,iy,iz]*DELTA_X + grid_offset
 	            call getConc(p,Cslice(ix,iy,iz,:))
 	        else
 	            in = .true.
@@ -702,7 +705,31 @@ elseif (axis == Z_AXIS) then
 	z = bcentre(3)	
 	iz = z/dx		! approx?
 	ixyz = iz
-!	call fillCslice('Z',iz,z,dx)
+	!
+	! checking why Cslice can exceed Cave_b
+    ix = fdata%NX/2
+    iy = 1
+	cb(:) = [ix,iy,iz]*DELTA_X + grid_offset
+    ixb = cb(1)/DXB + 1
+    iyb = cb(2)/DXB + 1
+    izb = cb(3)/DXB + 1
+    grid = [ixb, iyb, izb]
+    do i = 1,3
+	    alfa(i) = (cb(i) - (grid(i)-1)*DXB)/DXB
+    enddo
+    write(nflog,'(a,6i4,3f8.3)') 'new_get_fielddata: ix,iy,iz,grid,alfa: ',ix,iy,iz,grid,alfa
+    ix = fdata%NX/2
+    iy = fdata%NY
+	cb(:) = [ix,iy,iz]*DELTA_X + grid_offset
+    ixb = cb(1)/DXB + 1
+    iyb = cb(2)/DXB + 1
+    izb = cb(3)/DXB + 1
+    grid = [ixb, iyb, izb]
+    do i = 1,3
+	    alfa(i) = (cb(i) - (grid(i)-1)*DXB)/DXB
+    enddo
+    write(nflog,'(a,6i4,3f8.3)') 'new_get_fielddata: ix,iy,iz,grid,alfa: ',ix,iy,iz,grid,alfa
+    
 	do iy = 1,fdata%NY
 	    do ix = 1,fdata%NX
 	        ! The field outside the blob is estimated by interpolation from the coarse grid solution.
@@ -710,7 +737,7 @@ elseif (axis == Z_AXIS) then
 	        ! Need to be sure of mapping (ix,iy,iz) -> (x,y,z) in coarse grid axes 
 	        if (occupancy(ix,iy,iz)%indx(1) <= OUTSIDE_TAG) then
 	            in = .false.
-	            p(:) = [ix,iy,iz]*DELTA_X
+	            p(:) = [ix,iy,iz]*DELTA_X + grid_offset
 	            call getConc(p,Cslice(ix,iy,iz,:))
 	        else
 	            in = .true.
@@ -721,7 +748,7 @@ elseif (axis == Z_AXIS) then
 			    endif
 			    Cslice(ix,iy,iz,:) = allstate(i,1:MAX_CHEMO)
     	    endif
-!	        if (iy == NY/2) write(nflog,'(a,i6,L2,2e12.3)') 'blob: ',ix,in,Cslice(ix,iy,iz,1:2)
+!	        if (iy == NY/2) write(nflog,'(a,3i6,L2,2e12.3)') 'Cslice: O2: ',ix,iy,iz,in,Cslice(ix,iy,iz,1)
             do i1 = 1-nlump,0
             do i2 = 1-nlump,0
 	            kcell = occupancy(nlump*ix+i1,nlump*iy+i2,nlump*iz)%indx(1)
@@ -739,6 +766,9 @@ elseif (axis == Z_AXIS) then
 			 enddo
 	    enddo
 	enddo
+	write(nflog,*) 'Cslice: O2:' 
+	write(nflog,'(10e12.3)') Cslice(NX/2,:,iz,1)
+
 endif
 ixyz = ixyz-1   ! to use in C with 0-based indexing
 !write(nflog,*) 'axis: ',axis,' nc: ',nc, ' NX: ',fdata%NX,' dx: ',fdata%dx

@@ -43,6 +43,8 @@ use, intrinsic :: iso_c_binding
 
 implicit none
 
+logical :: use_central_flux = .false.
+
 contains
 
 !-------------------------------------------------------------------------------------------
@@ -78,6 +80,8 @@ allocate(amap_b(maxnz,0:3))
 allocate(ja_b(maxnz))
 allocate(ia_b(nrow_b+1))
 
+call make_lattice_grid_weights
+
 bmapfile = ''
 write(bmapfile,'(a,i2.0,a)') 'bmap',NXB,'.dat'
 write(nflog,*) 'setup_react_diff: ',bmapfile
@@ -85,7 +89,7 @@ call make_sparse_map(bmapfile,.false.,ok)
 if (.not.ok) return
 write(nflog,*) 'made bmapfile: ',bmapfile
 
-call make_grid_flux_weights
+!call make_grid_flux_weights
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	if (ichemo > TRACER) then
@@ -101,7 +105,10 @@ do ichemo = 1,MAX_CHEMO
 	Fprev_b = 0
 	call update_Cex_Cin_const(ichemo)		! initialise %dMdt with SS values
 	call getF_const(ichemo,total_flux,zero)	! computes cell fluxes then estimates total flux
-	Fprev_b(ixb0,iyb0,izb0) = total_flux
+	if (use_central_flux) then
+	    Fcurr_b = 0
+    	Fcurr_b(ixb0,iyb0,izb0) = total_flux
+    endif
 ! Sum fine grid fluxes to initialise Fcurr_b, Fprev_b
 !	Cprev => chemo(ichemo)%Cprev
 !	Fprev => chemo(ichemo)%Fprev
@@ -109,7 +116,7 @@ do ichemo = 1,MAX_CHEMO
 !	Cprev = C0
 !	Fprev = Cflux(:,:,:,ichemo)
 !	call makeF_b(Fprev_b,DELTA_T,zero)
-	Fcurr_b = Fprev_b
+	Fprev_b = Fcurr_b
 enddo
 ok = .true.
 end subroutine
@@ -138,25 +145,22 @@ integer :: ichemo
 real(REAL_KIND) :: dt, a_b(:), Cave_b(:,:,:), Cprev_b(:,:,:), Fcurr_b(:,:,:), Fprev_b(:,:,:), rhs(:)
 logical :: zero
 integer :: ixb, iyb, izb, k, i, krow, kcol, nc, krow0
-real(REAL_KIND) :: Kdiff, Kr, Cbdry, Fsum, Kdiff0
+real(REAL_KIND) :: Kdiff, Ktissue, Kmedium, Kr, Cbdry, Fsum
 integer, parameter :: m = 3
 
 zero = .true.
-Kdiff = chemo(ichemo)%medium_diff_coef
-Kdiff0 = chemo(ichemo)%diff_coef
-krow0 = (ixb0-1)*NYB*NZB + (iyb0-1)*NZB + izb0
+!Kdiff = chemo(ichemo)%medium_diff_coef
+Ktissue = chemo(ichemo)%diff_coef
+Kmedium = chemo(ichemo)%medium_diff_coef
+!krow0 = (ixb0-1)*NYB*NZB + (iyb0-1)*NZB + izb0
 Fsum = 0
 krow = 0
+Kdiff = Kmedium
 do k = 1,nnz_b
 	if (k == ia_b(krow+1)) krow = krow+1
 	kcol = ja_b(k)
 	if (amap_b(k,0) == 2*m) then
 		Kr = dxb*dxb/Kdiff
-!	    if (krow == krow0) then
-!		    Kr = dxb*dxb/Kdiff0
-!		else
-!		    Kr = dxb*dxb/Kdiff
-!		endif
 		a_b(k) = 3*Kr/(2*dt) + 2*m	! ... note that Kdiff should depend on (ixb,iyb,izb), ultimately on # of cells
 	else
 		a_b(k) = amap_b(k,0)
@@ -176,12 +180,13 @@ do izb = 1,NZB
 	do iyb = 1,NYB
 		do ixb = 1,NXB
 			krow = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
+ 			if (Fcurr_b(ixb,iyb,izb) > 0) then
+			    Kdiff = Ktissue
+			    Fsum = Fsum + Fcurr_b(ixb,iyb,izb)
+			else
+			    Kdiff = Kmedium
+			endif
             Kr = dxb*dxb/Kdiff
-!	        if (krow == krow0) then
-!		        Kr = dxb*dxb/Kdiff0
-!		    else
-!		        Kr = dxb*dxb/Kdiff
-!		    endif
 			rhs(krow) = Kr*((-2*Fcurr_b(ixb,iyb,izb) + Fprev_b(ixb,iyb,izb))/dxb3 + (1./(2*dt))*(4*Cave_b(ixb,iyb,izb) - Cprev_b(ixb,iyb,izb)))
 			if (rhs(krow) /= 0) zero = .false.
 		enddo
@@ -197,6 +202,7 @@ if (ichemo == OXYGEN) then
 			rhs(krow) = rhs(krow) + Cbdry		
 		enddo
 	enddo
+	write(nflog,*) 'make_csr_b: Fsum: ',Fsum
 endif
 end subroutine
 
@@ -363,43 +369,6 @@ do i = 1,3
 enddo
 end subroutine
 
-!-----------------------------------------------------------------------------------------
-! Flux contributions from a cell are accumulated at coarse grid points given by cnr(:,:)
-! This assumes that the cell flux rates have already been computed.
-! Flux units: mumol/s
-!-----------------------------------------------------------------------------------------
-subroutine grid_flux_weights(kcell,cnr,wt)
-integer :: kcell, cnr(3,8)
-real(REAL_KIND) :: wt(8)
-integer :: k
-real(REAL_KIND) :: centre(3), gridpt(3), r(3), d(8), sum
-type(cell_type), pointer :: cp
-
-cp => cell_list(kcell)
-if (cp%state == DEAD) then
-	write(*,*) 'Error: grid_flux_weights: dead cell: ',kcell
-	stop
-endif
-!if (cp%nspheres == 1) then
-!	centre = cp%centre(:,1)
-!else
-!	centre = 0.5*(cp%centre(:,1) + cp%centre(:,2))
-!endif
-call cell_location(cp,centre)
-sum = 0
-do k = 1,8
-	gridpt(:) = (cnr(:,k)-1)*DXB
-	r = centre - gridpt
-	d(k) = max(sqrt(dot_product(r,r)), small_d)
-	sum = sum + 1/d(k)
-enddo
-! The grid flux weights are (1/d(k))/sum.  Note that dMdt > 0 for +ve flux into the cell, 
-do k = 1,8
-!	Cflux(cnr(1,k),cnr(2,k),cnr(3,k),:) = Cflux(cnr(1,k),cnr(2,k),cnr(3,k),:) + cp%dMdt(:)*(1/d(k))/sum
-	wt(k) = (1/d(k))/sum
-enddo
-end subroutine
-
 !-------------------------------------------------------------------------------------------
 ! Estimate total flux values associated with each coarse grid pt, from the cell fluxes.
 ! This is the total cell uptake.
@@ -412,8 +381,13 @@ real(REAL_KIND) :: Kin, Kout
 integer :: kcell
 type(cell_type), pointer :: cp
 real(REAL_KIND) :: alpha_flux = 0.3
+integer :: k, site(3), cnr(3)
+real(REAL_KIND) :: wt
+type(occupancy_type) :: occ
 
 !write(*,*) 'getF_const: ',ichemo,nlist
+
+chemo(ichemo)%Fcurr_b(:,:,:) = 0
 
 ! Update Cex for each cell
 Kin = chemo(ichemo)%membrane_diff_in
@@ -427,66 +401,33 @@ do kcell = 1,nlist
 	if (cp%state == DEAD) cycle
 	cp%dMdt(ichemo) = Kin*cp%Cex(ichemo) - Kout*cp%conc(ichemo)
 	total_flux = total_flux + cp%dMdt(ichemo)
+	if (.not.use_central_flux) then
+	    site = cp%site
+	    occ = occupancy(site(1),site(2),site(3))
+	    do k = 1,8
+	        cnr = occ%cnr(:,k)
+	        chemo(ichemo)%Fcurr_b(cnr(1),cnr(2),cnr(3)) = chemo(ichemo)%Fcurr_b(cnr(1),cnr(2),cnr(3)) &
+	            + occ%wt(k)*cp%dMdt(ichemo)
+	    enddo
+	endif
 enddo
+if (ichemo == OXYGEN) then
+	write(nflog,'(a,2e12.3)') 'O2 total_flux: ',total_flux,chemo(ichemo)%Fcurr_b(ixb0,iyb0,izb0)
+endif
+    
 !!$omp end parallel do
 if (ichemo == OXYGEN) then
 	total_flux = alpha_flux*total_flux + (1 - alpha_flux)*total_flux_prev
 	total_flux_prev = total_flux
-	write(nflog,'(a,i4,e12.3)') 'O2 total_flux: ',istep,total_flux
+	write(nflog,'(a,i4,e12.3)') 'smoothed O2 total_flux: ',istep,total_flux
+	if (.not.use_central_flux) then
+	    chemo(ichemo)%Fcurr_b = alpha_flux*chemo(ichemo)%Fcurr_b + (1 - alpha_flux)*chemo(ichemo)%Fprev_b
+	endif
 endif
 zero = (total_flux == 0)
 !if (ichemo == OXYGEN) write(*,'(a,2e12.3)') 'Cex(O2), O2 flux: ',cell_list(1)%Cex(ichemo),cell_list(1)%dMdt(ichemo)
 end subroutine
 
-!-------------------------------------------------------------------------------------------
-! alfa is the amount of the previous flux
-!-------------------------------------------------------------------------------------------
-subroutine make_grid_flux(ichemo,Cflux_const,zero)
-integer :: ichemo
-real(REAL_KIND) :: Cflux_const(:,:,:)
-logical :: zero
-real(REAL_KIND) :: Fsum_b
-integer :: kcell, k, cnr(3,8)
-type(cell_type), pointer :: cp
-real(REAL_KIND) :: alfa = 0.7
-
-Cflux_const = 0
-do kcell = 1,nlist
-	cp => cell_list(kcell)
-	if (cp%state == DEAD) cycle
-	cnr = cp%cnr
-	do k = 1,8
-		Cflux_const(cnr(1,k),cnr(2,k),cnr(3,k)) = Cflux_const(cnr(1,k),cnr(2,k),cnr(3,k)) + cp%dMdt(ichemo)*cp%wt(k)
-	enddo
-enddo
-Cflux_const(:,:,:) = (1-alfa)*Cflux_const(:,:,:) + alfa*chemo(ichemo)%Fprev_b(:,:,:)
-Fsum_b = sum(Cflux_const)
-zero = (Fsum_b == 0)
-end subroutine
-
-!-------------------------------------------------------------------------------------------
-!-------------------------------------------------------------------------------------------
-subroutine make_grid_flux_weights
-integer :: ic, ix, iy, iz, kcell
-type(cell_type), pointer :: cp
-
-do kcell = 1,nlist
-	cp => cell_list(kcell)
-	if (cp%state == DEAD) cycle
-	ix = cp%site(1)		! no longer valid, %site has a different meaning
-	iy = cp%site(2)
-	iz = cp%site(3)
-	cp%cnr(:,1) = [ix, iy, iz]
-	cp%cnr(:,2) = [ix, iy+1, iz]
-	cp%cnr(:,3) = [ix, iy, iz+1]
-	cp%cnr(:,4) = [ix, iy+1, iz+1]
-	cp%cnr(:,5) = [ix+1, iy, iz]
-	cp%cnr(:,6) = [ix+1, iy+1, iz]
-	cp%cnr(:,7) = [ix+1, iy, iz+1]
-	cp%cnr(:,8) = [ix+1, iy+1, iz+1]
-	call grid_flux_weights(kcell, cp%cnr, cp%wt)
-enddo
-end subroutine
 
 !-------------------------------------------------------------------------------------------
 ! This valid for steady-state with any constituent, with decay, when Cex is known
@@ -933,14 +874,16 @@ do ic = 1,nchemo
 	Cprev_b => chemo(ichemo)%Cprev_b
 	Fprev_b => chemo(ichemo)%Fprev_b
 	Fcurr_b => chemo(ichemo)%Fcurr_b
-!	if (ichemo == OXYGEN) then
-!	    write(nflog,*) 'Cave_b: O2:'
-!	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
-!	endif
+	if (ichemo == OXYGEN) then
+	    write(nflog,*) 'Cave_b: O2: ixb,..,izb: ',NXB/2,izb0
+	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
+	endif
 		
 	Fprev_b = Fcurr_b
 	call getF_const(ichemo,total_flux,zeroC(ichemo))
-	Fcurr_b(ixb0,iyb0,izb0) = total_flux*framp  ! here all the flux is concentrated at a single grid point
+	if (use_central_flux) then
+	    Fcurr_b(ixb0,iyb0,izb0) = total_flux*framp  ! here all the flux is concentrated at a single grid point
+	endif
 	call make_csr_b(a_b, ichemo, dt, Cave_b, Cprev_b, Fcurr_b, Fprev_b, rhs, zeroC(ichemo))		! coarse grid
 
 	! Solve Cave_b(t+dt) on coarse grid
@@ -1005,6 +948,9 @@ do ic = 1,nchemo
 		enddo
 	enddo
 	deallocate(a_b, x, rhs)
+	if (ichemo == OXYGEN) then
+        write(nflog,*) 'Cave_b(14,14,9): ',Cave_b(14,14,9)
+    endif
 enddo
 !$omp end parallel do
 

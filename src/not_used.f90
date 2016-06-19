@@ -3676,3 +3676,64 @@ do i = 1,ndivide
 	if (.not.ok) return
 enddo
 end subroutine
+
+!-------------------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------------------
+subroutine make_grid_flux_weights
+integer :: ic, ix, iy, iz, kcell
+type(cell_type), pointer :: cp
+
+do kcell = 1,nlist
+	cp => cell_list(kcell)
+	if (cp%state == DEAD) cycle
+	ix = cp%site(1)		! no longer valid, %site has a different meaning
+	iy = cp%site(2)
+	iz = cp%site(3)
+	cp%cnr(:,1) = [ix, iy, iz]
+	cp%cnr(:,2) = [ix, iy+1, iz]
+	cp%cnr(:,3) = [ix, iy, iz+1]
+	cp%cnr(:,4) = [ix, iy+1, iz+1]
+	cp%cnr(:,5) = [ix+1, iy, iz]
+	cp%cnr(:,6) = [ix+1, iy+1, iz]
+	cp%cnr(:,7) = [ix+1, iy, iz+1]
+	cp%cnr(:,8) = [ix+1, iy+1, iz+1]
+	call grid_flux_weights(kcell, cp%cnr, cp%wt)
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Flux contributions from a cell are accumulated at coarse grid points given by cnr(:,:)
+! This assumes that the cell flux rates have already been computed.
+! Flux units: mumol/s
+!-----------------------------------------------------------------------------------------
+subroutine grid_flux_weights(kcell,cnr,wt)
+integer :: kcell, cnr(3,8)
+real(REAL_KIND) :: wt(8)
+integer :: k
+real(REAL_KIND) :: centre(3), gridpt(3), r(3), d(8), sum
+type(cell_type), pointer :: cp
+
+cp => cell_list(kcell)
+if (cp%state == DEAD) then
+	write(*,*) 'Error: grid_flux_weights: dead cell: ',kcell
+	stop
+endif
+!if (cp%nspheres == 1) then
+!	centre = cp%centre(:,1)
+!else
+!	centre = 0.5*(cp%centre(:,1) + cp%centre(:,2))
+!endif
+call cell_location(cp,centre)
+sum = 0
+do k = 1,8
+	gridpt(:) = (cnr(:,k)-1)*DXB
+	r = centre - gridpt
+	d(k) = max(sqrt(dot_product(r,r)), small_d)
+	sum = sum + 1/d(k)
+enddo
+! The grid flux weights are (1/d(k))/sum.  Note that dMdt > 0 for +ve flux into the cell, 
+do k = 1,8
+!	Cflux(cnr(1,k),cnr(2,k),cnr(3,k),:) = Cflux(cnr(1,k),cnr(2,k),cnr(3,k),:) + cp%dMdt(:)*(1/d(k))/sum
+	wt(k) = (1/d(k))/sum
+enddo
+end subroutine

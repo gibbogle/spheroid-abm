@@ -2996,6 +2996,13 @@ void MainWindow::enableUseOxygen()
             w->setEnabled(true);
         }
     }
+    for (int i=0; i<checkbox_list.length(); i++) {
+        QCheckBox *w = checkbox_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("cbox_OXYGEN")) {
+            w->setEnabled(true);
+        }
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3006,6 +3013,13 @@ void MainWindow::disableUseOxygen()
         QLineEdit *w = lineEdit_list[i];
         QString wname = w->objectName();
         if (wname.contains("line_OXYGEN")) {
+            w->setEnabled(false);
+        }
+    }
+    for (int i=0; i<checkbox_list.length(); i++) {
+        QCheckBox *w = checkbox_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("cbox_OXYGEN")) {
             w->setEnabled(false);
         }
     }
@@ -3022,6 +3036,13 @@ void MainWindow::enableUseGlucose()
             w->setEnabled(true);
         }
     }
+    for (int i=0; i<checkbox_list.length(); i++) {
+        QCheckBox *w = checkbox_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("cbox_GLUCOSE")) {
+            w->setEnabled(true);
+        }
+    }
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -3032,6 +3053,13 @@ void MainWindow::disableUseGlucose()
         QLineEdit *w = lineEdit_list[i];
         QString wname = w->objectName();
         if (wname.contains("line_GLUCOSE")) {
+            w->setEnabled(false);
+        }
+    }
+    for (int i=0; i<checkbox_list.length(); i++) {
+        QCheckBox *w = checkbox_list[i];
+        QString wname = w->objectName();
+        if (wname.contains("cbox_GLUCOSE")) {
             w->setEnabled(false);
         }
     }

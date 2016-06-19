@@ -35,6 +35,7 @@ Field::Field(QWidget *aParent) : QWidget(aParent)
     line_maxConc_list.clear();
     cell_constituent_rb_list.clear();
     field_constituent_rb_list.clear();
+    show_cells = true;
     data = NULL;
 }
 
@@ -612,6 +613,7 @@ void Field::displayField(int hr, int *res)
 //    sprintf(msg,"axis: %d valmin: %f",axis,valmin);
 //    LOG_MSG(msg);
 
+    if (!show_cells) return;
 //    ichemo = Global::GUI_to_DLL_index[cell_constituent];
 //    LOG_QMSG("displayField: cell: " + QString::number(cell_constituent) + " --> " + QString::number(ichemo));
 //    LOG_QMSG("displayField: nc: " + QString::number(fdata.ncells));

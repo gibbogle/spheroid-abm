@@ -323,9 +323,17 @@ void MainWindow::onSelectFieldConstituent()
     }
 }
 
-
 void MainWindow::on_verticalSliderTransparency_sliderMoved(int position)
 {
     vtk->setOpacity(position);
 }
 
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_show_cells_toggled()
+{
+    int res;
+    field->slice_changed = true;
+    field->show_cells = checkBox_show_cells->isChecked();
+    field->displayField(field->hour,&res);
+}

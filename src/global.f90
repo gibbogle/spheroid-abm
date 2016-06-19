@@ -91,6 +91,9 @@ type occupancy_type
 	integer :: indx(2)
 	real(REAL_KIND) :: C(MAX_CHEMO)
 	type(boundary_type), pointer :: bdry
+	! for FD grid weighting
+	integer :: cnr(3,8)
+	real(REAL_KIND) :: wt(8)
 end type
 
 type cell_type
@@ -284,6 +287,7 @@ integer :: Mnodes, ncpu_input
 integer :: Nevents
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
 real(REAL_KIND) :: dxb, dxb3, dxf, dx3
+real(REAL_KIND) :: grid_offset(3)
 real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer, t_lastmediumchange
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
@@ -806,6 +810,69 @@ nlist = nlist - ngaps
 ngaps = 0
 if (dbug) write(nflog,*) 'squeezed: ',n,nlist
 
+end subroutine
+
+!-------------------------------------------------------------------------------------------
+! Each lattice site (potential cell location) is assigned  weights associated with the 8
+! neighbouring grid points.
+! Note that the lattice sites (site centres) are at (ix,iy,iz)*DELTA_X
+! while the grid points are at (ixb-1,iyb-1,izb-1)*DXB
+! The initial blob centre is at the centre of the lattice, at ((NX+1)/2,(NY+1)/2,(NZ+1)/2) sites
+! i.e. at ((NX+1)/2,(NY+1)/2,(NZ+1)/2)*DELTA_X in lattice coords.
+! The centre is located in the coarse grid at the mid-point in X,Y and at izb0 = 5,
+! i.e. at the grid point ((NXB+1)/2,(NYB+1)/2,izb0)
+! which is ((NXB-1)/2,(NYB-1)/2,izb0-1)*DXB in grid coords.
+! Therefore the offset from lattice coords to grid coords is grid_offset(3):
+!   grid_offset(1) = ((NXB-1)/2)*DXB - ((NX+1)/2)*DELTA_X
+!   grid_offset(2) = ((NYB-1)/2)*DXB - ((NY+1)/2)*DELTA_X
+!   grid_offset(3) = (izb0-1)*DXB    - ((NZ+1)/2)*DELTA_X
+! and the lattice site (ix,iy,iz) translates to (ix,iy,iz)*DELTA_X + grid_offset(:)
+!-------------------------------------------------------------------------------------------
+subroutine make_lattice_grid_weights
+integer :: ix, iy, iz, ixb, iyb, izb, k, cnr(3,8)
+real(REAL_KIND) :: c(3), gridpt(3), r(3), sum, d(8)
+
+grid_offset(1) = ((NXB-1)/2)*DXB - ((NX+1)/2)*DELTA_X
+grid_offset(2) = ((NYB-1)/2)*DXB - ((NY+1)/2)*DELTA_X
+grid_offset(3) = (izb0-1)*DXB    - ((NZ+1)/2)*DELTA_X
+do ix = 1,NX
+    do iy = 1,NY
+        do iz = 1,NZ
+            c = [ix,iy,iz]*DELTA_X + grid_offset(:)     ! c(:) is the site location in grid axes
+	        ixb = c(1)/DXB + 1
+	        iyb = c(2)/DXB + 1
+	        izb = c(3)/DXB + 1
+	        
+	        cnr(:,1) = [ixb, iyb, izb]
+	        cnr(:,2) = [ixb, iyb+1, izb]
+	        cnr(:,3) = [ixb, iyb, izb+1]
+	        cnr(:,4) = [ixb, iyb+1, izb+1]
+	        cnr(:,5) = [ixb+1, iyb, izb]
+	        cnr(:,6) = [ixb+1, iyb+1, izb]
+	        cnr(:,7) = [ixb+1, iyb, izb+1]
+	        cnr(:,8) = [ixb+1, iyb+1, izb+1]
+
+            sum = 0
+            do k = 1,8
+	            gridpt(:) = (cnr(:,k)-1)*DXB
+	            r = c - gridpt
+	            d(k) = max(sqrt(dot_product(r,r)), small_d)
+	            sum = sum + 1/d(k)
+            enddo
+            ! The grid flux weights are (1/d(k))/sum.  Note that dMdt > 0 for +ve flux into the cell, 
+            do k = 1,8
+                occupancy(ix,iy,iz)%cnr(:,k) = cnr(:,k)
+	            occupancy(ix,iy,iz)%wt(k) = (1/d(k))/sum    ! weight associated with cnr(:,k)
+            enddo
+            if (ix == (NX+1)/2 .and. iy == (NY+1)/2 .and. iz == (NZ+1)/2) then
+                write(*,*) 'lattice centre point:'
+                do k = 1,8
+                    write(*,*) k,occupancy(ix,iy,iz)%cnr(:,k),occupancy(ix,iy,iz)%wt(k)
+                enddo
+            endif
+        enddo
+    enddo
+enddo
 end subroutine
 
 end module
