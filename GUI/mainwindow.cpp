@@ -1162,7 +1162,7 @@ void MainWindow::setFields()
     groupBox_drop->setEnabled(true);
     if (rbut_FD_SOLVER_1->isChecked()) {
         int nxb = line_NXB->text().toInt();
-        double dxf = 38;
+        double dxf = 41;
         if (specify_volume) {
             line_MEDIUM_VOLUME->setEnabled(true);
             double vol_cm3 = line_MEDIUM_VOLUME->text().toDouble();

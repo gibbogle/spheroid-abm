@@ -785,6 +785,7 @@ if (ntimes == 0) then
 	Nevents = 0
 	return
 endif
+Nevents = ntimes
 if (allocated(event)) deallocate(event)
 allocate(event(2*ntimes))
 kevent = 0
@@ -861,12 +862,14 @@ Nevents = kevent
 ! Set events not done
 ! convert time from hours to seconds
 ! convert volume from uL to cm^3  NO LONGER - now using cm^3 everywhere
+write(logmsg,*) 'nevents: ',nevents
+call logger(logmsg)
 do kevent = 1,Nevents
 	event(kevent)%done = .false.
 	event(kevent)%time = event(kevent)%time*60*60
 !	event(kevent)%volume = event(kevent)%volume*1.0e-3
 	E = event(kevent)
-!	write(*,'(a,i3,f8.0,2i3,3f8.4)') 'event: ',kevent,E%time,E%etype,E%ichemo,E%volume,E%conc,E%dose
+	write(*,'(a,i3,f8.0,2i3,3f8.4)') 'event: ',kevent,E%time,E%etype,E%ichemo,E%volume,E%conc,E%dose
 enddo
 ! Check that events are sequential
 do kevent = 1,Nevents-1
