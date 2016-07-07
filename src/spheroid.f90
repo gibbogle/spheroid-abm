@@ -869,7 +869,7 @@ do kevent = 1,Nevents
 	event(kevent)%time = event(kevent)%time*60*60
 !	event(kevent)%volume = event(kevent)%volume*1.0e-3
 	E = event(kevent)
-	write(*,'(a,i3,f8.0,2i3,3f8.4)') 'event: ',kevent,E%time,E%etype,E%ichemo,E%volume,E%conc,E%dose
+!	write(*,'(a,i3,f8.0,2i3,3f8.4)') 'event: ',kevent,E%time,E%etype,E%ichemo,E%volume,E%conc,E%dose
 enddo
 ! Check that events are sequential
 do kevent = 1,Nevents-1

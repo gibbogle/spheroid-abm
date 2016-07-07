@@ -1142,9 +1142,7 @@ Cex0 = occupancy(site0(1),site0(2),site0(3))%C
 Vc = cell_list(kcell2)%volume
 Vex = Vsite_cm3/Vcell_cm3 - Vc  ! normalised extracellular volume
 Cex = occupancy(site2(1),site2(2),site2(3))%C
-write(*,'(a,4e12.3)') 'AdjustMass: ',Vex,Vc,Cex0(OXYGEN),Cex(OXYGEN)
 Cex = (Vex*Cex + 1.2*(Cex-Cex0))/Vex
-write(*,'(a,e12.3)') 'Cex: ',Cex(OXYGEN)
 occupancy(site2(1),site2(2),site2(3))%C = Cex
 cell_list(kcell2)%Cex = Cex
 end subroutine
