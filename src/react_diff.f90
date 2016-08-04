@@ -204,7 +204,6 @@ if (ichemo == OXYGEN) then
 		enddo
 	enddo
 endif
-write(nflog,'(a,i4,e12.3)') 'make_csr_b: Fsum: ',ichemo,Fsum
 end subroutine
 
 !-------------------------------------------------------------------------------------------
@@ -418,8 +417,8 @@ do kcell = 1,nlist
 	    endif
 	endif
 enddo
-write(nflog,'(a,i4,2e12.3)') 'total_flux: ',ichemo,total_flux, &
-    sum(chemo(ichemo)%Fcurr_b(ixb0-1:ixb0+1,iyb0-1:iyb0+1,izb0-1:izb0+1))
+!write(nflog,'(a,i4,2e12.3)') 'total_flux: ',ichemo,total_flux, &
+!    sum(chemo(ichemo)%Fcurr_b(ixb0-1:ixb0+1,iyb0-1:iyb0+1,izb0-1:izb0+1))
 
     
 if (use_central_flux) then
@@ -885,10 +884,10 @@ do ic = 1,nchemo
 	Cprev_b => chemo(ichemo)%Cprev_b
 	Fprev_b => chemo(ichemo)%Fprev_b
 	Fcurr_b => chemo(ichemo)%Fcurr_b
-	if (ichemo == GLUCOSE) then
-	    write(nflog,*) 'Cave_b: glucose: ixb,..,izb: ',NXB/2,izb0
-	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
-	endif
+!	if (ichemo == GLUCOSE) then
+!	    write(nflog,*) 'Cave_b: glucose: ixb,..,izb: ',NXB/2,izb0
+!	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
+!	endif
 		
 	Fprev_b = Fcurr_b
 	call getF_const(ichemo,total_flux,zeroC(ichemo))
@@ -961,7 +960,6 @@ do ic = 1,nchemo
 		enddo
 	enddo
 	deallocate(a_b, x, rhs)
-    write(nflog,*) 'Cave_b(14,14,9): ',ichemo,Cave_b(14,14,9)
 enddo
 !$omp end parallel do
 

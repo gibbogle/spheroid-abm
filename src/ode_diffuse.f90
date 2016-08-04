@@ -1466,7 +1466,7 @@ enddo
 if ((tnow - t_lastmediumchange) > t_buffer) then
 	chemo(OXYGEN)%medium_Cbnd = alpha_Cbnd*chemo(OXYGEN)%medium_Cbnd + (1 - alpha_Cbnd)*chemo(OXYGEN)%medium_Cbnd_prev
 endif
-write(nflog,'(a,2e12.3)') 'medium_Cbnd: ',chemo(1:2)%medium_Cbnd
+!write(nflog,'(a,2e12.3)') 'medium_Cbnd: ',chemo(1:2)%medium_Cbnd
 chemo(OXYGEN)%medium_Cbnd_prev = chemo(OXYGEN)%medium_Cbnd
 csum = 0
 do ic = 1,nchemo
@@ -1507,7 +1507,6 @@ do izb = izb0-1,izb0+1
 enddo
 enddo
 enddo
-write(nflog,'(a,e12.3)') 'O2 average of neighbours: ',csum(OXYGEN)/26
 end subroutine
 
 !---------------------------------------------------------------------------------- 

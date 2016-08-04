@@ -1657,7 +1657,7 @@ do kcell = 1,nlist
     dVdtsum = dVdtsum + cp%dVdt
     divtsum = divtsum + cp%divide_time
 enddo
-write(nflog,'(a,4e12.3)') 'ave volume, divide_volume, dVdt, divide_time: ', Vsum/n,divVsum/n,dVdtsum/n,divtsum/n
+!write(nflog,'(a,4e12.3)') 'ave volume, divide_volume, dVdt, divide_time: ', Vsum/n,divVsum/n,dVdtsum/n,divtsum/n
 !write(*,'(a,4e12.3)') 'ave volume, divide_volume, dVdt, divide_time: ', Vsum/n,divVsum/n,dVdtsum/n,divtsum/n
 end subroutine
 
