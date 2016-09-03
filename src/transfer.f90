@@ -1361,15 +1361,6 @@ cfse_min = 1.0e20
 k = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
-!	k = k+1
-!	facs_data(k) = cell_list(kcell)%CFSE
-!	k = k+1
-!	facs_data(k) = cell_list(kcell)%dVdt
-!	k = k+1
-!	facs_data(k) = cell_list(kcell)%conc(OXYGEN)
-!	if (cell_list(kcell)%conc(OXYGEN) <= 0.00001 .or. cell_list(kcell)%dVdt < 2.0e-6) then
-!		write(nflog,'(2i6,2e12.3)') istep,kcell,cell_list(kcell)%dVdt,cell_list(kcell)%conc(OXYGEN)
-!	endif
 	do ivar = 1,nvars
 		ichemo = var_index(ivar)
 		if (ichemo == 0) then
@@ -1830,6 +1821,38 @@ do iz = 1,nslices
     write(nfslice,'(i4,3e12.3)') iz,rad(iz,:),rad(iz,2)-rad(iz,1)
 enddo
 close(nfslice)
+end subroutine
+
+!--------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
+subroutine WriteFACSData
+character*(128) :: filename
+character*(6) :: mintag
+integer :: kcell, ic, nc, ichem(2)
+type(cell_type), pointer :: cp
+
+nc = 0
+if (chemo(DRUG_A)%present) then
+	nc = nc + 1
+	ichem(nc) = DRUG_A
+endif
+if (chemo(DRUG_B)%present) then
+	nc = nc + 1
+	ichem(nc) = DRUG_B
+endif
+! Remove time tag from the filename for download from NeSI
+write(mintag,'(i6)') int(istep*DELTA_T/60)
+filename = saveFACS%filebase
+filename = trim(filename)//'_'
+filename = trim(filename)//trim(adjustl(mintag))
+filename = trim(filename)//'min.dat'
+open(nfFACS,file=filename,status='replace')
+do kcell = 1,nlist
+	cp => cell_list(kcell)
+	if (cp%state == DEAD) cycle
+	write(nfFACS,'(2e14.5)') (cp%conc(ichem(ic)),ic=1,nc)
+enddo
+close(nfFACS)
 end subroutine
 
 !-----------------------------------------------------------------------------------------

@@ -30,7 +30,7 @@ integer, parameter :: DIVIDE_ALWAYS_PUSH  = 1
 integer, parameter :: DIVIDE_USE_CLEAR_SITE  = 2
 integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 
-integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16, nfprofile=17, nfslice=18
+integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16, nfprofile=17, nfslice=18, nfFACS=19
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
 integer, parameter :: CFSE = 0
@@ -280,7 +280,7 @@ logical :: use_radiation_growth_delay_all = .true.
 logical :: drug_gt_cthreshold(MAX_DRUGTYPES)
 real(REAL_KIND), parameter :: Cthreshold = 1.0e-5
 
-type(savedata_type) :: saveprofile, saveslice
+type(savedata_type) :: saveprofile, saveslice, saveFACS
 
 integer :: istep, nsteps, it_solve, NT_CONC, NT_GUI_OUT, show_progeny, ichemo_curr
 integer :: Mnodes, ncpu_input

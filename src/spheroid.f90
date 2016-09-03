@@ -398,7 +398,7 @@ integer :: i, idrug, imetab, nmetab, im, itestcase, Nmm3, ichemo, itreatment, iu
 integer :: iuse_oxygen, iuse_glucose, iuse_tracer, iuse_drug, iuse_metab, iV_depend, iV_random, iuse_gd_all
 !integer ::  idrug_decay, imetab_decay
 integer :: ictype, idisplay, isconstant, ioxygengrowth, iglucosegrowth, ioxygendeath, iglucosedeath
-integer :: iuse_drop, iconstant, isaveprofiledata, isaveslicedata
+integer :: iuse_drop, iconstant, isaveprofiledata, isaveslicedata, isaveFACSdata
 logical :: use_metabolites
 real(REAL_KIND) :: days, bdry_conc, percent, d_n_limit
 real(REAL_KIND) :: sigma(2), DXmm, anoxia_tag_hours, anoxia_death_hours, aglucosia_tag_hours, aglucosia_death_hours
@@ -560,6 +560,10 @@ read(nfcell,*) isaveslicedata
 read(nfcell,*) saveslice%filebase
 read(nfcell,*) saveslice%dt
 read(nfcell,*) saveslice%nt
+read(nfcell,*) isaveFACSdata
+read(nfcell,*) saveFACS%filebase
+read(nfcell,*) saveFACS%dt
+read(nfcell,*) saveFACS%nt
 
 read(nfcell,*) Ndrugs_used
 call ReadDrugData(nfcell)
@@ -645,6 +649,9 @@ saveprofile%dt = 60*saveprofile%dt		! mins -> seconds
 saveslice%active = (isaveslicedata == 1)
 saveslice%it = 1
 saveslice%dt = 60*saveslice%dt			! mins -> seconds
+saveFACS%active = (isaveFACSdata == 1)
+saveFACS%it = 1
+saveFACS%dt = 60*saveFACS%dt			! mins -> seconds
 
 use_dropper = (iuse_drop == 1)
 
@@ -1608,6 +1615,15 @@ if (saveslice%active) then
 		saveslice%it = saveslice%it + 1
 		if (saveslice%it > saveslice%nt) then
 			saveslice%active = .false.
+		endif
+	endif
+endif
+if (saveFACS%active) then
+	if (istep*DELTA_T >= saveFACS%it*saveFACS%dt) then
+		call WriteFACSData
+		saveFACS%it = saveFACS%it + 1
+		if (saveFACS%it > saveFACS%nt) then
+			saveFACS%active = .false.
 		endif
 	endif
 endif

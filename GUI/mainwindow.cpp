@@ -182,7 +182,7 @@ void MainWindow::createActions()
     action_outputs->setEnabled(false);
     action_save_3D_snapshot->setEnabled(false);
     action_save_profile_data->setEnabled(false);
-    action_save_slice_data->setEnabled(false);
+//    action_save_slice_data->setEnabled(false);
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
     action_field->setEnabled(false);
@@ -1468,7 +1468,8 @@ void MainWindow::writeout()
             line += p.label;
         line += "\n";
 		out << line;
-        if (p.tag.contains("SAVE_SLICE_DATA_NUMBER")) {   // insert the drug data here, before plot data
+ //       if (p.tag.contains("SAVE_SLICE_DATA_NUMBER")) {   // insert the drug data here, before plot data
+        if (p.tag.contains("SAVE_FACS_DATA_NUMBER")) {   // insert the drug data here, before plot data
             ndrugs = 0;
             if (ProtocolUsesDrug()) {
                 if (cbox_USE_DRUG_A->isChecked()) ndrugs++;
@@ -1548,7 +1549,8 @@ void MainWindow::readInputFile()
         } else {
 			parm->set_value(k,data[0].toDouble());
 		}
-        if (p.tag.contains("SAVE_SLICE_DATA_NUMBER")) {   // drug data follows, before plot data
+//        if (p.tag.contains("SAVE_SLICE_DATA_NUMBER")) {   // drug data follows, before plot data
+        if (p.tag.contains("SAVE_FACS_DATA_NUMBER")) {   // drug data follows, before plot data
             readDrugData(&in);
         }
     }
@@ -1994,7 +1996,7 @@ void MainWindow::runServer()
         action_stop->setEnabled(true);
         action_save_3D_snapshot->setEnabled(false);
         action_save_profile_data->setEnabled(false);
-        action_save_slice_data->setEnabled(false);
+//        action_save_slice_data->setEnabled(false);
         action_show_gradient3D->setEnabled(false);
         action_show_gradient2D->setEnabled(false);
         paused = false;
@@ -2056,7 +2058,7 @@ void MainWindow::runServer()
     action_FACS->setEnabled(true);
     action_save_3D_snapshot->setEnabled(false);
     action_save_profile_data->setEnabled(false);
-    action_save_slice_data->setEnabled(false);
+//    action_save_slice_data->setEnabled(false);
     action_show_gradient3D->setEnabled(false);
     action_show_gradient2D->setEnabled(false);
     if (!Global::showingField)
@@ -2512,7 +2514,7 @@ void MainWindow::postConnection()
     action_stop->setEnabled(false);
     action_save_3D_snapshot->setEnabled(true);
     action_save_profile_data->setEnabled(true);
-    action_save_slice_data->setEnabled(true);
+//    action_save_slice_data->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
     action_field->setEnabled(true);
@@ -2575,7 +2577,7 @@ void MainWindow::pauseServer()
 	action_stop->setEnabled(true);
     action_save_3D_snapshot->setEnabled(true);
     action_save_profile_data->setEnabled(true);
-    action_save_slice_data->setEnabled(true);
+//    action_save_slice_data->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
     action_field->setEnabled(true);
@@ -2612,7 +2614,7 @@ void MainWindow::stopServer()
     action_stop->setEnabled(false);
     action_save_3D_snapshot->setEnabled(true);
     action_save_profile_data->setEnabled(true);
-    action_save_slice_data->setEnabled(true);
+//    action_save_slice_data->setEnabled(true);
     action_show_gradient3D->setEnabled(true);
     action_show_gradient2D->setEnabled(true);
     action_field->setEnabled(true);
@@ -3136,6 +3138,16 @@ void MainWindow:: on_cbox_SAVE_SLICE_DATA_toggled(bool checked)
     line_SAVE_SLICE_DATA_INTERVAL->setEnabled(checked);
     line_SAVE_SLICE_DATA_NUMBER->setEnabled(checked);
 }
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow:: on_cbox_SAVE_FACS_DATA_toggled(bool checked)
+{
+    text_SAVE_FACS_DATA_FILE_NAME->setEnabled(checked);
+    line_SAVE_FACS_DATA_INTERVAL->setEnabled(checked);
+    line_SAVE_FACS_DATA_NUMBER->setEnabled(checked);
+}
+
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::redrawDistPlot()
