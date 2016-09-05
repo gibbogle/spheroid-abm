@@ -348,9 +348,6 @@ do kcell = 1,nlist
 			call getDrugKillProb(killmodel,Kd,dMdt,Cdrug,dt,dkill_prob)
 			kill_prob = kill_prob + dkill_prob
 			death_prob = max(death_prob,dp%death_prob(ityp,im))
-			if (kcell == 1) then
-			    write(*,'(a,3i4,5e11.3)') 'CellDeath: ',idrug,im,killmodel,Cdrug,Kd,kmet,dkill_prob, kill_prob
-			endif
 		enddo
 	    if (.not.cell_list(kcell)%drug_tag(idrug) .and. par_uni(kpar) < kill_prob) then		! don't tag more than once
 			cell_list(kcell)%p_drug_death(idrug) = death_prob

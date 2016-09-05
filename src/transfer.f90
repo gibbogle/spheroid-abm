@@ -1828,18 +1828,43 @@ end subroutine
 subroutine WriteFACSData
 character*(128) :: filename
 character*(6) :: mintag
-integer :: kcell, ic, nc, ichem(2)
+!integer :: ic, nc, ichem(2)
 type(cell_type), pointer :: cp
+real(REAL_KIND) :: hour, val, facs_data(32)
+integer :: k, kcell, iextra, ichemo, ivar, nvars, var_index(32)
+character*(24) :: var_name(32)
 
-nc = 0
-if (chemo(DRUG_A)%present) then
-	nc = nc + 1
-	ichem(nc) = DRUG_A
-endif
-if (chemo(DRUG_B)%present) then
-	nc = nc + 1
-	ichem(nc) = DRUG_B
-endif
+hour = istep*DELTA_T/3600.
+nvars = 1	! CFSE
+var_index(nvars) = 0
+var_name(nvars) = 'CFSE'
+do ichemo = 1,MAX_CHEMO
+	if (.not.chemo(ichemo)%used) cycle
+	nvars = nvars + 1
+	var_index(nvars) = ichemo
+	var_name(nvars) = chemo(ichemo)%name
+enddo
+do iextra = 1,N_EXTRA-1
+	nvars = nvars + 1
+	var_index(nvars) = MAX_CHEMO + iextra
+	if (iextra == 1) then
+		var_name(nvars) = 'GROWTH_RATE'
+	elseif (iextra == 2) then
+		var_name(nvars) = 'CELL_VOLUME'
+	elseif (iextra == 3) then
+		var_name(nvars) = 'O2_BY_VOL'
+	endif
+enddo
+
+!nc = 0
+!if (chemo(DRUG_A)%present) then
+!	nc = nc + 1
+!	ichem(nc) = DRUG_A
+!endif
+!if (chemo(DRUG_B)%present) then
+!	nc = nc + 1
+!	ichem(nc) = DRUG_B
+!endif
 ! Remove time tag from the filename for download from NeSI
 write(mintag,'(i6)') int(istep*DELTA_T/60)
 filename = saveFACS%filebase
@@ -1847,10 +1872,33 @@ filename = trim(filename)//'_'
 filename = trim(filename)//trim(adjustl(mintag))
 filename = trim(filename)//'min.dat'
 open(nfFACS,file=filename,status='replace')
+write(nfFACS,'(a,a,2a12,a,i8,a,f8.2)') trim(header),' ',gui_run_version, dll_run_version, ' step: ',istep, ' hour: ',hour
+do ivar = 1,nvars
+	write(nfFACS,'(3x,a,$)') trim(var_name(ivar))
+enddo
+write(nfFACS,*)
 do kcell = 1,nlist
 	cp => cell_list(kcell)
 	if (cp%state == DEAD) cycle
-	write(nfFACS,'(2e14.5)') (cp%conc(ichem(ic)),ic=1,nc)
+!	write(nfFACS,'(2e14.5)') (cp%conc(ichem(ic)),ic=1,nc)
+	k = 0
+	do ivar = 1,nvars
+		ichemo = var_index(ivar)
+		if (ichemo == 0) then
+			val = cell_list(kcell)%CFSE
+		elseif (ichemo <= MAX_CHEMO) then
+			val = cell_list(kcell)%conc(ichemo)
+		elseif (ichemo == GROWTH_RATE) then
+			val = cell_list(kcell)%dVdt
+		elseif (ichemo == CELL_VOLUME) then
+			val = cell_list(kcell)%volume
+		elseif (ichemo == O2_BY_VOL) then
+			val = cell_list(kcell)%volume*cell_list(kcell)%conc(OXYGEN)
+		endif
+		k = k+1
+		facs_data(k) = val
+	enddo
+	write(nfFACS,'(32e14.5)') facs_data(1:nvars)
 enddo
 close(nfFACS)
 end subroutine
