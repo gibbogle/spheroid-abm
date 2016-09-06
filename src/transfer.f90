@@ -406,7 +406,9 @@ if (diam_count_limit > LIMIT_THRESHOLD) then
 elseif (diam_count_limit > 0) then
 	if (diam_um > diam_count_limit) limit_stop = .true.
 endif
-
+if (Ncelltypes == 2 .and. celltype_fraction(2) > 0) then
+	call get_clumpiness(2)
+endif
 end subroutine
 
 !--------------------------------------------------------------------------------
@@ -1947,6 +1949,51 @@ name = 'Cell O2xVol'
 call copyname(name,name_array(k),nvarlen)
 nvars = ivar + 1
 write(nflog,*) 'did get_constituents'
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_clumpiness(ityp)
+integer :: ityp
+integer :: ntypcells, kcell0, kcell, k0, k, n, ix, iy, iz, site0(3), site(3)
+real(REAL_KIND) :: df, fraction, dist(0:8)
+type(cell_type), pointer :: cp
+
+ntypcells = 0
+fraction = 0
+dist = 0
+do kcell0 = 1,nlist
+	cp => cell_list(kcell0)
+	if (cp%state == DEAD) cycle
+	if (cp%celltype == ityp) then
+		ntypcells = ntypcells + 1
+		n = 0
+		site0 = cell_list(kcell0)%site
+		do ix = -1,1,2
+			do iy = -1,1,2
+				do iz = -1,1,2
+					site = site0 + [ix,iy,iz]
+					kcell = occupancy(site(1),site(2),site(3))%indx(1)
+					if (kcell > 0) then
+						if (cell_list(kcell)%celltype == ityp) then
+							n = n+1
+						endif
+					endif
+				enddo
+			enddo
+		enddo
+		df = n/8.
+		fraction = fraction + df
+		dist(n) = dist(n) + 1
+	endif
+enddo
+
+dist = dist/ntypcells
+write(nflog,*)
+write(nflog,'(a)') 'Clumpiness:'
+write(nflog,'(a,i1,f8.3)') 'Actual fraction of activator cells: celltype: ',ityp,real(ntypcells)/Ncells
+write(nflog,'(a,f8.3)') 'Average fraction of neighbour activator cells: ',fraction/ntypcells
+write(nflog,'(a,9f8.4)') 'Probability of n = 0,..8: ',dist(0:8)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
