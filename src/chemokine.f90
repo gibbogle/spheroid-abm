@@ -146,6 +146,8 @@ if (use_FD) then
 	enddo
 endif
 chemo(OXYGEN)%diff_reduction_factor = 0.3
+chemo(:)%medium_Cext = 0
+chemo(:)%medium_Cbnd = 0
 end subroutine
 
 !----------------------------------------------------------------------------------------

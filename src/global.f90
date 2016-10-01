@@ -306,7 +306,7 @@ type(drug_type), allocatable, target :: drug(:)
 
 integer, allocatable :: gaplist(:)
 integer :: ngaps
-integer, parameter :: max_ngaps = 10000
+integer, parameter :: max_ngaps = 50000
 
 logical :: bdry_changed
 type(LQ_type) :: LQ(MAX_CELLTYPES)
@@ -333,6 +333,7 @@ logical :: use_FD = .true.
 logical :: use_gaplist = .true.
 logical :: relax
 logical :: use_parallel
+logical :: medium_change_step
 logical :: dbug = .false.
 logical :: bdry_debug
 
@@ -347,6 +348,8 @@ integer :: Nbnd
 integer :: seed(2)
 integer :: kcell_dbug
 integer :: icentral !extracellular variable index corresponding to a central site (NX/2,NY/2,NZ/2)
+
+integer :: istep_output_cell_data = 0
 
 ! Off-lattice parameters, in the input file but unused here
 real(REAL_KIND) :: a_separation

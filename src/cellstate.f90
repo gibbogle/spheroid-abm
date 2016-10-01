@@ -268,6 +268,8 @@ integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, killmodel, kpar=0
 real(REAL_KIND) :: C_O2, C_glucose, Cdrug, n_O2, kmet, Kd, dMdt, kill_prob, dkill_prob, death_prob, tnow
 logical :: anoxia_death, aglucosia_death
 type(drug_type), pointer :: dp
+real(REAL_KIND) :: Cdrug_sum, C_O2_sum, dMdt_sum, Cdrug_in_sum(0:2), C_O2_in_sum, C_O2_ex_sum
+integer :: n, n_in, ntagged
 
 !call logger('CellDeath')
 ok = .true.
@@ -277,10 +279,23 @@ aglucosia_death = chemo(GLUCOSE)%controls_death
 nlist0 = nlist
 !write(logmsg,*) 'Nanoxia_tag: ',Nanoxia_tag(1),'  Nanoxia_dead: ',Nanoxia_dead(1)
 !call logger(logmsg)
+!n = 0
+n_in = 0
+!Cdrug_sum = 0
+!C_O2_sum = 0
+!dMdt_sum = 0
+Cdrug_in_sum = 0
+C_O2_in_sum = 0
+C_O2_ex_sum = 0
+ntagged = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
+	n_in = n_in + 1
 	ityp = cell_list(kcell)%celltype
 	call getO2conc(kcell,C_O2)
+	C_O2_in_sum = C_O2_in_sum + C_O2
+	C_O2_ex_sum = C_O2_ex_sum + cell_list(kcell)%Cex(OXYGEN)
+	Cdrug_in_sum = Cdrug_in_sum + cell_list(kcell)%conc(TRACER+1:TRACER+3)
 	if (cell_list(kcell)%anoxia_tag) then
 !		write(logmsg,*) 'anoxia_tag: ',kcell,cell_list(kcell)%state,tnow,cell_list(kcell)%t_anoxia_die
 !		call logger(logmsg)
@@ -331,7 +346,6 @@ do kcell = 1,nlist
 			cell_list(kcell)%t_aglucosia = 0
 		endif
 	endif
-	
 	do idrug = 1,ndrugs_used	
 		dp => drug(idrug)
 		ichemo = TRACER + 1 + 3*(idrug-1)	
@@ -345,6 +359,15 @@ do kcell = 1,nlist
 			n_O2 = dp%n_O2(ityp,im)
 			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)**n_O2/(dp%KO2(ityp,im)**n_O2 + C_O2**n_O2))*dp%Kmet0(ityp,im)
 			dMdt = kmet*Cdrug
+!			if (im > 0 .and. dMdt > 0) then
+!				n = n + 1
+!				Cdrug_sum = Cdrug_sum + Cdrug 
+!				C_O2_sum = C_O2_sum + C_O2
+!				dMdt_sum = dMdt_sum + dMdt
+!			endif
+!			if (im > 0 .and. Cdrug > 0) then
+!				write(nflog,'(3i6,4e12.3)') istep,kcell,im,Cdrug,C_O2,kmet,dMdt
+!			endif
 			call getDrugKillProb(killmodel,Kd,dMdt,Cdrug,dt,dkill_prob)
 			kill_prob = kill_prob + dkill_prob
 			death_prob = max(death_prob,dp%death_prob(ityp,im))
@@ -353,9 +376,19 @@ do kcell = 1,nlist
 			cell_list(kcell)%p_drug_death(idrug) = death_prob
 			cell_list(kcell)%drug_tag(idrug) = .true.
             Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1
+            ntagged = ntagged + 1
+!            write(nfout,'(2i6,5e12.3)') istep,kcell,kill_prob,C_O2,cell_list(kcell)%conc(ichemo:ichemo+2)
 		endif
 	enddo
 enddo
+!write(nfout,*) 'ntagged: ',istep,ntagged
+!write(nflog,'(a,2e12.3)') 'O2 medium_Cext, Cbnd: ',chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
+write(nfout,'(a,i6,4e12.3)') 'C_O2_ex, C_O2_in, Cext, Cbnd: ',istep,C_O2_ex_sum/n_in,C_O2_in_sum/n_in, &
+	chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
+!write(nflog,'(a,i6,2e12.3)') 'Cell #1 O2: Cin,Cex: ',istep,cell_list(1)%conc(OXYGEN),cell_list(1)%Cex(OXYGEN)
+!if (n > 0) then
+!	write(nflog,'(a,i6,3e12.3)') 'Cdrug,C_O2,dMdt: ',istep,Cdrug_sum/n,C_O2_sum/n,dMdt_sum/n 
+!endif
 end subroutine
 
 !-----------------------------------------------------------------------------------------

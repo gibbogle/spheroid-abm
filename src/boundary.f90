@@ -137,9 +137,9 @@ do while (.not.done)
 	enddo
 enddo
 bdry_changed = .false.
-if (Nsites /= Nsites_old) then
-	write(nflog,*) 'UpdateBdryList: Nsites changed: ',Nsites_old,Nsites
-endif
+!if (Nsites /= Nsites_old) then
+!	write(nflog,*) 'UpdateBdryList: Nsites changed: ',Nsites_old,Nsites
+!endif
 end subroutine
 
 !----------------------------------------------------------------------------------------

@@ -600,10 +600,10 @@ do i = 1,neqn
 		dCreact = 0
 		if (ichemo == OXYGEN) then
 			metab = O2_metab(C)
-			dCreact = (-metab*chemo(ichemo)%max_cell_rate + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*chemo(ichemo)%max_cell_rate + membrane_flux)/vol_cm3	! convert mass rate (mumol/s) to concentration rate (mM/s)
 		elseif (ichemo == GLUCOSE) then
 			metab = C**Ng/(chemo(ichemo)%MM_C0**Ng + C**Ng)
-			dCreact = (-metab*chemo(ichemo)%max_cell_rate + membrane_flux)/vol_cm3	! convert mass rate (mol/s) to concentration rate (mM/s)
+			dCreact = (-metab*chemo(ichemo)%max_cell_rate + membrane_flux)/vol_cm3	! convert mass rate (mumol/s) to concentration rate (mM/s)
 		elseif (ichemo == TRACER) then
 			dCreact = membrane_flux/vol_cm3
 		elseif (im == 0) then
@@ -800,7 +800,7 @@ end subroutine
 ! This currently applies only to ichemo = OXYGEN
 ! (no decay, and because its diffusivity is much greater than all other constituents,
 ! O2 equilibrates rapidly)
-! NOTE: Solving only for EXTRA concentrations (INTRA are inferred from these with getCin())
+! NOTE: Solving only for EXTRA concentrations (INTRA are inferred from these with getCin_f())
 ! NOTE: Currently used only for OXYGEN
 !----------------------------------------------------------------------------------
 subroutine RelaxSolver(ichemo,y)
@@ -890,7 +890,7 @@ do k_under = 1,n_under
             Cnew = (Csum - DX2*dCreact/Kdiff)/6
             val = ydiff(ie)
             ydiff(ie) = (1-w_over)*ydiff(ie)+ w_over*Cnew
-            ydiff(ie) = max(ydiff(ie),0.000001)
+            ydiff(ie) = max(ydiff(ie),1.0e-7)	! was 1.0e-6
             if (ydiff(ie) < 0) then
 				write(nflog,*) 'ydiff < 0'
 				stop
@@ -941,7 +941,7 @@ do k = 1,ODEdiff%nvars
 
     else
 !        y(k) = y(k-1)	! put Cin here
-		y(k) = getCin(ichemo,y(k-1))
+		y(k) = getCin_f(ichemo,y(k-1))
 !		if (ODEdiff%cell_index(k) == idbug) then
 !			write(nfout,'(a,2f10.4)') 'RelaxSolver: ',y(k-1),y(k)
 !	        site = ODEdiff%varsite(ie,:)
@@ -1125,7 +1125,7 @@ do k = 1,ODEdiff%nvars
 		endif
     else
 !        y(k) = y(k-1)
-		y(k) = getCin(ichemo,y(k-1))
+		y(k) = getCin_f(ichemo,y(k-1))
 !		y(k) = getCinO2(y(k-1))
     endif
 enddo
@@ -1172,7 +1172,7 @@ do ie = ie1,ie2
     Cnew = (Csum - DX2*dCreact/Kdiff)/6
     val = ydiff(ie)
     ydiff(ie) = (1-w_over)*ydiff(ie)+ w_over*Cnew
-    ydiff(ie) = max(ydiff(ie),0.000001)
+    ydiff(ie) = max(ydiff(ie),1.0e-7)	! was 0.000001
     if (ydiff(ie) < 0) then
 		write(nflog,*) 'ydiff < 0'
 		stop
@@ -1213,7 +1213,7 @@ if (ichemo == OXYGEN) then
 !    vol = Vsite_cm3 - Vextra_cm3	! this was used in the RKC solution
     vol = Vextra_cm3	! the current extracellular volume should be used I think !!!!!!!!!!!!!!!
 	if (use_Cex_Cin) then
-		Cin = getCin(ichemo,Cex)
+		Cin = getCin_f(ichemo,Cex)
 !		flux = chemo(ichemo)%membrane_diff*(Cex - Cin)
 		flux = (chemo(ichemo)%membrane_diff_in*Cex - chemo(ichemo)%membrane_diff_out*Cin)
 	else	! 
@@ -1236,14 +1236,14 @@ end function
 ! NOTE: Currently only for OXYGEN - OK because membrane_diff_in = membrane_diff_out
 !----------------------------------------------------------------------------------
 !real(REAL_KIND) function getCinO2(C)
-real(REAL_KIND) function getCin(ichemo,C)
+real(REAL_KIND) function getCin_f(ichemo,C)
 integer :: ichemo
 real(REAL_KIND) :: C
 real(REAL_KIND) :: K1, K2, K2K1, C0, a, b, cc, D, r(3), Cin
 integer :: i, n
 
 if (ichemo /= OXYGEN) then
-	write(logmsg,*) 'ERROR: getCin: currently only for OXYGEN'
+	write(logmsg,*) 'ERROR: getCin_f: currently only for OXYGEN'
 	call logger(logmsg)
 	stop
 endif
@@ -1269,7 +1269,7 @@ if (chemo(ichemo)%Hill_N == 2) then
 			endif
 		enddo
 		if (n > 1) then
-			write(nflog,*) 'getCin: two roots > 0: ',r
+			write(nflog,*) 'getCin_f: two roots > 0: ',r
 			stop
 		endif
 	endif
@@ -1279,7 +1279,7 @@ elseif (chemo(ichemo)%Hill_N == 1) then
 	D = sqrt(b*b - 4*cc)
 	Cin = (D - b)/2
 endif
-getCin = Cin
+getCin_f = Cin
 end function
 
 !----------------------------------------------------------------------------------
@@ -1353,12 +1353,13 @@ end subroutine
 subroutine UpdateCbnd(dt)
 real(REAL_KIND) :: dt
 
+call UpdateChemomap
 if (use_FD) then
 	call UpdateCbnd_FD
 else
 	call UpdateCbnd_mixed(dt)
 endif
-call UpdateChemomap
+!call UpdateChemomap
 end subroutine
 
 !--------------------------------------------------------------------------------------
@@ -1397,6 +1398,11 @@ do ic = 1,nchemo
 				write(nflog,'(8e12.3)') (((Cextra(ixb+ix,iyb+iy,izb+iz),iz=0,1),iy=0,1),ix=0,1)
 				stop
 			endif
+!			if (ichemo == OXYGEN .and. c(ichemo) == 0) then
+!				write(logmsg,'(a,3i4,e12.3)') 'getConc: C_O2 = 0: ',ixb,iyb,izb,Cextra(ixb,iyb,izb)
+!				call logger(logmsg)
+!				write(*,*) trim(logmsg)
+!			endif
 enddo
 end subroutine
 
@@ -1411,17 +1417,21 @@ real(REAL_KIND) :: rad, x, y, z, dz, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CH
 real(REAL_KIND) :: cntr(3), xc0, yc0, zc0
 integer :: ixb, iyb, izb
 integer :: i, ic, ichemo, n = 100
-real(REAL_KIND) :: alpha_Cbnd = 0.3
-real(REAL_KIND) :: t_buffer = 3600	! one hour delay before applying smoothing to Cbnd
+real(REAL_KIND) :: alpha_Cbnd = 0.5
+!real(REAL_KIND) :: t_buffer = 3600	! one hour delay before applying smoothing to Cbnd
 integer :: ndrugs_present, drug_present(3*MAX_DRUGTYPES), drug_number(3*MAX_DRUGTYPES)
 integer :: idrug, iparent, im
-logical :: present
+logical :: present, zero_O2
 
+!write(nflog,*) 'UpdateCbnd_FD: '
+zero_O2 = (chemo(OXYGEN)%medium_Cbnd == 0)
 ndrugs_present = 0
 drug_present = 0
+drug_number = 0
 do idrug = 1,ndrugs_used
 	iparent = TRACER + 1 + 3*(idrug-1)
 	if (chemo(iparent)%present) then		! simulation with this drug has started
+		write(nflog,*) 'Drug is present: ',iparent
 	    do im = 0,2
 	        ichemo = iparent + im
 	        ndrugs_present = ndrugs_present + 1
@@ -1430,6 +1440,8 @@ do idrug = 1,ndrugs_used
 	    enddo
 	endif
 enddo
+!write(nflog,*) 'ndrugs_used, ndrugs_present: ',ndrugs_used, ndrugs_present, &
+!	drug_present(1:ndrugs_present),drug_number(1:ndrugs_present)
 
 tnow = istep*DELTA_T
 !call SetRadius(Nsites)
@@ -1463,21 +1475,25 @@ do ic = 1,nchemo
 	endif
 enddo
 
-if ((tnow - t_lastmediumchange) > t_buffer) then
-	chemo(OXYGEN)%medium_Cbnd = alpha_Cbnd*chemo(OXYGEN)%medium_Cbnd + (1 - alpha_Cbnd)*chemo(OXYGEN)%medium_Cbnd_prev
-endif
-!write(nflog,'(a,2e12.3)') 'medium_Cbnd: ',chemo(1:2)%medium_Cbnd
+chemo(OXYGEN)%medium_Cbnd = alpha_Cbnd*chemo(OXYGEN)%medium_Cbnd + (1 - alpha_Cbnd)*chemo(OXYGEN)%medium_Cbnd_prev
+!write(logmsg,'(a,i6,2e12.3)') 'O2 medium_Cbnd: ',istep,O2_Cbnd,chemo(OXYGEN)%medium_Cbnd
+!call logger(logmsg)
 chemo(OXYGEN)%medium_Cbnd_prev = chemo(OXYGEN)%medium_Cbnd
+
+drug_gt_cthreshold = .false.
+
+if (ndrugs_present > 0) then
 csum = 0
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
+	idrug = 0
 	do i = 1,ndrugs_present
 	    if (ichemo == drug_present(i)) then
 	        idrug = drug_number(i)
-	    else
-	        idrug = 0
+	        exit
 	    endif
 	enddo
+	if (idrug == 0) cycle
 	do ixb = 1,NXB
 		do iyb = 1,NYB
 			do izb = 1,NZB
@@ -1489,24 +1505,33 @@ do ic = 1,nchemo
 			enddo
 		enddo
 	enddo
+!	write(nflog,*) 'drug_gt_cthreshold: ',drug_gt_cthreshold(idrug)
 enddo
+endif
+
 chemo(:)%medium_Cext = csum(:)/(NXB*NYB*NZB)
+
+if (zero_O2) then
+	chemo(OXYGEN)%medium_Cext = 0
+	chemo(OXYGEN)%medium_Cbnd = 0
+endif
+
 !write(nflog,'(a,e12.3)') 'UpdateCbnd_FD: DRUG_A: medium_Cext: ',chemo(DRUG_A)%medium_Cext
 
-csum = 0
-do ixb = ixb0-1,ixb0+1
-do iyb = iyb0-1,iyb0+1
-do izb = izb0-1,izb0+1
-    x = (ixb-1)*DXB
-    y = (iyb-1)*DXB
-    z = (izb-1)*DXB
-    p = [x, y, z]
-	call getConc(p,c)
-	if (ixb /= ixb0 .or. iyb /= iyb0 .or. izb /= izb0) csum = csum + c
-!    write(*,'(a,3i6,2e12.3)') 'O2 neighbours: ',ixb,iyb,izb,DXB,c(OXYGEN)
-enddo
-enddo
-enddo
+!csum = 0
+!do ixb = ixb0-1,ixb0+1
+!do iyb = iyb0-1,iyb0+1
+!do izb = izb0-1,izb0+1
+!    x = (ixb-1)*DXB
+!    y = (iyb-1)*DXB
+!    z = (izb-1)*DXB
+!    p = [x, y, z]
+!	call getConc(p,c)
+!	if (ixb /= ixb0 .or. iyb /= iyb0 .or. izb /= izb0) csum = csum + c
+!!    write(*,'(a,3i6,2e12.3)') 'O2 neighbours: ',ixb,iyb,izb,DXB,c(OXYGEN)
+!enddo
+!enddo
+!enddo
 end subroutine
 
 !---------------------------------------------------------------------------------- 

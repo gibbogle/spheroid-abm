@@ -16,8 +16,8 @@ IMPLICIT NONE
 contains 
 
 !-----------------------------------------------------------------------------------------
-! This subroutine is called to initialize a simulation run. 
-! ncpu = the number of processors to use 
+! This subroutine is called to initialize a simulation run.
+! ncpu = the number of processors to use
 ! infile = file with the input data
 ! outfile = file to hold the output
 !-----------------------------------------------------------------------------------------
@@ -145,6 +145,7 @@ limit_stop = .false.
 Vex_min = 1.0
 Vex_max = 0
 kcell_dbug = 0
+medium_change_step = .false.
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
@@ -194,6 +195,7 @@ else
 	chemo(ichemo)%medium_M = 0
 	chemo(ichemo)%medium_U = 0
 endif
+chemo(OXYGEN)%medium_Cbnd_prev = chemo(OXYGEN)%bdry_conc
 end subroutine
 
 !----------------------------------------------------------------------------------------- 
@@ -1372,7 +1374,12 @@ end subroutine
 subroutine MediumChange(Ve,Ce)
 real(REAL_KIND) :: Ve, Ce(:)
 real(REAL_KIND) :: R, Vm, Vr, Vblob
-integer :: ichemo
+real(REAL_KIND) :: O2_drop_factor
+integer :: ichemo, kcell, ix, iy, iz
+type(cell_type), pointer :: cp
+logical :: reset_O2_concs = .false.
+logical :: new_fix = .true.
+logical :: O2_drop
 
 write(nflog,*) 'MediumChange:'
 write(nflog,'(a,f8.4)') 'Ve: ',Ve
@@ -1398,12 +1405,49 @@ if (use_FD) then	! need to set medium concentrations in Cave
 		if (chemo(ichemo)%used) then
 			chemo(ichemo)%Cave_b = chemo(ichemo)%medium_Cext
 			chemo(ichemo)%Cprev_b = chemo(ichemo)%medium_Cext
+			if (new_fix) then
+				chemo(ichemo)%Fprev_b = 0
+				chemo(ichemo)%Fcurr_b = 0
+			endif
 			write(nflog,'(a,i2,e12.3)') 'set Cave_b: ',ichemo,chemo(ichemo)%medium_Cext
 		endif
 	enddo
 endif
+O2_drop = (Ce(OXYGEN) < chemo(OXYGEN)%bdry_conc)
+if (O2_drop) then
+	O2_drop_factor = Ce(OXYGEN)/chemo(OXYGEN)%bdry_conc
+endif
 chemo(OXYGEN)%bdry_conc = Ce(OXYGEN)
-t_lastmediumchange = istep*DELTA_T
+!t_lastmediumchange = istep*DELTA_T
+t_lastmediumchange = t_simulation
+
+! This is new code
+! Note: bdry_conc = 0 is a special case, no framp needed
+if (chemo(OXYGEN)%bdry_conc > 0) then
+	if (O2_drop .and. reset_O2_concs) then		! reset IC and EC for O2 only
+		do kcell = 1,nlist
+			cp => cell_list(kcell)
+			if (cp%state == DEAD) cycle
+			cp%conc(OXYGEN) = O2_drop_factor*cp%conc(OXYGEN)
+			cp%Cex(OXYGEN) = O2_drop_factor*cp%Cex(OXYGEN)
+		enddo
+	endif
+	medium_change_step = .true.
+endif
+
+if (.not.new_fix) return
+
+! Reset concs at sites outside the blob
+do ix = 1,NX
+	do iy = 1,NY
+		do iz = 1,NZ
+			if (occupancy(ix,iy,iz)%indx(1) == OUTSIDE_TAG) then
+				occupancy(ix,iy,iz)%C(:) = chemo(:)%medium_Cbnd
+			endif
+		enddo
+	enddo
+enddo
+		
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1461,6 +1505,8 @@ real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um, framp, tnow,
 integer :: i, ic, ichemo, ndt, iz
 integer :: nvars, ns
 real(REAL_KIND) :: dxc, ex_conc(120*O2_BY_VOL+1)		! just for testing
+real(REAL_KIND) :: DELTA_T_save, t_sim_0, t_ramp = 3600
+integer :: ndiv, idiv
 logical :: ok = .true.
 logical :: dbug
 
@@ -1486,21 +1532,15 @@ blob_centre = getCentre()   ! units = sites
 nthour = 3600/DELTA_T
 dt = DELTA_T/NT_CONC
 
-if (istep == -100) then
-	tnow = istep*DELTA_T
-	call make_colony_distribution(tnow)
-	stop
-endif
-
 if (ngaps > 200) then
 	call squeezer
 endif
 
-bdry_debug = (istep >= 250000)
-if (use_dropper .and. Ncells >= Ndrop .and. .not.is_dropped) then
-    call shaper
-    call dropper
-endif
+bdry_debug = (istep < -250000)
+
+istep = istep + 1
+tnow = istep*DELTA_T
+t_simulation = (istep-1)*DELTA_T	! seconds
 
 if (bdry_debug) write(*,*) 'istep, bdry_changed: ',istep,bdry_changed
 if (bdry_changed) then
@@ -1513,8 +1553,7 @@ if (mod(istep,6*nthour) == 0) then
 	call CheckBdryList('simulate_step')
 !	write(nflog,*) 'did CheckBdryList'
 endif
-istep = istep + 1
-t_simulation = (istep-1)*DELTA_T	! seconds
+
 radiation_dose = 0
 if (use_treatment) then
 	call treatment(radiation_dose)
@@ -1526,7 +1565,7 @@ if (radiation_dose > 0) then
 	write(logmsg,'(a,f6.1)') 'Radiation dose: ',radiation_dose
 	call logger(logmsg)
 endif
-if (bdry_debug) call CheckBdryList('simulate_step c')
+
 if (dbug) write(nflog,*) 'GrowCells'
 !write(*,*) 'GrowCells'
 call GrowCells(radiation_dose,DELTA_T,ok)
@@ -1537,10 +1576,32 @@ if (.not.ok) then
 	res = 3
 	return
 endif
+radiation_dose = 0
+if (bdry_debug) call CheckBdryList('simulate_step c')
 
-drug_gt_cthreshold = .false.
+if (medium_change_step) then
+	ndiv = 6
+else
+	ndiv = 1
+endif
+t_ramp = DELTA_T
+DELTA_T_save = DELTA_T
+DELTA_T = DELTA_T/ndiv
+t_sim_0 = t_simulation
+do idiv = 0,ndiv-1
+t_simulation = t_sim_0 + idiv*DELTA_T
+
 if (use_FD) then
+	! The change in flux driving the FD solver is ramped over one time step, using a sinusoid
 	framp = 1
+	if (medium_change_step .and. t_simulation - t_lastmediumchange < t_ramp) then
+		framp = (t_simulation - t_lastmediumchange)/t_ramp
+		framp = sin(framp*PI/2)
+		framp = max(framp,0.1)
+	else
+		framp = 1
+	endif
+	if (istep == 1) framp = 0.5
 	call diff_solver(DELTA_T, framp,ok)
 	if (.not.ok) then
 		res = 4
@@ -1572,12 +1633,16 @@ enddo
 if (dbug) write(nflog,*) 'StateToSiteCell'
 call StateToSiteCell
 !call check_allstate('after StateToSiteCell')
-call CheckDrugConcs
+!call CheckDrugConcs
 
 if (.not.use_FD) then
-	call UpdateCbnd(DELTA_T)		! need to check placements of Update_Cbnd
+	call UpdateCbnd(DELTA_T)		! need to check placements of UpdateCbnd
 !	write(nflog,*) 'did UpdateCbnd'
 endif
+
+enddo
+DELTA_T = DELTA_T_save
+medium_change_step = .false.
 
 call CheckDrugPresence
 
@@ -1635,7 +1700,25 @@ if (dbug .or. mod(istep,nthour) == 0) then
 	call logger(logmsg)
 	call showcells
 endif
-! write(nflog,'(a,f8.3)') 'did simulate_step: time: ',wtime()-start_wtime
+! write(nflog,'(a,f8.3)') 'did simulate_step: time: ',wtime()-start_wtime 
+
+if (istep == istep_output_cell_data) then
+	call output_cell_data
+	stop
+endif
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine output_cell_data
+integer :: kcell
+type(cell_type), pointer :: cp
+
+do kcell = 1,nlist
+	cp => cell_list(kcell)
+	if (cp%state == DEAD) cycle
+	write(nfres,'(4e12.3)') cp%volume,cp%conc(TRACER+1:TRACER+3)
+enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------

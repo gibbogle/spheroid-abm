@@ -596,7 +596,6 @@ logical :: in
 integer :: ixb,iyb,izb,grid(3)
 real(REAL_KIND) :: cb(3), alfa(3)
 
-write(nflog,*) 'new_get_fielddata: axis: ',axis
 nlump = 1
 
 dx = nlump*DELTA_X
@@ -1007,7 +1006,7 @@ subroutine get_concdata(nvars, ns, dx, ex_conc) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: nvars, ns
 real(c_double) :: dx, ex_conc(0:*)
-real(REAL_KIND) :: cbnd, cmin = 1.0e-6
+real(REAL_KIND) :: cbnd, cmin = 1.0e-7
 integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z, x1, x2, offset
 
 !call logger('get_concdata')
@@ -1105,7 +1104,7 @@ subroutine get_IC_concdata(nvars, ns, dx, ic_conc) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: nvars, ns
 real(c_double) :: dx, ic_conc(0:*)
-real(REAL_KIND) :: cbnd, cmin = 1.0e-6
+real(REAL_KIND) :: cbnd, cmin = 1.0e-7
 integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z, x1, x2, offset
 type(cell_type), pointer :: cp
 
@@ -1568,7 +1567,7 @@ subroutine WriteProfileData1
 integer :: ns
 real(REAL_KIND) :: dx
 real(REAL_KIND), allocatable :: ex_conc(:,:)
-real(REAL_KIND) :: cbnd, cmin = 1.0e-6
+real(REAL_KIND) :: cbnd, cmin = 1.0e-7
 integer :: rng(3,2), i, k, ichemo, kcell, x, y, z, ic, nc, kmax
 character*(16) :: title(1:MAX_CHEMO+N_EXTRA)
 character*(128) :: filename
@@ -2036,7 +2035,7 @@ subroutine old_get_concdata(ns, dx, ex_conc) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: ns
 real(c_double) :: dx, ex_conc(*)
-real(REAL_KIND) :: cbnd, cmin = 1.0e-6
+real(REAL_KIND) :: cbnd, cmin = 1.0e-7
 integer :: rng(3,2), i, ic, k, ichemo, kcell, x, y, z, nvars
 
 nvars = 1 + MAX_CHEMO + N_EXTRA

@@ -37,6 +37,7 @@ use omp_lib
 use sparse_map
 use par_zig_mod
 use chemokine
+use ode_diffuse
 !use continuum
 
 use, intrinsic :: iso_c_binding
@@ -385,7 +386,7 @@ integer :: k, site(3), cnr(3)
 real(REAL_KIND) :: wsum
 type(occupancy_type) :: occ
 
-!write(*,*) 'getF_const: ',ichemo,nlist
+!write(nflog,*) 'getF_const: ',ichemo,nlist
 
 chemo(ichemo)%Fcurr_b(:,:,:) = 0
 
@@ -435,7 +436,6 @@ endif
 !	endif
 
 zero = (total_flux == 0)
-!if (ichemo == OXYGEN) write(*,'(a,2e12.3)') 'Cex(O2), O2 flux: ',cell_list(1)%Cex(ichemo),cell_list(1)%dMdt(ichemo)
 end subroutine
 
 
@@ -800,7 +800,7 @@ end subroutine
 !--------------------------------------------------------------------------------------
 ! Interpolate to obtain concentrations at p(:) = (x,y,z) from chemo(:)%Cave_b(:,:,:)
 !--------------------------------------------------------------------------------------
-subroutine getConc(cb,c)
+subroutine oldgetConc(cb,c)
 real(REAL_KIND) :: cb(3), c(:)
 integer :: ixb, iyb, izb, grid(3), i, ic, ichemo
 real(REAL_KIND) :: alfa(3)
@@ -873,6 +873,7 @@ maxits = 100
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	if (chemo(ichemo)%constant) cycle
+	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd == 0) cycle
 !	write(*,'(a,i2)') 'coarse grid: ichemo: ',ichemo
 !	write(nflog,'(a,i2)') 'coarse grid: ichemo: ',ichemo
 	ichemo_curr = ichemo
@@ -883,16 +884,11 @@ do ic = 1,nchemo
 	Cave_b => chemo(ichemo)%Cave_b
 	Cprev_b => chemo(ichemo)%Cprev_b
 	Fprev_b => chemo(ichemo)%Fprev_b
-	Fcurr_b => chemo(ichemo)%Fcurr_b
-!	if (ichemo == GLUCOSE) then
-!	    write(nflog,*) 'Cave_b: glucose: ixb,..,izb: ',NXB/2,izb0
-!	    write(nflog,'(10e12.3)') Cave_b(NXB/2,:,izb0)
-!	endif
-		
+	Fcurr_b => chemo(ichemo)%Fcurr_b	
 	Fprev_b = Fcurr_b
 	call getF_const(ichemo,total_flux,zeroC(ichemo))
-!	if (use_central_flux) then
-!	    Fcurr_b(ixb0,iyb0,izb0) = total_flux  ! here all the flux is concentrated at a single grid point
+!	if (ichemo == OXYGEN) then
+!		write(nflog,'(a,e12.3)') 'O2 total_flux: ',total_flux
 !	endif
 	Fcurr_b = framp*Fcurr_b
 
@@ -944,6 +940,9 @@ do ic = 1,nchemo
 		do iyb = 1,NYB
 			do ixb = 1,NXB
 				k = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
+!				if (ichemo == OXYGEN .and. ixb == NXB/2 .and. iyb == NYB/2) then
+!					write(nflog,'(a,i4,e12.3)') 'izb,cave_b: ',izb,x(k)
+!				endif
 				x(k) = max(0.0,fdecay*x(k))
 				if (isnan(x(k))) then
 					ok = .false.
@@ -956,6 +955,9 @@ do ic = 1,nchemo
 !					call logger(logmsg)
 !					stop
 !				endif 
+!				if (ichemo == OXYGEN .and. x(k) > 0.2) then
+!					write(nflog,'(a,3i4,f8.3)') 'Cave_b > 0.2: ',ixb,iyb,izb,x(k)
+!				endif
 			enddo
 		enddo
 	enddo

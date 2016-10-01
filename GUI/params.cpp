@@ -338,7 +338,7 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
  "Max consumption rate",
  "GLUCOSE consumption rate"},
 
-{"GLUCOSE_MM_KM", 1.33, 0, 0,
+{"GLUCOSE_MM_KM", 220, 0, 0,
  "Michaelis-Menten Km",
  "Michaelis-Menten Km (uM)"},
 
