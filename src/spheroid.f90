@@ -1432,8 +1432,9 @@ if (chemo(OXYGEN)%bdry_conc > 0) then
 			cp%Cex(OXYGEN) = O2_drop_factor*cp%Cex(OXYGEN)
 		enddo
 	endif
-	medium_change_step = .true.
+!	medium_change_step = .true.
 endif
+medium_change_step = .true.
 
 if (.not.new_fix) return
 
@@ -1620,7 +1621,8 @@ call SiteCellToState
 if (dbug) write(nflog,*) 'Solver'
 do it_solve = 1,NT_CONC
 	tstart = (it_solve-1)*dt
-	t_simulation = (istep-1)*DELTA_T + tstart
+!	t_simulation = (istep-1)*DELTA_T + tstart
+	t_simulation = t_simulation + (it_solve-1)*dt
 	call Solver(it_solve,tstart,dt,Ncells,ok)
 	if (.not.ok) then
 		res = 5
@@ -1633,18 +1635,17 @@ enddo
 if (dbug) write(nflog,*) 'StateToSiteCell'
 call StateToSiteCell
 !call check_allstate('after StateToSiteCell')
-!call CheckDrugConcs
+call CheckDrugConcs
 
 if (.not.use_FD) then
 	call UpdateCbnd(DELTA_T)		! need to check placements of UpdateCbnd
 !	write(nflog,*) 'did UpdateCbnd'
 endif
+call CheckDrugPresence
 
 enddo
 DELTA_T = DELTA_T_save
 medium_change_step = .false.
-
-call CheckDrugPresence
 
 res = 0
 

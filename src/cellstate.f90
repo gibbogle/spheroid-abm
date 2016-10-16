@@ -265,7 +265,8 @@ subroutine CellDeath(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
 integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, killmodel, kpar=0 
-real(REAL_KIND) :: C_O2, C_glucose, Cdrug, n_O2, kmet, Kd, dMdt, kill_prob, dkill_prob, death_prob, tnow
+real(REAL_KIND) :: C_O2, C_glucose, Cdrug, n_O2, kmet, Kd, dMdt
+real(REAL_KIND) :: kill_prob, dkill_prob, death_prob, survival_prob, tnow
 logical :: anoxia_death, aglucosia_death
 type(drug_type), pointer :: dp
 real(REAL_KIND) :: Cdrug_sum, C_O2_sum, dMdt_sum, Cdrug_in_sum(0:2), C_O2_in_sum, C_O2_ex_sum
@@ -351,6 +352,7 @@ do kcell = 1,nlist
 		ichemo = TRACER + 1 + 3*(idrug-1)	
 		kill_prob = 0
 		death_prob = 0
+		survival_prob = 1
 		do im = 0,2
 			if (.not.dp%kills(ityp,im)) cycle
 			killmodel = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
@@ -369,9 +371,11 @@ do kcell = 1,nlist
 !				write(nflog,'(3i6,4e12.3)') istep,kcell,im,Cdrug,C_O2,kmet,dMdt
 !			endif
 			call getDrugKillProb(killmodel,Kd,dMdt,Cdrug,dt,dkill_prob)
-			kill_prob = kill_prob + dkill_prob
+!			kill_prob = kill_prob + dkill_prob
+			survival_prob = survival_prob*(1 - dkill_prob)
 			death_prob = max(death_prob,dp%death_prob(ityp,im))
 		enddo
+		kill_prob = 1 - survival_prob
 	    if (.not.cell_list(kcell)%drug_tag(idrug) .and. par_uni(kpar) < kill_prob) then		! don't tag more than once
 			cell_list(kcell)%p_drug_death(idrug) = death_prob
 			cell_list(kcell)%drug_tag(idrug) = .true.
@@ -383,8 +387,8 @@ do kcell = 1,nlist
 enddo
 !write(nfout,*) 'ntagged: ',istep,ntagged
 !write(nflog,'(a,2e12.3)') 'O2 medium_Cext, Cbnd: ',chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
-write(nfout,'(a,i6,4e12.3)') 'C_O2_ex, C_O2_in, Cext, Cbnd: ',istep,C_O2_ex_sum/n_in,C_O2_in_sum/n_in, &
-	chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
+!write(nfout,'(a,i6,4e12.3)') 'C_O2_ex, C_O2_in, Cext, Cbnd: ',istep,C_O2_ex_sum/n_in,C_O2_in_sum/n_in, &
+!	chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
 !write(nflog,'(a,i6,2e12.3)') 'Cell #1 O2: Cin,Cex: ',istep,cell_list(1)%conc(OXYGEN),cell_list(1)%Cex(OXYGEN)
 !if (n > 0) then
 !	write(nflog,'(a,i6,3e12.3)') 'Cdrug,C_O2,dMdt: ',istep,Cdrug_sum/n,C_O2_sum/n,dMdt_sum/n 

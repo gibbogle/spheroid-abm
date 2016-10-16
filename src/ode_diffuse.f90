@@ -719,12 +719,20 @@ real(REAL_KIND) :: timer1, timer2
 ! Variables for RKC
 integer :: info(4), idid
 real(REAL_KIND) :: rtol, atol(1), sprad_ratio
+logical :: update_allstate = .false.
 type(rkc_comm) :: comm_rkc(MAX_CHEMO)
+type(cell_type), pointer :: cp
 
 !if (RK_SOLVER == IRKC_SOLVE) then	! The performance is very poor
 !	call irkc_solver(it,tstart,dt,nc)
 !	return
 !endif
+
+cp => cell_list(1)
+if (chemo(DRUG_A)%present) then
+	write(nfout,'(a,f7.3,7e12.3)') 'EC_IC_drug_conc: ',t_simulation/3600, cp%conc(OXYGEN), &
+		cp%Cex(DRUG_A:DRUG_A+2),cp%conc(DRUG_A:DRUG_A+2)
+endif
 
 ODEdiff%nintra = nc
 ntvars = ODEdiff%nextra + ODEdiff%nintra
@@ -757,6 +765,9 @@ do ic = 1,nchemo
 		ok = .false.
 		return
 	endif
+	if (update_allstate) then
+		allstate(1:nvars,ichemo) = state(:,ichemo)
+	endif
 enddo
 
 ichemo = OXYGEN
@@ -766,9 +777,14 @@ if (relax .and. .not.chemo(ichemo)%constant) then
 	else
 	    call RelaxSolver(ichemo,state(:,ichemo))
 	endif
+	if (update_allstate) then
+		allstate(1:nvars,ichemo) = state(:,ichemo)
+	endif
 endif
 
-allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
+if (.not.update_allstate) then
+	allstate(1:nvars,1:MAX_CHEMO) = state(:,:)
+endif
 ! Note: some time we need to copy the state values to the cell_list() array.
 deallocate(state)
 
