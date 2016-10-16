@@ -1498,7 +1498,6 @@ chemo(OXYGEN)%medium_Cbnd_prev = chemo(OXYGEN)%medium_Cbnd
 
 drug_gt_cthreshold = .false.
 
-if (ndrugs_present > 0) then
 csum = 0
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
@@ -1509,7 +1508,6 @@ do ic = 1,nchemo
 	        exit
 	    endif
 	enddo
-	if (idrug == 0) cycle
 	do ixb = 1,NXB
 		do iyb = 1,NYB
 			do izb = 1,NZB
@@ -1523,10 +1521,8 @@ do ic = 1,nchemo
 	enddo
 !	write(nflog,*) 'drug_gt_cthreshold: ',drug_gt_cthreshold(idrug)
 enddo
-endif
 
-chemo(:)%medium_Cext = csum(:)/(NXB*NYB*NZB)
-
+chemo(1:MAX_CHEMO)%medium_Cext = csum(1:MAX_CHEMO)/(NXB*NYB*NZB)
 if (zero_O2) then
 	chemo(OXYGEN)%medium_Cext = 0
 	chemo(OXYGEN)%medium_Cbnd = 0
