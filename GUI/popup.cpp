@@ -244,6 +244,7 @@ void MainWindow::makeGlucosePlot(double *ndays, QVector<double> *x, QVector<doub
     line = findChild<QLineEdit *>("line_GLUCOSE_CONSUMPTION");
     max_cell_rate = line->text().toDouble();
 
+    MM_C0 /= 1000;  // uM -> mM
     max_cell_rate *= 1.0e6;     // mol/cell/s -> mumol/cell/s
     nt = ((*ndays)*24*60*60)/((NPLOT-1)*dt);
     (*x)[0] = 0;
