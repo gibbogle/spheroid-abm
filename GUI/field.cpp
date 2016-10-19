@@ -509,6 +509,9 @@ void Field::displayField(int hr, int *res)
         new_get_fielddata(&axis, &fraction, &fdata, &ixyz, res);
         if (*res != 0) {
             LOG_MSG("Error: new_get_fielddata: FAILED");
+            sprintf(msg, "axis: %d fraction: %6.3f ixyz: %d res: %d",axis,fraction,ixyz,*res);
+            LOG_MSG(msg);
+//            exit(1);
             return;
         }
 //        sprintf(msg,"fdata: %d %d %d %d ncells: %d",fdata.NX,fdata.NY,fdata.NZ,fdata.NCONST,fdata.ncells);

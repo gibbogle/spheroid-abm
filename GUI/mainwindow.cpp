@@ -2353,9 +2353,9 @@ void MainWindow::showSummary(int hr)
     // Profile plots
     updateProfilePlots();
 
-//    if (step > 0 && !action_field->isEnabled()) {
+    if (step > 0 && !action_field->isEnabled()) {
     field->setSliceChanged();
-    if (step > 0) {
+//    if (step > 0) {
         field->displayField(hour,&res);
         if (videoField->record) {
             videoField->recorder();

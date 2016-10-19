@@ -590,7 +590,7 @@ type (fielddata_type)    :: fdata
 type(celldata_type) :: cdata(4000)
 type(cell_type), pointer :: cp
 real(REAL_KIND) :: x, y, z, rad, csum(3), bcentre(3), dx, p(3)
-integer :: ichemo, ix, iy, iz, k, i, i1, i2, kcell, nc, nlump
+integer :: ichemo, ix, iy, iz, k, i, i1, i2, kcell, nc, nlump, ii
 logical :: in
 
 integer :: ixb,iyb,izb,grid(3)
@@ -598,6 +598,7 @@ real(REAL_KIND) :: cb(3), alfa(3)
 
 nlump = 1
 
+!write(nflog,*) 'new_get_fielddata: ',axis,fraction,ixyz
 dx = nlump*DELTA_X
 fdata%NX = NX/nlump
 fdata%NY = NY/nlump
@@ -642,9 +643,12 @@ if (axis == X_AXIS) then
 	        else
 	            in = .true.
  	            i = ODEdiff%ivar(ix,iy,iz)
-	            if (i < 1) then
-				    res = -1
-				    return
+	            if (i < 1) then		! this solves (sort of) some startup problems with the 2D display
+					do ii = -5,5
+		 	            i = ODEdiff%ivar(ix,iy+ii,iz+ii)
+		 	            if (i >= 1) exit
+		 	        enddo
+		 	        write(nflog,*) 'new_get_fielddata: ii,i: ',ii,i
 			    endif
 			    Cslice(ix,iy,iz,:) = allstate(i,1:MAX_CHEMO)
     	    endif
@@ -678,8 +682,11 @@ elseif (axis == Y_AXIS) then
 	            in = .true.
  	            i = ODEdiff%ivar(ix,iy,iz)
 	            if (i < 1) then
-				    res = -1
-				    return
+					do ii = -5,5
+		 	            i = ODEdiff%ivar(ix+ii,iy,iz+ii)
+		 	            if (i >= 1) exit
+		 	        enddo
+		 	        write(nflog,*) 'new_get_fielddata: ii,i: ',ii,i
 			    endif
 			    Cslice(ix,iy,iz,:) = allstate(i,1:MAX_CHEMO)
     	    endif
@@ -741,8 +748,16 @@ elseif (axis == Z_AXIS) then
 	            in = .true.
  	            i = ODEdiff%ivar(ix,iy,iz)
 	            if (i < 1) then
-				    res = -1
-				    return
+!				    res = -1
+!				    write(nflog,*) 'new_get_fielddata: Z_AXIS: ixyz,i,res: ',ixyz,i,res
+!				    write(nflog,*) 'ix,iy,iz: ',ix,iy,iz
+!				    return
+!					Cslice(ix,iy,iz,:) = 0
+					do ii = -5,5
+		 	            i = ODEdiff%ivar(ix+ii,iy+ii,iz)
+		 	            if (i >= 1) exit
+		 	        enddo
+		 	        write(nflog,*) 'new_get_fielddata: ii,i: ',ii,i
 			    endif
 			    Cslice(ix,iy,iz,:) = allstate(i,1:MAX_CHEMO)
     	    endif
@@ -769,7 +784,7 @@ elseif (axis == Z_AXIS) then
 
 endif
 ixyz = ixyz-1   ! to use in C with 0-based indexing
-!write(nflog,*) 'axis: ',axis,' nc: ',nc, ' NX: ',fdata%NX,' dx: ',fdata%dx
+write(nflog,*) 'axis: ',axis,' nc: ',nc, ' NX: ',fdata%NX,' dx: ',fdata%dx
 fdata%ncells = nc
 res = 0
 

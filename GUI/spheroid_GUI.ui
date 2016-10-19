@@ -9364,6 +9364,9 @@ padding: 8px
    </property>
   </action>
   <action name="actionStop_recording_Field">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Stop recording 2D field</string>
    </property>
