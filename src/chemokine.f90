@@ -41,6 +41,7 @@ type chemokine_type
 	real(REAL_KIND) :: medium_M			! mass of constituent
 	real(REAL_KIND) :: medium_U			! total blob uptake rate
 	real(REAL_KIND) :: medium_Cext		! far-field concentration
+	real(REAL_KIND) :: medium_Cave		! far-field concentration (duplicated)
 	real(REAL_KIND) :: medium_Cbnd		! boundary concentration
 	real(REAL_KIND) :: total_flux_prev
 	real(REAL_KIND) :: medium_Cbnd_prev

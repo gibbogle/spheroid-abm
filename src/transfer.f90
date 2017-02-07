@@ -306,7 +306,123 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
+function rint(i) result(r)
+integer :: i
+real(REAL_KIND) :: r
+r = i
+end function
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
 subroutine get_summary(summaryData,i_hypoxia_cutoff,i_growth_cutoff) BIND(C)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_summary
+use, intrinsic :: iso_c_binding
+real(c_double) :: summaryData(*)
+integer(c_int) :: i_hypoxia_cutoff,i_growth_cutoff
+integer :: Nviable(MAX_CELLTYPES), Nlive(MAX_CELLTYPES)
+integer :: nhypoxic(3), nclonohypoxic(3), ngrowth(3), &
+    medium_oxygen, medium_glucose, medium_lactate, medium_drug(2,0:2), &
+    bdry_oxygen, bdry_glucose, bdry_lactate, bdry_drug(2,0:2)
+integer :: TNanoxia_dead, TNaglucosia_dead, TNradiation_dead, TNdrug_dead(2),  TNviable, &
+           Ntagged_anoxia(MAX_CELLTYPES), Ntagged_aglucosia(MAX_CELLTYPES), Ntagged_radiation(MAX_CELLTYPES), &
+           Ntagged_drug(2,MAX_CELLTYPES), &
+           TNtagged_anoxia, TNtagged_aglucosia, TNtagged_radiation, TNtagged_drug(2)
+integer :: ityp, i, im, idrug
+real(REAL_KIND) :: diam_um, hypoxic_percent, clonohypoxic_percent, growth_percent, necrotic_percent,  npmm3, Tplate_eff
+real(REAL_KIND) :: diam_cm, vol_cm3, vol_mm3, hour, necrotic_fraction, doubling_time, plate_eff(MAX_CELLTYPES)
+real(REAL_KIND) :: cmedium(MAX_CHEMO), cbdry(MAX_CHEMO)
+real(REAL_KIND) :: r_G, r_P, r_A, r_I, P_utilisation
+
+hour = istep*DELTA_T/3600.
+call getDiamVol(diam_cm,vol_cm3)
+vol_mm3 = vol_cm3*1000				! volume in mm^3
+diam_um = diam_cm*10000
+npmm3 = Ncells/vol_mm3
+
+Ntagged_anoxia(:) = Nanoxia_tag(:)			! number currently tagged by anoxia
+Ntagged_aglucosia(:) = Naglucosia_tag(:)	! number currently tagged by aglucosia
+Ntagged_radiation(:) = Nradiation_tag(:)	! number currently tagged by radiation
+Ntagged_drug(1,:) = Ndrug_tag(1,:)			! number currently tagged by drugA
+Ntagged_drug(2,:) = Ndrug_tag(2,:)			! number currently tagged by drugA
+
+TNtagged_anoxia = sum(Ntagged_anoxia(1:Ncelltypes))
+TNtagged_aglucosia = sum(Ntagged_aglucosia(1:Ncelltypes))
+TNtagged_radiation = sum(Ntagged_radiation(1:Ncelltypes))
+TNtagged_drug(1) = sum(Ntagged_drug(1,1:Ncelltypes))
+TNtagged_drug(2) = sum(Ntagged_drug(2,1:Ncelltypes))
+
+TNanoxia_dead = sum(Nanoxia_dead(1:Ncelltypes))
+TNaglucosia_dead = sum(Naglucosia_dead(1:Ncelltypes))
+TNradiation_dead = sum(Nradiation_dead(1:Ncelltypes))
+TNdrug_dead(1) = sum(Ndrug_dead(1,1:Ncelltypes))
+TNdrug_dead(2) = sum(Ndrug_dead(2,1:Ncelltypes))
+
+call getNviable(Nviable, Nlive)
+TNviable = sum(Nviable(1:Ncelltypes))
+
+call getHypoxicCount(nhypoxic)
+hypoxic_percent = (100.*nhypoxic(i_hypoxia_cutoff))/Ncells
+call getClonoHypoxicCount(nclonohypoxic)
+clonohypoxic_percent = (100.*nclonohypoxic(i_hypoxia_cutoff))/TNviable
+call getGrowthCount(ngrowth)
+growth_percent = (100.*ngrowth(i_growth_cutoff))/Ncells
+call getNecroticFraction(necrotic_fraction,vol_cm3)
+necrotic_percent = 100.*necrotic_fraction
+do ityp = 1,Ncelltypes
+	if (Nlive(ityp) > 0) then
+		plate_eff(ityp) = real(Nviable(ityp))/Nlive(ityp)
+	else
+		plate_eff(ityp) = 0
+	endif
+enddo
+plate_eff = 100.*plate_eff
+Tplate_eff = 0
+do ityp = 1,Ncelltypes
+	Tplate_eff = Tplate_eff + plate_eff(ityp)*celltype_fraction(ityp)
+enddo
+
+call getMediumConc(cmedium, cbdry)
+
+!if (ndoublings > 0) then
+!    doubling_time = doubling_time_sum/(3600*ndoublings)
+!else
+!    doubling_time = 0
+!endif
+
+summaryData(1:36) = [ rint(istep), rint(Ncells), rint(TNanoxia_dead), rint(TNaglucosia_dead), rint(TNdrug_dead(1)), rint(TNdrug_dead(2)), rint(TNradiation_dead), &
+    rint(TNtagged_anoxia), rint(TNtagged_aglucosia), rint(TNtagged_drug(1)), rint(TNtagged_drug(2)), rint(TNtagged_radiation), &
+	diam_um, vol_mm3, hypoxic_percent, clonohypoxic_percent, growth_percent, necrotic_percent, Tplate_eff, npmm3, &
+	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+2), cmedium(DRUG_B:DRUG_B+2), &
+	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+2), cbdry(DRUG_B:DRUG_B+2) ]
+!	doubling_time, r_G, r_P, r_A, r_I, rint(ndoublings), P_utilisation ]
+write(nfres,'(a,a,2a12,i8,3e12.4,31i7,29e12.4)') trim(header),' ',gui_run_version, dll_run_version, &
+	istep, hour, vol_mm3, diam_um, Ncells_type(1:2), &
+    Nanoxia_dead(1:2), Naglucosia_dead(1:2), Ndrug_dead(1,1:2), &
+    Ndrug_dead(2,1:2), Nradiation_dead(1:2), &
+    Ntagged_anoxia(1:2), Ntagged_aglucosia(1:2), Ntagged_drug(1,1:2), &
+    Ntagged_drug(2,1:2), Ntagged_radiation(1:2), &
+	nhypoxic(:)/real(Ncells), nclonohypoxic(:)/real(TNviable), ngrowth(:)/real(Ncells), &
+	necrotic_fraction, plate_eff(1:2), &
+	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+2), cmedium(DRUG_B:DRUG_B+2), &
+	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+2), cbdry(DRUG_B:DRUG_B+2)
+!	doubling_time, r_G, r_P, r_A, r_I, real(ndoublings), P_utilisation
+		
+call sum_dMdt(GLUCOSE)
+
+if (diam_count_limit > LIMIT_THRESHOLD) then
+	if (Ncells > diam_count_limit) limit_stop = .true.
+elseif (diam_count_limit > 0) then
+	if (diam_um > diam_count_limit) limit_stop = .true.
+endif
+
+!ndoublings = 0
+!doubling_time_sum = 0
+
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine get_summary1(summaryData,i_hypoxia_cutoff,i_growth_cutoff) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_summary
 use, intrinsic :: iso_c_binding
 integer(c_int) :: summaryData(*), i_hypoxia_cutoff,i_growth_cutoff
@@ -2143,4 +2259,98 @@ do ic = 1,nvars
 enddo
 end subroutine
 
+!-----------------------------------------------------------------------------------------
+! EC values should be average in the medium.
+! DRUG_A = TPZ_DRUG e.g. SN30000
+! DRUG_B = DNB_DRUG e.g. PR104A 
+!-----------------------------------------------------------------------------------------
+subroutine get_values(nvars,varID,ysim)
+!DEC$ ATTRIBUTES DLLEXPORT :: get_values
+integer :: nvars
+character*(24) :: varID(nvars)
+real(REAL_KIND) :: ysim(nvars)
+integer :: ivar, ityp
+integer :: Nviable(MAX_CELLTYPES), Nlive(MAX_CELLTYPES)
+real(REAL_KIND) :: plate_eff(MAX_CELLTYPES)
+
+call MakeMediumCave
+do ivar = 1,nvars
+	if (varID(ivar) == 'OXYGEN_EC') then
+		ysim(ivar) = chemo(OXYGEN)%medium_Cave
+	elseif (varID(ivar) == 'GLUCOSE_EC') then
+		ysim(ivar) = chemo(GLUCOSE)%medium_Cave
+!	elseif (varID(ivar) == 'LACTATE_EC') then
+!		ysim(ivar) = chemo(LACTATE)%medium_Cave
+	elseif (varID(ivar) == 'SN30000_EC') then
+		ysim(ivar) = chemo(DRUG_A)%medium_Cave
+	elseif (varID(ivar) == 'SN30000_METAB1_EC') then
+		ysim(ivar) = chemo(DRUG_A+1)%medium_Cave
+	elseif (varID(ivar) == 'SN30000_METAB2_EC') then
+		ysim(ivar) = chemo(DRUG_A+2)%medium_Cave
+	elseif (varID(ivar) == 'PR104A_EC') then
+		ysim(ivar) = chemo(DRUG_B)%medium_Cave
+	elseif (varID(ivar) == 'PR104A_METAB1_EC') then
+		ysim(ivar) = chemo(DRUG_B+1)%medium_Cave
+	elseif (varID(ivar) == 'PR104A_METAB2_EC') then
+		ysim(ivar) = chemo(DRUG_B+2)%medium_Cave
+	elseif (varID(ivar) == 'OXYGEN_IC') then
+!		ysim(ivar) = Caverage(MAX_CHEMO+OXYGEN)
+		ysim(ivar) = 0
+	elseif (varID(ivar) == 'GLUCOSE_IC') then
+!		ysim(ivar) = Caverage(MAX_CHEMO+GLUCOSE)
+		ysim(ivar) = 0
+!	elseif (varID(ivar) == 'LACTATE_IC') then
+!!		ysim(ivar) = Caverage(MAX_CHEMO+LACTATE)
+!		ysim(ivar) = 0
+	elseif (varID(ivar) == 'SN30000_IC') then
+!		ysim(ivar) = Caverage(MAX_CHEMO+DRUG_A)
+		ysim(ivar) = 0
+	elseif (varID(ivar) == 'SN30000_METAB1_IC') then
+!		ysim(ivar) = Caverage(MAX_CHEMO+DRUG_A+1)
+		ysim(ivar) = 0
+	elseif (varID(ivar) == 'SN30000_METAB2_IC') then
+!		ysim(ivar) = Caverage(MAX_CHEMO+DRUG_A+2)
+		ysim(ivar) = 0
+	elseif (varID(ivar) == 'PR104A_IC') then
+!		ysim(ivar) = Caverage(MAX_CHEMO+DRUG_A)
+		ysim(ivar) = 0
+	elseif (varID(ivar) == 'PR104A_METAB1_IC') then
+!		ysim(ivar) = Caverage(MAX_CHEMO+DRUG_A+1)
+		ysim(ivar) = 0
+	elseif (varID(ivar) == 'PR104A_METAB2_IC') then
+!		ysim(ivar) = Caverage(MAX_CHEMO+DRUG_A+2)
+		ysim(ivar) = 0
+	elseif (varID(ivar) == 'NCELLS') then
+		ysim(ivar) = Ncells			! for now, total live cells
+	elseif (varID(ivar) == 'PE') then
+		call getNviable(Nviable, Nlive)
+		do ityp = 1,Ncelltypes
+			if (Nlive(ityp) > 0) then
+				plate_eff(ityp) = real(Nviable(ityp))/Nlive(ityp)
+			else
+				plate_eff(ityp) = 0
+			endif
+		enddo
+		ysim(ivar) = plate_eff(1)	! for now, just type 1 cells
+	elseif (varID(ivar) == 'RADIATION') then
+		ysim(ivar) = -1
+	else
+		write(*,*) 'varID is not in the list of possible IDs: ',varID(ivar)
+		stop
+	endif
+enddo
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------
+subroutine MakeMediumCave
+integer :: ichemo
+
+do ichemo = 1,MAX_CHEMO
+	if (chemo(ichemo)%used) then
+!		chemo(ichemo)%medium_Cave = sum(chemo(ichemo)%Cave_b)/(NXB*NYB*NZB)
+		chemo(ichemo)%medium_Cave = chemo(ichemo)%medium_Cext
+	endif
+enddo
+end subroutine
 end module
