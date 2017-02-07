@@ -5,7 +5,8 @@ PROGRAM spheroid_main
 use spheroid_mod
 use global
 implicit none
-integer :: ncpu, res, summarydata(100)
+integer :: ncpu, res
+real(REAL_KIND) :: summarydata(100)
 character*(128) :: infile, outfile, runfile
 character*(64) :: travelfile = 'travel_time_dist.out'
 integer :: status, nlen, cnt, i, inbuflen, outbuflen
