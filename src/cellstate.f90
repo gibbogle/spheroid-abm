@@ -648,7 +648,7 @@ real(REAL_KIND) :: r_mean(MAX_CELLTYPES), c_rate(MAX_CELLTYPES)
 real(REAL_KIND) :: Vin_0, Vex_0, dV, minVex
 real(REAL_KIND) :: Cin_0(MAX_CHEMO), Cex_0(MAX_CHEMO)
 character*(20) :: msg
-logical :: drugkilled, oxygen_growth, glucose_growth, first_cycle
+logical :: drugkilled, oxygen_growth, glucose_growth, first_cycle, tagged
 integer :: C_option = 1
 type(cell_type), pointer :: cp
 
@@ -678,7 +678,11 @@ do kcell = 1,nlist0
 !			r_mean = Vdivide0/(2*(divide_time_mean(ityp) + tdelay))	! growth rate reduction
 !		endif
 !	endif
-	if (cp%volume < cp%divide_volume) then	! still growing - not delayed
+	tagged = cp%anoxia_tag .or. cp%aglucosia_tag					! cells tagged to die of anoxia or aglucosia do not metabolise
+	if (tagged) then
+		cp%dVdt = 0
+	endif
+	if ((cp%volume < cp%divide_volume) .and. .not.tagged) then	! still growing - not delayed
 		C_O2 = cp%conc(OXYGEN)
 		C_glucose = cp%conc(GLUCOSE)
 		if (oxygen_growth .and. glucose_growth) then
