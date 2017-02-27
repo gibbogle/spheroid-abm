@@ -3122,32 +3122,6 @@ void MainWindow::disableUseTracer()
 //    cbox_USE_TREATMENT_FILE->setChecked(false);
 //}
 
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow:: on_cbox_SAVE_PROFILE_DATA_toggled(bool checked)
-{
-    text_SAVE_PROFILE_DATA_FILE_NAME->setEnabled(checked);
-    line_SAVE_PROFILE_DATA_INTERVAL->setEnabled(checked);
-    line_SAVE_PROFILE_DATA_NUMBER->setEnabled(checked);
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow:: on_cbox_SAVE_SLICE_DATA_toggled(bool checked)
-{
-    text_SAVE_SLICE_DATA_FILE_NAME->setEnabled(checked);
-    line_SAVE_SLICE_DATA_INTERVAL->setEnabled(checked);
-    line_SAVE_SLICE_DATA_NUMBER->setEnabled(checked);
-}
-
-//--------------------------------------------------------------------------------------------------------
-//--------------------------------------------------------------------------------------------------------
-void MainWindow:: on_cbox_SAVE_FACS_DATA_toggled(bool checked)
-{
-    text_SAVE_FACS_DATA_FILE_NAME->setEnabled(checked);
-    line_SAVE_FACS_DATA_INTERVAL->setEnabled(checked);
-    line_SAVE_FACS_DATA_NUMBER->setEnabled(checked);
-}
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
