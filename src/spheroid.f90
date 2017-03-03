@@ -700,7 +700,7 @@ Nsteps = days*24*60*60/DELTA_T		! DELTA_T in seconds
 write(logmsg,'(a,2i6,f6.0)') 'nsteps, NT_CONC, DELTA_T: ',nsteps,NT_CONC,DELTA_T
 call logger(logmsg)
 
-call DetermineKd	! Kd is now set or computed in the GUI 
+call DetermineKd
 ok = .true.
 
 end subroutine
@@ -711,6 +711,7 @@ subroutine ReadDrugData(nf)
 integer :: nf
 integer :: idrug, im, ictyp, ival
 character*(16) :: drugname
+type(drug_type), pointer :: dp
 
 write(logmsg,*) 'ReadDrugData'
 call logger(logmsg)
@@ -719,6 +720,7 @@ if (allocated(drug)) then
 endif
 allocate(drug(Ndrugs_used))
 do idrug = 1,Ndrugs_used
+	dp => drug(idrug)
 	read(nf,'(a)') drug(idrug)%classname
 	if (drug(idrug)%classname == 'TPZ') then
 		drug(idrug)%drugclass = TPZ_CLASS
@@ -761,6 +763,8 @@ do idrug = 1,Ndrugs_used
             drug(idrug)%kill_model(ictyp,im) = ival
             read(nf,*) ival
             drug(idrug)%sensitises(ictyp,im) = (ival == 1)
+			write(nflog,'(a,i2,7e12.3)') 'ReadDrug: im,C2,KO2,Ckill_O2,Kmet0,f,T: ',im, &
+				dp%C2(ictyp,im),dp%KO2(ictyp,im),dp%kill_drug(ictyp,im),dp%Kmet0(ictyp,im),dp%kill_fraction(ictyp,im),dp%kill_duration(ictyp,im)
             drug(idrug)%Kmet0(ictyp,im) = drug(idrug)%Kmet0(ictyp,im)/60					! /min -> /sec
             drug(idrug)%KO2(ictyp,im) = 1.0e-3*drug(idrug)%KO2(ictyp,im)					! um -> mM
             drug(idrug)%kill_duration(ictyp,im) = 60*drug(idrug)%kill_duration(ictyp,im)	! min -> sec
@@ -967,8 +971,6 @@ real(REAL_KIND) :: f, T, Ckill, Ckill_O2, Kd
 integer :: idrug, ictyp, im, kill_model
 
 do idrug = 1,ndrugs_used
-!	if (idrug == 1 .and. .not.chemo(TPZ_DRUG)%used) cycle
-!	if (idrug == 2 .and. .not.chemo(DNB_DRUG)%used) cycle
 	do ictyp = 1,Ncelltypes
 		do im = 0,2
 			if (drug(idrug)%kills(ictyp,im)) then
@@ -993,13 +995,9 @@ do idrug = 1,ndrugs_used
 				elseif (kill_model == 5) then
 					Kd = -log(1-f)/(T*Ckill**2)
 				endif
+				write(nflog,'(a,i2,8e12.3)') 'DetermineKd: im,C2,KO2,Ckill,Kmet0,f,T,kmet,Kd: ',im,C2,KO2,Ckill,Kmet0,f,T,kmet,Kd
 				drug(idrug)%Kd(ictyp,im) = Kd
 			endif
-!			if (idrug == 1) then
-!				TPZ%Kd(i) = Kd
-!			elseif (idrug == 2) then
-!				DNB%Kd(i,im) = Kd
-!			endif
 		enddo
 	enddo
 enddo
@@ -1699,6 +1697,7 @@ if (dbug .or. mod(istep,nthour) == 0) then
 	write(logmsg,'(a,2i6,a,2i6,a,f6.1,a,i2,a,2f6.3)') &
 		'istep, hour: ',istep,istep/nthour,' nlist, ncells: ',nlist,ncells,' diam: ',diam_um,' nchemo: ',nchemo
 	call logger(logmsg)
+	write(nflog,*) 'Ndrug_tag: ',Ndrug_tag(1,1)
 	call showcells
 endif
 ! write(nflog,'(a,f8.3)') 'did simulate_step: time: ',wtime()-start_wtime 

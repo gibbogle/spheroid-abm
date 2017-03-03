@@ -259,7 +259,7 @@ real(REAL_KIND) :: Vex_min, Vex_max
 logical :: use_dropper
 integer :: Ndrop
 real(REAL_KIND) :: alpha_shape, beta_shape	! squashed sphere shape parameters
-real(REAL_KIND) :: adrop, bdrop, cdrop		! drop shape transformation parameters
+real(REAL_KIND) :: adrop, bdrop, cdrop		! drop shape transformation parameters 
 integer :: zmin     						! drop lower bound at drop time = lower limit of blob thereafter
 logical :: is_dropped
 

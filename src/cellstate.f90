@@ -271,6 +271,7 @@ logical :: anoxia_death, aglucosia_death
 type(drug_type), pointer :: dp
 real(REAL_KIND) :: Cdrug_sum, C_O2_sum, dMdt_sum, Cdrug_in_sum(0:2), C_O2_in_sum, C_O2_ex_sum
 integer :: n, n_in, ntagged
+logical :: flag
 
 !call logger('CellDeath')
 ok = .true.
@@ -289,6 +290,7 @@ Cdrug_in_sum = 0
 C_O2_in_sum = 0
 C_O2_ex_sum = 0
 ntagged = 0
+flag = .false.
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
 	n_in = n_in + 1
@@ -354,12 +356,14 @@ do kcell = 1,nlist
 		death_prob = 0
 		survival_prob = 1
 		do im = 0,2
+			if (.not.flag) write(nflog,*) 'im: ',im
 			if (.not.dp%kills(ityp,im)) cycle
 			killmodel = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
 			Cdrug = cell_list(kcell)%conc(ichemo + im)
 			Kd = dp%Kd(ityp,im)
 			n_O2 = dp%n_O2(ityp,im)
 			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)**n_O2/(dp%KO2(ityp,im)**n_O2 + C_O2**n_O2))*dp%Kmet0(ityp,im)
+			if (.not.flag) write(nflog,'(a,6e12.3)') 'kmet: ',dp%C2(ityp,im),dp%KO2(ityp,im),n_O2,C_O2,dp%Kmet0(ityp,im),kmet
 			dMdt = kmet*Cdrug
 !			if (im > 0 .and. dMdt > 0) then
 !				n = n + 1
@@ -371,11 +375,16 @@ do kcell = 1,nlist
 !				write(nflog,'(3i6,4e12.3)') istep,kcell,im,Cdrug,C_O2,kmet,dMdt
 !			endif
 			call getDrugKillProb(killmodel,Kd,dMdt,Cdrug,dt,dkill_prob)
+			if (.not.flag) then
+				write(nflog,'(a,5e12.3)') 'Cdrug,Kd,kmet,dMdt,dt: ',Cdrug,Kd,kmet,dMdt,dt
+				write(nflog,'(a,e12.3)') 'dkill_prob: ',dkill_prob
+			endif
 !			kill_prob = kill_prob + dkill_prob
 			survival_prob = survival_prob*(1 - dkill_prob)
 			death_prob = max(death_prob,dp%death_prob(ityp,im))
 		enddo
 		kill_prob = 1 - survival_prob
+		if (.not.flag) write(nflog,*) 'kill_prob: ',kill_prob
 	    if (.not.cell_list(kcell)%drug_tag(idrug) .and. par_uni(kpar) < kill_prob) then		! don't tag more than once
 			cell_list(kcell)%p_drug_death(idrug) = death_prob
 			cell_list(kcell)%drug_tag(idrug) = .true.
@@ -384,6 +393,7 @@ do kcell = 1,nlist
 !            write(nfout,'(2i6,5e12.3)') istep,kcell,kill_prob,C_O2,cell_list(kcell)%conc(ichemo:ichemo+2)
 		endif
 	enddo
+	flag = .true.
 enddo
 !write(nfout,*) 'ntagged: ',istep,ntagged
 !write(nflog,'(a,2e12.3)') 'O2 medium_Cext, Cbnd: ',chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd

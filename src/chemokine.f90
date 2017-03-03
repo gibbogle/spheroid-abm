@@ -344,8 +344,43 @@ do idrug = 1,ndrugs_used
 				ichemo = iparent + im
 				chemo(ichemo)%present = .false.
 			enddo
+			call RemoveDrug(idrug)
 		endif
 	endif
+enddo
+end subroutine
+
+!----------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------
+subroutine RemoveDrug(idrug)
+integer :: idrug
+integer :: iparent, ichemo, im, kcell, ix, iy, iz
+type(cell_type), pointer :: cp
+
+iparent = DRUG_A + 3*(idrug-1)
+do im = 0,2
+	ichemo = iparent + im
+	chemo(ichemo)%medium_Cbnd = 0
+!	Cflux(:,:,:,ichemo) = 0
+	chemo(ichemo)%Cave_b = 0
+	chemo(ichemo)%medium_Cext = 0
+	chemo(ichemo)%Medium_Cbnd = 0
+enddo
+do ix = 1,NX
+	do iy = 1,NY
+		do iz = 1,NZ
+			occupancy(ix,iy,iz)%C(iparent:iparent+2) = 0
+		enddo
+	enddo
+enddo
+do kcell = 1,nlist
+	if (cell_list(kcell)%state == DEAD) cycle
+    cp => cell_list(kcell)
+	do im = 0,2
+		ichemo = iparent + im
+		cp%conc(ichemo) = 0
+		cp%Cex(ichemo) = 0
+	enddo
 enddo
 end subroutine
 
