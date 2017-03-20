@@ -278,7 +278,7 @@ logical :: use_radiation_growth_delay_all = .true.
 !logical :: radiation_dosed
 
 logical :: drug_gt_cthreshold(MAX_DRUGTYPES)
-real(REAL_KIND), parameter :: Cthreshold = 1.0e-5
+real(REAL_KIND) :: Cthreshold
 
 type(savedata_type) :: saveprofile, saveslice, saveFACS
 

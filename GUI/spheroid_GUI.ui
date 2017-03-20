@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>6</number>
+           <number>7</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -7368,7 +7368,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>750</x>
-              <y>320</y>
+              <y>340</y>
               <width>131</width>
               <height>18</height>
              </rect>
@@ -7381,7 +7381,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>750</x>
-              <y>350</y>
+              <y>370</y>
               <width>131</width>
               <height>18</height>
              </rect>
@@ -7534,7 +7534,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>740</x>
-              <y>170</y>
+              <y>150</y>
               <width>171</width>
               <height>131</height>
              </rect>
@@ -7757,7 +7757,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>750</x>
-              <y>400</y>
+              <y>420</y>
               <width>31</width>
               <height>20</height>
              </rect>
@@ -7773,7 +7773,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>790</x>
-              <y>400</y>
+              <y>420</y>
               <width>191</width>
               <height>16</height>
              </rect>
@@ -7789,7 +7789,7 @@ padding: 8px
             <property name="geometry">
              <rect>
               <x>750</x>
-              <y>380</y>
+              <y>400</y>
               <width>151</width>
               <height>18</height>
              </rect>
@@ -8131,6 +8131,48 @@ padding: 8px
               </item>
              </layout>
             </widget>
+           </widget>
+           <widget class="QLineEdit" name="lineEdit">
+            <property name="geometry">
+             <rect>
+              <x>830</x>
+              <y>300</y>
+              <width>50</width>
+              <height>20</height>
+             </rect>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>50</width>
+              <height>16777215</height>
+             </size>
+            </property>
+           </widget>
+           <widget class="QLabel" name="alabel_mM">
+            <property name="geometry">
+             <rect>
+              <x>890</x>
+              <y>300</y>
+              <width>21</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>mM</string>
+            </property>
+           </widget>
+           <widget class="QMyLabel" name="label_DRUG_THRESHOLD">
+            <property name="geometry">
+             <rect>
+              <x>750</x>
+              <y>300</y>
+              <width>81</width>
+              <height>21</height>
+             </rect>
+            </property>
+            <property name="text">
+             <string>Drug Threshold</string>
+            </property>
            </widget>
           </widget>
          </widget>
@@ -9156,7 +9198,7 @@ padding: 8px
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../vspheroid-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/001_29.png</normaloff>:/icons/001_29.png</iconset>
    </property>
    <property name="text">
@@ -9171,7 +9213,7 @@ padding: 8px
   </action>
   <action name="action_run">
    <property name="icon">
-    <iconset resource="../../vspheroid-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/001_59.png</normaloff>:/icons/001_59.png</iconset>
    </property>
    <property name="text">
@@ -9183,7 +9225,7 @@ padding: 8px
   </action>
   <action name="action_inputs">
    <property name="icon">
-    <iconset resource="../../vspheroid-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/001_45.png</normaloff>:/icons/001_45.png</iconset>
    </property>
    <property name="text">
@@ -9195,7 +9237,7 @@ padding: 8px
   </action>
   <action name="action_outputs">
    <property name="icon">
-    <iconset resource="../../vspheroid-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/Display2.png</normaloff>:/icons/Display2.png</iconset>
    </property>
    <property name="text">
@@ -9210,7 +9252,7 @@ padding: 8px
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../vspheroid-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/cell2.png</normaloff>:/icons/cell2.png</iconset>
    </property>
    <property name="text">
@@ -9222,7 +9264,7 @@ padding: 8px
   </action>
   <action name="action_pause">
    <property name="icon">
-    <iconset resource="../../vspheroid-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/001_07.png</normaloff>:/icons/001_07.png</iconset>
    </property>
    <property name="text">
@@ -9307,7 +9349,7 @@ padding: 8px
   </action>
   <action name="action_field">
    <property name="icon">
-    <iconset resource="../../vspheroid-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/color.jpg</normaloff>:/icons/color.jpg</iconset>
    </property>
    <property name="text">
@@ -9324,7 +9366,7 @@ padding: 8px
   </action>
   <action name="action_FACS">
    <property name="icon">
-    <iconset resource="../../vspheroid-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/FACS_234.png</normaloff>:/icons/FACS_234.png</iconset>
    </property>
    <property name="text">
@@ -9410,7 +9452,9 @@ padding: 8px
   <tabstop>spin_SEED1</tabstop>
   <tabstop>spin_SEED2</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="icons.qrc"/>
+ </resources>
  <connections/>
  <buttongroups>
   <buttongroup name="buttonGroup_drugtype"/>
