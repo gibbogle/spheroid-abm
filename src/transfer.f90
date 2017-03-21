@@ -395,7 +395,7 @@ summaryData(1:36) = [ rint(istep), rint(Ncells), rint(TNanoxia_dead), rint(TNagl
 	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+2), cmedium(DRUG_B:DRUG_B+2), &
 	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+2), cbdry(DRUG_B:DRUG_B+2) ]
 !	doubling_time, r_G, r_P, r_A, r_I, rint(ndoublings), P_utilisation ]
-write(nfres,'(a,a,2a12,i8,3e12.4,31i7,29e12.4)') trim(header),' ',gui_run_version, dll_run_version, &
+write(nfres,'(a,a,2a12,i8,3e12.4,22i7,29e12.4)') trim(header),' ',gui_run_version, dll_run_version, &
 	istep, hour, vol_mm3, diam_um, Ncells_type(1:2), &
     Nanoxia_dead(1:2), Naglucosia_dead(1:2), Ndrug_dead(1,1:2), &
     Ndrug_dead(2,1:2), Nradiation_dead(1:2), &
@@ -406,7 +406,8 @@ write(nfres,'(a,a,2a12,i8,3e12.4,31i7,29e12.4)') trim(header),' ',gui_run_versio
 	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+2), cmedium(DRUG_B:DRUG_B+2), &
 	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+2), cbdry(DRUG_B:DRUG_B+2)
 !	doubling_time, r_G, r_P, r_A, r_I, real(ndoublings), P_utilisation
-		
+
+	
 call sum_dMdt(GLUCOSE)
 
 if (diam_count_limit > LIMIT_THRESHOLD) then

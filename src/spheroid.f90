@@ -680,7 +680,7 @@ write(nflog,*)
 open(nfres,file='spheroid_ts.out',status='replace')
 !write(nfres,'(a,a)') 'GUI version: ',gui_run_version
 !write(nfres,'(a,a)') 'DLL version: ',dll_run_version
-!write(nfres,*)
+!write(nfres,*) 
 write(nfres,'(a)') 'date info GUI_version DLL_version &
 istep hour vol_mm3 diam_um Ncells(1) Ncells(2) &
 Nanoxia_dead(1) Nanoxia_dead(2) Naglucosia_dead(1) Naglucosia_dead(2) NdrugA_dead(1) NdrugA_dead(2) &
@@ -691,8 +691,8 @@ f_hypox(1) f_hypox(2) f_hypox(3) &
 f_clonohypox(1) f_clonohypox(2) f_clonohypox(3) &
 f_growth(1) f_growth(2) f_growth(3) &
 f_necrot plating_efficiency(1) plating_efficiency(2) &
-medium_oxygen medium_glucose medium_drugA medium_drugB &
-bdry_oxygen bdry_glucose bdry_drugA bdry_drugB'
+medium_oxygen medium_glucose medium_drugA medium_drugA_met1 medium_drugA_met2 medium_drugB medium_drugB_met1 medium_drugB_met2 &
+bdry_oxygen bdry_glucose bdry_drugA bdry_drugA_met1 bdry_drugA_met2 bdry_drugB bdry_drugB_met1 bdry_drugB_met2'
 
 write(logmsg,*) 'Opened nfout: ',outputfile
 call logger(logmsg)
