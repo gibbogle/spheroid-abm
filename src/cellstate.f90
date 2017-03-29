@@ -264,14 +264,15 @@ end function
 subroutine CellDeath(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
-integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, killmodel, kpar=0 
-real(REAL_KIND) :: C_O2, C_glucose, Cdrug, n_O2, kmet, Kd, dMdt
-real(REAL_KIND) :: kill_prob, dkill_prob, death_prob, survival_prob, tnow
+integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, kill_model, kpar=0 
+real(REAL_KIND) :: C_O2, C_glucose, Cdrug, n_O2, kmet, Kd, dMdt, c, ctot
+real(REAL_KIND) :: kill_prob, dkill_prob(0:2), death_prob, survival_prob, tnow
 logical :: anoxia_death, aglucosia_death
 type(drug_type), pointer :: dp
 real(REAL_KIND) :: Cdrug_sum, C_O2_sum, dMdt_sum, Cdrug_in_sum(0:2), C_O2_in_sum, C_O2_ex_sum
 integer :: n, n_in, ntagged
 logical :: flag
+logical :: new_kill_method = .true.
 
 !call logger('CellDeath')
 ok = .true.
@@ -352,37 +353,47 @@ do kcell = 1,nlist
 	do idrug = 1,ndrugs_used	
 		dp => drug(idrug)
 		ichemo = TRACER + 1 + 3*(idrug-1)	
+		dkill_prob = 0
 		kill_prob = 0
 		death_prob = 0
 		survival_prob = 1
+		ctot = 0
 		do im = 0,2
 			if (.not.flag) write(nflog,*) 'im: ',im
 			if (.not.dp%kills(ityp,im)) cycle
-			killmodel = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
+			kill_model = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
 			Cdrug = cell_list(kcell)%conc(ichemo + im)
 			Kd = dp%Kd(ityp,im)
 			n_O2 = dp%n_O2(ityp,im)
 			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)**n_O2/(dp%KO2(ityp,im)**n_O2 + C_O2**n_O2))*dp%Kmet0(ityp,im)
 			if (.not.flag) write(nflog,'(a,6e12.3)') 'kmet: ',dp%C2(ityp,im),dp%KO2(ityp,im),n_O2,C_O2,dp%Kmet0(ityp,im),kmet
 			dMdt = kmet*Cdrug
-!			if (im > 0 .and. dMdt > 0) then
-!				n = n + 1
-!				Cdrug_sum = Cdrug_sum + Cdrug 
-!				C_O2_sum = C_O2_sum + C_O2
-!				dMdt_sum = dMdt_sum + dMdt
-!			endif
-!			if (im > 0 .and. Cdrug > 0) then
-!				write(nflog,'(3i6,4e12.3)') istep,kcell,im,Cdrug,C_O2,kmet,dMdt
-!			endif
-			call getDrugKillProb(killmodel,Kd,dMdt,Cdrug,dt,dkill_prob)
-			if (.not.flag) then
-				write(nflog,'(a,5e12.3)') 'Cdrug,Kd,kmet,dMdt,dt: ',Cdrug,Kd,kmet,dMdt,dt
-				write(nflog,'(a,e12.3)') 'dkill_prob: ',dkill_prob
+			if (new_kill_method) then	! Actually this is exactly the same as the original method.
+				if (kill_model == 1) then
+					c = Kd*dMdt
+				elseif (kill_model == 2) then
+					c = Kd*dMdt*Cdrug
+				elseif (kill_model == 3) then
+					c = Kd*dMdt**2
+				elseif (kill_model == 4) then
+					c = Kd*Cdrug
+				elseif (kill_model == 5) then
+					c = Kd*Cdrug**2
+				endif
+				ctot = ctot + c
+			else
+				call getDrugKillProb(kill_model,Kd,dMdt,Cdrug,dt,dkill_prob(im))
+				if (.not.flag) then
+					write(nflog,'(a,5e12.3)') 'Cdrug,Kd,kmet,dMdt,dt: ',Cdrug,Kd,kmet,dMdt,dt
+					write(nflog,'(a,e12.3)') 'dkill_prob: ',dkill_prob(im)
+				endif
+				survival_prob = survival_prob*(1 - dkill_prob(im))
 			endif
-!			kill_prob = kill_prob + dkill_prob
-			survival_prob = survival_prob*(1 - dkill_prob)
 			death_prob = max(death_prob,dp%death_prob(ityp,im))
 		enddo
+		if (new_kill_method) then
+			survival_prob = exp(-ctot*dt)
+		endif
 		kill_prob = 1 - survival_prob
 		if (.not.flag) write(nflog,*) 'kill_prob: ',kill_prob
 	    if (.not.cell_list(kcell)%drug_tag(idrug) .and. par_uni(kpar) < kill_prob) then		! don't tag more than once
@@ -390,6 +401,8 @@ do kcell = 1,nlist
 			cell_list(kcell)%drug_tag(idrug) = .true.
             Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1
             ntagged = ntagged + 1
+            ! Here we want to record (in .res file, nfout) the drug concs: cell_list(kcell)%conc(ichemo:ichemo+2) and dkill_prob(:)
+            write(nfout,'(2i6,3f10.6,4f8.4)') Ndrug_tag(idrug,ityp),kcell,cell_list(kcell)%conc(ichemo:ichemo+2),dkill_prob(:),kill_prob
 !            write(nfout,'(2i6,5e12.3)') istep,kcell,kill_prob,C_O2,cell_list(kcell)%conc(ichemo:ichemo+2)
 		endif
 	enddo

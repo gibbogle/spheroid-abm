@@ -1993,7 +1993,7 @@ if (allocated(work_rkc)) deallocate(work_rkc)
 do ichemo = 1,MAX_CHEMO
 	if (allocated(chemo(ichemo)%coef)) deallocate(chemo(ichemo)%coef)
 	if (allocated(chemo(ichemo)%conc)) deallocate(chemo(ichemo)%conc)
-	if (allocated(chemo(ichemo)%grad)) deallocate(chemo(ichemo)%grad)
+!	if (allocated(chemo(ichemo)%grad)) deallocate(chemo(ichemo)%grad)
 enddo
 !if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
 if (allocated(ODEdiff%varsite)) deallocate(ODEdiff%varsite)

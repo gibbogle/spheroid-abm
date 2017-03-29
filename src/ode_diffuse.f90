@@ -730,7 +730,7 @@ type(cell_type), pointer :: cp
 
 cp => cell_list(1)
 if (chemo(DRUG_A)%present) then
-	write(nfout,'(a,f7.3,7e12.3)') 'EC_IC_drug_conc: ',t_simulation/3600, cp%conc(OXYGEN), &
+	write(nflog,'(a,f7.3,7e12.3)') 'EC_IC_drug_conc: ',t_simulation/3600, cp%conc(OXYGEN), &
 		cp%Cex(DRUG_A:DRUG_A+2),cp%conc(DRUG_A:DRUG_A+2)
 endif
 

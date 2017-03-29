@@ -184,12 +184,12 @@ do ic = 1,MAX_CHEMO
 !			stop
 		endif
 		allocate(chemo(ic)%conc(NX,NY,NZ))
-		if (allocated(chemo(ic)%grad)) then
-			call logger("chemo(ic)%grad already allocated")
-			deallocate(chemo(ic)%grad)
-!			stop
-		endif
-		allocate(chemo(ic)%grad(3,NX,NY,NZ))
+!		if (allocated(chemo(ic)%grad)) then
+!			call logger("chemo(ic)%grad already allocated")
+!			deallocate(chemo(ic)%grad)
+!!			stop
+!		endif
+!		allocate(chemo(ic)%grad(3,NX,NY,NZ))
 		chemo(ic)%conc = chemo(ic)%bdry_conc	
 	endif
 enddo
