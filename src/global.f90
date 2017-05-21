@@ -328,6 +328,7 @@ logical :: use_extracellular_O2
 logical :: use_V_dependence
 logical :: use_divide_time_distribution = .true.
 logical :: use_constant_divide_volume = .true.
+logical :: use_new_drugdata = .true.
 logical :: randomise_initial_volume
 logical :: use_FD = .true.
 logical :: use_gaplist = .true.
