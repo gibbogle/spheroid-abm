@@ -45,13 +45,15 @@ real(REAL_KIND) :: area(NZ), cntr(2)
 integer :: iz, iz0, izmin, izmax
 
 iz0 = blob_centre(3)
+izmax = iz0
 do iz = iz0,NZ
-	call getArea(iz,area(iz),cntr)
+	call getArea(5,iz,area(iz),cntr)
 	if (area(iz) == 0) exit
 	izmax = iz
 enddo
+izmin = iz0
 do iz = iz0-1,1,-1
-	call getArea(iz,area(iz),cntr)
+	call getArea(5,iz,area(iz),cntr)
 	if (area(iz) == 0) exit
 	izmin = iz
 enddo
@@ -60,6 +62,42 @@ maxarea = 0
 do iz = izmin,izmax
 	volume = volume + area(iz)
 	if (area(iz) > maxarea) maxarea = area(iz)
+enddo
+!write(*,'(a,i6,f10.1,f8.3)') 'getVolume: Ncells,volume: ',Ncells,volume,volume/Ncells
+end subroutine
+
+!---------------------------------------------------------------------------------------
+! Returns region volumes, max z-slice area in units of sites
+! region 1: necrotic core
+! region 2-4: necrotic core + low-oxygen cells
+! region 5: whole spheroid
+!---------------------------------------------------------------------------------------
+subroutine getVolumes(volume,maxarea)
+real(REAL_KIND) :: volume(5), maxarea(5)
+real(REAL_KIND) :: area(NZ), cntr(2)
+integer :: iz, iz0, izmin, izmax, iregion
+
+iz0 = blob_centre(3)
+volume = 0
+maxarea = 0
+do iregion = 1,5
+	area = 0
+	izmax = iz0
+	do iz = iz0,NZ
+		call getArea(iregion,iz,area(iz),cntr)
+		if (area(iz) == 0) exit
+		izmax = iz
+	enddo
+	izmin = iz0
+	do iz = iz0-1,1,-1
+		call getArea(iregion,iz,area(iz),cntr)
+		if (area(iz) == 0) exit
+		izmin = iz
+	enddo
+	do iz = izmin,izmax
+		volume(iregion) = volume(iregion) + area(iz)
+		if (area(iz) > maxarea(iregion)) maxarea(iregion) = area(iz)
+	enddo
 enddo
 !write(*,'(a,i6,f10.1,f8.3)') 'getVolume: Ncells,volume: ',Ncells,volume,volume/Ncells
 end subroutine
@@ -86,7 +124,7 @@ integer :: iz, iz1, iz2, i
 !enddo
 
 do iz = 1,NZ
-	call getArea(iz,area,cntr)
+	call getArea(5,iz,area,cntr)
     r_outer(iz) = sqrt(area/PI)	! cm
     if (r_outer(iz) > 0) then
         call getInnerRadius(iz,cntr,r_inner(iz))
@@ -140,15 +178,17 @@ end subroutine
 
 !---------------------------------------------------------------------------------------
 !---------------------------------------------------------------------------------------
-subroutine getArea(iz, area, cntr)
-integer :: iz
+subroutine getArea(iregion, iz, area, cntr)
+integer :: iregion, iz
 real(REAL_KIND) :: area, cntr(2)
 real(REAL_KIND), allocatable :: x(:), y(:), xv(:), yv(:)
 real(REAL_KIND) :: ave(2), xc, yc, d2, d2max, dx(4), dy(4), dx_um
 real(REAL_KIND) :: delta = 0.20
 integer, allocatable :: iwk(:), vertex(:)
-integer :: ix, iy, n, nvert, i, i1, i2, k, kmax
+integer :: ix, iy, n, nvert, i, i1, i2, k, kmax, kcell
+logical :: flag
 
+flag = (istep==120) .and. (iz==60) .and. (iregion<=2)
 allocate(x(MAXN))
 allocate(y(MAXN))
 allocate(iwk(MAXN))
@@ -156,19 +196,42 @@ allocate(vertex(1000))
 allocate(xv(1000))
 allocate(yv(1000))
 
-! First test by looking at the z-slice approximately through the centre.
-!iz = Centre(3)
 n = 0
 do ix = 1,NX
 	do iy = 1,NY
-		if (occupancy(ix,iy,iz)%indx(1) > 0) then
-			n = n+1
-			x(n) = ix
-			y(n) = iy
+		kcell = occupancy(ix,iy,iz)%indx(1)
+		if (iregion == 1) then
+			if (kcell == 0) then
+				n = n+1
+				x(n) = ix
+				y(n) = iy
+!				if (flag) write(nflog,'(5i6)') iregion,n,ix,iy,iz
+			endif
+		elseif (iregion < 5) then
+			i = iregion - 1
+			if (kcell > 0) then
+				if (cell_list(kcell)%conc(OXYGEN) < O2cutoff(i)) then
+					n = n+1
+					x(n) = ix
+					y(n) = iy
+!					if (flag) write(nflog,'(5i6)') iregion,n,ix,iy,iz
+				endif
+			elseif (kcell == 0) then	! add necrotic core sites to the list
+				n = n+1
+				x(n) = ix
+				y(n) = iy
+			endif
+		elseif (iregion == 5) then
+			if (kcell > 0) then
+				n = n+1
+				x(n) = ix
+				y(n) = iy
+			endif
 		endif
 	enddo
 enddo
 if (n <= 3) then
+!	write(nflog,*) 'Not enough cells: region,n: ',iregion,n
 	area = n
 	return
 endif
@@ -178,11 +241,17 @@ ave = 0
 do i = 1,nvert
 	xv(i) = x(vertex(i))
 	yv(i) = y(vertex(i))
-!	write(*,'(i6,2f6.1)') i,xv(i),yv(i)
 	ave(1) = ave(1) + xv(i)
 	ave(2) = ave(2) + yv(i)
 enddo
 cntr = ave/nvert	! this is the approximate centre
+if (flag) then
+	write(nflog,*) 'iregion,nvert: ',iregion,nvert
+	do i = 1,nvert
+		write(nflog,'(2f8.0)') xv(i),yv(i)
+	enddo
+	write(nflog,'(a,2f8.0)') 'cntr: ',cntr
+endif
 ! Now adjust (xv,yv) to the site corner most remote from the centre
 dx = [-delta, delta, delta, -delta]
 dy = [-delta, -delta, delta, delta]

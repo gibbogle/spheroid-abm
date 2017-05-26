@@ -285,15 +285,15 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine getNecroticFraction(necrotic_fraction,totvol_cm3)
-real(REAL_KIND) :: necrotic_fraction, totvol_cm3	! vol_cm3 not used here, needed in scell
-real(REAL_KIND) :: cellvol_cm3, dvol
-!necrotic_fraction = (Nsites-Ncells)/real(Nsites)
-cellvol_cm3 = Ncells*DELTA_X**3
-dvol = totvol_cm3-cellvol_cm3
-necrotic_fraction = dvol/totvol_cm3
-if (necrotic_fraction < 0.005) necrotic_fraction = 0
-end subroutine
+!subroutine getNecroticFraction(necrotic_fraction,totvol_cm3)
+!real(REAL_KIND) :: necrotic_fraction, totvol_cm3	! vol_cm3 not used here, needed in scell
+!real(REAL_KIND) :: cellvol_cm3, dvol
+!!necrotic_fraction = (Nsites-Ncells)/real(Nsites)
+!cellvol_cm3 = Ncells*DELTA_X**3
+!dvol = totvol_cm3-cellvol_cm3
+!necrotic_fraction = dvol/totvol_cm3
+!if (necrotic_fraction < 0.005) necrotic_fraction = 0
+!end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
@@ -330,7 +330,7 @@ integer :: TNanoxia_dead, TNaglucosia_dead, TNradiation_dead, TNdrug_dead(2),  T
 integer :: ityp, i, im, idrug
 real(REAL_KIND) :: diam_um, hypoxic_percent, clonohypoxic_percent, growth_percent, necrotic_percent,  npmm3, Tplate_eff
 real(REAL_KIND) :: diam_cm, vol_cm3, vol_mm3, hour, necrotic_fraction, doubling_time, plate_eff(MAX_CELLTYPES)
-real(REAL_KIND) :: cmedium(MAX_CHEMO), cbdry(MAX_CHEMO)
+real(REAL_KIND) :: cmedium(MAX_CHEMO), cbdry(MAX_CHEMO), volume_cm3(5), maxarea(5), diameter_um(5)
 real(REAL_KIND) :: r_G, r_P, r_A, r_I, P_utilisation
 
 hour = istep*DELTA_T/3600.
@@ -366,8 +366,8 @@ call getClonoHypoxicCount(nclonohypoxic)
 clonohypoxic_percent = (100.*nclonohypoxic(i_hypoxia_cutoff))/TNviable
 call getGrowthCount(ngrowth)
 growth_percent = (100.*ngrowth(i_growth_cutoff))/Ncells
-call getNecroticFraction(necrotic_fraction,vol_cm3)
-necrotic_percent = 100.*necrotic_fraction
+!call getNecroticFraction(necrotic_fraction,vol_cm3)
+!necrotic_percent = 100.*necrotic_fraction
 do ityp = 1,Ncelltypes
 	if (Nlive(ityp) > 0) then
 		plate_eff(ityp) = real(Nviable(ityp))/Nlive(ityp)
@@ -383,6 +383,13 @@ enddo
 
 call getMediumConc(cmedium, cbdry)
 
+call getVolumes(volume_cm3,maxarea)
+do i = 1,5
+	diameter_um(i) = 10000*(6*volume_cm3(i)/PI)**(1./3)
+enddo
+necrotic_fraction = volume_cm3(1)/volume_cm3(5)
+necrotic_percent = 100.*necrotic_fraction
+
 !if (ndoublings > 0) then
 !    doubling_time = doubling_time_sum/(3600*ndoublings)
 !else
@@ -395,8 +402,8 @@ summaryData(1:36) = [ rint(istep), rint(Ncells), rint(TNanoxia_dead), rint(TNagl
 	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+2), cmedium(DRUG_B:DRUG_B+2), &
 	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+2), cbdry(DRUG_B:DRUG_B+2) ]
 !	doubling_time, r_G, r_P, r_A, r_I, rint(ndoublings), P_utilisation ]
-write(nfres,'(a,a,2a12,i8,3e12.4,22i7,29e12.4)') trim(header),' ',gui_run_version, dll_run_version, &
-	istep, hour, vol_mm3, diam_um, Ncells_type(1:2), &
+write(nfres,'(a,a,2a12,i8,7e12.4,22i7,29e12.4)') trim(header),' ',gui_run_version, dll_run_version, &
+	istep, hour, vol_mm3, diameter_um, Ncells_type(1:2), &
     Nanoxia_dead(1:2), Naglucosia_dead(1:2), Ndrug_dead(1,1:2), &
     Ndrug_dead(2,1:2), Nradiation_dead(1:2), &
     Ntagged_anoxia(1:2), Ntagged_aglucosia(1:2), Ntagged_drug(1,1:2), &
@@ -475,8 +482,8 @@ call getClonoHypoxicCount(nclonohypoxic)
 clonohypoxic_percent_10 = (1000.*nclonohypoxic(i_hypoxia_cutoff))/TNviable
 call getGrowthCount(ngrowth)
 growth_percent_10 = (1000.*ngrowth(i_growth_cutoff))/Ncells
-call getNecroticFraction(necrotic_fraction,vol_cm3)
-necrotic_percent_10 = 1000.*necrotic_fraction
+!call getNecroticFraction(necrotic_fraction,vol_cm3)
+!necrotic_percent_10 = 1000.*necrotic_fraction
 do ityp = 1,Ncelltypes
 	if (Nlive(ityp) > 0) then
 		plate_eff(ityp) = real(Nviable(ityp))/Nlive(ityp)
@@ -1277,7 +1284,8 @@ do ichemo = 0,nvars-1
 	do x = x1, x2
 		k = k + 1
 		kcell = occupancy(x,y,z)%indx(1)
-		if (kcell <= OUTSIDE_TAG) then
+!		if (kcell <= OUTSIDE_TAG) then
+		if (kcell <= 0) then
 			ic_conc(k) = 0
 			cycle
 		else
