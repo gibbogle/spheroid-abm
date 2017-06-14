@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>7</number>
+           <number>4</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -2992,7 +2992,7 @@ padding: 8px
                </widget>
               </item>
               <item row="1" column="0">
-               <widget class="QMyLabel" name="infolabel_PARENT_CT1_17">
+               <widget class="QMyLabel" name="infolabel_PARENT_CT1_18">
                 <property name="text">
                  <string>Sensitises?</string>
                 </property>
@@ -5354,7 +5354,7 @@ padding: 8px
                </widget>
               </item>
               <item row="17" column="0">
-               <widget class="QMyLabel" name="infolabel_PARENT_CT1_18">
+               <widget class="QMyLabel" name="infolabel_PARENT_CT1_17">
                 <property name="maximumSize">
                  <size>
                   <width>130</width>
@@ -9385,7 +9385,7 @@ padding: 8px
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../monolayer_m-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/001_29.png</normaloff>:/icons/001_29.png</iconset>
    </property>
    <property name="text">
@@ -9400,7 +9400,7 @@ padding: 8px
   </action>
   <action name="action_run">
    <property name="icon">
-    <iconset resource="../../monolayer_m-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/001_59.png</normaloff>:/icons/001_59.png</iconset>
    </property>
    <property name="text">
@@ -9412,7 +9412,7 @@ padding: 8px
   </action>
   <action name="action_inputs">
    <property name="icon">
-    <iconset resource="../../monolayer_m-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/001_45.png</normaloff>:/icons/001_45.png</iconset>
    </property>
    <property name="text">
@@ -9424,7 +9424,7 @@ padding: 8px
   </action>
   <action name="action_outputs">
    <property name="icon">
-    <iconset resource="../../monolayer_m-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/Display2.png</normaloff>:/icons/Display2.png</iconset>
    </property>
    <property name="text">
@@ -9439,7 +9439,7 @@ padding: 8px
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../monolayer_m-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/cell2.png</normaloff>:/icons/cell2.png</iconset>
    </property>
    <property name="text">
@@ -9451,7 +9451,7 @@ padding: 8px
   </action>
   <action name="action_pause">
    <property name="icon">
-    <iconset resource="../../monolayer_m-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/001_07.png</normaloff>:/icons/001_07.png</iconset>
    </property>
    <property name="text">
@@ -9536,7 +9536,7 @@ padding: 8px
   </action>
   <action name="action_field">
    <property name="icon">
-    <iconset resource="../../monolayer_m-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/color.jpg</normaloff>:/icons/color.jpg</iconset>
    </property>
    <property name="text">
@@ -9553,7 +9553,7 @@ padding: 8px
   </action>
   <action name="action_FACS">
    <property name="icon">
-    <iconset resource="../../monolayer_m-abm/GUI/icons.qrc">
+    <iconset resource="icons.qrc">
      <normaloff>:/icons/FACS_234.png</normaloff>:/icons/FACS_234.png</iconset>
    </property>
    <property name="text">
@@ -9639,7 +9639,9 @@ padding: 8px
   <tabstop>spin_SEED1</tabstop>
   <tabstop>spin_SEED2</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="icons.qrc"/>
+ </resources>
  <connections/>
  <buttongroups>
   <buttongroup name="buttonGroup_drugtype"/>
