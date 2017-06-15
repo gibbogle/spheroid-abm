@@ -67,7 +67,7 @@ enddo
 end subroutine
 
 !---------------------------------------------------------------------------------------
-! Returns region volumes, max z-slice area in units of sites
+! Returns region volumes in cm3, max z-slice area in units of sites
 ! region 1: necrotic core
 ! region 2-4: necrotic core + low-oxygen cells
 ! region 5: whole spheroid
@@ -99,6 +99,8 @@ do iregion = 1,5
 		if (area(iz) > maxarea(iregion)) maxarea(iregion) = area(iz)
 	enddo
 enddo
+volume = volume*DELTA_X**3
+
 !write(*,'(a,i6,f10.1,f8.3)') 'getVolume: Ncells,volume: ',Ncells,volume,volume/Ncells
 end subroutine
 
