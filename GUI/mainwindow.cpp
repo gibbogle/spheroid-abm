@@ -3519,6 +3519,7 @@ void MainWindow::setupCellColours()
     int k2 = 1;
     comboBox_CELLCOLOUR_2->setCurrentIndex(k2);
     vtk->celltype_colour[2] = comboColour[k2];
+    LOG_MSG("Set celltype_colour");
 }
 
 //--------------------------------------------------------------------------------------------------------

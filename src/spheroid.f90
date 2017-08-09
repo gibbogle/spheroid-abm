@@ -1399,6 +1399,7 @@ chemo(:)%medium_M = ((Vm - Vr)/Vm)*chemo(:)%medium_M + Ve*Ce(:)
 total_volume = Vm - Vr + Ve + Vblob
 chemo(:)%medium_Cext = chemo(:)%medium_M/(total_volume - Vblob)
 chemo(:)%medium_Cbnd = chemo(:)%medium_Cext
+chemo(:)%medium_Cbnd_prev = chemo(:)%medium_Cext
 !chemo(OXYGEN+1:)%medium_Cext = chemo(OXYGEN+1:)%medium_M/(total_volume - Vblob)
 !chemo(OXYGEN)%medium_Cext = chemo(OXYGEN)%bdry_conc
 write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M

@@ -321,8 +321,8 @@ real(c_double) :: summaryData(*)
 integer(c_int) :: i_hypoxia_cutoff,i_growth_cutoff
 integer :: Nviable(MAX_CELLTYPES), Nlive(MAX_CELLTYPES)
 integer :: nhypoxic(3), nclonohypoxic(3), ngrowth(3), &
-    medium_oxygen, medium_glucose, medium_lactate, medium_drug(2,0:2), &
-    bdry_oxygen, bdry_glucose, bdry_lactate, bdry_drug(2,0:2)
+    medium_oxygen, medium_glucose, medium_lactate, medium_drug(2,0:2)
+!    bdry_oxygen, bdry_glucose, bdry_lactate, bdry_drug(2,0:2)
 integer :: TNanoxia_dead, TNaglucosia_dead, TNradiation_dead, TNdrug_dead(2),  TNviable, &
            Ntagged_anoxia(MAX_CELLTYPES), Ntagged_aglucosia(MAX_CELLTYPES), Ntagged_radiation(MAX_CELLTYPES), &
            Ntagged_drug(2,MAX_CELLTYPES), &

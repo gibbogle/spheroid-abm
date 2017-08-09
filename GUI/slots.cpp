@@ -158,8 +158,8 @@ void MainWindow::on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index)
 {
     QColor qcolor;
     qcolor = comboColour[index];
-//    vtk->celltype_colour[1] = qcolor;
-//    vtk->renderCells();
+    vtk->celltype_colour[1] = qcolor;
+    vtk->renderCells();
     sprintf(msg,"changed celltype_colour[1]: index: %d r,g,b: %d %d %d",index,qcolor.red(),qcolor.green(),qcolor.blue());
     LOG_MSG(msg);
 }
@@ -168,8 +168,8 @@ void MainWindow::on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index)
 //-----------------------------------------------------------------------------------------
 void MainWindow::on_comboBox_CELLCOLOUR_2_currentIndexChanged(int index)
 {
-//    vtk->celltype_colour[2] = comboColour[index];
-//    vtk->renderCells();
+    vtk->celltype_colour[2] = comboColour[index];
+    vtk->renderCells();
 }
 
 //------------------------------------------------------------------------------------------------------

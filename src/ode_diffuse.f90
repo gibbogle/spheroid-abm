@@ -1433,7 +1433,7 @@ real(REAL_KIND) :: rad, x, y, z, dz, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CH
 real(REAL_KIND) :: cntr(3), xc0, yc0, zc0
 integer :: ixb, iyb, izb
 integer :: i, ic, ichemo, n = 100
-real(REAL_KIND) :: alpha_Cbnd = 0.5
+real(REAL_KIND) :: alpha_Cbnd = 0.3
 !real(REAL_KIND) :: t_buffer = 3600	! one hour delay before applying smoothing to Cbnd
 integer :: ndrugs_present, drug_present(3*MAX_DRUGTYPES), drug_number(3*MAX_DRUGTYPES)
 integer :: idrug, iparent, im
@@ -1492,7 +1492,7 @@ do ic = 1,nchemo
 enddo
 
 chemo(OXYGEN)%medium_Cbnd = alpha_Cbnd*chemo(OXYGEN)%medium_Cbnd + (1 - alpha_Cbnd)*chemo(OXYGEN)%medium_Cbnd_prev
-!write(logmsg,'(a,i6,2e12.3)') 'O2 medium_Cbnd: ',istep,O2_Cbnd,chemo(OXYGEN)%medium_Cbnd
+!write(logmsg,'(a,i6,e12.3)') 'O2 medium_Cbnd: ',istep,chemo(OXYGEN)%medium_Cbnd
 !call logger(logmsg)
 chemo(OXYGEN)%medium_Cbnd_prev = chemo(OXYGEN)%medium_Cbnd
 
