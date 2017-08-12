@@ -1681,7 +1681,7 @@ if (.not.use_TCP .and. (mod(istep,6) == 0)) then
 endif
 
 if (saveprofile%active) then
-	if (istep*DELTA_T >= saveprofile%tstart + saveprofile%it*saveprofile%dt) then
+	if (istep*DELTA_T >= saveprofile%tstart + (saveprofile%it-1)*saveprofile%dt) then
 		call WriteProfileData
 		saveprofile%it = saveprofile%it + 1
 		if (saveprofile%it > saveprofile%nt) then
