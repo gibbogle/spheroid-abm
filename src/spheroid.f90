@@ -1690,7 +1690,7 @@ if (saveprofile%active) then
 	endif
 endif
 if (saveslice%active) then
-	if (istep*DELTA_T >= saveslice%tstart + saveslice%it*saveslice%dt) then
+	if (istep*DELTA_T >= saveslice%tstart + (saveslice%it-1)*saveslice%dt) then
 		call WriteSliceData
 		saveslice%it = saveslice%it + 1
 		if (saveslice%it > saveslice%nt) then
@@ -1699,7 +1699,7 @@ if (saveslice%active) then
 	endif
 endif
 if (saveFACS%active) then
-	if (istep*DELTA_T >= saveFACS%tstart + saveFACS%it*saveFACS%dt) then
+	if (istep*DELTA_T >= saveFACS%tstart + (saveFACS%it-1)*saveFACS%dt) then
 		call WriteFACSData
 		saveFACS%it = saveFACS%it + 1
 		if (saveFACS%it > saveFACS%nt) then
