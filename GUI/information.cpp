@@ -1,5 +1,6 @@
 #include "qmycheckbox.h"
 #include "qmylabel.h"
+#include "qmygroupbox.h"
 #include "params.h"
 #include "qdebug.h"
 

@@ -363,6 +363,13 @@ do kcell = 1,nlist
 			if (.not.dp%kills(ityp,im)) cycle
 			kill_model = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
 			Cdrug = cell_list(kcell)%conc(ichemo + im)
+			if (dbug_drug_flag) then	! fix the metabolite concentration
+				if (im == 1) then
+					Cdrug = 5.0e-4
+				else
+					Cdrug = 5.0e-4
+				endif
+			endif
 			Kd = dp%Kd(ityp,im)
 			n_O2 = dp%n_O2(ityp,im)
 			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)**n_O2/(dp%KO2(ityp,im)**n_O2 + C_O2**n_O2))*dp%Kmet0(ityp,im)

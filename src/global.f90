@@ -230,7 +230,7 @@ end type
 type savedata_type
     logical :: active
     character*(128) :: filebase
-    real(REAL_KIND) :: dt
+    real(REAL_KIND) :: dt, tstart
     integer :: nt, it
 end type
 
@@ -349,6 +349,7 @@ integer :: Nbnd
 integer :: seed(2)
 integer :: kcell_dbug
 integer :: icentral !extracellular variable index corresponding to a central site (NX/2,NY/2,NZ/2)
+logical :: dbug_drug_flag	! trying to debug Cho's SF problem
 
 integer :: istep_output_cell_data = 0
 

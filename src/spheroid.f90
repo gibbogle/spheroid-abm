@@ -146,6 +146,7 @@ Vex_min = 1.0
 Vex_max = 0
 kcell_dbug = 0
 medium_change_step = .false.
+dbug_drug_flag = .false.
 write(logmsg,'(a,i6)') 'Startup procedures have been executed: initial T cell count: ',Ncells0
 call logger(logmsg)
 
@@ -557,14 +558,17 @@ read(nfcell,*) alpha_shape
 read(nfcell,*) beta_shape
 read(nfcell,*) isaveprofiledata
 read(nfcell,*) saveprofile%filebase
+read(nfcell,*) saveprofile%tstart
 read(nfcell,*) saveprofile%dt
 read(nfcell,*) saveprofile%nt
 read(nfcell,*) isaveslicedata
 read(nfcell,*) saveslice%filebase
+read(nfcell,*) saveslice%tstart
 read(nfcell,*) saveslice%dt
 read(nfcell,*) saveslice%nt
 read(nfcell,*) isaveFACSdata
 read(nfcell,*) saveFACS%filebase
+read(nfcell,*) saveFACS%tstart
 read(nfcell,*) saveFACS%dt
 read(nfcell,*) saveFACS%nt
 
@@ -648,13 +652,16 @@ call logger(logmsg)
 
 saveprofile%active = (isaveprofiledata == 1)
 saveprofile%it = 1
-saveprofile%dt = 60*saveprofile%dt		! mins -> seconds
+saveprofile%dt = 60*saveprofile%dt			! mins -> seconds
+saveprofile%tstart = 60*saveprofile%tstart	! mins -> seconds
 saveslice%active = (isaveslicedata == 1)
 saveslice%it = 1
-saveslice%dt = 60*saveslice%dt			! mins -> seconds
+saveslice%dt = 60*saveslice%dt				! mins -> seconds
+saveslice%tstart = 60*saveslice%tstart		! mins -> seconds
 saveFACS%active = (isaveFACSdata == 1)
 saveFACS%it = 1
-saveFACS%dt = 60*saveFACS%dt			! mins -> seconds
+saveFACS%dt = 60*saveFACS%dt				! mins -> seconds
+saveFACS%tstart = 60*saveFACS%tstart		! mins -> seconds
 
 use_dropper = (iuse_drop == 1)
 
@@ -1266,7 +1273,9 @@ do kevent = 1,Nevents
 			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
 			V = E%volume
 			call MediumChange(V,C)
+			dbug_drug_flag = .false.
 		elseif (E%etype == DRUG_EVENT) then
+!			dbug_drug_flag = .true.
 			C = 0
 			C(OXYGEN) = E%O2conc
 			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
@@ -1672,7 +1681,7 @@ if (.not.use_TCP .and. (mod(istep,6) == 0)) then
 endif
 
 if (saveprofile%active) then
-	if (istep*DELTA_T >= saveprofile%it*saveprofile%dt) then
+	if (istep*DELTA_T >= saveprofile%tstart + saveprofile%it*saveprofile%dt) then
 		call WriteProfileData
 		saveprofile%it = saveprofile%it + 1
 		if (saveprofile%it > saveprofile%nt) then
@@ -1681,7 +1690,7 @@ if (saveprofile%active) then
 	endif
 endif
 if (saveslice%active) then
-	if (istep*DELTA_T >= saveslice%it*saveslice%dt) then
+	if (istep*DELTA_T >= saveslice%tstart + saveslice%it*saveslice%dt) then
 		call WriteSliceData
 		saveslice%it = saveslice%it + 1
 		if (saveslice%it > saveslice%nt) then
@@ -1690,7 +1699,7 @@ if (saveslice%active) then
 	endif
 endif
 if (saveFACS%active) then
-	if (istep*DELTA_T >= saveFACS%it*saveFACS%dt) then
+	if (istep*DELTA_T >= saveFACS%tstart + saveFACS%it*saveFACS%dt) then
 		call WriteFACSData
 		saveFACS%it = saveFACS%it + 1
 		if (saveFACS%it > saveFACS%nt) then

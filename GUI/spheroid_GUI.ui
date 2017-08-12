@@ -42,7 +42,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>4</number>
+           <number>6</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -6182,7 +6182,7 @@ padding: 8px
            <widget class="QMyCheckBox" name="cbox_SAVE_PROFILE_DATA">
             <property name="geometry">
              <rect>
-              <x>690</x>
+              <x>640</x>
               <y>20</y>
               <width>111</width>
               <height>18</height>
@@ -6191,99 +6191,8 @@ padding: 8px
             <property name="text">
              <string>Save profile data?</string>
             </property>
-           </widget>
-           <widget class="QLineEdit" name="text_SAVE_PROFILE_DATA_FILE_NAME">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>40</y>
-              <width>71</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>profile_data</string>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_FILE">
-            <property name="geometry">
-             <rect>
-              <x>655</x>
-              <y>40</y>
-              <width>71</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Base file name</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_SAVE_PROFILE_DATA_INTERVAL">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>70</y>
-              <width>41</width>
-              <height>20</height>
-             </rect>
-            </property>
-           </widget>
-           <widget class="QLabel" name="alabel_mins_2">
-            <property name="geometry">
-             <rect>
-              <x>780</x>
-              <y>70</y>
-              <width>21</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>mins</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_SAVE_PROFILE_DATA_NUMBER">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>100</y>
-              <width>31</width>
-              <height>20</height>
-             </rect>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_INTERVAL">
-            <property name="geometry">
-             <rect>
-              <x>680</x>
-              <y>70</y>
-              <width>51</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Interval</string>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_NUMBER">
-            <property name="geometry">
-             <rect>
-              <x>680</x>
-              <y>100</y>
-              <width>51</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Number</string>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
            <widget class="QLabel" name="alabel_timeseries">
@@ -6355,7 +6264,7 @@ padding: 8px
            <widget class="QMyCheckBox" name="cbox_SAVE_SLICE_DATA">
             <property name="geometry">
              <rect>
-              <x>690</x>
+              <x>640</x>
               <y>150</y>
               <width>111</width>
               <height>18</height>
@@ -6364,144 +6273,14 @@ padding: 8px
             <property name="text">
              <string>Save slice data?</string>
             </property>
-           </widget>
-           <widget class="QLineEdit" name="text_SAVE_SLICE_DATA_FILE_NAME">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>170</y>
-              <width>71</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>slice_data</string>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_SAVE_SLICE_DATA_INTERVAL">
-            <property name="geometry">
-             <rect>
-              <x>680</x>
-              <y>200</y>
-              <width>51</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Interval</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_SAVE_SLICE_DATA_NUMBER">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>230</y>
-              <width>31</width>
-              <height>20</height>
-             </rect>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_SAVE_SLICE_DATA_INTERVAL">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>200</y>
-              <width>41</width>
-              <height>20</height>
-             </rect>
-            </property>
-           </widget>
-           <widget class="QLabel" name="alabel_mins_3">
-            <property name="geometry">
-             <rect>
-              <x>775</x>
-              <y>200</y>
-              <width>21</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>mins</string>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_SAVE_SLICE_DATA_NUMBER">
-            <property name="geometry">
-             <rect>
-              <x>680</x>
-              <y>230</y>
-              <width>51</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Number</string>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_SAVE_SLICE_DATA_FILE">
-            <property name="geometry">
-             <rect>
-              <x>655</x>
-              <y>170</y>
-              <width>71</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Base file name</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_SAVE_FACS_DATA_NUMBER">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>360</y>
-              <width>31</width>
-              <height>20</height>
-             </rect>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_SAVE_FACS_DATA_INTERVAL">
-            <property name="geometry">
-             <rect>
-              <x>680</x>
-              <y>330</y>
-              <width>51</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Interval</string>
-            </property>
-           </widget>
-           <widget class="QLineEdit" name="line_SAVE_FACS_DATA_INTERVAL">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>330</y>
-              <width>41</width>
-              <height>20</height>
-             </rect>
+            <property name="checked">
+             <bool>true</bool>
             </property>
            </widget>
            <widget class="QMyCheckBox" name="cbox_SAVE_FACS_DATA">
             <property name="geometry">
              <rect>
-              <x>690</x>
+              <x>640</x>
               <y>280</y>
               <width>111</width>
               <height>18</height>
@@ -6510,61 +6289,483 @@ padding: 8px
             <property name="text">
              <string>Save FACS data?</string>
             </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
            </widget>
-           <widget class="QMyLabel" name="label_SAVE_FACS_DATA_FILE">
+           <widget class="QGroupBox" name="groupBox_saveprofile">
             <property name="geometry">
              <rect>
-              <x>655</x>
+              <x>640</x>
+              <y>40</y>
+              <width>311</width>
+              <height>101</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QLabel" name="alabel_mins_2">
+             <property name="geometry">
+              <rect>
+               <x>280</x>
+               <y>40</y>
+               <width>21</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>mins</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_PROFILE_DATA_NUMBER">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>70</y>
+               <width>31</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_INTERVAL">
+             <property name="geometry">
+              <rect>
+               <x>180</x>
+               <y>40</y>
+               <width>51</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Interval</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="text_SAVE_PROFILE_DATA_FILE_NAME">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>10</y>
+               <width>71</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>profile_data</string>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_NUMBER">
+             <property name="geometry">
+              <rect>
+               <x>40</x>
+               <y>70</y>
+               <width>51</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Number</string>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_TSTART">
+             <property name="geometry">
+              <rect>
+               <x>30</x>
+               <y>40</y>
+               <width>61</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Start time</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="alabel_mins_5">
+             <property name="geometry">
+              <rect>
+               <x>140</x>
+               <y>40</y>
+               <width>21</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>mins</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_PROFILE_DATA_TSTART">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>40</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>0</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_PROFILE_DATA_FILE">
+             <property name="geometry">
+              <rect>
+               <x>15</x>
+               <y>10</y>
+               <width>71</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Base file name</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_PROFILE_DATA_INTERVAL">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>230</x>
+               <y>40</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_saveslice">
+            <property name="geometry">
+             <rect>
+              <x>640</x>
+              <y>170</y>
+              <width>311</width>
+              <height>101</height>
+             </rect>
+            </property>
+            <property name="title">
+             <string/>
+            </property>
+            <widget class="QLabel" name="alabel_mins_3">
+             <property name="geometry">
+              <rect>
+               <x>280</x>
+               <y>40</y>
+               <width>21</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>mins</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_SLICE_DATA_TSTART">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>40</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>0</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_SLICE_DATA_FILE">
+             <property name="geometry">
+              <rect>
+               <x>15</x>
+               <y>10</y>
+               <width>71</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Base file name</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="text_SAVE_SLICE_DATA_FILE_NAME">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>10</y>
+               <width>71</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>slice_data</string>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_SLICE_DATA_INTERVAL">
+             <property name="geometry">
+              <rect>
+               <x>185</x>
+               <y>40</y>
+               <width>51</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Interval</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="alabel_mins_6">
+             <property name="geometry">
+              <rect>
+               <x>140</x>
+               <y>40</y>
+               <width>21</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>mins</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_SLICE_DATA_INTERVAL">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>235</x>
+               <y>40</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_SLICE_DATA_NUMBER">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>70</y>
+               <width>31</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_SLICE_DATA_NUMBER">
+             <property name="geometry">
+              <rect>
+               <x>40</x>
+               <y>70</y>
+               <width>51</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Number</string>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_SLICE_DATA_TSTART">
+             <property name="geometry">
+              <rect>
+               <x>30</x>
+               <y>40</y>
+               <width>61</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Start time</string>
+             </property>
+            </widget>
+           </widget>
+           <widget class="QGroupBox" name="groupBox_savefacs">
+            <property name="geometry">
+             <rect>
+              <x>640</x>
               <y>300</y>
-              <width>71</width>
-              <height>20</height>
+              <width>311</width>
+              <height>101</height>
              </rect>
             </property>
-            <property name="text">
-             <string>Base file name</string>
+            <property name="title">
+             <string/>
             </property>
-           </widget>
-           <widget class="QLineEdit" name="text_SAVE_FACS_DATA_FILE_NAME">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="geometry">
-             <rect>
-              <x>730</x>
-              <y>300</y>
-              <width>71</width>
-              <height>20</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>facs_data</string>
-            </property>
-           </widget>
-           <widget class="QLabel" name="alabel_mins_4">
-            <property name="geometry">
-             <rect>
-              <x>775</x>
-              <y>330</y>
-              <width>21</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>mins</string>
-            </property>
-           </widget>
-           <widget class="QMyLabel" name="label_SAVE_FACS_DATA_NUMBER">
-            <property name="geometry">
-             <rect>
-              <x>680</x>
-              <y>360</y>
-              <width>51</width>
-              <height>21</height>
-             </rect>
-            </property>
-            <property name="text">
-             <string>Number</string>
-            </property>
+            <widget class="QLabel" name="alabel_mins_4">
+             <property name="geometry">
+              <rect>
+               <x>280</x>
+               <y>40</y>
+               <width>21</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>mins</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_FACS_DATA_TSTART">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>40</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>0</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_FACS_DATA_FILE">
+             <property name="geometry">
+              <rect>
+               <x>15</x>
+               <y>10</y>
+               <width>71</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Base file name</string>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_FACS_DATA_TSTART">
+             <property name="geometry">
+              <rect>
+               <x>30</x>
+               <y>40</y>
+               <width>61</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Start time</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_FACS_DATA_NUMBER">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>70</y>
+               <width>31</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_FACS_DATA_INTERVAL">
+             <property name="geometry">
+              <rect>
+               <x>185</x>
+               <y>40</y>
+               <width>51</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Interval</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="text_SAVE_FACS_DATA_FILE_NAME">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>10</y>
+               <width>71</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>facs_data</string>
+             </property>
+            </widget>
+            <widget class="QLineEdit" name="line_SAVE_FACS_DATA_INTERVAL">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="geometry">
+              <rect>
+               <x>235</x>
+               <y>40</y>
+               <width>41</width>
+               <height>20</height>
+              </rect>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+            <widget class="QLabel" name="alabel_mins_7">
+             <property name="geometry">
+              <rect>
+               <x>140</x>
+               <y>40</y>
+               <width>21</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>mins</string>
+             </property>
+            </widget>
+            <widget class="QMyLabel" name="label_SAVE_FACS_DATA_NUMBER">
+             <property name="geometry">
+              <rect>
+               <x>40</x>
+               <y>70</y>
+               <width>51</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Number</string>
+             </property>
+            </widget>
            </widget>
           </widget>
           <widget class="QWidget" name="tab_run">
@@ -9622,15 +9823,15 @@ padding: 8px
    </slots>
   </customwidget>
   <customwidget>
+   <class>QMyGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>qmygroupbox.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
    <class>QMyCheckBox</class>
    <extends>QCheckBox</extends>
    <header location="global">qmycheckbox.h</header>
-  </customwidget>
-  <customwidget>
-   <class>QMyGroupBox</class>
-   <extends>QGroupBox</extends>
-   <header>qmylabel.h</header>
-   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>
