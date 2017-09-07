@@ -126,11 +126,13 @@ private slots:
     void onSelectCellConstituent();
     void onSelectFieldConstituent();
 
-    void on_verticalSliderTransparency_sliderMoved(int position);
+    void on_verticalSliderTransparency1_sliderMoved(int position);
+    void on_verticalSliderTransparency2_sliderMoved(int position);
     void on_checkBox_CELLDISPLAY_1_toggled(bool display);
     void on_checkBox_CELLDISPLAY_2_toggled(bool display);
     void on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index);
     void on_comboBox_CELLCOLOUR_2_currentIndexChanged(int index);
+    void on_checkBox_celltypecolours2D_toggled(bool checked);
 
     void on_cbox_SAVE_PROFILE_DATA_toggled(bool checked);
     void on_cbox_SAVE_SLICE_DATA_toggled(bool checked);

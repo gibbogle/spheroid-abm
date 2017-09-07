@@ -76,5 +76,7 @@ namespace Global
     bool showingField;
     bool recordingField;
 
+    bool celltypecolours2D;
+    QColor celltype_colour[3];
 
 } // namespace Global

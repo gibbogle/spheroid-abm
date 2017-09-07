@@ -158,6 +158,7 @@ void MainWindow::on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index)
 {
     QColor qcolor;
     qcolor = comboColour[index];
+    Global::celltype_colour[1] = qcolor;    // bad to duplicate this!
     vtk->celltype_colour[1] = qcolor;
     vtk->renderCells();
     sprintf(msg,"changed celltype_colour[1]: index: %d r,g,b: %d %d %d",index,qcolor.red(),qcolor.green(),qcolor.blue());
@@ -168,7 +169,10 @@ void MainWindow::on_comboBox_CELLCOLOUR_1_currentIndexChanged(int index)
 //-----------------------------------------------------------------------------------------
 void MainWindow::on_comboBox_CELLCOLOUR_2_currentIndexChanged(int index)
 {
-    vtk->celltype_colour[2] = comboColour[index];
+    QColor qcolor;
+    qcolor = comboColour[index];
+    Global::celltype_colour[2] = qcolor;    // bad to duplicate this!
+    vtk->celltype_colour[2] = qcolor;
     vtk->renderCells();
 }
 
@@ -326,9 +330,14 @@ void MainWindow::onSelectFieldConstituent()
     }
 }
 
-void MainWindow::on_verticalSliderTransparency_sliderMoved(int position)
+void MainWindow::on_verticalSliderTransparency1_sliderMoved(int position)
 {
-//    vtk->setOpacity(position);
+    vtk->setOpacity(1,position);
+}
+
+void MainWindow::on_verticalSliderTransparency2_sliderMoved(int position)
+{
+    vtk->setOpacity(2,position);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -404,4 +413,11 @@ void MainWindow:: on_cbox_SAVE_FACS_DATA_toggled(bool checked)
 //    line_SAVE_FACS_DATA_INTERVAL->setEnabled(checked);
 //    line_SAVE_FACS_DATA_NUMBER->setEnabled(checked);
     groupBox_savefacs->setEnabled(checked);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_celltypecolours2D_toggled(bool checked)
+{
+    Global::celltypecolours2D = checked;
 }

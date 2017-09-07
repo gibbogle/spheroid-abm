@@ -629,23 +629,36 @@ void Field::displayField(int hr, int *res)
         d = 2*a*radius;
 //        sprintf(msg,"Cell: %d x,y: %f %f radius: %f xp,yp: %f %f",i,x,y,radius,xp,yp);
 //        LOG_MSG(msg);
-        if (fdata.cell_data[i].status == 0) {
-            rgbcol[0] = 0;
-            rgbcol[1] = 200;
-            rgbcol[2] = 32;
-        } else if (fdata.cell_data[i].status == 1) {
+        int status = fdata.cell_data[i].status;
+        if (status == 0  || status == 10) {
+            if (!Global::celltypecolours2D) {   // use original colour (light green)
+                rgbcol[0] = 0;
+                rgbcol[1] = 255;
+                rgbcol[2] = 0;
+            } else if (status == 0) {           // use colours from 3D screen
+                QColor color = Global::celltype_colour[1];
+                rgbcol[0] = color.red();
+                rgbcol[1] = color.green();
+                rgbcol[2] = color.blue();
+            } else {
+                QColor color = Global::celltype_colour[2];
+                rgbcol[0] = color.red();
+                rgbcol[1] = color.green();
+                rgbcol[2] = color.blue();
+            }
+        } else if (status == 1) {
             rgbcol[0] = 50;
             rgbcol[1] = 100;
             rgbcol[2] = 32;
-        } else if (fdata.cell_data[i].status == 2 || fdata.cell_data[i].status == 4) {
+        } else if (status == 2 || status == 4) {
             rgbcol[0] = 0;
             rgbcol[1] = 0;
             rgbcol[2] = 255;
-        } else if (fdata.cell_data[i].status == 3) {
+        } else if (status == 3) {
             rgbcol[0] = 255;
             rgbcol[1] = 0;
             rgbcol[2] = 255;
-        } else if (fdata.cell_data[i].status >= 10) {   // tagged to die of treatment
+        } else if (status > 10) {   // tagged to die of treatment
             rgbcol[0] = 255;
             rgbcol[1] = 150;
             rgbcol[2] = 0;

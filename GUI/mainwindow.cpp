@@ -3513,10 +3513,10 @@ void MainWindow::setupCellColours()
 //    comboBox_CELLCOLOUR_2->addItem("blue");
 //    comboBox_CELLCOLOUR_2->addItem("purple");
 //    comboBox_CELLCOLOUR_2->addItem("brown");
-    int k1 = 0;
+    int k1 = 3;
     comboBox_CELLCOLOUR_1->setCurrentIndex(k1);
     vtk->celltype_colour[1] = comboColour[k1];
-    int k2 = 1;
+    int k2 = 0;
     comboBox_CELLCOLOUR_2->setCurrentIndex(k2);
     vtk->celltype_colour[2] = comboColour[k2];
     LOG_MSG("Set celltype_colour");

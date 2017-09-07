@@ -42,7 +42,7 @@ padding: 8px
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -79,7 +79,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>6</number>
+           <number>0</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -8727,14 +8727,14 @@ padding: 8px
          <string/>
         </property>
        </widget>
-       <widget class="QSlider" name="verticalSliderTransparency">
+       <widget class="QSlider" name="verticalSliderTransparency1">
         <property name="enabled">
          <bool>true</bool>
         </property>
         <property name="geometry">
          <rect>
-          <x>890</x>
-          <y>30</y>
+          <x>1000</x>
+          <y>160</y>
           <width>19</width>
           <height>221</height>
          </rect>
@@ -8752,8 +8752,8 @@ padding: 8px
        <widget class="QLabel" name="alabel_Transparency">
         <property name="geometry">
          <rect>
-          <x>880</x>
-          <y>260</y>
+          <x>1020</x>
+          <y>390</y>
           <width>71</width>
           <height>16</height>
          </rect>
@@ -8885,14 +8885,26 @@ padding: 8px
          </property>
         </widget>
        </widget>
-       <widget class="QWidget" name="widget_dialog" native="true">
+       <widget class="QSlider" name="verticalSliderTransparency2">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="geometry">
          <rect>
-          <x>860</x>
-          <y>330</y>
-          <width>120</width>
-          <height>80</height>
+          <x>1080</x>
+          <y>160</y>
+          <width>19</width>
+          <height>221</height>
          </rect>
+        </property>
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="sliderPosition">
+         <number>0</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
         </property>
        </widget>
       </widget>
@@ -9096,6 +9108,32 @@ padding: 8px
         </property>
         <property name="checked">
          <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_celltypecolours2D">
+        <property name="geometry">
+         <rect>
+          <x>710</x>
+          <y>230</y>
+          <width>181</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Different colours for cell types?</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="alabel_2Dcolours">
+        <property name="geometry">
+         <rect>
+          <x>710</x>
+          <y>260</y>
+          <width>201</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>(Colours are selected on the 3D screen)</string>
         </property>
        </widget>
       </widget>

@@ -422,6 +422,9 @@ if (diam_count_limit > LIMIT_THRESHOLD) then
 elseif (diam_count_limit > 0) then
 	if (diam_um > diam_count_limit) limit_stop = .true.
 endif
+if (Ncelltypes == 2) then
+	call get_clumpiness
+endif
 
 !ndoublings = 0
 !doubling_time_sum = 0
@@ -530,8 +533,8 @@ if (diam_count_limit > LIMIT_THRESHOLD) then
 elseif (diam_count_limit > 0) then
 	if (diam_um > diam_count_limit) limit_stop = .true.
 endif
-if (Ncelltypes == 2 .and. celltype_fraction(2) > 0) then
-	call get_clumpiness(2)
+if (Ncelltypes == 2) then
+	call get_clumpiness
 endif
 end subroutine
 
@@ -991,6 +994,7 @@ endif
 end subroutine
 
 !--------------------------------------------------------------------------------
+! A growing cell has status 0 for celltype 1, 9 for celltype 2
 !--------------------------------------------------------------------------------
 function getstatus(cp) result(status)
 type(cell_type), pointer :: cp
@@ -1001,18 +1005,22 @@ if (cp%anoxia_tag) then
 elseif (cp%aglucosia_tag) then
 	status = 4	! tagged to die of aglucosia
 elseif (cp%radiation_tag) then
-	status = 10
-elseif (cp%drug_tag(1)) then
 	status = 11
 elseif (cp%drug_tag(1)) then
 	status = 12
+elseif (cp%drug_tag(2)) then
+	status = 13
 elseif (cp%conc(OXYGEN) < hypoxia_threshold) then
 	status = 1	! radiobiological hypoxia
 !elseif (cp%mitosis > 0) then
 elseif (cp%volume > 0.9*cp%divide_volume) then  ! just a surrogate for mitosis
 	status = 3	! in mitosis
 else
-	status = 0
+	if (cp%celltype == 1) then
+		status = 0
+	else
+		status = 10
+	endif
 endif
 end function
 
@@ -2092,47 +2100,64 @@ end subroutine
 
 !-----------------------------------------------------------------------------------------
 !-----------------------------------------------------------------------------------------
-subroutine get_clumpiness(ityp)
+subroutine get_clumpiness
 integer :: ityp
-integer :: ntypcells, kcell0, kcell, k0, k, n, ix, iy, iz, site0(3), site(3)
-real(REAL_KIND) :: df, fraction, dist(0:8)
+integer :: ntypcells(2), kcell0, kcell, k0, k, n, ix, iy, iz, site0(3), site(3)
+real(REAL_KIND) :: df, cfraction(2), dist(2,0:26)
+logical :: celltype_present(2)
 type(cell_type), pointer :: cp
 
+do ityp = 1,2
+	celltype_present(ityp) = (celltype_fraction(ityp) > 0)
+enddo
+
+write(nflog,*) 'get_clumpiness: celltype_fraction: ',celltype_fraction(1:Ncelltypes)
 ntypcells = 0
-fraction = 0
+cfraction = 0
 dist = 0
 do kcell0 = 1,nlist
 	cp => cell_list(kcell0)
 	if (cp%state == DEAD) cycle
-	if (cp%celltype == ityp) then
-		ntypcells = ntypcells + 1
-		n = 0
-		site0 = cell_list(kcell0)%site
-		do ix = -1,1,2
-			do iy = -1,1,2
-				do iz = -1,1,2
-					site = site0 + [ix,iy,iz]
-					kcell = occupancy(site(1),site(2),site(3))%indx(1)
-					if (kcell > 0) then
-						if (cell_list(kcell)%celltype == ityp) then
-							n = n+1
+	do ityp = 1,2
+		if (cp%celltype == ityp) then
+			ntypcells(ityp) = ntypcells(ityp) + 1
+			n = 0
+			site0 = cell_list(kcell0)%site
+			do ix = -1,1
+				do iy = -1,1
+					do iz = -1,1
+						if (ix == 0 .and. iy == 0 .and. iz == 0) cycle
+						site = site0 + [ix,iy,iz]
+						kcell = occupancy(site(1),site(2),site(3))%indx(1)
+						if (kcell > 0) then
+							if (cell_list(kcell)%celltype == ityp) then
+								n = n+1
+							endif
 						endif
-					endif
+					enddo
 				enddo
 			enddo
-		enddo
-		df = n/8.
-		fraction = fraction + df
-		dist(n) = dist(n) + 1
+			df = n/26.
+			cfraction(ityp) = cfraction(ityp) + df
+			dist(ityp,n) = dist(ityp,n) + 1
+		endif
+	enddo
+enddo
+write(nflog,*) 'ntypcells: ',ntypcells
+do ityp = 1,2
+	if (celltype_present(ityp) .and. ntypcells(ityp) > 0) then
+		dist(ityp,:) = dist(ityp,:)/ntypcells(ityp)
+		cfraction(ityp) = cfraction(ityp)/ntypcells(ityp)
+	else
+		cfraction(ityp) = 0
 	endif
 enddo
-
-dist = dist/ntypcells
 write(nflog,*)
 write(nflog,'(a)') 'Clumpiness:'
-write(nflog,'(a,i1,f8.3)') 'Actual fraction of activator cells: celltype: ',ityp,real(ntypcells)/Ncells
-write(nflog,'(a,f8.3)') 'Average fraction of neighbour activator cells: ',fraction/ntypcells
-write(nflog,'(a,9f8.4)') 'Probability of n = 0,..8: ',dist(0:8)
+write(nflog,'(a,2f8.3)') 'Actual fraction of cells of each type: ',real(ntypcells)/Ncells
+write(nflog,'(a,2f8.3)') 'Average fractions of neighbour cells: ',cfraction(:)
+write(nflog,'(a,27f8.4)') 'Type 1 probability of n = 0,..26: ',dist(1,0:26)
+write(nflog,'(a,27f8.4)') 'Type 2 probability of n = 0,..26: ',dist(2,0:26)
 end subroutine
 
 !-----------------------------------------------------------------------------------------
