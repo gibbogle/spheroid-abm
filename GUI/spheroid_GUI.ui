@@ -41,6 +41,9 @@ padding: 8px
    <layout class="QGridLayout" name="gridLayout_GLGL5">
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <property name="currentIndex">
        <number>3</number>
       </property>
@@ -9111,6 +9114,9 @@ padding: 8px
         </property>
        </widget>
        <widget class="QCheckBox" name="checkBox_celltypecolours2D">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>710</x>
@@ -9134,6 +9140,22 @@ padding: 8px
         </property>
         <property name="text">
          <string>(Colours are selected on the 3D screen)</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_only2colours2D">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="geometry">
+         <rect>
+          <x>710</x>
+          <y>300</y>
+          <width>171</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Display only cell-type colours?</string>
         </property>
        </widget>
       </widget>

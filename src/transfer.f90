@@ -790,6 +790,7 @@ if (axis == X_AXIS) then
 			        cdata(nc)%radius = rad
 			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(2)- 1,NZ - cp%site(3)]
                     cdata(nc)%status = getstatus(cp)
+                    cdata(nc)%celltype = cp%celltype
 			    endif
 			enddo
 			enddo
@@ -828,6 +829,7 @@ elseif (axis == Y_AXIS) then
 			        cdata(nc)%radius = rad
 			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1) - 1, NZ - cp%site(3)]
                     cdata(nc)%status = getstatus(cp)
+                    cdata(nc)%celltype = cp%celltype
 			    endif
 			enddo
 			enddo
@@ -901,6 +903,7 @@ elseif (axis == Z_AXIS) then
 !			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1)-1.5,cp%site(2)-1.5]
 			        cdata(nc)%centre(1:2) = DELTA_X*[cp%site(1)-1,cp%site(2)-1]
                     cdata(nc)%status = getstatus(cp)
+                    cdata(nc)%celltype = cp%celltype
 			    endif
 			 enddo
 			 enddo
@@ -994,7 +997,7 @@ endif
 end subroutine
 
 !--------------------------------------------------------------------------------
-! A growing cell has status 0 for celltype 1, 9 for celltype 2
+! A growing cell has status 0 for celltype 1, 10 for celltype 2
 !--------------------------------------------------------------------------------
 function getstatus(cp) result(status)
 type(cell_type), pointer :: cp

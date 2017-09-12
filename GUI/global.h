@@ -132,6 +132,7 @@ namespace Global
     extern bool recordingField;
 
     extern bool celltypecolours2D;
+    extern bool only2colours2D;
     extern QColor celltype_colour[3];
 
 } // namespace Global

@@ -416,8 +416,23 @@ void MainWindow:: on_cbox_SAVE_FACS_DATA_toggled(bool checked)
 }
 
 //--------------------------------------------------------------------------------------------------------
+// Note: with field->displayField, clicking the checkbox can cause a crash.  Not sure why.
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::on_checkBox_celltypecolours2D_toggled(bool checked)
 {
+    int res;
     Global::celltypecolours2D = checked;
+//    field->slice_changed = true;
+//    if (started) field->displayField(hour,&res);
+    checkBox_only2colours2D->setEnabled(checked);
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_only2colours2D_toggled(bool checked)
+{
+    int res;
+    Global::only2colours2D = checked;
+//    field->slice_changed = true;
+//    if (started) field->displayField(hour,&res);
 }
