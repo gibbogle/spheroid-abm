@@ -359,7 +359,7 @@ do kcell = 1,nlist
 		survival_prob = 1
 		ctot = 0
 		do im = 0,2
-			if (.not.flag) write(nflog,*) 'im: ',im
+!			if (.not.flag) write(nflog,*) 'im: ',im
 			if (.not.dp%kills(ityp,im)) cycle
 			kill_model = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
 			Cdrug = cell_list(kcell)%conc(ichemo + im)
@@ -373,7 +373,7 @@ do kcell = 1,nlist
 			Kd = dp%Kd(ityp,im)
 			n_O2 = dp%n_O2(ityp,im)
 			kmet = (1 - dp%C2(ityp,im) + dp%C2(ityp,im)*dp%KO2(ityp,im)**n_O2/(dp%KO2(ityp,im)**n_O2 + C_O2**n_O2))*dp%Kmet0(ityp,im)
-			if (.not.flag) write(nflog,'(a,6e12.3)') 'kmet: ',dp%C2(ityp,im),dp%KO2(ityp,im),n_O2,C_O2,dp%Kmet0(ityp,im),kmet
+!			if (.not.flag) write(nflog,'(a,6e12.3)') 'kmet: ',dp%C2(ityp,im),dp%KO2(ityp,im),n_O2,C_O2,dp%Kmet0(ityp,im),kmet
 			dMdt = kmet*Cdrug
 			if (new_kill_method) then	! Actually this is exactly the same as the original method.
 				if (kill_model == 1) then
@@ -391,8 +391,8 @@ do kcell = 1,nlist
 			else
 				call getDrugKillProb(kill_model,Kd,dMdt,Cdrug,dt,dkill_prob(im))
 				if (.not.flag) then
-					write(nflog,'(a,5e12.3)') 'Cdrug,Kd,kmet,dMdt,dt: ',Cdrug,Kd,kmet,dMdt,dt
-					write(nflog,'(a,e12.3)') 'dkill_prob: ',dkill_prob(im)
+!					write(nflog,'(a,5e12.3)') 'Cdrug,Kd,kmet,dMdt,dt: ',Cdrug,Kd,kmet,dMdt,dt
+!					write(nflog,'(a,e12.3)') 'dkill_prob: ',dkill_prob(im)
 				endif
 				survival_prob = survival_prob*(1 - dkill_prob(im))
 			endif
@@ -402,14 +402,14 @@ do kcell = 1,nlist
 			survival_prob = exp(-ctot*dt)
 		endif
 		kill_prob = 1 - survival_prob
-		if (.not.flag) write(nflog,*) 'kill_prob: ',kill_prob
+!		if (.not.flag) write(nflog,*) 'kill_prob: ',kill_prob
 	    if (.not.cell_list(kcell)%drug_tag(idrug) .and. par_uni(kpar) < kill_prob) then		! don't tag more than once
 			cell_list(kcell)%p_drug_death(idrug) = death_prob
 			cell_list(kcell)%drug_tag(idrug) = .true.
             Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1
             ntagged = ntagged + 1
             ! Here we want to record (in .res file, nfout) the drug concs: cell_list(kcell)%conc(ichemo:ichemo+2) and dkill_prob(:)
-            write(nfout,'(2i6,3f10.6,4f8.4)') Ndrug_tag(idrug,ityp),kcell,cell_list(kcell)%conc(ichemo:ichemo+2),dkill_prob(:),kill_prob
+!            write(nfout,'(2i6,3f10.6,4f8.4)') Ndrug_tag(idrug,ityp),kcell,cell_list(kcell)%conc(ichemo:ichemo+2),dkill_prob(:),kill_prob
 !            write(nfout,'(2i6,5e12.3)') istep,kcell,kill_prob,C_O2,cell_list(kcell)%conc(ichemo:ichemo+2)
 		endif
 	enddo

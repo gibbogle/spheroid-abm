@@ -181,9 +181,13 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
 "Medium volume",
 "Volume of the medium in which the spheroid is growing."},
 
-{"UNSTIRRED_LAYER", 0.01, 0, 0,
-"Unstirred layer width",
-"Thickness of the unstirred layer around the spheroid (cm)."},
+{"C_O2_BOLUS", 0.0, 0, 0,
+"O2 bolus conc",
+"Initial O2 conc in medium after drug dose, for test case #1."},
+
+//{"UNSTIRRED_LAYER", 0.01, 0, 0,
+//"Unstirred layer width",
+//"Thickness of the unstirred layer around the spheroid (cm)."},
 
 {"VDIVIDE0", 1.6, 0, 0,
 "Nominal divide volume",

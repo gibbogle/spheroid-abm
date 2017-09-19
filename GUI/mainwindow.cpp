@@ -1188,10 +1188,10 @@ void MainWindow::setFields()
             line_MEDIUM_VOLUME->setText(str);
             line_MEDIUM_VOLUME->setEnabled(false);
         }
-        line_UNSTIRRED_LAYER->setEnabled(false);
+//        line_UNSTIRRED_LAYER->setEnabled(false);
     } else if (ON_LATTICE) {
         line_MEDIUM_VOLUME->setEnabled(true);
-        line_UNSTIRRED_LAYER->setEnabled(true);
+//        line_UNSTIRRED_LAYER->setEnabled(true);
         line_FLUID_FRACTION->setEnabled(true);
         cbox_USE_RELAX->setEnabled(true);
         cbox_USE_PAR_RELAX->setEnabled(true);

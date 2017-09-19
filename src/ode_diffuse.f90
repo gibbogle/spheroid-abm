@@ -1528,22 +1528,6 @@ if (zero_O2) then
 	chemo(OXYGEN)%medium_Cbnd = 0
 endif
 
-!write(nflog,'(a,e12.3)') 'UpdateCbnd_FD: DRUG_A: medium_Cext: ',chemo(DRUG_A)%medium_Cext
-
-!csum = 0
-!do ixb = ixb0-1,ixb0+1
-!do iyb = iyb0-1,iyb0+1
-!do izb = izb0-1,izb0+1
-!    x = (ixb-1)*DXB
-!    y = (iyb-1)*DXB
-!    z = (izb-1)*DXB
-!    p = [x, y, z]
-!	call getConc(p,c)
-!	if (ixb /= ixb0 .or. iyb /= iyb0 .or. izb /= izb0) csum = csum + c
-!!    write(*,'(a,3i6,2e12.3)') 'O2 neighbours: ',ixb,iyb,izb,DXB,c(OXYGEN)
-!enddo
-!enddo
-!enddo
 end subroutine
 
 !---------------------------------------------------------------------------------- 

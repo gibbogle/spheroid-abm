@@ -449,7 +449,8 @@ DELTA_X = DXmm/10							! mm -> cm
 Vsite_cm3 = DELTA_X*DELTA_X*DELTA_X			! total site volume (cm^3)
 read(nfcell,*) fluid_fraction				! fraction of the (non-necrotic) tumour that is fluid
 read(nfcell,*) medium_volume0				! initial total volume (medium + spheroid) (cm^3)
-read(nfcell,*) d_layer						! thickness of the unstirred layer around the spheroid (cm)
+!read(nfcell,*) d_layer						! thickness of the unstirred layer around the spheroid (cm) NOW MADE CONSTANT
+read(nfcell,*) C_O2_bolus					! for special_case(1), medium O2 conc on drug dose
 read(nfcell,*) Vdivide0						! nominal cell volume multiple for division
 read(nfcell,*) dVdivide						! variation about nominal divide volume
 read(nfcell,*) MM_THRESHOLD					! O2 concentration threshold Michaelis-Menten "soft-landing" (uM)
@@ -1257,6 +1258,7 @@ type(event_type) :: E
 
 !write(logmsg,*) 'ProcessEvent'
 !call logger(logmsg)
+drug_O2_bolus = .false.
 do kevent = 1,Nevents
 	E = event(kevent)
 	if (t_simulation >= E%time .and. .not.E%done) then
@@ -1278,6 +1280,9 @@ do kevent = 1,Nevents
 !			dbug_drug_flag = .true.
 			C = 0
 			C(OXYGEN) = E%O2conc
+			if (test_case(1)) then
+				drug_O2_bolus = .true.
+			endif
 			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
 			ichemo = E%ichemo
 			idrug = E%idrug
@@ -1387,14 +1392,16 @@ end subroutine
 subroutine MediumChange(Ve,Ce)
 real(REAL_KIND) :: Ve, Ce(:)
 real(REAL_KIND) :: R, Vm, Vr, Vblob
-real(REAL_KIND) :: O2_drop_factor
+real(REAL_KIND) :: O2_bdry
 integer :: ichemo, kcell, ix, iy, iz
 type(cell_type), pointer :: cp
-logical :: reset_O2_concs = .false.
 logical :: new_fix = .true.
-logical :: O2_drop
 
 write(nflog,*) 'MediumChange:'
+O2_bdry = Ce(OXYGEN)
+if (drug_O2_bolus) then
+	Ce(OXYGEN) = C_O2_bolus
+endif
 write(nflog,'(a,f8.4)') 'Ve: ',Ve
 write(nflog,'(a,13f8.4)') 'Ce: ',Ce
 write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
@@ -1427,27 +1434,9 @@ if (use_FD) then	! need to set medium concentrations in Cave
 		endif
 	enddo
 endif
-O2_drop = (Ce(OXYGEN) < chemo(OXYGEN)%bdry_conc)
-if (O2_drop) then
-	O2_drop_factor = Ce(OXYGEN)/chemo(OXYGEN)%bdry_conc
-endif
-chemo(OXYGEN)%bdry_conc = Ce(OXYGEN)
-!t_lastmediumchange = istep*DELTA_T
+chemo(OXYGEN)%bdry_conc = O2_bdry	!Ce(OXYGEN)
 t_lastmediumchange = t_simulation
 
-! This is new code
-! Note: bdry_conc = 0 is a special case, no framp needed
-if (chemo(OXYGEN)%bdry_conc > 0) then
-	if (O2_drop .and. reset_O2_concs) then		! reset IC and EC for O2 only
-		do kcell = 1,nlist
-			cp => cell_list(kcell)
-			if (cp%state == DEAD) cycle
-			cp%conc(OXYGEN) = O2_drop_factor*cp%conc(OXYGEN)
-			cp%Cex(OXYGEN) = O2_drop_factor*cp%Cex(OXYGEN)
-		enddo
-	endif
-!	medium_change_step = .true.
-endif
 medium_change_step = .true.
 
 if (.not.new_fix) return
@@ -1528,6 +1517,7 @@ logical :: dbug
 !call logger('simulate_step')
 !write(*,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
 !write(nflog,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
+write(nflog,'(a,3e12.3)') 'OXYGEN: ',chemo(OXYGEN)%bdry_conc,chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
 dbug = .false.
 if (Ncells == 0) then
 	call logger('Ncells = 0')
