@@ -62,14 +62,11 @@ call logger(logmsg)
 #endif
 
 ! Set up grid alignment
-NY = NX
-NZ = NX
 x0 = (NX + 1.0)/2.
 y0 = (NY + 1.0)/2.
 z0 = (NZ + 1.0)/2.
 blob_centre = [x0,y0,z0]   ! (units = grids)
 
-DXB = 1.0e-4*DXB	! um -> cm
 ixb0 = (1 + NXB)/2
 iyb0 = (1 + NYB)/2
 izb0 = 6
@@ -672,8 +669,14 @@ if (itestcase /= 0) then
     test_case(itestcase) = .true.
 endif
 
-if (mod(NX,2) /= 0) NX = NX+1					! ensure that NX is even
+if (mod(NX,2) /= 0) NX = NX+1					! ensure that NX is even 
+NY = NX
+NZ = NX
 NYB = NXB
+DXB = 1.0e-4*DXB	! um -> cm
+write(nflog,'(a,3i4,e12.3)') 'Coarse grid: NXB,NYB,NZB,DXB: ',NXB,NYB,NZB,DXB
+write(nflog,'(a,3i4,e12.3)') 'Lattice grid: NX,NY,NZ,DELTA_X: ',NX,NY,NZ,DELTA_X
+write(nflog,*)
 
 open(nfout,file=outputfile,status='replace')
 write(nfout,'(a,a)') 'GUI version: ',gui_run_version
@@ -786,6 +789,7 @@ do idrug = 1,Ndrugs_used
     enddo
     write(nflog,*) 'drug: ',idrug,drug(idrug)%classname,'  ',drug(idrug)%name
 enddo
+drug_dose_flag = .false.
 end subroutine
 
 !-----------------------------------------------------------------------------------------
@@ -1268,6 +1272,7 @@ do kevent = 1,Nevents
 			write(logmsg,'(a,f8.0,f8.3)') 'RADIATION_EVENT: time, dose: ',t_simulation,E%dose
 			call logger(logmsg)
 		elseif (E%etype == MEDIUM_EVENT) then
+			drug_dose_flag = .false.
 			write(logmsg,'(a,f8.0,f8.3,2f8.4)') 'MEDIUM_EVENT: time, volume, O2medium: ',t_simulation,E%volume,E%O2medium
 			call logger(logmsg)
 			C = 0
@@ -1275,12 +1280,11 @@ do kevent = 1,Nevents
 			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
 			V = E%volume
 			call MediumChange(V,C)
-			dbug_drug_flag = .false.
 		elseif (E%etype == DRUG_EVENT) then
-!			dbug_drug_flag = .true.
+			drug_dose_flag = .true.
 			C = 0
 			C(OXYGEN) = E%O2conc
-			if (test_case(1)) then
+			if (test_case(1) .or. test_case(2)) then
 				drug_O2_bolus = .true.
 			endif
 			C(GLUCOSE) = chemo(GLUCOSE)%bdry_conc
@@ -1401,17 +1405,21 @@ write(nflog,*) 'MediumChange:'
 O2_bdry = Ce(OXYGEN)
 if (drug_O2_bolus) then
 	Ce(OXYGEN) = C_O2_bolus
+	if (O2_bdry == 0) then
+		O2_bdry = anoxia_threshold/2
+	endif
 endif
-write(nflog,'(a,f8.4)') 'Ve: ',Ve
-write(nflog,'(a,13f8.4)') 'Ce: ',Ce
-write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
 !call SetRadius(Nsites)
 R = blob_radius*DELTA_X		! cm
 Vblob = (4./3.)*PI*R**3	! cm3
 Vm = total_volume - Vblob
+chemo(:)%medium_M = chemo(:)%medium_Cext*Vm
+write(nflog,'(a,f8.4)') 'Ve: ',Ve
+write(nflog,'(a,13f8.4)') 'Ce: ',Ce
+!write(nflog,'(a,13e12.3)')'medium_M: ',chemo(OXYGEN+1:)%medium_M
 Vr = min(Vm,Ve)
 write(nflog,'(a,4f8.4)') 'total_volume, Vblob, Vm, Vr: ',total_volume, Vblob, Vm, Vr
-chemo(:)%medium_M = ((Vm - Vr)/Vm)*chemo(:)%medium_M + Ve*Ce(:)
+chemo(:)%medium_M = ((Vm - Vr)/Vm)*chemo(:)%medium_M + Ve*Ce(:)		
 total_volume = Vm - Vr + Ve + Vblob
 chemo(:)%medium_Cext = chemo(:)%medium_M/(total_volume - Vblob)
 chemo(:)%medium_Cbnd = chemo(:)%medium_Cext
@@ -1504,7 +1512,7 @@ subroutine simulate_step(res) BIND(C)
 use, intrinsic :: iso_c_binding
 integer(c_int) :: res
 integer :: kcell, site(3), hour, nthour, kpar=0
-real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um, framp, tnow, area, diam
+real(REAL_KIND) :: r(3), rmax, tstart, dt, radiation_dose, diam_um, tnow, area, diam, f
 !integer, parameter :: NT_CONC = 6
 integer :: i, ic, ichemo, ndt, iz
 integer :: nvars, ns
@@ -1512,12 +1520,14 @@ real(REAL_KIND) :: dxc, ex_conc(120*O2_BY_VOL+1)		! just for testing
 real(REAL_KIND) :: DELTA_T_save, t_sim_0, t_ramp = 3600
 integer :: ndiv, idiv
 logical :: ok = .true.
+logical :: sine_ramp = .false.
 logical :: dbug
 
 !call logger('simulate_step')
 !write(*,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
 !write(nflog,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
-write(nflog,'(a,3e12.3)') 'OXYGEN: ',chemo(OXYGEN)%bdry_conc,chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
+write(nflog,'(a,3e12.3)') 'OXYGEN (air bdry, medium ave, blob bdry): ',chemo(OXYGEN)%bdry_conc,chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
+!call showO2
 dbug = .false.
 if (Ncells == 0) then
 	call logger('Ncells = 0')
@@ -1535,7 +1545,7 @@ blob_radius = sqrt(blob_area/PI)		! number of sites
 blob_centre = getCentre()   ! units = sites
 
 nthour = 3600/DELTA_T
-dt = DELTA_T/NT_CONC
+!dt = DELTA_T/NT_CONC
 
 if (ngaps > 200) then
 	call squeezer
@@ -1585,69 +1595,71 @@ radiation_dose = 0
 if (bdry_debug) call CheckBdryList('simulate_step c')
 
 if (medium_change_step) then
-	ndiv = 6
+	ndiv = 12
 else
 	ndiv = 1
 endif
 t_ramp = DELTA_T
 DELTA_T_save = DELTA_T
 DELTA_T = DELTA_T/ndiv
+dt = DELTA_T/NT_CONC
 t_sim_0 = t_simulation
+
 do idiv = 0,ndiv-1
-t_simulation = t_sim_0 + idiv*DELTA_T
+	t_simulation = t_sim_0 + idiv*DELTA_T
 
-if (use_FD) then
-	! The change in flux driving the FD solver is ramped over one time step, using a sinusoid
-	framp = 1
-	if (medium_change_step .and. t_simulation - t_lastmediumchange < t_ramp) then
-		framp = (t_simulation - t_lastmediumchange)/t_ramp
-		framp = sin(framp*PI/2)
-		framp = max(framp,0.1)
-	else
-		framp = 1
+	if (use_FD) then
+		! The change in flux driving the FD solver is ramped over one (short) time step, using a sinusoid 
+		if (medium_change_step .and. t_simulation - t_lastmediumchange < t_ramp) then
+			f = (t_simulation - t_lastmediumchange)/t_ramp
+			if (sine_ramp) f = sin(f*PI/2)
+			framp_mediumchange = max(f,0.01)
+		else
+			framp_mediumchange = 1
+		endif
+		if (istep == 1) framp_mediumchange = 0.5
+		call diff_solver(DELTA_T, framp_mediumchange,ok)
+		if (.not.ok) then
+			res = 4
+			return
+		endif
+		call UpdateCbnd(DELTA_T)
 	endif
-	if (istep == 1) framp = 0.5
-	call diff_solver(DELTA_T, framp,ok)
-	if (.not.ok) then
-		res = 4
-		return
+	if (dbug) write(nflog,*) 'SetupODEdiff'
+	call SetupODEdiff
+
+	!call check_allstate('before SiteCellToState')
+	if (dbug) write(nflog,*) 'SiteCellToState'
+	call SiteCellToState
+	!call check_allstate('after SiteCellToState')
+
+	if (dbug) write(nflog,*) 'Solver'
+	do it_solve = 1,NT_CONC
+		tstart = (it_solve-1)*dt
+	!	t_simulation = (istep-1)*DELTA_T + tstart
+		t_simulation = t_simulation + (it_solve-1)*dt
+		call Solver(it_solve,tstart,dt,Ncells,ok)
+		if (.not.ok) then
+			res = 5
+			return
+		endif
+	enddo
+	!write(nflog,*) 'did Solver'
+	!call check_allstate('after Solver')
+
+	if (dbug) write(nflog,*) 'StateToSiteCell'
+	call StateToSiteCell
+	!call check_allstate('after StateToSiteCell')
+	call CheckDrugConcs
+
+	if (.not.use_FD) then
+		call UpdateCbnd(DELTA_T)		! need to check placements of UpdateCbnd
+	!	write(nflog,*) 'did UpdateCbnd'
 	endif
-	call UpdateCbnd(DELTA_T)
-endif
-if (dbug) write(nflog,*) 'SetupODEdiff'
-call SetupODEdiff
+	call CheckDrugPresence
 
-!call check_allstate('before SiteCellToState')
-if (dbug) write(nflog,*) 'SiteCellToState'
-call SiteCellToState
-!call check_allstate('after SiteCellToState')
+enddo	! idiv loop
 
-if (dbug) write(nflog,*) 'Solver'
-do it_solve = 1,NT_CONC
-	tstart = (it_solve-1)*dt
-!	t_simulation = (istep-1)*DELTA_T + tstart
-	t_simulation = t_simulation + (it_solve-1)*dt
-	call Solver(it_solve,tstart,dt,Ncells,ok)
-	if (.not.ok) then
-		res = 5
-		return
-	endif
-enddo
-!write(nflog,*) 'did Solver'
-!call check_allstate('after Solver')
-
-if (dbug) write(nflog,*) 'StateToSiteCell'
-call StateToSiteCell
-!call check_allstate('after StateToSiteCell')
-call CheckDrugConcs
-
-if (.not.use_FD) then
-	call UpdateCbnd(DELTA_T)		! need to check placements of UpdateCbnd
-!	write(nflog,*) 'did UpdateCbnd'
-endif
-call CheckDrugPresence
-
-enddo
 DELTA_T = DELTA_T_save
 medium_change_step = .false.
 
@@ -2030,6 +2042,18 @@ if (par_zig_init) then
 	call par_zigfree
 endif
 call logger('freed par_zig')
+end subroutine
+
+!-----------------------------------------------------------------------------------------
+! Show O2 on a line through the blob centre from surface
+!-----------------------------------------------------------------------------------------
+subroutine showO2
+integer :: izb, i
+real(REAL_KIND), pointer :: Cave_b(:,:,:)
+
+Cave_b => chemo(OXYGEN)%Cave_b
+write(nfout,'(i5,2x,40e11.3)') istep,(cave_b(ixb0,iyb0,izb),izb=1,NZB)
+write(nfout,'(40e11.3)') (occupancy(NX/2,NY/2,5*i)%C(OXYGEN),i=1,NZ/5)
 end subroutine
 
 end module

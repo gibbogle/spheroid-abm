@@ -188,9 +188,9 @@ real(REAL_KIND) :: ave(2), xc, yc, d2, d2max, dx(4), dy(4), dx_um
 real(REAL_KIND) :: delta = 0.20
 integer, allocatable :: iwk(:), vertex(:)
 integer :: ix, iy, n, nvert, i, i1, i2, k, kmax, kcell
-logical :: flag
+logical :: flag = .false.
 
-flag = (istep==120) .and. (iz==60) .and. (iregion<=2)
+!flag = (istep==120) .and. (iz==60) .and. (iregion<=2)
 allocate(x(MAXN))
 allocate(y(MAXN))
 allocate(iwk(MAXN))

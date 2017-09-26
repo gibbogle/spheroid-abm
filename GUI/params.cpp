@@ -230,7 +230,9 @@ After contact is made the force is non-zero until x > xc2 - this is the effect o
 
 {"TEST_CASE", 0, 0, 0,
 "Test case #",
-"Number of the test case to run.  The default value of 0 is for a normal run"},
+"Number of the test case to run.  The default value of 0 is for a normal run.\n\
+ Case 1 uses O2 bolus as initial medium concentration in a drug dose event, with protocol O2 level at the upper boundary\n\
+ Case 2 uses O2 bolus as initial medium concentration in a drug dose event, with a wall at the upper boundary"},
 
 {"SEED1", 1234, 0, 0,
 "First RNG seed",

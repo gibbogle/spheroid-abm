@@ -288,7 +288,8 @@ integer :: Nevents
 real(REAL_KIND) :: DELTA_T, DELTA_X, fluid_fraction, Vsite_cm3, Vextra_cm3, Vcell_cm3, Vcell_pL
 real(REAL_KIND) :: dxb, dxb3, dxf, dx3
 real(REAL_KIND) :: grid_offset(3)
-real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer, C_O2_bolus, t_lastmediumchange
+real(REAL_KIND) :: medium_volume0, total_volume, cell_radius, d_layer
+real(REAL_KIND) :: C_O2_bolus, t_lastmediumchange, t_sincemediumchange, framp_mediumchange
 real(REAL_KIND) :: celltype_fraction(MAX_CELLTYPES)
 logical :: celltype_display(MAX_CELLTYPES)
 real(REAL_KIND) :: MM_THRESHOLD, anoxia_threshold, t_anoxia_limit, anoxia_death_delay, Vdivide0, dVdivide
@@ -338,6 +339,7 @@ logical :: use_parallel
 logical :: medium_change_step
 logical :: dbug = .false.
 logical :: bdry_debug
+logical :: drug_dose_flag
 
 logical :: use_events = .true.
 

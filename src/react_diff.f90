@@ -140,18 +140,19 @@ end subroutine
 ! Use variable numbering (ix,iy) -> k = (ix-1)*NY + iy
 ! Since the equation is now dM/dt = ... need to derive different expression for Kr
 ! Need to add treatment of top boundary for O2
-! Need to add decay!  For now add it explicitly in solver
+! This is where the air oxygen concentration is applied.
 !-------------------------------------------------------------------------------------------
 subroutine make_csr_b(a_b, ichemo, dt, Cave_b, Cprev_b, Fcurr_b, Fprev_b, rhs, zero)
 integer :: ichemo
 real(REAL_KIND) :: dt, a_b(:), Cave_b(:,:,:), Cprev_b(:,:,:), Fcurr_b(:,:,:), Fprev_b(:,:,:), rhs(:)
 logical :: zero
 integer :: ixb, iyb, izb, k, i, krow, kcol, nc
-real(REAL_KIND) :: Kdiff, Ktissue, Kmedium, Kr, Cbdry, Fsum
+real(REAL_KIND) :: Kdiff, Ktissue, Kmedium, Kr, CO2_bdry, Fsum
 integer, parameter :: m = 3
+logical :: O2_wall_bdry
 
+O2_wall_bdry = (test_case(2) .and. drug_dose_flag)
 zero = .true.
-!Kdiff = chemo(ichemo)%medium_diff_coef
 Ktissue = chemo(ichemo)%diff_coef
 Kmedium = chemo(ichemo)%medium_diff_coef
 Fsum = 0
@@ -166,7 +167,7 @@ do k = 1,nnz_b
 	else
 		a_b(k) = amap_b(k,0)
 	endif
-	if (ichemo == OXYGEN) then
+	if (.not.O2_wall_bdry .and. ichemo == OXYGEN) then
 		if (amap_b(k,3) == NZB .and. kcol == krow-1) then
 			if (a_b(k) /= -2) then
 				write(*,*) 'Error in OXYGEN bdry adjustment'
@@ -194,14 +195,23 @@ do izb = 1,NZB
 		enddo
 	enddo
 enddo
+
 !!$omp end parallel do
-if (ichemo == OXYGEN) then
-	Cbdry = chemo(ichemo)%bdry_conc
+if (.not.O2_wall_bdry .and. ichemo == OXYGEN) then
+	if (medium_change_step .and. drug_O2_bolus) then
+		! need to ramp O2 level from C_O2_bolus down to %bdry_conc using framp_mediumchange
+		CO2_bdry = framp_mediumchange*chemo(ichemo)%bdry_conc + (1-framp_mediumchange)*C_O2_bolus
+!		write(*,'(a,2e12.3)') 'framp_mediumchange, CO2_bdry: ',framp_mediumchange, CO2_bdry
+!		write(nfout,'(a,2e12.3)') 'framp_mediumchange, CO2_bdry: ',framp_mediumchange, CO2_bdry
+!		write(nflog,'(a,2e12.3)') 'framp_mediumchange, CO2_bdry: ',framp_mediumchange, CO2_bdry
+	else
+		CO2_bdry = chemo(ichemo)%bdry_conc
+	endif
 	izb = NZB
 	do ixb = 1,NXB
 		do iyb = 1,NYB
 			krow = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
-			rhs(krow) = rhs(krow) + Cbdry		
+			rhs(krow) = rhs(krow) + CO2_bdry		
 		enddo
 	enddo
 endif
@@ -401,6 +411,11 @@ do kcell = 1,nlist
 	cp => cell_list(kcell)
 	if (cp%state == DEAD) cycle
 	cp%dMdt(ichemo) = Kin*cp%Cex(ichemo) - Kout*cp%conc(ichemo)
+	if (ichemo == OXYGEN) then
+		if (cp%conc(ichemo) < anoxia_threshold/2 .or. cp%Cex(ichemo) < anoxia_threshold/2) then
+			cp%dMdt(ichemo) = 0
+		endif
+	endif
 	total_flux = total_flux + cp%dMdt(ichemo)
 	if (.not.use_central_flux) then
 	    site = cp%site
@@ -886,9 +901,9 @@ do ic = 1,nchemo
 	Fprev_b => chemo(ichemo)%Fprev_b
 	Fcurr_b => chemo(ichemo)%Fcurr_b	
 	Fprev_b = Fcurr_b
-	call getF_const(ichemo,total_flux,zeroC(ichemo))
+	call getF_const(ichemo,total_flux,zeroC(ichemo))	! updates Fcurr_b
 !	if (ichemo == OXYGEN) then
-!		write(nflog,'(a,e12.3)') 'O2 total_flux: ',total_flux
+!		write(nflog,'(a,e12.3)') 'medium O2: ',Cave_b(NXB/2,NYB/2,NZB/2)
 !	endif
 	Fcurr_b = framp*Fcurr_b
 
@@ -943,7 +958,17 @@ do ic = 1,nchemo
 !				if (ichemo == OXYGEN .and. ixb == NXB/2 .and. iyb == NYB/2) then
 !					write(nflog,'(a,i4,e12.3)') 'izb,cave_b: ',izb,x(k)
 !				endif
-				x(k) = max(0.0,fdecay*x(k))
+				x(k) = fdecay*x(k)
+				if (ichemo == OXYGEN) then
+					if (test_case(1)) then
+						x(k) = max(x(k),anoxia_threshold/2)
+					elseif (x(k) < 0) then
+						write(nflog,*) 'O2: x(k) < 0: ichemo,ixb,iyb,izb: ',ichemo,ixb,iyb,izb,x(k)
+						x(k) = 0
+					endif
+				else
+					x(k) = max(0.0,x(k))
+				endif
 				if (isnan(x(k))) then
 					ok = .false.
 					cycle

@@ -54,6 +54,8 @@ contains
 ! %bdry_decay = .true. for the case that a simple exponential decay of bdry conc
 ! is specified.
 ! Now uses %medium_Cbnd, no t dependence here.
+! This is the concentration at the blob boundary, set equal to %medium_Cbnd that 
+! was computed previously
 !----------------------------------------------------------------------------------
 real(REAL_KIND) function BdryConc(ichemo)
 integer :: ichemo
@@ -1426,6 +1428,8 @@ end subroutine
 ! Was set_bdry_conc
 ! The blob is currently centred at blob_centre (lattice coords) and has radius
 ! = blob_radius (lattice sites).
+! Need to remove smoothing (alpha_Cbnd) from here because it creates the conditions
+! for an oscillation when blob O2 levels are not consistent with Cave_b.
 !----------------------------------------------------------------------------------
 subroutine UpdateCbnd_FD
 integer :: kpar = 0
@@ -1433,7 +1437,7 @@ real(REAL_KIND) :: rad, x, y, z, dz, p(3), phi, theta, c(MAX_CHEMO), csum(MAX_CH
 real(REAL_KIND) :: cntr(3), xc0, yc0, zc0
 integer :: ixb, iyb, izb
 integer :: i, ic, ichemo, n = 100
-real(REAL_KIND) :: alpha_Cbnd = 0.3
+real(REAL_KIND) :: alpha_Cbnd = 0.4
 !real(REAL_KIND) :: t_buffer = 3600	! one hour delay before applying smoothing to Cbnd
 integer :: ndrugs_present, drug_present(3*MAX_DRUGTYPES), drug_number(3*MAX_DRUGTYPES)
 integer :: idrug, iparent, im
@@ -1478,9 +1482,6 @@ do i = 1,n
 	p = [x, y, z]
 	call getConc(p,c)
 	csum = csum + c
-!	if (i <= 10) then
-!    	write(*,'(a,i6,2e12.3)') 'UpdateCbnd_FD: i,rad,c(O2): ',i,rad,c(OXYGEN)
-!    endif
 enddo
 do ic = 1,nchemo
 	ichemo = chemomap(ic)
@@ -1492,9 +1493,9 @@ do ic = 1,nchemo
 enddo
 
 chemo(OXYGEN)%medium_Cbnd = alpha_Cbnd*chemo(OXYGEN)%medium_Cbnd + (1 - alpha_Cbnd)*chemo(OXYGEN)%medium_Cbnd_prev
-!write(logmsg,'(a,i6,e12.3)') 'O2 medium_Cbnd: ',istep,chemo(OXYGEN)%medium_Cbnd
-!call logger(logmsg)
 chemo(OXYGEN)%medium_Cbnd_prev = chemo(OXYGEN)%medium_Cbnd
+!write(nflog,'(a,i6,e12.3)') 'O2 medium_Cbnd: ',istep,chemo(OXYGEN)%medium_Cbnd
+!write(nfout,'(a,i6,e12.3)') 'O2 medium_Cbnd: ',istep,chemo(OXYGEN)%medium_Cbnd
 
 drug_gt_cthreshold = .false.
 
@@ -1524,6 +1525,7 @@ enddo
 
 chemo(1:MAX_CHEMO)%medium_Cext = csum(1:MAX_CHEMO)/(NXB*NYB*NZB)
 if (zero_O2) then
+	write(nflog,*) 'zero_O2: setting medium_Cext and medium_Cbnd to 0'
 	chemo(OXYGEN)%medium_Cext = 0
 	chemo(OXYGEN)%medium_Cbnd = 0
 endif
