@@ -318,6 +318,7 @@ character*(2048) :: logmsg
 character*(1024) :: header
 logical :: test_case(4)
 logical :: drug_O2_bolus
+logical :: drug_dose_flag
 
 TYPE(winsockport) :: awp_0, awp_1
 logical :: use_TCP = .true.         ! turned off in para_main()
@@ -339,7 +340,6 @@ logical :: use_parallel
 logical :: medium_change_step
 logical :: dbug = .false.
 logical :: bdry_debug
-logical :: drug_dose_flag
 
 logical :: use_events = .true.
 

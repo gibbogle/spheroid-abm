@@ -463,6 +463,11 @@ logical :: use_actual_cell_volume = .false.
 logical :: use_revised_diffusion_eqtn = .false.  ! account for effect of local cells on Kdiff
 type(drug_type), pointer :: dp
 
+! Testing a change to the shape of the drug metabolism rate function - it didn't do anything useful
+logical :: SN34183_test = .false.
+real(REAL_KIND) :: f_O2
+real(REAL_KIND) :: mult_O2 = 10
+
 ichemo = icase
 if (ichemo == GLUCOSE) then
 	Ng = chemo(GLUCOSE)%Hill_N
@@ -614,7 +619,19 @@ do i = 1,neqn
 				if (dp%Vmax(ict,0) > 0) then
 					KmetC = KmetC + dp%Vmax(ict,0)*C/(dp%Km(ict,0) + C)
 				endif
-				dCreact = -(1 - dp%C2(ict,0) + dp%C2(ict,0)*dp%KO2(ict,0)**n_O2(0)/(dp%KO2(ict,0)**n_O2(0) + Cin(OXYGEN)**n_O2(0)))*KmetC
+				if (SN34183_test) then
+!					f_O2 = dp%KO2(ict,0)**n_O2(0)/(dp%KO2(ict,0)**n_O2(0) + Cin(OXYGEN)**n_O2(0))
+!					if (Cin(OXYGEN) > dp%KO2(ict,0)) then
+!						if (Cin(OXYGEN) > mult_O2*dp%KO2(ict,0)) then
+!							f_O2 = 1
+!						else
+!							f_O2 = 0.5 + 0.5*(Cin(OXYGEN) - dp%KO2(ict,0))/((mult_O2-1)*dp%KO2(ict,0))
+!						endif
+!					endif
+!					dCreact = -(1 - dp%C2(ict,0) + dp%C2(ict,0)*f_O2)*KmetC
+				else
+					dCreact = -(1 - dp%C2(ict,0) + dp%C2(ict,0)*dp%KO2(ict,0)**n_O2(0)/(dp%KO2(ict,0)**n_O2(0) + Cin(OXYGEN)**n_O2(0)))*KmetC
+				endif
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
 		elseif (im == 1) then	! ichemo-1 is the PARENT drug

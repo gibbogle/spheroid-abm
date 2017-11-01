@@ -13,7 +13,7 @@
 #define MAX_CONC 9 // must = MAX_CHEMO in DLL for conc[] in FIELD_DATA to be the right size
 #define NEXTRA 4    // must = N_EXTRA in DLL
 
-struct field_data {
+struct field_data { // NOT USED
     int site[3];
     int state;
     double volume;
@@ -42,7 +42,7 @@ typedef new_field_data NEW_FIELD_DATA;
 
 extern "C" {
     void get_fieldinfo(int *, int *, double *, int *, int *, int *, int *);
-    void get_fielddata(int *, double *, int *, int *, FIELD_DATA *, int *);
+    void get_fielddata(int *, double *, int *, int *, FIELD_DATA *, int *); // NOT USED
     void new_get_fielddata(int *, double *, new_field_data *, int *, int *);
 }
 

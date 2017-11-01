@@ -45,7 +45,7 @@ padding: 8px
        <bool>true</bool>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>4</number>
       </property>
       <widget class="QWidget" name="page_input">
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -82,7 +82,7 @@ padding: 8px
            <enum>QTabWidget::West</enum>
           </property>
           <property name="currentIndex">
-           <number>7</number>
+           <number>6</number>
           </property>
           <property name="elideMode">
            <enum>Qt::ElideNone</enum>
@@ -6248,7 +6248,7 @@ padding: 8px
              </rect>
             </property>
             <property name="text">
-             <string>20</string>
+             <string>50</string>
             </property>
            </widget>
            <widget class="QLabel" name="alabel_nbins">
@@ -9168,7 +9168,7 @@ padding: 8px
          <rect>
           <x>0</x>
           <y>30</y>
-          <width>771</width>
+          <width>791</width>
           <height>621</height>
          </rect>
         </property>
@@ -9196,7 +9196,7 @@ padding: 8px
           <rect>
            <x>640</x>
            <y>50</y>
-           <width>121</width>
+           <width>141</width>
            <height>101</height>
           </rect>
          </property>
@@ -9208,8 +9208,8 @@ padding: 8px
          <property name="geometry">
           <rect>
            <x>640</x>
-           <y>300</y>
-           <width>121</width>
+           <y>350</y>
+           <width>141</width>
            <height>101</height>
           </rect>
          </property>
@@ -9234,7 +9234,7 @@ padding: 8px
          <property name="geometry">
           <rect>
            <x>650</x>
-           <y>260</y>
+           <y>310</y>
            <width>71</width>
            <height>18</height>
           </rect>
@@ -9260,7 +9260,7 @@ padding: 8px
          <property name="geometry">
           <rect>
            <x>680</x>
-           <y>280</y>
+           <y>330</y>
            <width>41</width>
            <height>16</height>
           </rect>
@@ -9291,9 +9291,9 @@ padding: 8px
        <widget class="QMyGroupBox" name="groupBox_Histo">
         <property name="geometry">
          <rect>
-          <x>780</x>
+          <x>800</x>
           <y>30</y>
-          <width>761</width>
+          <width>781</width>
           <height>621</height>
          </rect>
         </property>
@@ -9324,7 +9324,7 @@ padding: 8px
           <rect>
            <x>640</x>
            <y>90</y>
-           <width>121</width>
+           <width>141</width>
            <height>101</height>
           </rect>
          </property>
@@ -9480,7 +9480,7 @@ padding: 8px
        <widget class="QLabel" name="alabel__Histo">
         <property name="geometry">
          <rect>
-          <x>1060</x>
+          <x>1080</x>
           <y>-10</y>
           <width>141</width>
           <height>41</height>
@@ -9493,6 +9493,32 @@ padding: 8px
         </property>
         <property name="text">
          <string>Histogram</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="pushButton_update_FACS_Histo">
+        <property name="geometry">
+         <rect>
+          <x>680</x>
+          <y>0</y>
+          <width>75</width>
+          <height>23</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Refresh</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="checkBox_volume_scaling">
+        <property name="geometry">
+         <rect>
+          <x>790</x>
+          <y>0</y>
+          <width>111</width>
+          <height>21</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Use C*V for drugs</string>
         </property>
        </widget>
       </widget>
@@ -9886,15 +9912,15 @@ padding: 8px
    </slots>
   </customwidget>
   <customwidget>
-   <class>QMyGroupBox</class>
-   <extends>QGroupBox</extends>
-   <header>qmygroupbox.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
    <class>QMyCheckBox</class>
    <extends>QCheckBox</extends>
    <header location="global">qmycheckbox.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QMyGroupBox</class>
+   <extends>QGroupBox</extends>
+   <header>qmylabel.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <tabstops>

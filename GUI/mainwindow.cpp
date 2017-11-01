@@ -554,7 +554,6 @@ void MainWindow::showFACS()
     QString xlabel, ylabel;
     QRadioButton *rb;
 
-//    LOG_MSG("showFACS");
 //    if (showingFACS) LOG_MSG("showingFACS");
 //    if (recordingFACS) LOG_MSG("recordingFACS");
     qpFACS = (QwtPlot *)qFindChild<QObject *>(this, "qwtPlot_FACS");
@@ -595,10 +594,22 @@ void MainWindow::showFACS()
     case TRACER:
         break;
     case DRUG_A_PARENT:
+        xscale = 1;
+        xlabel = "Drug A";
+        xmax = Global::FACS_vmax[DRUG_A];
+        xmin = MIN(1.0e-5,xmax/2);
         break;
     case DRUG_A_METAB_1:
+        xscale = 1;
+        xlabel = "Drug A metab 1";
+        xmax = Global::FACS_vmax[DRUG_A_METAB_1];
+        xmin = MIN(1.0e-5,xmax/2);
         break;
     case DRUG_A_METAB_2:
+        xscale = 1;
+        xlabel = "Drug A metab 2";
+        xmax = Global::FACS_vmax[DRUG_A_METAB_2];
+        xmin = MIN(1.0e-5,xmax/2);
         break;
     case DRUG_B_PARENT:
         break;
@@ -625,6 +636,9 @@ void MainWindow::showFACS()
         xmax = 2;
         break;
     }
+    sprintf(msg,"ichemo: %d vmin,vmax: %e %e",ichemo,Global::FACS_vmin[ichemo],Global::FACS_vmax[ichemo]);
+    LOG_MSG(msg);
+
     for (ivar=0; ivar<Global::nvars_used; ivar++) {
         rb = FACS_y_vars_rb_list[ivar];
         if (rb->isChecked()) {
@@ -655,10 +669,22 @@ void MainWindow::showFACS()
     case TRACER:
         break;
     case DRUG_A_PARENT:
+        yscale = 1;
+        ylabel = "Drug A";
+        ymax = Global::FACS_vmax[DRUG_A];
+        ymin = MIN(1.0e-5,ymax/2);
         break;
     case DRUG_A_METAB_1:
+        yscale = 1;
+        ylabel = "Drug A metab 1";
+        ymax = Global::FACS_vmax[DRUG_A_METAB_1];
+        ymin = MIN(1.0e-5,ymax/2);
         break;
     case DRUG_A_METAB_2:
+        yscale = 1;
+        ylabel = "Drug A metab 2";
+        ymax = Global::FACS_vmax[DRUG_A_METAB_2];
+        ymin = MIN(1.0e-5,ymax/2);
         break;
     case DRUG_B_PARENT:
         break;
@@ -746,11 +772,12 @@ void MainWindow::test_histo()
 {
     int numValues = 20;
     double width = 10, xmin = 0;
+    int ivar = 0;
     QwtArray<double> values(numValues);
     for (int i=0; i<numValues; i++) {
         values[i] = rand() %100;
     }
-    makeHistoPlot(numValues,xmin,width,values);
+    makeHistoPlot(ivar,numValues,xmin,width,values);
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -770,13 +797,27 @@ void MainWindow:: initHistoPlot()
 
 //--------------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------------
-void MainWindow::makeHistoPlot(int numValues, double xmin, double width,  QwtArray<double> values)
+void MainWindow::makeHistoPlot(int ivar, int numValues, double xmin, double width,  QwtArray<double> values)
 {
     QwtPlot *plot;
     double pos;
+    QString mode;
+    bool savedata;
 
-//    LOG_MSG("makeHistoPlot");
+    QString xlabel = Global::var_string[ivar];
     bool use_HistoBar = radioButton_histotype_1->isChecked();
+    bool log_scale = checkBox_histo_logscale->isChecked();
+    savedata = log_scale && (ivar == DRUG_A_METAB_1);
+    if (savedata) {
+        sprintf(msg,"makeHistoPlot: hour: %f", hour);
+        LOG_MSG(msg);
+        if (use_HistoBar) {
+            mode = "Histogram: " + xlabel;
+        } else {
+            mode = "Line: " + xlabel;
+        }
+        LOG_QMSG(mode);
+    }
     if (use_HistoBar) {
         plot = qpHistoBar;
         qpHistoLine->hide();
@@ -795,6 +836,8 @@ void MainWindow::makeHistoPlot(int numValues, double xmin, double width,  QwtArr
     grid->setMinPen(QPen(Qt::gray, 0 , Qt::DotLine));
     grid->attach(plot);
 
+    double x0 = xmin - 3;
+    double x1 = x0 + 6;
     if (use_HistoBar) {
         if (histogram) {
             histogram->detach();
@@ -809,16 +852,48 @@ void MainWindow::makeHistoPlot(int numValues, double xmin, double width,  QwtArr
         for ( int i = 0; i < numValues; i++ )
         {
             intervals[i] = QwtDoubleInterval(pos, pos + width);
+            if (savedata) {
+                if (i == 0) {
+                    sprintf(msg,"%f %f",x0,0);
+                    LOG_MSG(msg);
+                    sprintf(msg,"%f %f",xmin-width/2,0);
+                    LOG_MSG(msg);
+                }
+                sprintf(msg,"%f %f",pos+width/2,values[i]);
+                LOG_MSG(msg);
+                if (i == numValues-1) {
+                    sprintf(msg,"%f %f",pos+3*width/2,0);
+                    LOG_MSG(msg);
+                    sprintf(msg,"%f %f",x1,0);
+                    LOG_MSG(msg);
+                }
+            }
             pos += width;
         }
 
         histogram->setData(QwtIntervalData(intervals, values));
-        histogram->attach(plot);
+        histogram->attach(plot);         
     } else {
         double x[100], y[100];
         for ( int i = 0; i < numValues; i++ ) {
             x[i] = xmin + (i + 0.5)*width;
             y[i] = values[i];
+            if (savedata) {
+                if (i == 0) {
+                    sprintf(msg,"%f %f",x0,0);
+                    LOG_MSG(msg);
+                    sprintf(msg,"%f %f",xmin-width/2,0);
+                    LOG_MSG(msg);
+                }
+                sprintf(msg,"%f %f",x[i],y[i]);
+                LOG_MSG(msg);
+                if (i == numValues-1) {
+                    sprintf(msg,"%f %f",x[i]+width/2,0);
+                    LOG_MSG(msg);
+                    sprintf(msg,"%f %f",x1,0);
+                    LOG_MSG(msg);
+                }
+            }
         }
         pos = x[numValues-1] + width/2;
         QwtPlotCurve *curve = new QwtPlotCurve("");
@@ -871,7 +946,6 @@ void MainWindow:: showHisto()
 {
     int ivar, k, k0, numValues;
     QRadioButton *rb;
-    QString xlabel;
     double width, xmin;
     bool log_scale;
 
@@ -886,7 +960,6 @@ void MainWindow:: showHisto()
             break;
         }
     }
-    xlabel = Global::var_string[ivar];
     k0 = Global::histo_celltype*numValues*Global::nvars_used;
 //    sprintf(msg,"histo_celltype: %d numValues: %d nvars_used: %d k0: %d",Global::histo_celltype,numValues,Global::nvars_used,k0);
 //    LOG_MSG(msg);
@@ -908,7 +981,7 @@ void MainWindow:: showHisto()
         xmin = Global::histo_vmin[ivar];
         width = (Global::histo_vmax[ivar] - Global::histo_vmin[ivar])/numValues;
     }
-    makeHistoPlot(numValues,xmin,width,values);
+    makeHistoPlot(ivar,numValues,xmin,width,values);
 }
 
 //-------------------------------------------------------------

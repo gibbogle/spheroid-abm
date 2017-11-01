@@ -436,3 +436,27 @@ void MainWindow::on_checkBox_only2colours2D_toggled(bool checked)
 //    field->slice_changed = true;
 //    if (started) field->displayField(hour,&res);
 }
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_pushButton_update_FACS_Histo_clicked()
+{
+    if (exthread->paused || exthread->stopped) {
+        exthread->getFACS();
+        emit facs_update();
+        emit histo_update();
+    }
+}
+
+//--------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+void MainWindow::on_checkBox_volume_scaling_toggled(bool checked)
+{
+    if (checked) {
+        Global::volume_scaling = 1;
+        LOG_MSG("volume_scaling: on");
+    } else {
+        Global::volume_scaling = 0;
+        LOG_MSG("volume_scaling: off");
+    }
+}

@@ -1262,6 +1262,7 @@ type(event_type) :: E
 
 !write(logmsg,*) 'ProcessEvent'
 !call logger(logmsg)
+radiation_dose = 0
 drug_O2_bolus = .false.
 do kevent = 1,Nevents
 	E = event(kevent)

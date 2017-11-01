@@ -1490,26 +1490,32 @@ enddo
 end subroutine
 
 !-----------------------------------------------------------------------------------------
+! Now the min and max values for each variable are returned
 !-----------------------------------------------------------------------------------------
-subroutine get_FACS(facs_data) BIND(C)
+subroutine get_FACS(facs_data, vmin, vmax, volume_scaling) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_facs
 use, intrinsic :: iso_c_binding
-real(c_double) :: val, facs_data(*)
+integer(c_int),value :: volume_scaling
+real(c_double) :: val, facs_data(*), vmin(*), vmax(*)
 integer :: k, kcell, iextra, ichemo, ivar, nvars, var_index(32)
-real(REAL_KIND) :: cfse_min
+logical :: volscale
 
+write(nflog,*) 'get_FACS'
+volscale = (volume_scaling == 1)
 nvars = 1	! CFSE
 var_index(nvars) = 0
 do ichemo = 1,MAX_CHEMO
 	if (.not.chemo(ichemo)%used) cycle
 	nvars = nvars + 1
 	var_index(nvars) = ichemo
+	write(nflog,'(a,2i6)') 'ivar, var_index: ',nvars,var_index(nvars)
 enddo
 do iextra = 1,N_EXTRA-1
 	nvars = nvars + 1
 	var_index(nvars) = MAX_CHEMO + iextra
 enddo
-cfse_min = 1.0e20
+vmin(1:MAX_CHEMO+N_EXTRA) = 1.0e10
+vmax(1:MAX_CHEMO+N_EXTRA) = -1.0e10
 k = 0
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
@@ -1517,9 +1523,9 @@ do kcell = 1,nlist
 		ichemo = var_index(ivar)
 		if (ichemo == 0) then
 			val = cell_list(kcell)%CFSE
-			cfse_min = min(val,cfse_min)
 		elseif (ichemo <= MAX_CHEMO) then
 			val = cell_list(kcell)%conc(ichemo)
+			if (ichemo >= 4 .and. kcell < 20) write(nflog,*) kcell,ichemo,val
 		elseif (ichemo == GROWTH_RATE) then
 			val = cell_list(kcell)%dVdt
 		elseif (ichemo == CELL_VOLUME) then
@@ -1527,9 +1533,18 @@ do kcell = 1,nlist
 		elseif (ichemo == O2_BY_VOL) then
 			val = cell_list(kcell)%volume*cell_list(kcell)%conc(OXYGEN)
 		endif
+		if (volscale .and. (ichemo >= DRUG_A .and. ichemo <= DRUG_B + 2)) then
+			val = val*Vcell_pL*cell_list(kcell)%volume
+		endif
 		k = k+1
 		facs_data(k) = val
+		vmin(ichemo+1) = min(val,vmin(ichemo+1))
+		vmax(ichemo+1) = max(val,vmax(ichemo+1))
 	enddo
+enddo
+do ivar = 1,nvars
+	ichemo = var_index(ivar)
+	write(nflog,'(a,2i4,2e12.3)') 'ivar, ichemo, vmin, vmax: ',ivar, ichemo, vmin(ichemo), vmax(ichemo)
 enddo
 end subroutine
 
@@ -1543,10 +1558,10 @@ end subroutine
 !                          3 = type 2
 ! Stack three cases in vmax() and histo_data()
 !-----------------------------------------------------------------------------------------
-subroutine get_histo(nhisto, histo_data, vmin, vmax, histo_data_log, vmin_log, vmax_log) BIND(C)
+subroutine get_histo(nhisto, histo_data, vmin, vmax, histo_data_log, vmin_log, vmax_log, volume_scaling) BIND(C)
 !DEC$ ATTRIBUTES DLLEXPORT :: get_histo
 use, intrinsic :: iso_c_binding
-integer(c_int),value :: nhisto
+integer(c_int),value :: nhisto, volume_scaling
 real(c_double) :: vmin(*), vmax(*), histo_data(*)
 real(c_double) :: vmin_log(*), vmax_log(*), histo_data_log(*)
 real(REAL_KIND) :: val, val_log
@@ -1555,9 +1570,12 @@ integer,allocatable :: cnt(:,:,:)
 real(REAL_KIND),allocatable :: dv(:,:), valmin(:,:), valmax(:,:)
 integer,allocatable :: cnt_log(:,:,:)
 real(REAL_KIND),allocatable :: dv_log(:,:), valmin_log(:,:), valmax_log(:,:)
+logical :: volscale
 !real(REAL_KIND) :: vmin_log(100), vmax_log(100)
 !real(REAL_KIND),allocatable :: histo_data_log(:)
 
+volscale = (volume_scaling == 1)
+write(nflog,*) 'get_histo: histogram using volume scaling for drugs: ',volume_scaling,' ',volscale
 nvars = 1	! CFSE
 var_index(nvars) = 0
 do ichemo = 1,MAX_CHEMO
@@ -1603,6 +1621,9 @@ do kcell = 1,nlist
 			val = Vcell_pL*cell_list(kcell)%volume
 		elseif (ichemo == O2_BY_VOL) then
 			val = cell_list(kcell)%conc(OXYGEN)*Vcell_pL*cell_list(kcell)%volume
+		endif
+		if (volscale .and. (ichemo >= DRUG_A .and. ichemo <= DRUG_B + 2)) then
+			val = val*Vcell_pL*cell_list(kcell)%volume
 		endif
 		valmax(ict+1,ivar) = max(valmax(ict+1,ivar),val)	! cell type 1 or 2
 		valmax(1,ivar) = max(valmax(1,ivar),val)			! both
@@ -1650,6 +1671,9 @@ do kcell = 1,nlist
 			val = Vcell_pL*cell_list(kcell)%volume
 		elseif (ichemo == O2_BY_VOL) then
 			val = cell_list(kcell)%conc(OXYGEN)*Vcell_pL*cell_list(kcell)%volume
+		endif
+		if (volscale .and. (ichemo >= DRUG_A .and. ichemo <= DRUG_B + 2)) then
+			val = val*Vcell_pL*cell_list(kcell)%volume
 		endif
 		k = (val-valmin(1,ivar))/dv(1,ivar) + 1
 		k = min(k,nhisto)

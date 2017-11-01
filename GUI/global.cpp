@@ -24,6 +24,8 @@ namespace Global
     double *FACS_data=NULL;
     int nFACS_cells=0;
     int nFACS_dim=0;
+    double FACS_vmin[MAX_VARS];
+    double FACS_vmax[MAX_VARS];
 
     double *histo_data=NULL;
     double *histo_data_log=NULL;
@@ -79,5 +81,7 @@ namespace Global
     bool celltypecolours2D;
     bool only2colours2D;
     QColor celltype_colour[3];
+
+    int volume_scaling;
 
 } // namespace Global

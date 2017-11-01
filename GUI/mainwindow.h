@@ -14,13 +14,13 @@
 
 using namespace std;
 
-#include "ui_spheroid_GUI.h"
 #include <qwt_plot_curve.h>
 #include <qwt_plot_marker.h>
 #include <qwt_symbol.h>
 #include "params.h"
 #include "qmylabel.h"
 #include "qmycheckbox.h"
+#include "qmygroupbox.h"
 #include "misc.h"
 #include "plot.h"
 #include "myvtk.h"
@@ -30,6 +30,7 @@ using namespace std;
 #include "SimpleView3DUI.h"
 #include "SimpleView2DUI.h"
 #include "qvideooutput.h"
+#include "ui_spheroid_GUI.h"
 
 #include <qwt_plot.h>
 #include <qwt_plot_grid.h>
@@ -189,6 +190,7 @@ public slots:
     void on_buttonGroup_celltype_buttonClicked(QAbstractButton* button);
     void on_buttonGroup_histotype_buttonClicked(QAbstractButton* button);
     void on_checkBox_histo_logscale_toggled();
+    void on_checkBox_volume_scaling_toggled(bool checked);
     void on_buttonGroup_drug_buttonClicked(QAbstractButton* button);
     void updateCkill();
 
@@ -200,6 +202,9 @@ public slots:
     void makeDrugPlot(int idrug, int kset, int ictyp, double *maxdose, QString plotStr, QVector<double> *x, QVector<double> *y);
     void makeDrugRadiationPlot(int idrug, int kset, int ictyp, double *maxO2, QString plotStr, QVector<double> *x, QVector<double> *y);
     void processGroupBoxClick(QString);
+
+    void on_pushButton_update_FACS_Histo_clicked();
+
 signals:
     void facs_update();
     void histo_update();
@@ -239,7 +244,7 @@ private:
     void setGraphsActive();
     void initDrugComboBoxes();
     void test_histo();
-    void makeHistoPlot(int numValues, double xmin, double width, QVector<double> values);
+    void makeHistoPlot(int ivar, int numValues, double xmin, double width, QVector<double> values);
     void showBool(QString, bool);
 
 	double erf(double z);

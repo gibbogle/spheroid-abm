@@ -415,10 +415,8 @@ void MyVTK::setOpacity(int celltype, int position)
 {
     if (position == 100) {
         opacity[celltype] = 0.001;
-//        opacity[2] = 0.001;       // try varying opacity for type 1 only
     } else {
         opacity[celltype] = (100. - position)/100;
-//        opacity[2] = (100. - position)/100;
     }
 //    sprintf(msg,"celltype opacity: %d %f",celltype,opacity[celltype]);
 //    LOG_MSG(msg);
