@@ -2082,8 +2082,10 @@ void MainWindow::runServer()
         paused = false;
         return;
     } else {
- //       field = new Field(page_2D, checkBox_record2D->isChecked());
-        field->setSaveImages(checkBox_record2D->isChecked());
+        int start_hour = lineEdit_record2D_start_hour->text().toInt();
+        int end_hour = lineEdit_record2D_end_hour->text().toInt();
+        QString base_name = lineEdit_record2D_base_name->text();
+        field->setSaveImages(checkBox_record2D->isChecked(),base_name, start_hour, end_hour);
         field->setUseLogScale(checkBox_O2logscale->isChecked());
 //        if (radioButton_hypoxia_1->isChecked())
 //            Global::i_hypoxia_cutoff = 1;

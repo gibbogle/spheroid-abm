@@ -66,13 +66,16 @@ public:
     void selectCellConstituent();
     void selectFieldConstituent();
     void setExecuting(bool);
-    void setSaveImages(bool);
+    void setSaveImages(bool, QString, int, int);
     void setUseLogScale(bool);
     void setCellConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QList<QRadioButton *> *rb_list, QString tag);
     void setFieldConstituentButtons(QGroupBox *gbox, QButtonGroup *bg, QVBoxLayout **vbox, QList<QRadioButton *> *rb_list, QString tag);
 
     QWidget *field_page;
     bool save_images;
+    QString record2D_base_name;
+    int record2D_start_hour;
+    int record2D_end_hour;
     bool use_log;
     MyQGraphicsView* view;
     QGraphicsScene* scene;

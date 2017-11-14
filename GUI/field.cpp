@@ -379,9 +379,12 @@ void Field::setSliceChanged()
 
 //------------------------------------------------------------------------------------------------
 //------------------------------------------------------------------------------------------------
-void Field::setSaveImages(bool save)
+void Field::setSaveImages(bool save, QString base_name, int start_hour, int end_hour)
 {
     save_images = save;
+    record2D_base_name = base_name;
+    record2D_start_hour = start_hour;
+    record2D_end_hour = end_hour;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -694,9 +697,9 @@ void Field::displayField(int hr, int *res)
     QGraphicsTextItem *scalebar_text = scene->addText("100 um",font);
     scalebar_text->setPos(scalebar0,1.4*scalebar0);
     view->show();
-    return;
+//    return;
 
-    if (save_images) {
+    if (save_images && hour >= record2D_start_hour && hour <= record2D_end_hour) {
         scene->clearSelection();                                                  // Selections would also render to the file
         scene->setSceneRect(scene->itemsBoundingRect());                          // Re-shrink the scene to it's bounding contents
         QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);  // Create the image with the exact size of the shrunk scene
@@ -705,11 +708,14 @@ void Field::displayField(int hr, int *res)
         QPainter painter(&image);
         scene->render(&painter);
         ifield++;
-        char filename[] = "image/field0000.png";
-        char numstr[5];
-        sprintf(numstr,"%04d",hour);
-        for (int i=0; i<4; i++)
-            filename[11+i] = numstr[i];
+        QString numstr = QString("%1").arg(hour, 4, 10, QChar('0'));
+        QString filename = record2D_base_name + numstr + ".png";
+//        char *filename = qstr.toAscii();
+//        char filename[] = "image/field0000.png";
+//        char numstr[5];
+//        sprintf(numstr,"%04d",hour);
+//        for (int i=0; i<4; i++)
+//            filename[11+i] = numstr[i];
         image.save(filename);
     }
 }
