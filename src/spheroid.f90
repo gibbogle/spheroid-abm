@@ -17,7 +17,7 @@ contains
 
 !-----------------------------------------------------------------------------------------
 ! This subroutine is called to initialize a simulation run.
-! ncpu = the number of processors to use
+! ncpu = the number of processors to use 
 ! infile = file with the input data
 ! outfile = file to hold the output
 !-----------------------------------------------------------------------------------------
@@ -335,8 +335,6 @@ call RngInitialisation
 
 ! These are deallocated here instead of in subroutine wrapup so that when a simulation run ends
 ! it will still be possible to view the cell distributions and chemokine concentration fields.
-if (allocated(occupancy)) deallocate(occupancy)
-if (allocated(cell_list)) deallocate(cell_list)
 if (allocated(allstate)) deallocate(allstate)
 if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
 if (allocated(gaplist)) deallocate(gaplist)
@@ -349,16 +347,19 @@ nlist = 0
 
 allocate(zoffset(0:2*Mnodes))
 allocate(zdomain(NZ))
-!x0 = (NX + 1.0)/2.        ! global value
-!y0 = (NY + 1.0)/2.
-!z0 = (NZ + 1.0)/2.
-!blob_centre = [x0,y0,z0]   ! now, actually the global centre (units = grids)
 call SetRadius(initial_count)
 write(logmsg,*) 'Initial radius, count, max_nlist: ',blob_radius, initial_count, max_nlist
 call logger(logmsg)
 
-allocate(cell_list(max_nlist))
-allocate(occupancy(NX,NY,NZ))
+if (leave_allocated) then
+	if (.not.allocated(occupancy)) allocate(occupancy(NX,NY,NZ))
+	if (.not.allocated(cell_list)) allocate(cell_list(max_nlist))
+else
+	if (allocated(occupancy)) deallocate(occupancy)
+	if (allocated(cell_list)) deallocate(cell_list)
+	allocate(occupancy(NX,NY,NZ))
+	allocate(cell_list(max_nlist))
+endif
 allocate(gaplist(max_ngaps))
 !allocate(Cslice(NX/2,NY/2,NZ/2,MAX_CHEMO))
 allocate(Cslice(NX,NY,NZ,MAX_CHEMO))
@@ -782,6 +783,7 @@ do idrug = 1,Ndrugs_used
             drug(idrug)%sensitises(ictyp,im) = (ival == 1)
 			write(nflog,'(a,i2,7e12.3)') 'ReadDrug: im,C2,KO2,Ckill_O2,Kmet0,f,T: ',im, &
 				dp%C2(ictyp,im),dp%KO2(ictyp,im),dp%kill_drug(ictyp,im),dp%Kmet0(ictyp,im),dp%kill_fraction(ictyp,im),dp%kill_duration(ictyp,im)
+			drug(idrug)%Vmax(ictyp,im) = drug(idrug)%Vmax(ictyp,im)/60						! /min -> /sec
             drug(idrug)%Kmet0(ictyp,im) = drug(idrug)%Kmet0(ictyp,im)/60					! /min -> /sec
             drug(idrug)%KO2(ictyp,im) = 1.0e-3*drug(idrug)%KO2(ictyp,im)					! um -> mM
             drug(idrug)%kill_duration(ictyp,im) = 60*drug(idrug)%kill_duration(ictyp,im)	! min -> sec
@@ -2005,7 +2007,7 @@ if (allocated(zdomain)) deallocate(zdomain)
 if (allocated(gaplist)) deallocate(gaplist,stat=ierr)
 !if (allocated(occupancy)) deallocate(occupancy)
 !if (allocated(cell_list)) deallocate(cell_list)
-!if (allocated(allstate)) deallocate(allstate)
+if (allocated(allstate)) deallocate(allstate)
 if (allocated(allstatep)) deallocate(allstatep)
 if (allocated(work_rkc)) deallocate(work_rkc)
 do ichemo = 1,MAX_CHEMO

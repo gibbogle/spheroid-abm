@@ -342,6 +342,7 @@ logical :: dbug = .false.
 logical :: bdry_debug
 
 logical :: use_events = .true.
+logical :: leave_allocated = .true.
 
 real(REAL_KIND) :: ysave(100000),dCreactsave(100000)
 
