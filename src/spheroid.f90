@@ -742,9 +742,15 @@ do idrug = 1,Ndrugs_used
 	elseif (drug(idrug)%classname == 'DNB') then
 		drug(idrug)%drugclass = DNB_CLASS
 	endif
-	drug(idrug)%nmetabolites = 2			! currently all drugs have 2 metabolites
+	read(nf,*) drug(idrug)%nmetabolites
+	write(nflog,*) 'nmetabolites: ',drug(idrug)%nmetabolites
+	if (drug(idrug)%nmetabolites > MAX_METAB) then
+		write(logmsg,*) 'ERROR: nmetabolites > MAX_METAB'
+		call logger(logmsg)
+		stop
+	endif
 	drug(idrug)%use_metabolites = .true.	! currently simulate metabolites
-    do im = 0,2			! 0 = parent, 1 = metab_1, 2 = metab_2
+    do im = 0,drug(idrug)%nmetabolites			! 0 = parent, 1 = metab_1, 2 = metab_2, 3 = metab_3
 		read(nf,'(a)') drugname
 		if (im == 0) then
 			drug(idrug)%name = drugname
@@ -791,6 +797,7 @@ do idrug = 1,Ndrugs_used
     enddo
     write(nflog,*) 'drug: ',idrug,drug(idrug)%classname,'  ',drug(idrug)%name
 enddo
+
 drug_dose_flag = .false.
 end subroutine
 
@@ -918,19 +925,20 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 subroutine CopyDrugParameters(idrug,ichemo)
 integer :: idrug,ichemo
-integer :: im, im1, im2
+integer :: im, im1, im2, nmet
 character*(1) :: numstr
 
+nmet = drug(idrug)%nmetabolites
 im1 = 0
 chemo(ichemo)%name = drug(idrug)%name
 if (drug(idrug)%use_metabolites) then
-	do im = 1,drug(idrug)%nmetabolites
+	do im = 1,nmet
 		chemo(ichemo+im)%used = .true.
 		chemo(ichemo+im)%name = trim(chemo(ichemo)%name) // '_metab'
 		write(numstr,'(i1)') im
 		chemo(ichemo+im)%name = trim(chemo(ichemo+im)%name) // numstr
 	enddo
-	im2 = 2
+	im2 = nmet
 else
 	im2 = 0
 endif
@@ -988,11 +996,12 @@ end subroutine
 subroutine DetermineKd
 real(REAL_KIND) :: C2, KO2, n_O2, Kmet0, kmet 
 real(REAL_KIND) :: f, T, Ckill, Ckill_O2, Kd
-integer :: idrug, ictyp, im, kill_model
+integer :: idrug, ictyp, im, nmet, kill_model
 
 do idrug = 1,ndrugs_used
+	nmet = drug(idrug)%nmetabolites
 	do ictyp = 1,Ncelltypes
-		do im = 0,2
+		do im = 0,nmet
 			if (drug(idrug)%kills(ictyp,im)) then
 				C2 = drug(idrug)%C2(ictyp,im)
 				KO2 = drug(idrug)%KO2(ictyp,im)
@@ -1258,7 +1267,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine ProcessEvent(radiation_dose)
 real(REAL_KIND) :: radiation_dose
-integer :: kevent, ichemo, idrug, im, nmetab
+integer :: kevent, ichemo, idrug, im, nmet
 real(REAL_KIND) :: V, C(MAX_CHEMO)
 type(event_type) :: E
 
@@ -1300,8 +1309,8 @@ do kevent = 1,Nevents
 			! set %present
 			chemo(ichemo)%present = .true.
 			chemo(ichemo)%bdry_conc = 0
-			nmetab = drug(idrug)%nmetabolites
-			do im = 1,nmetab
+			nmet = drug(idrug)%nmetabolites
+			do im = 1,nmet
 				if (chemo(ichemo + im)%used) then
 					chemo(ichemo + im)%present = .true.
 					chemo(ichemo + im)%bdry_conc = 0
@@ -1320,7 +1329,7 @@ end subroutine
 !----------------------------------------------------------------------------------
 subroutine Treatment(radiation_dose)
 real(REAL_KIND) :: radiation_dose
-integer :: i, idrug, ichemo, nmetab, im	!, ichemo_metab
+integer :: i, idrug, ichemo, nmet, im	!, ichemo_metab
 
 radiation_dose = 0
 do i = 1,protocol(0)%n
@@ -1335,17 +1344,11 @@ enddo
 do idrug = 1,2
 !	ichemo = idrug + TRACER		!!!!!!!!!!!!!!!!!! wrong
 	ichemo = protocol(idrug)%ichemo
-	if (idrug == 1) then
-!		ichemo_metab = DRUG_A_METAB
-		nmetab = 2
-	elseif (idrug == 2) then
-!		ichemo_metab = DRUG_B_METAB
-		nmetab = 2
-	endif
+	nmet = drug(idrug)%nmetabolites
 	do i = 1,protocol(idrug)%n
 		if (i == 1 .and. t_simulation < protocol(idrug)%tstart(i)) then
 			chemo(ichemo)%bdry_conc = 0
-			do im = 1,nmetab
+			do im = 1,nmet
 				chemo(ichemo + im)%bdry_conc = 0
 			enddo
 			exit
@@ -1357,7 +1360,7 @@ do idrug = 1,2
 			chemo(ichemo)%present = .true.
 			call InitConcs(ichemo)
 			call SetupMedium(ichemo)
-			do im = 1,nmetab
+			do im = 1,nmet
 				if (chemo(ichemo + im)%used) then
 					chemo(ichemo + im)%present = .true.
 					call InitConcs(ichemo + im)
@@ -1375,7 +1378,7 @@ do idrug = 1,2
 !			chemo(ichemo)%present = .false.
 			call InitConcs(ichemo)
 			call SetupMedium(ichemo)
-			do im = 1,nmetab
+			do im = 1,nmet
 				chemo(ichemo + im)%bdry_conc = 0
 				if (chemo(ichemo + im)%used) then
 	!				chemo(ichemo_metab)%present = .false.
@@ -1526,6 +1529,7 @@ logical :: ok = .true.
 logical :: sine_ramp = .false.
 logical :: dbug
 
+write(nflog,'(a,4e12.3)') 'drug: ',chemo(DRUG_A:DRUG_A+3)%medium_Cext
 !call logger('simulate_step')
 !write(*,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
 !write(nflog,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime

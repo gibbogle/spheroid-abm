@@ -97,7 +97,7 @@ end subroutine
 subroutine Irradiation(dose,ok)
 real(REAL_KIND) :: dose
 logical :: ok
-integer :: kcell, site(3), iv, ityp, idrug, im, ichemo, kpar=0
+integer :: kcell, site(3), iv, ityp, idrug, im, iparent, nmet, kpar=0
 real(REAL_KIND) :: C_O2, SER, p_death, p_recovery, R, kill_prob, tnow
 real(REAL_KIND) :: Cs							! concentration of radiosensitising drug
 real(REAL_KIND) :: SER_max0, SER_Km, SER_KO2	! SER parameters of the drug
@@ -114,12 +114,13 @@ do kcell = 1,nlist
 	! Compute sensitisation SER
 	SER = 1.0
 	do idrug = 1,Ndrugs_used
-		ichemo = 4 + 3*(idrug-1)
-		if (.not.chemo(ichemo)%present) cycle
-		do im = 0,2
-			ichemo = 4 + 3*(idrug-1) + im
+		nmet = drug(idrug)%nmetabolites
+		iparent = DRUG_A + (MAX_METAB+1)*(idrug-1)
+		if (.not.chemo(iparent)%present) cycle
+		do im = 0,nmet
+!			ichemo = 4 + 3*(idrug-1) + im
 			if (drug(idrug)%sensitises(ityp,im)) then
-				Cs = cell_list(kcell)%conc(ichemo)	! concentration of drug/metabolite in the cell
+				Cs = cell_list(kcell)%conc(iparent+im)	! concentration of drug/metabolite in the cell
 				SER_max0 = drug(idrug)%SER_max(ityp,im)
 				SER_Km = drug(idrug)%SER_Km(ityp,im)
 				SER_KO2 = drug(idrug)%SER_KO2(ityp,im)
@@ -264,12 +265,12 @@ end function
 subroutine CellDeath(dt,ok)
 real(REAL_KIND) :: dt
 logical :: ok
-integer :: kcell, nlist0, site(3), i, ichemo, idrug, im, ityp, kill_model, kpar=0 
+integer :: kcell, nlist0, site(3), i, iparent, idrug, im, nmet, ityp, kill_model, kpar=0 
 real(REAL_KIND) :: C_O2, C_glucose, Cdrug, n_O2, kmet, Kd, dMdt, c, ctot
-real(REAL_KIND) :: kill_prob, dkill_prob(0:2), death_prob, survival_prob, tnow
+real(REAL_KIND) :: kill_prob, dkill_prob(0:MAX_METAB), death_prob, survival_prob, tnow
 logical :: anoxia_death, aglucosia_death
 type(drug_type), pointer :: dp
-real(REAL_KIND) :: Cdrug_sum, C_O2_sum, dMdt_sum, Cdrug_in_sum(0:2), C_O2_in_sum, C_O2_ex_sum
+real(REAL_KIND) :: Cdrug_sum, C_O2_sum, dMdt_sum, C_O2_in_sum, C_O2_ex_sum
 integer :: n, n_in, ntagged
 logical :: flag
 logical :: new_kill_method = .true.
@@ -287,7 +288,6 @@ n_in = 0
 !Cdrug_sum = 0
 !C_O2_sum = 0
 !dMdt_sum = 0
-Cdrug_in_sum = 0
 C_O2_in_sum = 0
 C_O2_ex_sum = 0
 ntagged = 0
@@ -299,7 +299,6 @@ do kcell = 1,nlist
 	call getO2conc(kcell,C_O2)
 	C_O2_in_sum = C_O2_in_sum + C_O2
 	C_O2_ex_sum = C_O2_ex_sum + cell_list(kcell)%Cex(OXYGEN)
-	Cdrug_in_sum = Cdrug_in_sum + cell_list(kcell)%conc(TRACER+1:TRACER+3)
 	if (cell_list(kcell)%anoxia_tag) then
 !		write(logmsg,*) 'anoxia_tag: ',kcell,cell_list(kcell)%state,tnow,cell_list(kcell)%t_anoxia_die
 !		call logger(logmsg)
@@ -351,18 +350,19 @@ do kcell = 1,nlist
 		endif
 	endif
 	do idrug = 1,ndrugs_used	
+		nmet = drug(idrug)%nmetabolites
 		dp => drug(idrug)
-		ichemo = TRACER + 1 + 3*(idrug-1)	
+		iparent = DRUG_A + (MAX_METAB+1)*(idrug-1)
 		dkill_prob = 0
 		kill_prob = 0
 		death_prob = 0
 		survival_prob = 1
 		ctot = 0
-		do im = 0,2
+		do im = 0,nmet
 !			if (.not.flag) write(nflog,*) 'im: ',im
 			if (.not.dp%kills(ityp,im)) cycle
 			kill_model = dp%kill_model(ityp,im)		! could use %drugclass to separate kill modes
-			Cdrug = cell_list(kcell)%conc(ichemo + im)
+			Cdrug = cell_list(kcell)%conc(iparent + im)
 			if (dbug_drug_flag) then	! fix the metabolite concentration
 				if (im == 1) then
 					Cdrug = 5.0e-4
@@ -408,9 +408,6 @@ do kcell = 1,nlist
 			cell_list(kcell)%drug_tag(idrug) = .true.
             Ndrug_tag(idrug,ityp) = Ndrug_tag(idrug,ityp) + 1
             ntagged = ntagged + 1
-            ! Here we want to record (in .res file, nfout) the drug concs: cell_list(kcell)%conc(ichemo:ichemo+2) and dkill_prob(:)
-!            write(nfout,'(2i6,3f10.6,4f8.4)') Ndrug_tag(idrug,ityp),kcell,cell_list(kcell)%conc(ichemo:ichemo+2),dkill_prob(:),kill_prob
-!            write(nfout,'(2i6,5e12.3)') istep,kcell,kill_prob,C_O2,cell_list(kcell)%conc(ichemo:ichemo+2)
 		endif
 	enddo
 	flag = .true.

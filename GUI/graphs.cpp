@@ -152,71 +152,95 @@ GRAPH_SET tsGraphSet[] = {
      "Average concentration of drug A metabolite 2 in the medium (far-field)",
     24, true, 0, 0.001, 0, TS_TYPE},
 
+    {"mediumdrugAmet3",
+    "Ave Medium Drug A metab3",
+    "Concentration",
+     "Average concentration of drug A metabolite 3 in the medium (far-field)",
+    25, true, 0, 0.001, 0, TS_TYPE},
+
     {"mediumdrugB",
     "Ave Medium Drug B",
     "Concentration",
      "Average concentration of drug B in the medium (far-field)",
-    25, true, 0, 0.001, 0, TS_TYPE},
+    26, true, 0, 0.001, 0, TS_TYPE},
 
     {"mediumdrugBmet1",
     "Ave Medium Drug B metab1",
     "Concentration",
      "Average concentration of drug B metabolite 1 in the medium (far-field)",
-    26, true, 0, 0.001, 0, TS_TYPE},
+    27, true, 0, 0.001, 0, TS_TYPE},
 
     {"mediumdrugBmet2",
     "Ave Medium Drug B metab2",
     "Concentration",
      "Average concentration of drug B metabolite 2 in the medium (far-field)",
-    27, true, 0, 0.001, 0, TS_TYPE},
+    28, true, 0, 0.001, 0, TS_TYPE},
+
+    {"mediumdrugBmet3",
+    "Ave Medium Drug B metab3",
+    "Concentration",
+     "Average concentration of drug B metabolite 3 in the medium (far-field)",
+    29, true, 0, 0.001, 0, TS_TYPE},
 
     {"bdryoxygen",
     "Blob Boundary Oxygen",
     "Concentration",
      "Average concentration of oxygen at the blob boundary",
-    28, true, 0, 0.001, 0, TS_TYPE},
+    30, true, 0, 0.001, 0, TS_TYPE},
 
     {"bdryglucose",
     "Blob Boundary Glucose",
     "Concentration",
      "Average concentration of glucose at the blob boundary",
-    29, true, 0, 0.001, 0, TS_TYPE},
+    31, true, 0, 0.001, 0, TS_TYPE},
 
     {"bdrydrugA",
     "Blob Boundary Drug A",
     "Concentration",
      "Average concentration of drug A at the blob boundary",
-    30, true, 0, 0.001, 0, TS_TYPE},
+    32, true, 0, 0.001, 0, TS_TYPE},
 
     {"bdrydrugAmet1",
     "Blob Boundary Drug A metab1",
     "Concentration",
      "Average concentration of drug A metabolite 1 at the blob boundary",
-    31, true, 0, 0.001, 0, TS_TYPE},
+    33, true, 0, 0.001, 0, TS_TYPE},
 
     {"bdrydrugAmet2",
     "Blob Boundary Drug A metab2",
     "Concentration",
      "Average concentration of drug A metabolite 2 at the blob boundary",
-    32, true, 0, 0.001, 0, TS_TYPE},
+    34, true, 0, 0.001, 0, TS_TYPE},
+
+    {"bdrydrugAmet3",
+    "Blob Boundary Drug A metab3",
+    "Concentration",
+     "Average concentration of drug A metabolite 3 at the blob boundary",
+    35, true, 0, 0.001, 0, TS_TYPE},
 
     {"bdrydrugB",
     "Blob Boundary Drug B",
     "Concentration",
      "Average concentration of drug B at the blob boundary",
-    33, true, 0, 0.001, 0, TS_TYPE},
+    36, true, 0, 0.001, 0, TS_TYPE},
 
     {"bdrydrugBmet1",
     "Blob Boundary Drug B metab1",
     "Concentration",
      "Average concentration of drug B metabolite 1 at the blob boundary",
-    34, true, 0, 0.001, 0, TS_TYPE},
+    37, true, 0, 0.001, 0, TS_TYPE},
 
     {"bdrydrugBmet2",
     "Blob Boundary Drug B metab2",
     "Concentration",
      "Average concentration of drug B metabolite 2 at the blob boundary",
-    35, true, 0, 0.001, 0, TS_TYPE},
+    38, true, 0, 0.001, 0, TS_TYPE},
+
+    {"bdrydrugBmet3",
+    "Blob Boundary Drug B metab3",
+    "Concentration",
+     "Average concentration of drug B metabolite 3 at the blob boundary",
+    39, true, 0, 0.001, 0, TS_TYPE},
 
 // Extracellular profiles
 
@@ -268,6 +292,12 @@ GRAPH_SET tsGraphSet[] = {
     "Drug_A_metab2 description",
     DRUG_A_METAB_2, false, 0, 1, 0, PROF_TYPE},
 
+    {"Drug_A_metab3",
+    "Drug A Metabolite 3 Concentration",
+    "",
+    "Drug_A_metab3 description",
+    DRUG_A_METAB_3, false, 0, 1, 0, PROF_TYPE},
+
     {"Drug_B",
     "Drug B Concentration",
     "",
@@ -285,6 +315,12 @@ GRAPH_SET tsGraphSet[] = {
     "",
     "Drug_B_metab2 description",
     DRUG_B_METAB_2, false, 0, 1, 0, PROF_TYPE},
+
+    {"Drug_B_metab3",
+    "Drug B Metabolite 3 Concentration",
+    "",
+    "Drug_B_metab3 description",
+    DRUG_B_METAB_3, false, 0, 1, 0, PROF_TYPE},
 
 // Intracellular profiles
 
@@ -324,6 +360,12 @@ GRAPH_SET tsGraphSet[] = {
     "Drug_A_metab2 description",
     IC_DRUG_A_METAB_2, false, 0, 1, 0, PROF_TYPE},
 
+    {"IC_Drug_A_metab3",
+    "IC Drug A Metabolite 3 Concentration",
+    "",
+    "Drug_A_metab3 description",
+    IC_DRUG_A_METAB_3, false, 0, 1, 0, PROF_TYPE},
+
     {"IC_Drug_B",
     "IC Drug B Concentration",
     "",
@@ -341,6 +383,12 @@ GRAPH_SET tsGraphSet[] = {
     "",
     "Drug_B_metab2 description",
     IC_DRUG_B_METAB_2, false, 0, 1, 0, PROF_TYPE},
+
+    {"Drug_B_metab3",
+    "IC Drug B Metabolite 3 Concentration",
+    "",
+    "Drug_B_metab3 description",
+    IC_DRUG_B_METAB_3, false, 0, 1, 0, PROF_TYPE},
 
     {"IC_CFSE",
     "CFSE Concentration",

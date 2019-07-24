@@ -250,6 +250,7 @@ do ichemo = 1,MAX_CHEMO
 		chemomap(nchemo) = ichemo
 	endif
 enddo
+!write(*,'(a,i3,2x,10i3)') 'chemomap: ',nchemo,chemomap(1:nchemo)
 deallocate(exmap)
 end subroutine
 
@@ -372,16 +373,17 @@ end subroutine
 !----------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------
 subroutine CheckDrugConcs
-integer :: ndrugs_present, drug_present(3*MAX_DRUGTYPES), drug_number(3*MAX_DRUGTYPES)
-integer :: idrug, iparent, im, kcell, ichemo, i
+integer :: ndrugs_present, drug_present((MAX_METAB+1)*MAX_DRUGTYPES), drug_number((MAX_METAB+1)*MAX_DRUGTYPES)
+integer :: idrug, iparent, im, nmet, kcell, ichemo, i
 type(cell_type), pointer :: cp
 
 ndrugs_present = 0
 drug_present = 0
 do idrug = 1,ndrugs_used
-	iparent = TRACER + 1 + 3*(idrug-1)
+	nmet = drug(idrug)%nmetabolites
+	iparent = DRUG_A + (MAX_METAB+1)*(idrug-1)
 	if (chemo(iparent)%present) then		! simulation with this drug has started
-	    do im = 0,2
+	    do im = 0,nmet
 	        ichemo = iparent + im
 	        ndrugs_present = ndrugs_present + 1
 	        drug_present(ndrugs_present) = ichemo
@@ -453,11 +455,11 @@ integer :: neqn, icase
 real(REAL_KIND) :: t, y(neqn), dydt(neqn)
 integer :: i, k, ie, ki, kv, nextra, nintra, ichemo, idrug, im, site(3), kcell, ict, ith, Ng, nc, nc0
 real(REAL_KIND) :: dCsum, dCdiff, dCreact,  DX2, DX3, vol_cm3, val, Cin(MAX_CHEMO), Cex
-real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_kin, membrane_kout, membrane_flux, area_factor, n_O2(0:2)
+real(REAL_KIND) :: decay_rate, dc1, dc6, cbnd, yy, C, membrane_kin, membrane_kout, membrane_flux, area_factor, n_O2(0:MAX_METAB)
 logical :: bnd, dbug
 !logical :: TPZ_metabolised(MAX_CELLTYPES,0:2), DNB_metabolised(MAX_CELLTYPES,0:2)
-logical :: metabolised(MAX_CELLTYPES,0:2)
-real(REAL_KIND) :: metab, dMdt, KmetC, vcell_actual, Kd(0:2), dC, C0
+logical :: metabolised(MAX_CELLTYPES,0:MAX_METAB)
+real(REAL_KIND) :: metab, dMdt, KmetC, vcell_actual, Kd(0:MAX_METAB), dC, C0
 logical :: intracellular, cell_exists
 logical :: use_actual_cell_volume = .false.
 logical :: use_revised_diffusion_eqtn = .false.  ! account for effect of local cells on Kdiff
@@ -472,11 +474,12 @@ ichemo = icase
 if (ichemo == GLUCOSE) then
 	Ng = chemo(GLUCOSE)%Hill_N
 endif
-if (ichemo > TRACER) then
-	idrug = (ichemo - TRACER - 1)/3 + 1
-	im = ichemo - TRACER - 1 - 3*(idrug-1)		! 0 = drug, 1 = metab1, 2 = metab2
+if (ichemo >= DRUG_A) then
+    idrug = (ichemo - DRUG_A)/(MAX_METAB+1) + 1
+    im = ichemo - DRUG_A - (MAX_METAB+1)*(idrug-1)		! 0 = drug, 1 = metab1, 2 = metab2, 3 = metab3
 	dp => drug(idrug)
 	metabolised(:,:) = (dp%Kmet0(:,:) > 0)
+!	write(*,*) 'metabolised: ',ichemo,idrug,im,metabolised(1,:)
 !	if (im == 0) then
 !		write(*,*) 'f_rkc: ichemo,idrug,im: ',ichemo,idrug,im
 !		write(*,*) 'metabolised: ',metabolised(:,:)
@@ -497,6 +500,10 @@ dc6 = 6*dc1 + decay_rate
 cbnd = BdryConc(ichemo)
 membrane_kin = chemo(ichemo)%membrane_diff_in
 membrane_kout = chemo(ichemo)%membrane_diff_out
+if (membrane_kin == 0) then
+	write(*,*) 'ichemo, Kin, Kout: ',ichemo,membrane_kin,membrane_kout
+	stop
+endif
 
 !write(*,*) 'f_rkc: neqn: ',neqn
 !$omp parallel do private(intracellular, vol_cm3, Cex, cell_exists, Cin, dCsum, k, kv, dCdiff, val, dCreact, yy, C, metab, kcell, ict, membrane_flux, KmetC, area_factor) default(shared) schedule(static)
@@ -650,6 +657,17 @@ do i = 1,neqn
 				dCreact = dCreact - (1 - dp%C2(ict,2) + dp%C2(ict,2)*dp%KO2(ict,2)**n_O2(2)/(dp%KO2(ict,2)**n_O2(2) + Cin(OXYGEN)**n_O2(2)))*dp%Kmet0(ict,2)*C
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
+		elseif (im == 3) then	! ichemo-1 is the METAB2
+			if (metabolised(ict,2) .and. Cin(ichemo-1) > 0) then
+!				write(*,*) 'im = 3, metabolised(2): ',metabolised(ict,2),Cin(ichemo-1)
+				dCreact = (1 - dp%C2(ict,2) + dp%C2(ict,2)*dp%KO2(ict,2)**n_O2(2)/(dp%KO2(ict,2)**n_O2(2) + Cin(OXYGEN)**n_O2(2)))*dp%Kmet0(ict,2)*Cin(ichemo-1)
+			endif
+			if (metabolised(ict,3) .and. C > 0) then
+!				write(*,*) 'im = 3, metabolised(3): ',metabolised(ict,3),C
+				dCreact = dCreact - (1 - dp%C2(ict,3) + dp%C2(ict,3)*dp%KO2(ict,3)**n_O2(3)/(dp%KO2(ict,3)**n_O2(3) + Cin(OXYGEN)**n_O2(3)))*dp%Kmet0(ict,3)*C
+			endif
+			dCreact = dCreact + membrane_flux/vol_cm3
+!			if (dCreact > 0) write(*,'(a,6e11.3)') 'dCreact, flux: ',dCreact,membrane_flux/vol_cm3,membrane_kin,membrane_kout,C,Cex
 		endif
 	    dydt(i) = dCreact - yy*decay_rate
 		if (isnan(dydt(i))) then
@@ -749,8 +767,8 @@ type(cell_type), pointer :: cp
 
 cp => cell_list(1)
 if (chemo(DRUG_A)%present) then
-	write(nflog,'(a,f7.3,7e12.3)') 'EC_IC_drug_conc: ',t_simulation/3600, cp%conc(OXYGEN), &
-		cp%Cex(DRUG_A:DRUG_A+2),cp%conc(DRUG_A:DRUG_A+2)
+	write(nflog,'(a,f7.3,9e12.3)') 'EC_IC_drug_conc: ',t_simulation/3600, cp%conc(OXYGEN), &
+		cp%Cex(DRUG_A:DRUG_A+MAX_METAB),cp%conc(DRUG_A:DRUG_A+MAX_METAB)
 endif
 
 ODEdiff%nintra = nc
@@ -1456,8 +1474,8 @@ integer :: ixb, iyb, izb
 integer :: i, ic, ichemo, n = 100
 real(REAL_KIND) :: alpha_Cbnd = 0.4
 !real(REAL_KIND) :: t_buffer = 3600	! one hour delay before applying smoothing to Cbnd
-integer :: ndrugs_present, drug_present(3*MAX_DRUGTYPES), drug_number(3*MAX_DRUGTYPES)
-integer :: idrug, iparent, im
+integer :: ndrugs_present, drug_present((MAX_METAB+1)*MAX_DRUGTYPES), drug_number((MAX_METAB+1)*MAX_DRUGTYPES)
+integer :: idrug, iparent, im, nmet
 logical :: present, zero_O2
 
 !write(nflog,*) 'UpdateCbnd_FD: '
@@ -1466,10 +1484,11 @@ ndrugs_present = 0
 drug_present = 0
 drug_number = 0
 do idrug = 1,ndrugs_used
-	iparent = TRACER + 1 + 3*(idrug-1)
+	nmet = drug(idrug)%nmetabolites
+	iparent = DRUG_A + (MAX_METAB+1)*(idrug-1)
 	if (chemo(iparent)%present) then		! simulation with this drug has started
 		write(nflog,*) 'Drug is present: ',iparent
-	    do im = 0,2
+	    do im = 0,nmet
 	        ichemo = iparent + im
 	        ndrugs_present = ndrugs_present + 1
 	        drug_present(ndrugs_present) = ichemo
@@ -1577,7 +1596,7 @@ real(REAL_KIND) :: a, Rlayer(MAX_CHEMO)
 integer :: kcell, Nh, Nc
 real(REAL_KIND) :: C, metab, dMdt, asum
 real(REAL_KIND) :: Kin, Kout, decay_rate, vol_cm3, Cin, Cex
-integer :: idrug, iparent, im
+integer :: idrug, iparent, im, nmet
 
 !write(*,*) 'UpdateCbnd_mixed'
 ! Start by looking at a conservative constituent (e.g. glucose)
@@ -1660,10 +1679,11 @@ do ichemo = 1,MAX_CHEMO
 enddo
 
 do idrug = 1,ndrugs_used
-	iparent = TRACER + 1 + 3*(idrug-1)
+	nmet = drug(idrug)%nmetabolites
+	iparent = DRUG_A + (MAX_METAB+1)*(idrug-1)
 	if (chemo(iparent)%present) then		! simulation with this drug has started
-	    do im = 0,2
-	        ichemo =iparent + im
+	    do im = 0,nmet
+	        ichemo = iparent + im
 	        if (chemo(ichemo)%medium_Cext > Cthreshold) drug_gt_cthreshold(idrug) = .true.
 	        if (chemo(ichemo)%medium_Cbnd > Cthreshold) drug_gt_cthreshold(idrug) = .true.
 	    enddo

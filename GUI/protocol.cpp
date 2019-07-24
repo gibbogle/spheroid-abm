@@ -22,6 +22,8 @@ void MainWindow::LoadProtocol(QString fileName)
     QTableWidget *table = tableWidget;
     table->clearContents();
     QFile file(fileName);
+
+    LOG_MSG("in LoadProtocol");
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
         QMessageBox::warning(this, tr("Application"),
                              tr("Cannot read file %1:\n%2.")
@@ -29,7 +31,7 @@ void MainWindow::LoadProtocol(QString fileName)
                              .arg(file.errorString()));
         return;
     }
-//    qDebug() << "Opened " << fileName;
+    qDebug() << "Opened " << fileName;
     QTextStream in(&file);
     QString line;
     // Skip lines

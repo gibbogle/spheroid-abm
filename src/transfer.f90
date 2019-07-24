@@ -321,17 +321,18 @@ real(c_double) :: summaryData(*)
 integer(c_int) :: i_hypoxia_cutoff,i_growth_cutoff
 integer :: Nviable(MAX_CELLTYPES), Nlive(MAX_CELLTYPES)
 integer :: nhypoxic(3), nclonohypoxic(3), ngrowth(3), &
-    medium_oxygen, medium_glucose, medium_lactate, medium_drug(2,0:2)
+    medium_oxygen, medium_glucose, medium_lactate, medium_drug(2,0:MAX_METAB)
 !    bdry_oxygen, bdry_glucose, bdry_lactate, bdry_drug(2,0:2)
 integer :: TNanoxia_dead, TNaglucosia_dead, TNradiation_dead, TNdrug_dead(2),  TNviable, &
            Ntagged_anoxia(MAX_CELLTYPES), Ntagged_aglucosia(MAX_CELLTYPES), Ntagged_radiation(MAX_CELLTYPES), &
            Ntagged_drug(2,MAX_CELLTYPES), &
            TNtagged_anoxia, TNtagged_aglucosia, TNtagged_radiation, TNtagged_drug(2)
-integer :: ityp, i, im, idrug
+integer :: ityp, i, im, idrug, nfields
 real(REAL_KIND) :: diam_um, hypoxic_percent, clonohypoxic_percent, growth_percent, necrotic_percent,  npmm3, Tplate_eff
 real(REAL_KIND) :: diam_cm, vol_cm3, vol_mm3, hour, necrotic_fraction, doubling_time, plate_eff(MAX_CELLTYPES)
 real(REAL_KIND) :: cmedium(MAX_CHEMO), cbdry(MAX_CHEMO), volume_cm3(5), maxarea(5), diameter_um(5)
 real(REAL_KIND) :: r_G, r_P, r_A, r_I, P_utilisation
+character*(36) :: formatstr
 
 hour = istep*DELTA_T/3600.
 call getDiamVol(diam_cm,vol_cm3)
@@ -396,13 +397,21 @@ necrotic_percent = 100.*necrotic_fraction
 !    doubling_time = 0
 !endif
 
-summaryData(1:36) = [ rint(istep), rint(Ncells), rint(TNanoxia_dead), rint(TNaglucosia_dead), rint(TNdrug_dead(1)), rint(TNdrug_dead(2)), rint(TNradiation_dead), &
+if (MAX_METAB == 2) then
+	nfields = 36
+	formatstr = '(a,a,2a12,i8,7e12.4,22i7,29e12.4)'
+elseif (MAX_METAB == 3) then
+	nfields = 36 + 4
+	formatstr = '(a,a,2a12,i8,7e12.4,22i7,33e12.4)'
+endif
+
+summaryData(1:nfields) = [ rint(istep), rint(Ncells), rint(TNanoxia_dead), rint(TNaglucosia_dead), rint(TNdrug_dead(1)), rint(TNdrug_dead(2)), rint(TNradiation_dead), &
     rint(TNtagged_anoxia), rint(TNtagged_aglucosia), rint(TNtagged_drug(1)), rint(TNtagged_drug(2)), rint(TNtagged_radiation), &
 	diam_um, vol_mm3, hypoxic_percent, clonohypoxic_percent, growth_percent, necrotic_percent, Tplate_eff, npmm3, &
-	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+2), cmedium(DRUG_B:DRUG_B+2), &
-	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+2), cbdry(DRUG_B:DRUG_B+2) ]
+	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+MAX_METAB), cmedium(DRUG_B:DRUG_B+MAX_METAB), &
+	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+MAX_METAB), cbdry(DRUG_B:DRUG_B+MAX_METAB) ]
 !	doubling_time, r_G, r_P, r_A, r_I, rint(ndoublings), P_utilisation ]
-write(nfres,'(a,a,2a12,i8,7e12.4,22i7,29e12.4)') trim(header),' ',gui_run_version, dll_run_version, &
+write(nfres,formatstr) trim(header),' ',gui_run_version, dll_run_version, &
 	istep, hour, vol_mm3, diameter_um, Ncells_type(1:2), &
     Nanoxia_dead(1:2), Naglucosia_dead(1:2), Ndrug_dead(1,1:2), &
     Ndrug_dead(2,1:2), Nradiation_dead(1:2), &
@@ -410,8 +419,8 @@ write(nfres,'(a,a,2a12,i8,7e12.4,22i7,29e12.4)') trim(header),' ',gui_run_versio
     Ntagged_drug(2,1:2), Ntagged_radiation(1:2), &
 	nhypoxic(:)/real(Ncells), nclonohypoxic(:)/real(TNviable), ngrowth(:)/real(Ncells), &
 	necrotic_fraction, plate_eff(1:2), &
-	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+2), cmedium(DRUG_B:DRUG_B+2), &
-	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+2), cbdry(DRUG_B:DRUG_B+2)
+	cmedium(OXYGEN), cmedium(GLUCOSE), cmedium(DRUG_A:DRUG_A+MAX_METAB), cmedium(DRUG_B:DRUG_B+MAX_METAB), &
+	cbdry(OXYGEN), cbdry(GLUCOSE), cbdry(DRUG_A:DRUG_A+MAX_METAB), cbdry(DRUG_B:DRUG_B+MAX_METAB)
 !	doubling_time, r_G, r_P, r_A, r_I, real(ndoublings), P_utilisation
 
 	

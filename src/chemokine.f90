@@ -327,20 +327,21 @@ end subroutine
 !----------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------
 subroutine CheckDrugPresence
-integer :: idrug, iparent, im, ichemo
+integer :: idrug, iparent, im, ichemo, nmet
 
 ! Check drugs and their metabolites
 do idrug = 1,ndrugs_used
-	iparent = TRACER + 1 + 3*(idrug-1)
+	nmet = drug(idrug)%nmetabolites
+	iparent = DRUG_A + (MAX_METAB+1)*(idrug-1)
 	if (chemo(iparent)%present) then		! simulation with this drug has started
 		if (.not.drug_gt_cthreshold(idrug)) then
 			write(logmsg,'(a,i2,a,a)') 'Removing drug and metabolites, concentrations below threshold: ',idrug,' ',chemo(iparent)%name
 			call logger(logmsg)
-			write(logmsg,'(a,3e12.3)') 'concs: ',(chemo(iparent+im)%medium_Cbnd,im=0,2)
+			write(logmsg,'(a,4e12.3)') 'concs: ',(chemo(iparent+im)%medium_Cbnd,im=0,MAX_METAB)
 			call logger(logmsg)
 			write(logmsg,'(a,e12.3)') 'threshold concentration: ',Cthreshold
 			call logger(logmsg)
-			do im = 0,2
+			do im = 0,nmet
 				ichemo = iparent + im
 				chemo(ichemo)%present = .false.
 			enddo
@@ -354,11 +355,12 @@ end subroutine
 !----------------------------------------------------------------------------------------
 subroutine RemoveDrug(idrug)
 integer :: idrug
-integer :: iparent, ichemo, im, kcell, ix, iy, iz
+integer :: iparent, ichemo, im, nmet, kcell, ix, iy, iz
 type(cell_type), pointer :: cp
 
-iparent = DRUG_A + 3*(idrug-1)
-do im = 0,2
+nmet = drug(idrug)%nmetabolites
+iparent = DRUG_A + (MAX_METAB+1)*(idrug-1)
+do im = 0,nmet
 	ichemo = iparent + im
 	chemo(ichemo)%medium_Cbnd = 0
 !	Cflux(:,:,:,ichemo) = 0
@@ -376,7 +378,7 @@ enddo
 do kcell = 1,nlist
 	if (cell_list(kcell)%state == DEAD) cycle
     cp => cell_list(kcell)
-	do im = 0,2
+	do im = 0,nmet
 		ichemo = iparent + im
 		cp%conc(ichemo) = 0
 		cp%Cex(ichemo) = 0

@@ -32,17 +32,29 @@ void MainWindow::readDrugParams(int idrug, QString fileName)
 
     QTextStream in(&file);
     QString line;
-    int ival;
+    int ival, nmet;
     double dval;
     bool ok1, ok2;
 
     line = in.readLine();
     QStringList data = line.split(" ",QString::SkipEmptyParts);
     drug[idrug].classname = data[0];
-    for (int kset=0; kset<3; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
+    line = in.readLine();
+    data = line.split(" ",QString::SkipEmptyParts);
+    nmet = data[0].toInt(&ok1);
+    if (!ok1 || nmet < 0 || nmet > 3) {
+        QMessageBox::warning(this, tr("Application"),
+                             tr("Drug file %1:\n%2.")
+                             .arg(fileName)
+                             .arg(" has the wrong number of metabolites.  Check the file."));
+        return;
+    }
+
+    drug[idrug].nmetabolites = nmet;
+    for (int kset=0; kset<nmet+1; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
         for (int i=0; i<6; i++) {
             line = in.readLine();
-            QStringList data = line.split(" ",QString::SkipEmptyParts);
+            data = line.split(" ",QString::SkipEmptyParts);
             if (i > 0) {
                 dval = data[0].toDouble(&ok1);
                 if (!ok1) {
@@ -54,8 +66,8 @@ void MainWindow::readDrugParams(int idrug, QString fileName)
                 }
             }
             if (i==0) {
-                dval = data[0].toInt(&ok1, 10);
                 ival = data[0].toDouble(&ok2);
+                dval = data[0].toInt(&ok1, 10);
                 if (ok1 || ok2) {
                     QMessageBox::warning(this, tr("Application"),
                                          tr("Drug file %1:\n%2.")
@@ -101,7 +113,7 @@ void MainWindow::readDrugParams(int idrug, QString fileName)
 void MainWindow::writeDrugParams(QTextStream *out, int idrug)
 {
     QString line;
-    int nch;
+    int nch, nmet;
 
     line = drug[idrug].classname;
     nch = line.length();
@@ -109,8 +121,15 @@ void MainWindow::writeDrugParams(QTextStream *out, int idrug)
         line += " ";
     line += "CLASS_NAME";
     *out << line + "\n";
+    nmet = drug[idrug].nmetabolites;
+    line = QString::number(nmet);
+    nch = line.length();
+    for (int k=0; k<max(16-nch,1); k++)
+        line += " ";
+    line += "N_METABOLITES";
+    *out << line + "\n";
 
-    for (int kset=0; kset<3; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
+    for (int kset=0; kset<nmet+1; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
         line = drug[idrug].param[kset].name;
         nch = line.length();
         for (int k=0; k<max(16-nch,1); k++)
@@ -195,16 +214,20 @@ void MainWindow::populateDrugTable(int idrug)
 {
     QString line;
     bool flag;
+    int nmet;
     QString basestr, ctypstr, numstr, objname;
 
     LOG_QMSG("populateDrugTable");
-    for (int kset=0; kset<3; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
+    nmet = drug[idrug].nmetabolites;
+    for (int kset=0; kset<nmet+1; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
         if (kset == 0) {
             basestr = "PARENT_";
         } else if (kset == 1) {
             basestr = "METAB1_";
-        } else {
+        } else if (kset == 2) {
             basestr = "METAB2_";
+        } else {
+            basestr = "METAB3_";
         }
         line = drug[idrug].param[kset].name;
 
@@ -277,7 +300,7 @@ void MainWindow::on_buttonGroup_drug_buttonClicked(QAbstractButton* button)
 //--------------------------------------------------------------------------------------------------------
 void MainWindow::changeDrugParam(QObject *w)
 {
-    int idrug, kset, ict, ictyp, i, ii;
+    int idrug, kset, ict, ictyp, i, ii, nmet;
     // get idrug
     if (radioButton_drugA->isChecked()) {
         idrug = 0;
@@ -286,6 +309,7 @@ void MainWindow::changeDrugParam(QObject *w)
     } else {
         return;
     }
+    nmet = drug[idrug].nmetabolites;
     QString name = w->objectName();
     // get number i
     QStringList data = name.split("_");
@@ -299,6 +323,8 @@ void MainWindow::changeDrugParam(QObject *w)
         kset = 1;
     } else if (name.contains("METAB2")) {
         kset = 2;
+    } else if (name.contains("METAB3")) {
+        kset = 3;
     }
     if (name.contains("_CT1")) {            // cell type 1  data
         ict = 1;
@@ -368,15 +394,21 @@ void MainWindow::initDrugComboBoxes()
 void MainWindow::readDrugData(QTextStream *in)
 {
     QString line;
+    int nmet;
 
     line = in->readLine();
     QStringList data = line.split(" ",QString::SkipEmptyParts);
-    LOG_QMSG("readDrugData: " + line);
+//    LOG_QMSG("readDrugData: " + line);
     int ndrugs = data[0].toInt();
     if (ndrugs == 0) return;
+
     makeDrugFileLists();
     for (int idrug=0; idrug<ndrugs; idrug++) {
         line = in->readLine();  // CLASS_NAME
+        line = in->readLine();
+        data = line.split(" ",QString::SkipEmptyParts);
+//        LOG_QMSG("readDrugData: " + line);
+        nmet = data[0].toInt();
         line = in->readLine();  // DRUG_NAME
         QStringList data = line.split(" ",QString::SkipEmptyParts);
         QString drugname = data[0];
@@ -420,7 +452,9 @@ void MainWindow::readDrugData(QTextStream *in)
                 cbox_USE_DRUG_B->setChecked(true);
             }
         }
-        int nskip = 3*(6 + 2*(NDKILLPARAMS + NIKILLPARAMS)) - 1;
+        int nskip = (nmet+1)*(6 + 2*(NDKILLPARAMS + NIKILLPARAMS)) - 1;
+        sprintf(msg,"nskip: %d",nskip);
+        LOG_MSG(msg);
         for (int k=0; k<nskip; k++) {
             line = in->readLine();
         }
@@ -468,16 +502,19 @@ void MainWindow::ConnectKillParameterSignals()
 {
     int NactiveParams = 9;
     int activeParamNo[] = { 0, 1, 2, 6, 8, 9, 13, 15, 17 };
+    int nmet = 3;
     QString basestr, ctypstr, numstr, objname;
 
     LOG_QMSG("ConnectKillParameterSignals");
-    for (int kset=0; kset<3; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
+    for (int kset=0; kset<nmet+1; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
         if (kset == 0) {
             basestr = "PARENT_";
         } else if (kset == 1) {
             basestr = "METAB1_";
-        } else {
+        } else if (kset == 2) {
             basestr = "METAB2_";
+        } else {
+            basestr = "METAB3_";
         }
         for (int ictyp=0; ictyp<NCELLTYPES; ictyp++) {
             ctypstr = "CT" + QString::number(ictyp+1) + "_";
@@ -513,6 +550,8 @@ void MainWindow::updateCkill()
         kset = 1;
     } else if (part[1].compare("METAB2") == 0) {
         kset = 2;
+    } else if (part[1].compare("METAB3") == 0) {
+        kset = 3;
     }
     if (part[2].contains("CT1")) {
         ictyp = 0;

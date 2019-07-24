@@ -12,12 +12,14 @@
 #define DRUG_A_PARENT 4
 #define DRUG_A_METAB_1 5
 #define DRUG_A_METAB_2 6
-#define DRUG_B_PARENT 7
-#define DRUG_B_METAB_1 8
-#define DRUG_B_METAB_2 9
-#define GROWTH_RATE 10      // we pretend that this is a concentration
-#define CELL_VOLUME 11
-#define O2_BY_VOL 12
+#define DRUG_A_METAB_3 7
+#define DRUG_B_PARENT 8
+#define DRUG_B_METAB_1 9
+#define DRUG_B_METAB_2 10
+#define DRUG_B_METAB_3 11
+#define GROWTH_RATE 12      // we pretend that this is a concentration
+#define CELL_VOLUME 13
+#define O2_BY_VOL 14
 
 #define MAX_VARS O2_BY_VOL + 1
 
@@ -30,12 +32,14 @@
 #define IC_DRUG_A_PARENT 4
 #define IC_DRUG_A_METAB_1 5
 #define IC_DRUG_A_METAB_2 6
-#define IC_DRUG_B_PARENT 7
-#define IC_DRUG_B_METAB_1 8
-#define IC_DRUG_B_METAB_2 9
-#define IC_GROWTH_RATE 10      // we pretend that this is a concentration
-#define IC_CELL_VOLUME 11
-#define IC_O2_BY_VOL 12
+#define IC_DRUG_A_METAB_3 7
+#define IC_DRUG_B_PARENT 8
+#define IC_DRUG_B_METAB_1 9
+#define IC_DRUG_B_METAB_2 10
+#define IC_DRUG_B_METAB_3 11
+#define IC_GROWTH_RATE 12      // we pretend that this is a concentration
+#define IC_CELL_VOLUME 13
+#define IC_O2_BY_VOL 14
 
 #define DIST_NV 20
 

@@ -191,11 +191,12 @@ do izb = 1,NZB
 		    Fsum = Fsum + Fcurr_b(ixb,iyb,izb)
             Kr = dxb*dxb/Kdiff
 			rhs(krow) = Kr*((-2*Fcurr_b(ixb,iyb,izb) + Fprev_b(ixb,iyb,izb))/dxb3 + (1./(2*dt))*(4*Cave_b(ixb,iyb,izb) - Cprev_b(ixb,iyb,izb)))
-			if (rhs(krow) /= 0) zero = .false.
+			if (rhs(krow) /= 0) then
+				zero = .false.
+			endif
 		enddo
 	enddo
 enddo
-
 !!$omp end parallel do
 if (.not.O2_wall_bdry .and. ichemo == OXYGEN) then
 	if (medium_change_step .and. drug_O2_bolus) then
@@ -433,6 +434,7 @@ do kcell = 1,nlist
 	    endif
 	endif
 enddo
+!write(*,'(a,i4,e12.3)') 'total_flux: ',ichemo,total_flux
 !write(nflog,'(a,i4,2e12.3)') 'total_flux: ',ichemo,total_flux, &
 !    sum(chemo(ichemo)%Fcurr_b(ixb0-1:ixb0+1,iyb0-1:iyb0+1,izb0-1:izb0+1))
 
@@ -466,7 +468,7 @@ real(REAL_KIND) :: Kin, Kout, Kd, Kmax, VKdecay, C0, a, b, c, D, r(3)
 integer :: i, n, ictyp, idrug, im
 real(REAL_KIND) :: CO2, C_parent, C_metab1
 !real(REAL_KIND) :: C2_0, C2_1, C2_2, KO2_0, KO2_1, KO2_2, Kmet0_0, Kmet0_1, Kmet0_2
-real(REAL_KIND) :: C2(0:2), KO2(0:2), Kmet0(0:2), n_O2(0:2)
+real(REAL_KIND) :: C2(0:MAX_METAB), KO2(0:MAX_METAB), Kmet0(0:MAX_METAB), n_O2(0:MAX_METAB)
 real(REAL_KIND) :: K1, K2, Km, Vmax
 type(drug_type), pointer :: dp
 
@@ -519,9 +521,9 @@ if (ichemo <= GLUCOSE) then
 elseif (ichemo == TRACER) then
 	
 else	! parent drug or drug metabolite
-	idrug = (ichemo - TRACER - 1)/3 + 1
+    idrug = (ichemo - DRUG_A)/(MAX_METAB+1) + 1
+    im = ichemo - DRUG_A - (MAX_METAB+1)*(idrug-1)		! 0 = drug, 1 = metab1, 2 = metab2, 3 = metab3
 	dp => drug(idrug)
-	im = ichemo - TRACER - 1 - 3*(idrug-1)
 	C2(:) = dp%C2(ictyp,:)
 	KO2(:) = dp%KO2(ictyp,:)
 	Kmet0(:) = dp%Kmet0(ictyp,:)
@@ -587,9 +589,8 @@ real(REAL_KIND) :: Vin, Cex, dCexdt, Cin
 real(REAL_KIND) :: Kin, Kout, Kd, Kmax, VKdecay, dCdt, delta, C0, a, b, c, D, r(3)
 integer :: i, n, ictyp, idrug, im
 real(REAL_KIND) :: CO2, C_parent, C_metab1
-!real(REAL_KIND) :: C2_0, C2_1, C2_2, KO2_0, KO2_1, KO2_2, Kmet0_0, Kmet0_1, Kmet0_2
-real(REAL_KIND) :: C2(0:2), KO2(0:2), Kmet0(0:2), n_O2(0:2)
-real(REAL_KIND) :: K1(0:2), K2(0:2)
+real(REAL_KIND) :: C2(0:MAX_METAB), KO2(0:MAX_METAB), Kmet0(0:MAX_METAB), n_O2(0:MAX_METAB)
+real(REAL_KIND) :: K1(0:MAX_METAB), K2(0:MAX_METAB)
 real(REAL_KIND) :: Km, Vmax		!, K1_0, K2_0, K1_1, K2_1, K1_2, K2_2
 type(drug_type), pointer :: dp
 type(cell_type), pointer :: cp
@@ -643,9 +644,9 @@ if (ichemo <= GLUCOSE) then
 elseif (ichemo == TRACER) then
 	stop
 else	! parent drug or drug metabolite
-	idrug = (ichemo - TRACER - 1)/3 + 1
+    idrug = (ichemo - DRUG_A)/(MAX_METAB+1) + 1
+    im = ichemo - DRUG_A - (MAX_METAB+1)*(idrug-1)		! 0 = drug, 1 = metab1, 2 = metab2, 3 = metab3
 	dp => drug(idrug)
-	im = ichemo - TRACER - 1 - 3*(idrug-1)
 	C2(:) = dp%C2(ictyp,:)
 	KO2(:) = dp%KO2(ictyp,:)
 	Kmet0(:) = dp%Kmet0(ictyp,:)
@@ -909,6 +910,11 @@ do ic = 1,nchemo
 
 	call make_csr_b(a_b, ichemo, dt, Cave_b, Cprev_b, Fcurr_b, Fprev_b, rhs, zeroC(ichemo))		! coarse grid
 
+if (zeroC(ichemo)) then
+	write(nflog,*) 'no solve, zeroC: ',ichemo
+	deallocate(a_b, x, rhs)
+	cycle
+endif
 	! Solve Cave_b(t+dt) on coarse grid
 	!----------------------------------
 	call itsol_create_matrix(icc,nrow_b,nnz_b,a_b,ja_b,ia_b,ierr)
@@ -949,7 +955,12 @@ do ic = 1,nchemo
 !	write(nflog,*) 'did itsol_free_matrix'
 
 	Cprev_b = Cave_b
-	fdecay = 1 - chemo(ichemo)%decay_rate*dt
+!	fdecay = 1 - chemo(ichemo)%decay_rate*dt
+	fdecay = exp(-chemo(ichemo)%decay_rate*dt)
+	if (fdecay < 0) then
+		write(nflog,*) 'fdecay < 0: ',ichemo,chemo(ichemo)%decay_rate,dt,fdecay
+		stop
+	endif
 	msum = 0
 	do izb = 1,NZB
 		do iyb = 1,NYB
@@ -974,7 +985,9 @@ do ic = 1,nchemo
 					cycle
 				endif
 				Cave_b(ixb,iyb,izb) = x(k)
+!			if (ichemo == 6) then
 !				msum = msum + x(k)*dxb3		! this sums the mass of constituent in mumols
+!			endif
 !				if (x(k) < 0) then
 !					write(logmsg,*) 'Cave_b < 0: ',ichemo,ixb,iyb,izb,x(k)
 !					call logger(logmsg)

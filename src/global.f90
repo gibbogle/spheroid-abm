@@ -33,6 +33,8 @@ integer, parameter :: DIVIDE_USE_CLEAR_SITE_RANDOM  = 3
 integer, parameter :: nfin=10, nfout=11, nflog=12, nfres=13, nfrun=14, nfcell=15, nftreatment=16, nfprofile=17, nfslice=18, nfFACS=19
 integer, parameter :: neumann(3,6) = reshape((/ -1,0,0, 1,0,0, 0,-1,0, 0,1,0, 0,0,-1, 0,0,1 /), (/3,6/))
 
+integer, parameter :: MAX_METAB = 3
+
 integer, parameter :: CFSE = 0
 integer, parameter :: OXYGEN = 1
 integer, parameter :: GLUCOSE = 2
@@ -41,11 +43,13 @@ integer, parameter :: DRUG_A = 4
 integer, parameter :: TPZ_DRUG = DRUG_A
 integer, parameter :: TPZ_DRUG_METAB_1 = TPZ_DRUG + 1
 integer, parameter :: TPZ_DRUG_METAB_2 = TPZ_DRUG + 2
-integer, parameter :: DRUG_B = DRUG_A + 3
+integer, parameter :: TPZ_DRUG_METAB_3 = TPZ_DRUG + 3
+integer, parameter :: DRUG_B = DRUG_A + 1 + MAX_METAB
 integer, parameter :: DNB_DRUG = DRUG_B
 integer, parameter :: DNB_DRUG_METAB_1 = DNB_DRUG + 1
 integer, parameter :: DNB_DRUG_METAB_2 = DNB_DRUG + 2
-integer, parameter :: MAX_CHEMO = DRUG_B + 2
+integer, parameter :: DNB_DRUG_METAB_3 = DNB_DRUG + 3
+integer, parameter :: MAX_CHEMO = DRUG_B + MAX_METAB
 integer, parameter :: GROWTH_RATE = MAX_CHEMO + 1	! (not used here, used in the GUI)
 integer, parameter :: CELL_VOLUME = MAX_CHEMO + 2
 integer, parameter :: O2_BY_VOL = MAX_CHEMO + 3
@@ -140,30 +144,30 @@ type drug_type
 	character*(16)  :: name
 	integer         :: nmetabolites
 	logical         :: use_metabolites
-	real(REAL_KIND) :: diff_coef(0:2)
-	real(REAL_KIND) :: medium_diff_coef(0:2)
-	real(REAL_KIND) :: membrane_diff_in(0:2)
-	real(REAL_KIND) :: membrane_diff_out(0:2)
-	real(REAL_KIND) :: halflife(0:2)
-	logical         :: kills(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: KO2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: n_O2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Vmax(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Km(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Klesion(MAX_CELLTYPES,0:2)
-	integer         :: kill_model(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: death_prob(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: Kd(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES,0:2)
-	logical         :: sensitises(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: SER_max(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: SER_Km(MAX_CELLTYPES,0:2)
-	real(REAL_KIND) :: SER_KO2(MAX_CELLTYPES,0:2)
+	real(REAL_KIND) :: diff_coef(0:MAX_METAB)
+	real(REAL_KIND) :: medium_diff_coef(0:MAX_METAB)
+	real(REAL_KIND) :: membrane_diff_in(0:MAX_METAB)
+	real(REAL_KIND) :: membrane_diff_out(0:MAX_METAB)
+	real(REAL_KIND) :: halflife(0:MAX_METAB)
+	logical         :: kills(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: Kmet0(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: C2(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: KO2(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: n_O2(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: Vmax(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: Km(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: Klesion(MAX_CELLTYPES,0:MAX_METAB)
+	integer         :: kill_model(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: death_prob(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: Kd(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: kill_O2(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: kill_drug(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: kill_duration(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: kill_fraction(MAX_CELLTYPES,0:MAX_METAB)
+	logical         :: sensitises(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: SER_max(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: SER_Km(MAX_CELLTYPES,0:MAX_METAB)
+	real(REAL_KIND) :: SER_KO2(MAX_CELLTYPES,0:MAX_METAB)
 end type
 
 type boundary_type
@@ -728,7 +732,7 @@ else
 		Vdiv = Vdivide0
 	else
 		R = par_uni(kpar)
-		Vdiv = Vdivide0 + dVdivide*(2*R-1)
+		Vdiv = Vdivide0 + dVdivide*(2*R-1)	! should be /2
 	endif
 	Tdiv = Tmean
 endif

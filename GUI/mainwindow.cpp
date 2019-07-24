@@ -1414,7 +1414,6 @@ void MainWindow::reloadParams()
                         w_c->setCurrentIndex(val);
 					} else if (qsname.startsWith("cbox_")) {
 						QCheckBox *w_cb = (QCheckBox *)w;
-                        LOG_QMSG(qsname);
 
                         bool use_OXYGEN = qsname.contains("USE_OXYGEN");
                         if (p.value == 1) {
@@ -1586,7 +1585,7 @@ void MainWindow::readInputFile()
 	if (fileName.compare("") == 0)
 		return;
     paramSaved = false;
-//    qDebug() << "readInputFile: " + fileName;
+    qDebug() << "readInputFile: " + fileName;
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
         QMessageBox::warning(this, tr("Application"),
@@ -1632,18 +1631,15 @@ void MainWindow::readInputFile()
 //        if (p.tag.contains("SAVE_SLICE_DATA_NUMBER")) {   // drug data follows, before plot data
         if (p.tag.contains("SAVE_FACS_DATA_NUMBER")) {   // drug data follows, before plot data
             readDrugData(&in);
+            LOG_MSG("did readDrugData");
         }
     }
 
-//    qDebug() << in.readLine();
-//    qDebug() << in.readLine();
-//    qDebug() << in.readLine();
-//    qDebug() << in.readLine();
-//    qDebug() << in.readLine();
-
+    LOG_QMSG("now load protocol from: " + fileName);
     LoadProtocol(fileName);
-
+    LOG_MSG("did LoadProtocol");
     reloadParams();
+    LOG_MSG("did reloadParams");
 	inputFile = fileName;
     alabel_casename->setText(inputFile);
 }

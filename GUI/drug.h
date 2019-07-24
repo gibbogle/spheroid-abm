@@ -50,7 +50,8 @@ typedef drug_param_set DRUG_PARAM_SET;
 
 struct drug_str {
     QString classname;
-    DRUG_PARAM_SET param[3];
+    int nmetabolites;
+    DRUG_PARAM_SET param[4];
 };
 typedef drug_str DRUG_STR;
 
