@@ -57,7 +57,9 @@ integer :: x, y, z
 integer :: k, site(3)
 type (boundary_type), pointer :: bdry
 
-nullify(bdrylist)
+write(nflog,*) 'CreateBdryList'
+call DestroyBdrylist
+!nullify(bdrylist)
 nbdry = 0
 do x = 1,NX
     do y = 1,NY
@@ -271,13 +273,15 @@ end subroutine
 !-----------------------------------------------------------------------------------------
 ! Check consistency between bdrylist and occupancy%bdry
 !-----------------------------------------------------------------------------------------
-subroutine CheckBdryList(infomsg)
+subroutine CheckBdryList(infomsg,ok)
 character*(*) :: infomsg
+logical :: ok
 type (boundary_type), pointer :: bdry => null(), ocbdry => null()
 integer :: x, y, z, site(3), dy, nb1, nb2, nbx, indx(2)
 
 write(logmsg,'(a,a,i6)') 'CheckBdryList: ',infomsg,istep
 call logger(logmsg)
+ok = .true.
 nb1 = 0
 nbx = 0
 bdry => bdrylist
@@ -287,20 +291,26 @@ do while ( associated ( bdry ))
     site = bdry%site
     ocbdry => occupancy(site(1),site(2),site(3))%bdry
     if (.not.associated(ocbdry,bdry)) then
-		write(logmsg,*) 'Error: CheckBdryList: inconsistent bdry pointers at site: ',site
+		write(logmsg,'(a,a,a,3i5)') 'Error: CheckBdryList: called from: ',infomsg, ' inconsistent bdry pointers at site: ',site
 		call logger(logmsg)
-		stop
+		ok = .false.
+		return
+!		stop
 	endif
 	indx = occupancy(site(1),site(2),site(3))%indx
 	if (indx(1) <= OUTSIDE_TAG) then
-		write(logmsg,*) 'Error: CheckBdryList: site is outside: ',site
+		write(logmsg,'(a,a,a,3i5)') 'Error: CheckBdryList: called from: ',infomsg, ' site is outside: ',site
 		call logger(logmsg)
-		stop
+		ok = .false.
+		return
+!		stop
 	endif
 	if (.not.isbdry(site)) then
-		write(logmsg,*) 'Error: CheckBdryList: site in bdrylist is NOT bdry: ',site
+		write(logmsg,'(a,a,a,3i5)') 'Error: CheckBdryList: called from: ',infomsg, ' site in bdrylist is NOT bdry: ',site
 		call logger(logmsg)
-		stop
+		ok = .false.
+		return
+!		stop
 	endif
 		
     bdry => bdry%next
@@ -330,14 +340,14 @@ do x = 1,NX
 	enddo				
 enddo
 if (nb1 /= nb2) then
-	write(logmsg,*) 'Error: inconsistent boundary site counts: ',nb1,nb2
+	write(logmsg,'(a,a,2i5)') 'Error: inconsistent boundary site counts: called from: ',infomsg,nb1,nb2
 	call logger(logmsg)
-	stop
+	ok = .false.
+	return
+!	stop
 endif
 write(logmsg,*) 'bdrylist and occupancy%bdry are consistent: ',nb1,nbx
 call logger(logmsg)
 end subroutine
-
-
 
 end module

@@ -417,6 +417,7 @@ do kcell = 1,nlist
 			cp%dMdt(ichemo) = 0
 		endif
 	endif
+!	if (ichemo == 2 .and. kcell == 1) write(*,*) 'glucose flux: ',cp%dMdt(ichemo)
 	total_flux = total_flux + cp%dMdt(ichemo)
 	if (.not.use_central_flux) then
 	    site = cp%site

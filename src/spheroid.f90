@@ -108,6 +108,10 @@ call logger(logmsg)
 if (.not.ok) return
 
 call CreateBdryList
+call CheckBdryList('setup: CreateBdryList',ok)
+if (.not.ok) then
+	return
+endif
 
 if (use_FD) then
 	call setup_react_diff(ok)
@@ -1529,11 +1533,11 @@ logical :: ok = .true.
 logical :: sine_ramp = .false.
 logical :: dbug
 
-write(nflog,'(a,4e12.3)') 'drug: ',chemo(DRUG_A:DRUG_A+3)%medium_Cext
+!write(nflog,'(a,4e12.3)') 'drug: ',chemo(DRUG_A:DRUG_A+3)%medium_Cext
 !call logger('simulate_step')
 !write(*,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
 !write(nflog,'(a,f8.3)') 'simulate_step: time: ',wtime()-start_wtime
-write(nflog,'(a,3e12.3)') 'OXYGEN (air bdry, medium ave, blob bdry): ',chemo(OXYGEN)%bdry_conc,chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
+!write(nflog,'(a,3e12.3)') 'OXYGEN (air bdry, medium ave, blob bdry): ',chemo(OXYGEN)%bdry_conc,chemo(OXYGEN)%medium_Cext,chemo(OXYGEN)%medium_Cbnd
 !call showO2
 dbug = .false.
 if (Ncells == 0) then
@@ -1568,11 +1572,20 @@ if (bdry_debug) write(*,*) 'istep, bdry_changed: ',istep,bdry_changed
 if (bdry_changed) then
 	if (dbug) write(nflog,*) 'UpdateBdryList'
 	call UpdateBdrylist
+!	call CheckBdryList('simulate_step: after UpdateBdrList',ok)
+!	if (.not.ok) then
+!		res = 7
+!		return
+!	endif
 !	write(nflog,*) 'did UpdateBdryList'
 endif
 if (mod(istep,6*nthour) == 0) then
 	if (dbug) write(nflog,*) 'CheckBdryList'
-	call CheckBdryList('simulate_step')
+	call CheckBdryList('simulate_step',ok)
+	if (.not.ok) then
+		res = 7
+		return
+	endif
 !	write(nflog,*) 'did CheckBdryList'
 endif
 
@@ -1591,7 +1604,13 @@ endif
 if (dbug) write(nflog,*) 'GrowCells'
 !write(*,*) 'GrowCells'
 call GrowCells(radiation_dose,DELTA_T,ok)
-if (bdry_debug) call CheckBdryList('simulate_step d')
+if (bdry_debug) then
+	call CheckBdryList('simulate_step d',ok)
+	if (.not.ok) then
+		res = 7
+		return
+	endif
+endif
 if (dbug) write(nflog,*) 'did GrowCells'
 !write(*,*) 'did GrowCells'
 if (.not.ok) then
@@ -1599,7 +1618,13 @@ if (.not.ok) then
 	return
 endif
 radiation_dose = 0
-if (bdry_debug) call CheckBdryList('simulate_step c')
+if (bdry_debug) then
+	call CheckBdryList('simulate_step c',ok)
+	if (.not.ok) then
+		res = 7
+		return
+	endif
+endif
 
 if (medium_change_step) then
 	ndiv = 12

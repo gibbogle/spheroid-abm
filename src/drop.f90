@@ -227,7 +227,7 @@ occupancy(:,:,1:zmin-1)%indx(1) = UNREACHABLE_TAG
 call DestroyBdryList
 call CreateBdryList
 
-call CheckBdryList('after dropper')
+call CheckBdryList('after dropper',ok)
 
 end subroutine
 
