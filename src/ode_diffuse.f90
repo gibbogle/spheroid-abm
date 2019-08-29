@@ -479,7 +479,6 @@ if (ichemo >= DRUG_A) then
     im = ichemo - DRUG_A - (MAX_METAB+1)*(idrug-1)		! 0 = drug, 1 = metab1, 2 = metab2, 3 = metab3
 	dp => drug(idrug)
 	metabolised(:,:) = (dp%Kmet0(:,:) > 0)
-!	write(*,*) 'metabolised: ',ichemo,idrug,im,metabolised(1,:)
 !	if (im == 0) then
 !		write(*,*) 'f_rkc: ichemo,idrug,im: ',ichemo,idrug,im
 !		write(*,*) 'metabolised: ',metabolised(:,:)
@@ -608,6 +607,15 @@ do i = 1,neqn
 		    membrane_flux = 0
 		endif
     	dydt(i) = dCsum - membrane_flux/vol_cm3
+    	if (abs(dydt(i)) > 100) then
+    		write(*,*) 'bad dydt: ',ichemo,i,dydt(i)
+    		write(logmsg,*) 'bad dydt: ',ichemo,i,dydt(i)
+    		call logger(logmsg)
+    		stop
+    	endif
+!    	if (ichemo == DRUG_A+3 .and. i == 807) then
+!    		write(*,'(a,2i6,3e12.3)') 'EXTRA: ichemo, i, dydt: ',ichemo,i,dydt(i),dCsum,membrane_flux/vol_cm3
+!    	endif
 	else							! intracellular
 		C = Cin(ichemo)
 		membrane_flux = area_factor*(membrane_kin*Cex - membrane_kout*C)
@@ -667,7 +675,7 @@ do i = 1,neqn
 				dCreact = dCreact - (1 - dp%C2(ict,3) + dp%C2(ict,3)*dp%KO2(ict,3)**n_O2(3)/(dp%KO2(ict,3)**n_O2(3) + Cin(OXYGEN)**n_O2(3)))*dp%Kmet0(ict,3)*C
 			endif
 			dCreact = dCreact + membrane_flux/vol_cm3
-!			if (dCreact > 0) write(*,'(a,6e11.3)') 'dCreact, flux: ',dCreact,membrane_flux/vol_cm3,membrane_kin,membrane_kout,C,Cex
+!			if (dCreact > 0 .and. i == 808) write(*,'(a,i6,4e12.3)') 'INTRA: dCreact, flux: ',i,dCreact,membrane_flux/vol_cm3,C,Cex
 		endif
 	    dydt(i) = dCreact - yy*decay_rate
 		if (isnan(dydt(i))) then
@@ -764,7 +772,6 @@ type(cell_type), pointer :: cp
 !	call irkc_solver(it,tstart,dt,nc)
 !	return
 !endif
-
 cp => cell_list(1)
 if (chemo(DRUG_A)%present) then
 	write(nflog,'(a,f7.3,9e12.3)') 'EC_IC_drug_conc: ',t_simulation/3600, cp%conc(OXYGEN), &
@@ -785,7 +792,7 @@ info(1) = 1
 info(2) = 1		! = 1 => use spcrad() to estimate spectral radius, != 1 => let rkc do it
 info(3) = 1
 info(4) = 0
-rtol = 1d-2
+rtol = 1d-2		! was 1d-2
 atol = rtol
 
 do ic = 1,nchemo
@@ -824,7 +831,6 @@ if (.not.update_allstate) then
 endif
 ! Note: some time we need to copy the state values to the cell_list() array.
 deallocate(state)
-
 end subroutine
 
 !----------------------------------------------------------------------------------

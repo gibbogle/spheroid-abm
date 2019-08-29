@@ -129,7 +129,7 @@ void MainWindow::writeDrugParams(QTextStream *out, int idrug)
     line += "N_METABOLITES";
     *out << line + "\n";
 
-    for (int kset=0; kset<nmet+1; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2
+    for (int kset=0; kset<nmet+1; kset++) {     // 0 = parent, 1 = metab_1, 2 = metab_2, 3 = metab_3
         line = drug[idrug].param[kset].name;
         nch = line.length();
         for (int k=0; k<max(16-nch,1); k++)
@@ -139,7 +139,6 @@ void MainWindow::writeDrugParams(QTextStream *out, int idrug)
         else
             line += "METABOLITE";
         *out << line + "\n";
-
         for (int i=0; i<NDPARAMS; i++) {
             line = QString::number(drug[idrug].param[kset].dparam[i]);
             nch = line.length();

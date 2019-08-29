@@ -1219,7 +1219,7 @@ void MainWindow::setFields()
 
     LOG_MSG("setFields");
     if (ON_LATTICE) {
-        spin_NX->setValue(120);
+        spin_NX->setValue(100);
         tab_force->setEnabled(false);
         groupBox_force->setEnabled(false);
         groupBox_farfield->setEnabled(true);
@@ -2881,7 +2881,7 @@ void MainWindow::changeParam()
 	if (w->isWidgetType()) {
 		QString wname = w->objectName();
 //        LOG_QMSG("changeParam:" + wname);
-        if (wname.contains("_PARENT_") || wname.contains("_METAB1_") || wname.contains("_METAB2_")) {
+        if (wname.contains("_PARENT_") || wname.contains("_METAB1_") || wname.contains("_METAB2_") || wname.contains("_METAB3_")) {
             changeDrugParam(w);
             return;
         }

@@ -119,7 +119,7 @@ if (use_FD) then
 endif
 istep = 0
 call SetupODEdiff
-allocate(allstate(MAX_VARS,MAX_CHEMO))
+!allocate(allstate(MAX_VARS,MAX_CHEMO))
 allocate(work_rkc(8+5*MAX_VARS))
 do ichemo = 1,TRACER
 	if (chemo(ichemo)%used) then
@@ -339,7 +339,7 @@ call RngInitialisation
 
 ! These are deallocated here instead of in subroutine wrapup so that when a simulation run ends
 ! it will still be possible to view the cell distributions and chemokine concentration fields.
-if (allocated(allstate)) deallocate(allstate)
+!if (allocated(allstate)) deallocate(allstate)
 if (allocated(ODEdiff%ivar)) deallocate(ODEdiff%ivar)
 if (allocated(gaplist)) deallocate(gaplist)
 if (allocated(Cslice)) deallocate(Cslice)
@@ -358,15 +358,23 @@ call logger(logmsg)
 if (leave_allocated) then
 	if (.not.allocated(occupancy)) allocate(occupancy(NX,NY,NZ))
 	if (.not.allocated(cell_list)) allocate(cell_list(max_nlist))
+	if (.not.allocated(allstate)) allocate(allstate(MAX_VARS,MAX_CHEMO))
 else
 	if (allocated(occupancy)) deallocate(occupancy)
 	if (allocated(cell_list)) deallocate(cell_list)
+	if (allocated(allstate)) deallocate(allstate)
 	allocate(occupancy(NX,NY,NZ))
 	allocate(cell_list(max_nlist))
+	allocate(allstate(MAX_VARS,MAX_CHEMO))
 endif
 allocate(gaplist(max_ngaps))
 !allocate(Cslice(NX/2,NY/2,NZ/2,MAX_CHEMO))
 allocate(Cslice(NX,NY,NZ,MAX_CHEMO))
+
+!write(*,*) 'sizes:'
+!write(*,*) 'occupancy_type: ',occupancy(1,1,1)
+!write(*,*) 'cell_type: ',sizeof(cell_list(1))
+!write(*,*) 'cell_list array: ',sizeof(cell_list)
 
 call make_jumpvec
 
@@ -2036,7 +2044,7 @@ if (allocated(zdomain)) deallocate(zdomain)
 if (allocated(gaplist)) deallocate(gaplist,stat=ierr)
 !if (allocated(occupancy)) deallocate(occupancy)
 !if (allocated(cell_list)) deallocate(cell_list)
-if (allocated(allstate)) deallocate(allstate)
+!if (allocated(allstate)) deallocate(allstate)
 if (allocated(allstatep)) deallocate(allstatep)
 if (allocated(work_rkc)) deallocate(work_rkc)
 do ichemo = 1,MAX_CHEMO

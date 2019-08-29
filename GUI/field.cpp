@@ -498,7 +498,7 @@ void Field::displayField(int hr, int *res)
     int i, k, ix, iy, iz, w, rgbcol[3], ichemo, ixyz;
     double xp, yp, x, y, d, C, cmin, cmax, rmax, valmin;
     double a, b, Wc, dx, Wx, radius;
-    int Nc, NX, NY, NZ;
+    int NX, NY, NZ;
     double beta = 1.0;
     NEW_FIELD_DATA fdata;
 
@@ -508,7 +508,7 @@ void Field::displayField(int hr, int *res)
     *res = 0;
     if (hr >= 0) hour = hr;
     if (slice_changed) {
-//        LOG_MSG("call new_get_fielddata");
+//        LOG_MSG("slice_changed: call new_get_fielddata");
         new_get_fielddata(&axis, &fraction, &fdata, &ixyz, res);
         if (*res != 0) {
             LOG_MSG("Error: new_get_fielddata: FAILED");

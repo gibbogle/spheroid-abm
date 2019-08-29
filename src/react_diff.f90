@@ -709,6 +709,7 @@ else	! parent drug or drug metabolite
 		Cin = (K1(1)*C_metab1 + (Kin*Cex/Vin - dCdt))/(K1(2) + Kd + Kout/Vin)
 		Cin = max(Cin,0.0)
 	endif
+	write(*,*) 'done'
 endif
 end function
 
@@ -891,7 +892,7 @@ do ic = 1,nchemo
 	ichemo = chemomap(ic)
 	if (chemo(ichemo)%constant) cycle
 	if (ichemo == OXYGEN .and. chemo(ichemo)%medium_Cbnd == 0) cycle
-!	write(*,'(a,i2)') 'coarse grid: ichemo: ',ichemo
+!	write(*,'(a,i6,i2)') 'coarse grid: istep, ichemo: ',istep, ichemo
 !	write(nflog,'(a,i2)') 'coarse grid: ichemo: ',ichemo
 	ichemo_curr = ichemo
 	icc = ichemo - 1
@@ -913,9 +914,11 @@ do ic = 1,nchemo
 
 if (zeroC(ichemo)) then
 	write(nflog,*) 'no solve, zeroC: ',ichemo
+!	write(*,*) 'no solve, zeroC: ',ichemo
 	deallocate(a_b, x, rhs)
 	cycle
 endif
+!	write(*,*) 'solving: ichemo: ', ichemo
 	! Solve Cave_b(t+dt) on coarse grid
 	!----------------------------------
 	call itsol_create_matrix(icc,nrow_b,nnz_b,a_b,ja_b,ia_b,ierr)
@@ -967,7 +970,7 @@ endif
 		do iyb = 1,NYB
 			do ixb = 1,NXB
 				k = (ixb-1)*NYB*NZB + (iyb-1)*NZB + izb
-!				if (ichemo == OXYGEN .and. ixb == NXB/2 .and. iyb == NYB/2) then
+!				if (ichemo == DRUG_A+3 .and. ixb == NXB/2 .and. iyb == NYB/2) then
 !					write(nflog,'(a,i4,e12.3)') 'izb,cave_b: ',izb,x(k)
 !				endif
 				x(k) = fdecay*x(k)

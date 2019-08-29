@@ -59,11 +59,12 @@ do i = 1, cnt
         write(*,*) 'Output file: ',outfile
     endif
 end do
-
+write(*,*) 'sizeof occupancy_type: ',sizeof(occupancy_type)
+stop
 !call get_dimensions(NX,NY,NZ,nsteps,DELTA_T, MAX_CHEMO, cused);
 i_hypoxia_cutoff = 3
 i_growth_cutoff = 1
-do irun = 1,2
+do irun = 1,1
 	write(*,*) 'irun: ',irun
 	inbuflen = len(infile)
 	outbuflen = len(outfile)

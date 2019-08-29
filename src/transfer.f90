@@ -745,6 +745,7 @@ fdata%conc_ptr = c_loc(Cslice)
 fdata%cell_ptr = c_loc(cdata)
 
 ! Find blob centre
+!write(nflog,*) 'Find blob centre'
 csum = 0
 nc = 0
 do kcell = 1,nlist
@@ -923,7 +924,7 @@ elseif (axis == Z_AXIS) then
 
 endif
 ixyz = ixyz-1   ! to use in C with 0-based indexing
-write(nflog,*) 'axis: ',axis,' nc: ',nc, ' NX: ',fdata%NX,' dx: ',fdata%dx
+!write(nflog,*) 'axis: ',axis,' nc: ',nc, ' NX: ',fdata%NX,' dx: ',fdata%dx
 fdata%ncells = nc
 res = 0
 
