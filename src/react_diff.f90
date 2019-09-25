@@ -977,9 +977,10 @@ endif
 				if (ichemo == OXYGEN) then
 					if (test_case(1)) then
 						x(k) = max(x(k),anoxia_threshold/2)
-					elseif (x(k) < 0) then
-						write(nflog,*) 'O2: x(k) < 0: ichemo,ixb,iyb,izb: ',ichemo,ixb,iyb,izb,x(k)
-						x(k) = 0
+					elseif (x(k) < 1.0e-4) then
+!						write(nflog,'(a,4i5,e12.3)') 'O2: x(k) < 0: ichemo,ixb,iyb,izb,x(k): ',ichemo,ixb,iyb,izb,x(k)
+!						write(nflog,'(a,e12.3)') 'Cave_b: ',Cave_b(ixb,iyb,izb)
+						x(k) = 1.0e-4
 					endif
 				else
 					x(k) = max(0.0,x(k))
